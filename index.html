@@ -1348,176 +1348,198 @@
         }
       }
 
-          function addCourse() {
-            var date = document.getElementById("editDate").value;
-            var startTime = document.getElementById("startTime").value;
-            var endTime = document.getElementById("endTime").value;
-            var courseName = getCourseName();
-            var courseCategory = document.getElementById("courseCategory").value;
+      function handleCourseSelect() {
+        var select = document.getElementById("courseSelect");
+        var customGroup = document.getElementById("customCourseGroup");
+        var customInput = document.getElementById("customCourseName");
 
-            if (!date || !startTime || !endTime || !courseName) {
-              showMessage("请填写完整信息！", "error");
-              return;
-            }
+        if (select.value === "custom") {
+          customGroup.style.display = "block";
+          customInput.focus();
+        } else {
+          customGroup.style.display = "none";
+          customInput.value = "";
+        }
+      }
 
-            if (startTime >= endTime) {
-              showMessage("结束时间必须晚于开始时间！", "error");
-              return;
-            }
+      function getCourseName() {
+        var courseSelect = document.getElementById("courseSelect");
+        var customCourseName = document.getElementById("customCourseName");
 
-            var timeStr = startTime + "-" + endTime;
-            var courseType = getCourseTypeFromName(courseName);
+        if (courseSelect.value === "custom") {
+          return customCourseName.value.trim ? customCourseName.value.trim() : customCourseName.value;
+        } else {
+          return courseSelect.value;
+        }
+      }
 
-            var newCourse = {
-              time: timeStr,
-              course: courseName,
-              type: courseType,
-              category: courseCategory,
-            };
+      function getCourseTypeFromName(courseName) {
+        if (courseName.indexOf("英语SMK") !== -1) return "smk";
+        if (courseName.indexOf("岛主") !== -1) return "island";
+        if (courseName.indexOf("普老师") !== -1 || courseName.indexOf("刷题") !== -1) return "teacher";
+        if (courseName.indexOf("英语YH") !== -1) return "english";
+        if (courseName.indexOf("游泳") !== -1 || courseName.indexOf("跑步") !== -1 || 
+            courseName.indexOf("篮球") !== -1 || courseName.indexOf("运动") !== -1) return "exercise";
+        if (courseName.indexOf("作业") !== -1 || courseName.indexOf("背诵") !== -1 || 
+            courseName.indexOf("练习") !== -1) return "homework";
+        if (courseName.indexOf("画画") !== -1 || courseName.indexOf("音乐") !== -1 || 
+            courseName.indexOf("钢琴") !== -1) return "art";
+        return "other";
+      }
 
-            if (!scheduleData[date]) {
-              scheduleData[date] = [];
-            }
+      function addCourse() {
+        var date = document.getElementById("editDate").value;
+        var startTime = document.getElementById("startTime").value;
+        var endTime = document.getElementById("endTime").value;
+        var courseName = getCourseName();
+        var courseCategory = document.getElementById("courseCategory").value;
 
-            scheduleData[date].push(newCourse);
+        if (!date || !startTime || !endTime || !courseName) {
+          showMessage("请填写完整信息！", "error");
+          return;
+        }
 
-            scheduleData[date].sort(function(a, b) {
-              var timeA = a.time.split("-")[0];
-              var timeB = b.time.split("-")[0];
-              return timeA < timeB ? -1 : timeA > timeB ? 1 : 0;
-            });
+        if (startTime >= endTime) {
+          showMessage("结束时间必须晚于开始时间！", "error");
+          return;
+        }
 
-            showMessage("成功添加课程：" + courseName, "success");
-            clearForm();
+        var timeStr = startTime + "-" + endTime;
+        var courseType = getCourseTypeFromName(courseName);
 
-            if (date === formatDate(currentDate)) {
-              updateDisplay();
-            }
+        var newCourse = {
+          time: timeStr,
+          course: courseName,
+          type: courseType,
+          category: courseCategory,
+        };
 
-            viewDateCourses();
+        if (!scheduleData[date]) {
+          scheduleData[date] = [];
+        }
+
+        scheduleData[date].push(newCourse);
+
+        scheduleData[date].sort(function(a, b) {
+          var timeA = a.time.split("-")[0];
+          var timeB = b.time.split("-")[0];
+          return timeA < timeB ? -1 : timeA > timeB ? 1 : 0;
+        });
+
+        showMessage("成功添加课程：" + courseName, "success");
+        clearForm();
+
+        if (date === formatDate(currentDate)) {
+          updateDisplay();
+        }
+
+        viewDateCourses();
+      }
+
+      function viewDateCourses() {
+        var date = document.getElementById("editDate").value;
+        if (!date) {
+          showMessage("请先选择日期！", "error");
+          return;
+        }
+
+        var courses = scheduleData[date] || [];
+        var courseList = document.getElementById("courseList");
+
+        if (courses.length === 0) {
+          courseList.innerHTML = '<p style="text-align: center; color: #666;">这一天还没有安排课程</p>';
+          return;
+        }
+
+        var html = '<h4 style="margin-bottom: 15px;">📅 ' + date + ' 的课程安排：</h4>';
+        for (var i = 0; i < courses.length; i++) {
+          var course = courses[i];
+          html += '<div class="course-list-item">' +
+            '<div class="course-info">' +
+            '<strong>' + course.time + '</strong> - ' + course.course +
+            '<br><small style="color: #666;">' + course.category + '</small>' +
+            '</div>' +
+            '<div class="course-actions">' +
+            '<button class="btn btn-danger btn-small" onclick="deleteCourse(\'' + date + '\', ' + i + ')">删除</button>' +
+            '</div>' +
+            '</div>';
+        }
+        courseList.innerHTML = html;
+      }
+
+      function deleteCourse(date, index) {
+        if (confirm("确定要删除这个课程吗？")) {
+          scheduleData[date].splice(index, 1);
+
+          if (scheduleData[date].length === 0) {
+            scheduleData[date] = [];
           }
 
-          function viewDateCourses() {
-            var date = document.getElementById("editDate").value;
-            if (!date) {
-              showMessage("请先选择日期！", "error");
-              return;
-            }
+          showMessage("课程已删除", "success");
+          viewDateCourses();
 
-            var courses = scheduleData[date] || [];
-            var courseList = document.getElementById("courseList");
-
-            if (courses.length === 0) {
-              courseList.innerHTML = '<p style="text-align: center; color: #666;">这一天还没有安排课程</p>';
-              return;
-            }
-
-            var html = '<h4 style="margin-bottom: 15px;">📅 ' + date + ' 的课程安排：</h4>';
-            for (var i = 0; i < courses.length; i++) {
-              var course = courses[i];
-              html += '<div class="course-list-item">' +
-                '<div class="course-info">' +
-                '<strong>' + course.time + '</strong> - ' + course.course +
-                '<br><small style="color: #666;">' + course.category + '</small>' +
-                '</div>' +
-                '<div class="course-actions">' +
-                '<button class="btn btn-danger btn-small" onclick="deleteCourse(\'' + date + '\', ' + i + ')">删除</button>' +
-                '</div>' +
-                '</div>';
-            }
-            courseList.innerHTML = html;
+          if (date === formatDate(currentDate)) {
+            updateDisplay();
           }
+        }
+      }
 
-          function deleteCourse(date, index) {
-            if (confirm("确定要删除这个课程吗？")) {
-              scheduleData[date].splice(index, 1);
+      function clearForm() {
+        document.getElementById("startTime").value = "";
+        document.getElementById("endTime").value = "";
+        document.getElementById("courseSelect").value = "";
+        document.getElementById("customCourseName").value = "";
+        document.getElementById("customCourseGroup").style.display = "none";
+        document.getElementById("courseCategory").value = "学科辅导";
+      }
 
-              if (scheduleData[date].length === 0) {
-                scheduleData[date] = [];
-              }
+      function clearAllCourses() {
+        var date = document.getElementById("editDate").value;
+        if (!date) {
+          showMessage("请先选择日期！", "error");
+          return;
+        }
 
-              showMessage("课程已删除", "success");
-              viewDateCourses();
+        if (confirm("确定要清空 " + date + " 的所有课程吗？")) {
+          scheduleData[date] = [];
+          showMessage("已清空当天所有课程", "success");
+          viewDateCourses();
 
-              if (date === formatDate(currentDate)) {
-                updateDisplay();
-              }
-            }
+          if (date === formatDate(currentDate)) {
+            updateDisplay();
           }
+        }
+      }
 
-          function clearForm() {
-            document.getElementById("startTime").value = "";
-            document.getElementById("endTime").value = "";
-            document.getElementById("courseSelect").value = "";
-            document.getElementById("customCourseName").value = "";
-            document.getElementById("customCourseGroup").style.display = "none";
-            document.getElementById("courseCategory").value = "学科辅导";
-          }
+      function showMessage(text, type) {
+        var successMsg = document.getElementById("successMessage");
+        var errorMsg = document.getElementById("errorMessage");
 
-          function clearAllCourses() {
-            var date = document.getElementById("editDate").value;
-            if (!date) {
-              showMessage("请先选择日期！", "error");
-              return;
-            }
+        successMsg.style.display = "none";
+        errorMsg.style.display = "none";
 
-            if (confirm("确定要清空 " + date + " 的所有课程吗？")) {
-              scheduleData[date] = [];
-              showMessage("已清空当天所有课程", "success");
-              viewDateCourses();
-
-              if (date === formatDate(currentDate)) {
-                updateDisplay();
-              }
-            }
-          }
-
-          function getCourseName() {
-            var courseSelect = document.getElementById("courseSelect");
-            var customCourseName = document.getElementById("customCourseName");
-
-            if (courseSelect.value === "custom") {
-              return customCourseName.value.trim ? customCourseName.value.trim() : customCourseName.value;
-            } else {
-              return courseSelect.value;
-            }
-          }
-
-          function getCourseTypeFromName(courseName) {
-            if (courseName.indexOf("英语SMK") !== -1) return "smk";
-            if (courseName.indexOf("岛主") !== -1) return "island";
-            if (courseName.indexOf("普老师") !== -1 || courseName.indexOf("刷题") !== -1) return "teacher";
-            if (courseName.indexOf("英语YH") !== -1) return "english";
-            if (courseName.indexOf("游泳") !== -1 || courseName.indexOf("跑步") !== -1 || 
-                courseName.indexOf("篮球") !== -1 || courseName.indexOf("运动") !== -1) return "exercise";
-            if (courseName.indexOf("作业") !== -1 || courseName.indexOf("背诵") !== -1 || 
-                courseName.indexOf("练习") !== -1) return "homework";
-            if (courseName.indexOf("画画") !== -1 || courseName.indexOf("音乐") !== -1 || 
-                courseName.indexOf("钢琴") !== -1) return "art";
-            return "other";
-          }
-
-          function showMessage(text, type) {
-            var successMsg = document.getElementById("successMessage");
-            var errorMsg = document.getElementById("errorMessage");
-
+        if (type === "success") {
+          successMsg.textContent = text;
+          successMsg.style.display = "block";
+          setTimeout(function() {
             successMsg.style.display = "none";
+          }, 3000);
+        } else {
+          errorMsg.textContent = text;
+          errorMsg.style.display = "block";
+          setTimeout(function() {
             errorMsg.style.display = "none";
+          }, 3000);
+        }
+      }
 
-            if (type === "success") {
-              successMsg.textContent = text;
-              successMsg.style.display = "block";
-              setTimeout(function() {
-                successMsg.style.display = "none";
-              }, 3000);
-            } else {
-              errorMsg.textContent = text;
-              errorMsg.style.display = "block";
-              setTimeout(function() {
-                errorMsg.style.display = "none";
-              }, 3000);
-            }
-          }
+      // 初始化
+      updateDisplay();
+
+      // 每分钟检查课程提醒
+      setInterval(function() {
+        // 课程提醒逻辑
+      }, 60000);
 
       // 初始化
       updateDisplay();
