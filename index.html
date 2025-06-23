@@ -669,6 +669,22 @@
             }
           };
           
+          // PC端鼠标长按事件
+          prevBtn.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            handleTouchStart(-1);
+          }, false);
+          
+          prevBtn.addEventListener('mouseup', function(e) {
+            e.preventDefault();
+            handleTouchEnd(-1);
+          }, false);
+          
+          prevBtn.addEventListener('mouseleave', function(e) {
+            e.preventDefault();
+            handleTouchEnd(-1);
+          }, false);
+          
           // 移动端触摸事件
           prevBtn.addEventListener('touchstart', function(e) {
             preventTouchDefault(e);
@@ -694,6 +710,22 @@
               changeDate(1);
             }
           };
+          
+          // PC端鼠标长按事件
+          nextBtn.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            handleTouchStart(1);
+          }, false);
+          
+          nextBtn.addEventListener('mouseup', function(e) {
+            e.preventDefault();
+            handleTouchEnd(1);
+          }, false);
+          
+          nextBtn.addEventListener('mouseleave', function(e) {
+            e.preventDefault();
+            handleTouchEnd(1);
+          }, false);
           
           // 移动端触摸事件
           nextBtn.addEventListener('touchstart', function(e) {
