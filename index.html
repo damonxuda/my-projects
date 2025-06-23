@@ -497,9 +497,21 @@
 
       <div class="main-content">
         <div class="calendar-nav">
-          <button class="nav-btn" onclick="changeDate(-1)">← 前一天</button>
+          <button class="nav-btn" 
+                  onmousedown="startLongPress(-1)" 
+                  onmouseup="stopLongPress()" 
+                  onmouseleave="stopLongPress()"
+                  ontouchstart="startLongPress(-1)" 
+                  ontouchend="stopLongPress()"
+                  onclick="changeDate(-1)">← 前一天</button>
           <div class="date-display" id="displayDate"></div>
-          <button class="nav-btn" onclick="changeDate(1)">后一天 →</button>
+          <button class="nav-btn" 
+                  onmousedown="startLongPress(1)" 
+                  onmouseup="stopLongPress()" 
+                  onmouseleave="stopLongPress()"
+                  ontouchstart="startLongPress(1)" 
+                  ontouchend="stopLongPress()"
+                  onclick="changeDate(1)">后一天 →</button>
         </div>
 
         <div class="today-schedule">
@@ -633,6 +645,35 @@
         e.preventDefault();
       });
 
+      // 长按切换日期功能
+      let longPressTimer = null;
+      let longPressInterval = null;
+      let isLongPressing = false;
+
+      function startLongPress(direction) {
+        isLongPressing = true;
+        longPressTimer = setTimeout(() => {
+          // 开始连续切换
+          longPressInterval = setInterval(() => {
+            if (isLongPressing) {
+              changeDate(direction);
+            }
+          }, 300); // 每300毫秒切换一次，速度适中
+        }, 500); // 长按500毫秒后开始连续切换
+      }
+
+      function stopLongPress() {
+        isLongPressing = false;
+        if (longPressTimer) {
+          clearTimeout(longPressTimer);
+          longPressTimer = null;
+        }
+        if (longPressInterval) {
+          clearInterval(longPressInterval);
+          longPressInterval = null;
+        }
+      }
+
       // 处理课程选择
       function handleCourseSelect() {
         const select = document.getElementById("courseSelect");
@@ -699,7 +740,7 @@
         return "other";
       }
 
-      // 修正后的课程安排数据 - 按纸质表格重新核对
+      // 修正后的课程安排数据 - 重新按纸质表格和底部统计核对
       const scheduleData = {
         // 第一周 6.30(周一) - 7.6(周日)
         "2025-06-30": [ // 周一
@@ -730,6 +771,12 @@
             time: "12:30-15:00",
             course: "岛主五竞",
             type: "island",
+            category: "学科辅导",
+          },
+          {
+            time: "19:00-21:00",
+            course: "普老师刷题A",
+            type: "teacher",
             category: "学科辅导",
           },
         ],
@@ -944,6 +991,267 @@
             time: "12:30-15:00",
             course: "英语SMK (1点-3点)",
             type: "smk",
+            category: "学科辅导",
+          },
+          {
+            time: "15:30-17:30",
+            course: "英语YH",
+            type: "english",
+            category: "学科辅导",
+          },
+        ],
+        "2025-08-02": [ // 周六
+          {
+            time: "12:30-15:00",
+            course: "岛主五竞",
+            type: "island",
+            category: "学科辅导",
+          },
+        ],
+        "2025-08-03": [], // 周日 - 空课
+
+        // 8月第一周 8.4(周一) - 8.10(周日) - 课程模式改变
+        "2025-08-04": [ // 周一
+          {
+            time: "9:00-11:00",
+            course: "普老师刷题A",
+            type: "teacher",
+            category: "学科辅导",
+          },
+          {
+            time: "13:00-15:00",
+            course: "英语SMK (1点-3点)",
+            type: "smk",
+            category: "学科辅导",
+          },
+          {
+            time: "15:30-17:30",
+            course: "英语YH",
+            type: "english",
+            category: "学科辅导",
+          },
+          {
+            time: "19:00-21:00",
+            course: "普老师刷题A",
+            type: "teacher",
+            category: "学科辅导",
+          },
+        ],
+        "2025-08-05": [ // 周二
+          {
+            time: "9:00-11:00",
+            course: "普老师刷题A",
+            type: "teacher",
+            category: "学科辅导",
+          },
+          {
+            time: "19:00-21:00",
+            course: "普老师刷题A",
+            type: "teacher",
+            category: "学科辅导",
+          },
+        ],
+        "2025-08-06": [ // 周三
+          {
+            time: "9:00-11:00",
+            course: "普老师刷题A",
+            type: "teacher",
+            category: "学科辅导",
+          },
+          {
+            time: "15:30-17:30",
+            course: "英语YH",
+            type: "english",
+            category: "学科辅导",
+          },
+        ],
+        "2025-08-07": [ // 周四
+          {
+            time: "9:00-11:00",
+            course: "普老师刷题A",
+            type: "teacher",
+            category: "学科辅导",
+          },
+          {
+            time: "19:00-21:00",
+            course: "普老师刷题A",
+            type: "teacher",
+            category: "学科辅导",
+          },
+        ],
+        "2025-08-08": [ // 周五
+          {
+            time: "9:00-11:00",
+            course: "普老师刷题A",
+            type: "teacher",
+            category: "学科辅导",
+          },
+          {
+            time: "13:00-15:00",
+            course: "英语SMK (1点-3点)",
+            type: "smk",
+            category: "学科辅导",
+          },
+          {
+            time: "15:30-17:30",
+            course: "英语YH",
+            type: "english",
+            category: "学科辅导",
+          },
+          {
+            time: "19:00-21:00",
+            course: "普老师刷题A",
+            type: "teacher",
+            category: "学科辅导",
+          },
+        ],
+        "2025-08-09": [ // 周六
+          {
+            time: "9:00-11:00",
+            course: "普老师刷题A",
+            type: "teacher",
+            category: "学科辅导",
+          },
+        ],
+        "2025-08-10": [ // 周日
+          {
+            time: "9:00-11:00",
+            course: "普老师刷题A",
+            type: "teacher",
+            category: "学科辅导",
+          },
+        ],
+
+        // 8月第二周 8.11(周一) - 8.17(周日)
+        "2025-08-11": [ // 周一
+          {
+            time: "13:00-15:00",
+            course: "英语SMK (1点-3点)",
+            type: "smk",
+            category: "学科辅导",
+          },
+          {
+            time: "15:30-17:30",
+            course: "英语YH",
+            type: "english",
+            category: "学科辅导",
+          },
+        ],
+        "2025-08-12": [ // 周二
+          {
+            time: "15:30-17:30",
+            course: "英语YH",
+            type: "english",
+            category: "学科辅导",
+          },
+        ],
+        "2025-08-13": [ // 周三
+          {
+            time: "15:30-17:30",
+            course: "英语YH",
+            type: "english",
+            category: "学科辅导",
+          },
+        ],
+        "2025-08-14": [ // 周四
+          {
+            time: "15:30-17:30",
+            course: "英语YH",
+            type: "english",
+            category: "学科辅导",
+          },
+        ],
+        "2025-08-15": [ // 周五
+          {
+            time: "13:00-15:00",
+            course: "英语SMK (1点-3点)",
+            type: "smk",
+            category: "学科辅导",
+          },
+          {
+            time: "15:30-17:30",
+            course: "英语YH",
+            type: "english",
+            category: "学科辅导",
+          },
+        ],
+        "2025-08-16": [], // 周六 - 空课
+        "2025-08-17": [], // 周日 - 空课
+
+        // 8月第三周 8.18(周一) - 8.24(周日)
+        "2025-08-18": [ // 周一
+          {
+            time: "15:30-17:30",
+            course: "英语YH",
+            type: "english",
+            category: "学科辅导",
+          },
+        ],
+        "2025-08-19": [ // 周二
+          {
+            time: "15:30-17:30",
+            course: "英语YH",
+            type: "english",
+            category: "学科辅导",
+          },
+        ],
+        "2025-08-20": [ // 周三
+          {
+            time: "15:30-17:30",
+            course: "英语YH",
+            type: "english",
+            category: "学科辅导",
+          },
+        ],
+        "2025-08-21": [ // 周四
+          {
+            time: "15:30-17:30",
+            course: "英语YH",
+            type: "english",
+            category: "学科辅导",
+          },
+        ],
+        "2025-08-22": [], // 周五 - 空课
+        "2025-08-23": [ // 周六
+          {
+            time: "19:00-21:00",
+            course: "普老师刷题A",
+            type: "teacher",
+            category: "学科辅导",
+          },
+        ],
+        "2025-08-24": [ // 周日
+          {
+            time: "19:00-21:00",
+            course: "定位考",
+            type: "teacher",
+            category: "学科辅导",
+          },
+        ],
+
+        // 8月第四周 8.25(周一) - 8.31(周日)
+        "2025-08-25": [], // 周一 - 空课
+        "2025-08-26": [ // 周二
+          {
+            time: "15:30-17:30",
+            course: "英语YH",
+            type: "english",
+            category: "学科辅导",
+          },
+        ],
+        "2025-08-27": [ // 周三
+          {
+            time: "15:30-17:30",
+            course: "英语YH",
+            type: "english",
+            category: "学科辅导",
+          },
+        ],
+        "2025-08-28": [], // 周四 - 空课
+        "2025-08-29": [], // 周五 - 空课
+        "2025-08-30": [], // 周六 - 空课
+        "2025-08-31": [], // 周日 - 空课
+      };smk",
             category: "学科辅导",
           },
         ],
@@ -1582,14 +1890,15 @@
       // 每分钟检查一次即将开始的课程
       setInterval(checkUpcomingCourses, 60000);
 
-      // 每天自动刷新到当天
-      setInterval(() => {
-        const today = new Date();
-        if (formatDate(currentDate) !== formatDate(today)) {
-          currentDate = today;
-          updateDisplay();
-        }
-      }, 60000);
+      // 移除自动跳转到今天的定时器 - 解决自动回到今天的问题
+      // 原来的代码会自动跳转，现在注释掉
+      // setInterval(() => {
+      //   const today = new Date();
+      //   if (formatDate(currentDate) !== formatDate(today)) {
+      //     currentDate = today;
+      //     updateDisplay();
+      //   }
+      // }, 60000);
 
       // 键盘快捷键
       document.addEventListener("keydown", (e) => {
