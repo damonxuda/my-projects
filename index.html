@@ -455,9 +455,7 @@
         "2025-08-17": [], // 周日空课
 
         // 8月第三周 8.18(周一) - 8.24(周日)
-        "2025-08-18": [
-          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
-        ],
+        "2025-08-18": [], // 周一空课
         "2025-08-19": [
           { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
         ],
@@ -606,7 +604,49 @@
         updateDisplay();
       }
 
-      // 改进的触摸事件处理，针对微信环境优化
+      // 改进的触摸和鼠标事件处理
+      var mouseStartTime = 0;
+      var mouseEndTime = 0;
+      var isMouseLongPress = false;
+
+      function handleMouseStart(direction) {
+        mouseStartTime = new Date().getTime();
+        isMouseLongPress = false;
+        
+        // 设置长按检测
+        longPressTimer = setTimeout(function() {
+          isMouseLongPress = true;
+          // 长按开始，立即执行一次
+          changeDate(direction);
+          // 然后开始连续执行
+          longPressInterval = setInterval(function() {
+            changeDate(direction);
+          }, 200);
+        }, 600); // 600ms后开始长按
+      }
+
+      function handleMouseEnd(direction) {
+        mouseEndTime = new Date().getTime();
+        var mouseDuration = mouseEndTime - mouseStartTime;
+        
+        // 清除定时器
+        if (longPressTimer) {
+          clearTimeout(longPressTimer);
+          longPressTimer = null;
+        }
+        if (longPressInterval) {
+          clearInterval(longPressInterval);
+          longPressInterval = null;
+        }
+        
+        // 如果是短按（小于600ms且没有触发长按）
+        if (mouseDuration < 600 && !isMouseLongPress) {
+          changeDate(direction);
+        }
+        
+        isMouseLongPress = false;
+      }
+
       function handleTouchStart(direction) {
         touchStartTime = new Date().getTime();
         isLongPress = false;
@@ -657,28 +697,20 @@
         var nextBtn = document.getElementById('nextBtn');
 
         if (prevBtn) {
-          // PC端点击事件
-          prevBtn.onclick = function(e) {
-            e.preventDefault();
-            if (!isLongPress) {
-              changeDate(-1);
-            }
-          };
-          
-          // PC端鼠标长按事件
+          // PC端鼠标事件（替代原来的click）
           prevBtn.addEventListener('mousedown', function(e) {
             e.preventDefault();
-            handleTouchStart(-1);
+            handleMouseStart(-1);
           }, false);
           
           prevBtn.addEventListener('mouseup', function(e) {
             e.preventDefault();
-            handleTouchEnd(-1);
+            handleMouseEnd(-1);
           }, false);
           
           prevBtn.addEventListener('mouseleave', function(e) {
             e.preventDefault();
-            handleTouchEnd(-1);
+            handleMouseEnd(-1);
           }, false);
           
           // 移动端触摸事件
@@ -699,28 +731,20 @@
         }
 
         if (nextBtn) {
-          // PC端点击事件
-          nextBtn.onclick = function(e) {
-            e.preventDefault();
-            if (!isLongPress) {
-              changeDate(1);
-            }
-          };
-          
-          // PC端鼠标长按事件
+          // PC端鼠标事件（替代原来的click）
           nextBtn.addEventListener('mousedown', function(e) {
             e.preventDefault();
-            handleTouchStart(1);
+            handleMouseStart(1);
           }, false);
           
           nextBtn.addEventListener('mouseup', function(e) {
             e.preventDefault();
-            handleTouchEnd(1);
+            handleMouseEnd(1);
           }, false);
           
           nextBtn.addEventListener('mouseleave', function(e) {
             e.preventDefault();
-            handleTouchEnd(1);
+            handleMouseEnd(1);
           }, false);
           
           // 移动端触摸事件
