@@ -301,8 +301,9 @@
     </div>
 
     <script>
-      // 完整课程数据
+      // 完整课程数据 - 严格按纸质表格核对
       var scheduleData = {
+        // 7月第一周 6.30(周一) - 7.6(周日)
         "2025-06-30": [
           { time: "12:30-15:00", course: "英语SMK (1点-3点)", type: "smk", category: "学科辅导" },
           { time: "19:00-21:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
@@ -310,7 +311,7 @@
         "2025-07-01": [
           { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
-        "2025-07-02": [],
+        "2025-07-02": [], // 周三空课
         "2025-07-03": [
           { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
@@ -320,7 +321,9 @@
         "2025-07-05": [
           { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
-        "2025-07-06": [],
+        "2025-07-06": [], // 周日空课
+
+        // 7月第二周 7.7(周一) - 7.13(周日)
         "2025-07-07": [
           { time: "12:30-15:00", course: "英语SMK (1点-3点)", type: "smk", category: "学科辅导" },
           { time: "19:00-21:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
@@ -328,7 +331,7 @@
         "2025-07-08": [
           { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
-        "2025-07-09": [],
+        "2025-07-09": [], // 周三空课
         "2025-07-10": [
           { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
@@ -338,7 +341,9 @@
         "2025-07-12": [
           { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
-        "2025-07-13": [],
+        "2025-07-13": [], // 周日空课
+
+        // 7月第三周 7.14(周一) - 7.20(周日)
         "2025-07-14": [
           { time: "12:30-15:00", course: "英语SMK (1点-3点)", type: "smk", category: "学科辅导" },
           { time: "19:00-21:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
@@ -346,7 +351,7 @@
         "2025-07-15": [
           { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
-        "2025-07-16": [],
+        "2025-07-16": [], // 周三空课
         "2025-07-17": [
           { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
@@ -356,7 +361,9 @@
         "2025-07-19": [
           { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
-        "2025-07-20": [],
+        "2025-07-20": [], // 周日空课
+
+        // 7月第四周 7.21(周一) - 7.27(周日)
         "2025-07-21": [
           { time: "12:30-15:00", course: "英语SMK (1点-3点)", type: "smk", category: "学科辅导" },
           { time: "19:00-21:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
@@ -364,7 +371,7 @@
         "2025-07-22": [
           { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
-        "2025-07-23": [],
+        "2025-07-23": [], // 周三空课
         "2025-07-24": [
           { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
@@ -374,7 +381,9 @@
         "2025-07-26": [
           { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
-        "2025-07-27": [],
+        "2025-07-27": [], // 周日空课
+
+        // 7月第五周 7.28(周一) - 8.3(周日)
         "2025-07-28": [
           { time: "12:30-15:00", course: "英语SMK (1点-3点)", type: "smk", category: "学科辅导" },
           { time: "19:00-21:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
@@ -382,7 +391,7 @@
         "2025-07-29": [
           { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
-        "2025-07-30": [],
+        "2025-07-30": [], // 周三空课
         "2025-07-31": [
           { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" },
           { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
@@ -394,13 +403,94 @@
         "2025-08-02": [
           { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
-        "2025-08-03": [],
+        "2025-08-03": [], // 周日空课
+
+        // 8月第一周 8.4(周一) - 8.10(周日) - 课程模式改变
         "2025-08-04": [
           { time: "9:00-11:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" },
           { time: "13:00-15:00", course: "英语SMK (1点-3点)", type: "smk", category: "学科辅导" },
           { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" },
           { time: "19:00-21:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
-        ]
+        ],
+        "2025-08-05": [
+          { time: "9:00-11:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" },
+          { time: "19:00-21:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
+        ],
+        "2025-08-06": [
+          { time: "9:00-11:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" },
+          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
+        ],
+        "2025-08-07": [
+          { time: "9:00-11:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" },
+          { time: "19:00-21:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
+        ],
+        "2025-08-08": [
+          { time: "9:00-11:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" },
+          { time: "13:00-15:00", course: "英语SMK (1点-3点)", type: "smk", category: "学科辅导" },
+          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" },
+          { time: "19:00-21:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
+        ],
+        "2025-08-09": [
+          { time: "9:00-11:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
+        ],
+        "2025-08-10": [
+          { time: "9:00-11:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
+        ],
+
+        // 8月第二周 8.11(周一) - 8.17(周日)
+        "2025-08-11": [
+          { time: "13:00-15:00", course: "英语SMK (1点-3点)", type: "smk", category: "学科辅导" },
+          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
+        ],
+        "2025-08-12": [
+          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
+        ],
+        "2025-08-13": [
+          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
+        ],
+        "2025-08-14": [
+          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
+        ],
+        "2025-08-15": [
+          { time: "13:00-15:00", course: "英语SMK (1点-3点)", type: "smk", category: "学科辅导" },
+          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
+        ],
+        "2025-08-16": [], // 周六空课
+        "2025-08-17": [], // 周日空课
+
+        // 8月第三周 8.18(周一) - 8.24(周日)
+        "2025-08-18": [
+          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
+        ],
+        "2025-08-19": [
+          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
+        ],
+        "2025-08-20": [
+          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
+        ],
+        "2025-08-21": [
+          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
+        ],
+        "2025-08-22": [], // 周五空课
+        "2025-08-23": [
+          { time: "19:00-21:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
+        ],
+        "2025-08-24": [
+          { time: "19:00-21:00", course: "定位考", type: "teacher", category: "学科辅导" }
+        ],
+
+        // 8月第四周 8.25(周一) - 8.31(周日)
+        "2025-08-25": [], // 周一空课
+        "2025-08-26": [
+          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
+        ],
+        "2025-08-27": [
+          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
+        ],
+        "2025-08-28": [], // 周四空课
+        "2025-08-29": [], // 周五空课
+        "2025-08-30": [], // 周六空课
+        "2025-08-31": []  // 周日空课
       };
 
       var currentDate = new Date();
