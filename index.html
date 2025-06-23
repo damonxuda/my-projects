@@ -498,7 +498,9 @@
       // 长按相关变量
       var longPressTimer = null;
       var longPressInterval = null;
-      var isLongPressing = false;
+      var touchStartTime = 0;
+      var touchEndTime = 0;
+      var isLongPress = false;
 
       function formatDate(date) {
         var year = date.getFullYear();
@@ -608,20 +610,28 @@
         updateDisplay();
       }
 
-      // 长按功能
-      function startLongPress(direction) {
-        isLongPressing = true;
+      // 改进的触摸事件处理，针对微信环境优化
+      function handleTouchStart(direction) {
+        touchStartTime = new Date().getTime();
+        isLongPress = false;
+        
+        // 设置长按检测
         longPressTimer = setTimeout(function() {
+          isLongPress = true;
+          // 长按开始，立即执行一次
+          changeDate(direction);
+          // 然后开始连续执行
           longPressInterval = setInterval(function() {
-            if (isLongPressing) {
-              changeDate(direction);
-            }
-          }, 300);
-        }, 500);
+            changeDate(direction);
+          }, 200);
+        }, 600); // 600ms后开始长按
       }
 
-      function stopLongPress() {
-        isLongPressing = false;
+      function handleTouchEnd(direction) {
+        touchEndTime = new Date().getTime();
+        var touchDuration = touchEndTime - touchStartTime;
+        
+        // 清除定时器
         if (longPressTimer) {
           clearTimeout(longPressTimer);
           longPressTimer = null;
@@ -630,12 +640,19 @@
           clearInterval(longPressInterval);
           longPressInterval = null;
         }
-      }
-
-      function handleClick(direction) {
-        if (!isLongPressing) {
+        
+        // 如果是短按（小于600ms且没有触发长按）
+        if (touchDuration < 600 && !isLongPress) {
           changeDate(direction);
         }
+        
+        isLongPress = false;
+      }
+
+      // 阻止触摸时的默认行为
+      function preventTouchDefault(e) {
+        e.preventDefault();
+        e.stopPropagation();
       }
 
       // 事件绑定
@@ -644,21 +661,55 @@
         var nextBtn = document.getElementById('nextBtn');
 
         if (prevBtn) {
-          prevBtn.onclick = function() { handleClick(-1); };
-          prevBtn.onmousedown = function() { startLongPress(-1); };
-          prevBtn.onmouseup = stopLongPress;
-          prevBtn.onmouseleave = stopLongPress;
-          prevBtn.ontouchstart = function(e) { e.preventDefault(); startLongPress(-1); };
-          prevBtn.ontouchend = stopLongPress;
+          // PC端点击事件
+          prevBtn.onclick = function(e) {
+            e.preventDefault();
+            if (!isLongPress) {
+              changeDate(-1);
+            }
+          };
+          
+          // 移动端触摸事件
+          prevBtn.addEventListener('touchstart', function(e) {
+            preventTouchDefault(e);
+            handleTouchStart(-1);
+          }, false);
+          
+          prevBtn.addEventListener('touchend', function(e) {
+            preventTouchDefault(e);
+            handleTouchEnd(-1);
+          }, false);
+          
+          prevBtn.addEventListener('touchcancel', function(e) {
+            preventTouchDefault(e);
+            handleTouchEnd(-1);
+          }, false);
         }
 
         if (nextBtn) {
-          nextBtn.onclick = function() { handleClick(1); };
-          nextBtn.onmousedown = function() { startLongPress(1); };
-          nextBtn.onmouseup = stopLongPress;
-          nextBtn.onmouseleave = stopLongPress;
-          nextBtn.ontouchstart = function(e) { e.preventDefault(); startLongPress(1); };
-          nextBtn.ontouchend = stopLongPress;
+          // PC端点击事件
+          nextBtn.onclick = function(e) {
+            e.preventDefault();
+            if (!isLongPress) {
+              changeDate(1);
+            }
+          };
+          
+          // 移动端触摸事件
+          nextBtn.addEventListener('touchstart', function(e) {
+            preventTouchDefault(e);
+            handleTouchStart(1);
+          }, false);
+          
+          nextBtn.addEventListener('touchend', function(e) {
+            preventTouchDefault(e);
+            handleTouchEnd(1);
+          }, false);
+          
+          nextBtn.addEventListener('touchcancel', function(e) {
+            preventTouchDefault(e);
+            handleTouchEnd(1);
+          }, false);
         }
       }
 
