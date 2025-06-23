@@ -57,9 +57,6 @@
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         min-height: 100vh;
         padding: 20px;
-        /* 防止页面缩放 */
-        -webkit-text-size-adjust: 100%;
-        -ms-text-size-adjust: 100%;
         touch-action: manipulation;
       }
 
@@ -219,29 +216,6 @@
         color: #333;
       }
 
-      .notification {
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: linear-gradient(135deg, #ff6b6b, #ffa726);
-        color: white;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        transform: translateX(400px);
-        transition: transform 0.5s ease;
-        z-index: 1000;
-        max-width: 300px;
-      }
-
-      .notification.show {
-        transform: translateX(0);
-      }
-
-      .notification h3 {
-        margin-bottom: 10px;
-      }
-
       .stats {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -268,179 +242,6 @@
         margin-top: 5px;
       }
 
-      .category-stats {
-        background: #f8f9ff;
-        border-radius: 12px;
-        padding: 25px;
-        margin-top: 30px;
-        border-left: 5px solid #4caf50;
-      }
-
-      .category-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 15px;
-      }
-
-      .category-item {
-        background: white;
-        padding: 15px;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      .category-name {
-        font-weight: bold;
-        color: #333;
-      }
-
-      .category-hours {
-        color: #667eea;
-        font-size: 1.1rem;
-        font-weight: bold;
-      }
-
-      .toggle-stats {
-        background: linear-gradient(135deg, #4caf50, #45a049);
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 0.9rem;
-        margin-top: 15px;
-        transition: all 0.3s ease;
-      }
-
-      .toggle-stats:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
-      }
-
-      .edit-panel {
-        background: #f0f8ff;
-        border-radius: 12px;
-        padding: 25px;
-        margin-top: 30px;
-        border-left: 5px solid #ff6b6b;
-        display: none;
-      }
-
-      .edit-form {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 15px;
-        margin-bottom: 20px;
-      }
-
-      .form-group {
-        display: flex;
-        flex-direction: column;
-      }
-
-      .form-group label {
-        margin-bottom: 5px;
-        color: #333;
-        font-weight: bold;
-      }
-
-      .form-group input,
-      .form-group select {
-        padding: 10px;
-        border: 2px solid #e2e8f0;
-        border-radius: 6px;
-        font-size: 1rem;
-      }
-
-      .form-group input:focus,
-      .form-group select:focus {
-        outline: none;
-        border-color: #667eea;
-      }
-
-      .form-buttons {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-      }
-
-      .btn {
-        padding: 10px 20px;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 1rem;
-        transition: all 0.3s ease;
-      }
-
-      .btn-primary {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
-      }
-
-      .btn-success {
-        background: linear-gradient(135deg, #4caf50, #45a049);
-        color: white;
-      }
-
-      .btn-danger {
-        background: linear-gradient(135deg, #f44336, #d32f2f);
-        color: white;
-      }
-
-      .btn-secondary {
-        background: linear-gradient(135deg, #6c757d, #5a6268);
-        color: white;
-      }
-
-      .btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-      }
-
-      .course-list {
-        background: white;
-        border-radius: 8px;
-        padding: 15px;
-        margin-top: 15px;
-        max-height: 300px;
-        overflow-y: auto;
-      }
-
-      .course-list-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px;
-        border-bottom: 1px solid #eee;
-        transition: background 0.2s ease;
-      }
-
-      .course-list-item:hover {
-        background: #f5f5f5;
-      }
-
-      .course-list-item:last-child {
-        border-bottom: none;
-      }
-
-      .course-info {
-        flex: 1;
-      }
-
-      .course-actions {
-        display: flex;
-        gap: 5px;
-      }
-
-      .btn-small {
-        padding: 5px 10px;
-        font-size: 0.8rem;
-      }
-
       .edit-toggle {
         background: linear-gradient(135deg, #ff6b6b, #ffa726);
         color: white;
@@ -457,24 +258,6 @@
         transform: translateY(-2px);
         box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
       }
-
-      .success-message {
-        background: #d4edda;
-        color: #155724;
-        padding: 10px;
-        border-radius: 6px;
-        margin-top: 10px;
-        display: none;
-      }
-
-      .error-message {
-        background: #f8d7da;
-        color: #721c24;
-        padding: 10px;
-        border-radius: 6px;
-        margin-top: 10px;
-        display: none;
-      }
     </style>
   </head>
   <body>
@@ -486,9 +269,9 @@
 
       <div class="main-content">
         <div class="calendar-nav">
-          <button class="nav-btn" onclick="handlePrevDay()" onmousedown="startLongPress(-1)" onmouseup="stopLongPress()" onmouseleave="stopLongPress()" ontouchstart="startLongPress(-1)" ontouchend="stopLongPress()">← 前一天</button>
+          <button class="nav-btn" onclick="changeDate(-1)">← 前一天</button>
           <div class="date-display" id="displayDate"></div>
-          <button class="nav-btn" onclick="handleNextDay()" onmousedown="startLongPress(1)" onmouseup="stopLongPress()" onmouseleave="stopLongPress()" ontouchstart="startLongPress(1)" ontouchend="stopLongPress()">后一天 →</button>
+          <button class="nav-btn" onclick="changeDate(1)">后一天 →</button>
         </div>
 
         <div class="today-schedule">
@@ -511,718 +294,127 @@
           </div>
         </div>
 
-        <!-- 分类统计区域 -->
-        <div class="category-stats" id="categoryStats" style="display: none">
-          <h3 style="margin-bottom: 20px; color: #333">📊 今日分类统计</h3>
-          <div class="category-grid" id="categoryGrid"></div>
-        </div>
-
-        <!-- 编辑课程按钮 -->
-        <button class="edit-toggle" onclick="toggleEditPanel()">
+        <button class="edit-toggle" onclick="alert('编辑功能')">
           ✏️ 编辑课程安排
         </button>
-
-        <!-- 编辑面板 -->
-        <div class="edit-panel" id="editPanel">
-          <h3 style="margin-bottom: 20px; color: #333">📝 编辑课程安排</h3>
-
-          <div class="edit-form">
-            <div class="form-group">
-              <label for="editDate">日期</label>
-              <input
-                type="date"
-                id="editDate"
-                min="2025-06-30"
-                max="2025-12-31"
-              />
-            </div>
-            <div class="form-group">
-              <label for="startTime">开始时间</label>
-              <input type="time" id="startTime" />
-            </div>
-            <div class="form-group">
-              <label for="endTime">结束时间</label>
-              <input type="time" id="endTime" />
-            </div>
-            <div class="form-group">
-              <label for="courseSelect">选择课程</label>
-              <select id="courseSelect" onchange="handleCourseSelect()">
-                <option value="">-- 选择现有课程 --</option>
-                <option value="英语SMK (1点-3点)">英语SMK (1点-3点)</option>
-                <option value="岛主五竞">岛主五竞</option>
-                <option value="普老师刷题A">普老师刷题A</option>
-                <option value="英语YH">英语YH</option>
-                <option value="custom">-- 输入自定义课程 --</option>
-              </select>
-            </div>
-            <div
-              class="form-group"
-              id="customCourseGroup"
-              style="display: none"
-            >
-              <label for="customCourseName">自定义课程名称</label>
-              <input
-                type="text"
-                id="customCourseName"
-                placeholder="如：游泳、画画、作业等"
-              />
-            </div>
-            <div class="form-group">
-              <label for="courseCategory">分类</label>
-              <select id="courseCategory">
-                <option value="学科辅导">学科辅导</option>
-                <option value="体育锻炼">体育锻炼</option>
-                <option value="作业完成">作业完成</option>
-                <option value="兴趣爱好">兴趣爱好</option>
-                <option value="生活技能">生活技能</option>
-                <option value="社交活动">社交活动</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-buttons">
-            <button class="btn btn-success" onclick="addCourse()">
-              ➕ 添加课程
-            </button>
-            <button class="btn btn-primary" onclick="viewDateCourses()">
-              👀 查看当天课程
-            </button>
-            <button class="btn btn-secondary" onclick="clearForm()">
-              🔄 清空表单
-            </button>
-            <button class="btn btn-danger" onclick="clearAllCourses()">
-              🗑️ 清空当天所有课程
-            </button>
-          </div>
-
-          <div class="success-message" id="successMessage"></div>
-          <div class="error-message" id="errorMessage"></div>
-
-          <div class="course-list" id="courseList"></div>
-        </div>
       </div>
     </div>
 
-    <div class="notification" id="notification">
-      <h3>📢 课程提醒</h3>
-      <p id="notificationText"></p>
-    </div>
-
     <script>
-      // 长按相关变量
-      var longPressTimer = null;
-      var longPressInterval = null;
-      var isLongPressing = false;
-
-      // 完整修正的课程安排数据 - 严格按纸质表格核对
+      // 完整课程数据
       var scheduleData = {
-        // 第一周 6.30(周一) - 7.6(周日)
         "2025-06-30": [
-          {
-            time: "12:30-15:00",
-            course: "英语SMK (1点-3点)",
-            type: "smk",
-            category: "学科辅导",
-          },
-          {
-            time: "19:00-21:00",
-            course: "普老师刷题A",
-            type: "teacher",
-            category: "学科辅导",
-          },
+          { time: "12:30-15:00", course: "英语SMK (1点-3点)", type: "smk", category: "学科辅导" },
+          { time: "19:00-21:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
         ],
         "2025-07-01": [
-          {
-            time: "12:30-15:00",
-            course: "岛主五竞",
-            type: "island",
-            category: "学科辅导",
-          },
+          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
-        "2025-07-02": [], // 周三空课
+        "2025-07-02": [],
         "2025-07-03": [
-          {
-            time: "12:30-15:00",
-            course: "岛主五竞",
-            type: "island",
-            category: "学科辅导",
-          },
+          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
         "2025-07-04": [
-          {
-            time: "12:30-15:00",
-            course: "英语SMK (1点-3点)",
-            type: "smk",
-            category: "学科辅导",
-          },
+          { time: "12:30-15:00", course: "英语SMK (1点-3点)", type: "smk", category: "学科辅导" }
         ],
         "2025-07-05": [
-          {
-            time: "12:30-15:00",
-            course: "岛主五竞",
-            type: "island",
-            category: "学科辅导",
-          },
+          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
-        "2025-07-06": [], // 周日空课
-
-        // 第二周 7.7(周一) - 7.13(周日)
+        "2025-07-06": [],
         "2025-07-07": [
-          {
-            time: "12:30-15:00",
-            course: "英语SMK (1点-3点)",
-            type: "smk",
-            category: "学科辅导",
-          },
-          {
-            time: "19:00-21:00",
-            course: "普老师刷题A",
-            type: "teacher",
-            category: "学科辅导",
-          },
+          { time: "12:30-15:00", course: "英语SMK (1点-3点)", type: "smk", category: "学科辅导" },
+          { time: "19:00-21:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
         ],
         "2025-07-08": [
-          {
-            time: "12:30-15:00",
-            course: "岛主五竞",
-            type: "island",
-            category: "学科辅导",
-          },
+          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
-        "2025-07-09": [], // 周三空课
+        "2025-07-09": [],
         "2025-07-10": [
-          {
-            time: "12:30-15:00",
-            course: "岛主五竞",
-            type: "island",
-            category: "学科辅导",
-          },
+          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
         "2025-07-11": [
-          {
-            time: "12:30-15:00",
-            course: "英语SMK (1点-3点)",
-            type: "smk",
-            category: "学科辅导",
-          },
+          { time: "12:30-15:00", course: "英语SMK (1点-3点)", type: "smk", category: "学科辅导" }
         ],
         "2025-07-12": [
-          {
-            time: "12:30-15:00",
-            course: "岛主五竞",
-            type: "island",
-            category: "学科辅导",
-          },
+          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
-        "2025-07-13": [], // 周日空课
-
-        // 第三周 7.14(周一) - 7.20(周日)
+        "2025-07-13": [],
         "2025-07-14": [
-          {
-            time: "12:30-15:00",
-            course: "英语SMK (1点-3点)",
-            type: "smk",
-            category: "学科辅导",
-          },
-          {
-            time: "19:00-21:00",
-            course: "普老师刷题A",
-            type: "teacher",
-            category: "学科辅导",
-          },
+          { time: "12:30-15:00", course: "英语SMK (1点-3点)", type: "smk", category: "学科辅导" },
+          { time: "19:00-21:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
         ],
         "2025-07-15": [
-          {
-            time: "12:30-15:00",
-            course: "岛主五竞",
-            type: "island",
-            category: "学科辅导",
-          },
+          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
-        "2025-07-16": [], // 周三空课
+        "2025-07-16": [],
         "2025-07-17": [
-          {
-            time: "12:30-15:00",
-            course: "岛主五竞",
-            type: "island",
-            category: "学科辅导",
-          },
+          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
         "2025-07-18": [
-          {
-            time: "12:30-15:00",
-            course: "英语SMK (1点-3点)",
-            type: "smk",
-            category: "学科辅导",
-          },
+          { time: "12:30-15:00", course: "英语SMK (1点-3点)", type: "smk", category: "学科辅导" }
         ],
         "2025-07-19": [
-          {
-            time: "12:30-15:00",
-            course: "岛主五竞",
-            type: "island",
-            category: "学科辅导",
-          },
+          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
-        "2025-07-20": [], // 周日空课
-
-        // 第四周 7.21(周一) - 7.27(周日)
+        "2025-07-20": [],
         "2025-07-21": [
-          {
-            time: "12:30-15:00",
-            course: "英语SMK (1点-3点)",
-            type: "smk",
-            category: "学科辅导",
-          },
-          {
-            time: "19:00-21:00",
-            course: "普老师刷题A",
-            type: "teacher",
-            category: "学科辅导",
-          },
+          { time: "12:30-15:00", course: "英语SMK (1点-3点)", type: "smk", category: "学科辅导" },
+          { time: "19:00-21:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
         ],
         "2025-07-22": [
-          {
-            time: "12:30-15:00",
-            course: "岛主五竞",
-            type: "island",
-            category: "学科辅导",
-          },
+          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
-        "2025-07-23": [], // 周三空课
+        "2025-07-23": [],
         "2025-07-24": [
-          {
-            time: "12:30-15:00",
-            course: "岛主五竞",
-            type: "island",
-            category: "学科辅导",
-          },
+          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
         "2025-07-25": [
-          {
-            time: "12:30-15:00",
-            course: "英语SMK (1点-3点)",
-            type: "smk",
-            category: "学科辅导",
-          },
+          { time: "12:30-15:00", course: "英语SMK (1点-3点)", type: "smk", category: "学科辅导" }
         ],
         "2025-07-26": [
-          {
-            time: "12:30-15:00",
-            course: "岛主五竞",
-            type: "island",
-            category: "学科辅导",
-          },
+          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
-        "2025-07-27": [], // 周日空课
-
-        // 第五周 7.28(周一) - 8.3(周日)
+        "2025-07-27": [],
         "2025-07-28": [
-          {
-            time: "12:30-15:00",
-            course: "英语SMK (1点-3点)",
-            type: "smk",
-            category: "学科辅导",
-          },
-          {
-            time: "19:00-21:00",
-            course: "普老师刷题A",
-            type: "teacher",
-            category: "学科辅导",
-          },
+          { time: "12:30-15:00", course: "英语SMK (1点-3点)", type: "smk", category: "学科辅导" },
+          { time: "19:00-21:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
         ],
         "2025-07-29": [
-          {
-            time: "12:30-15:00",
-            course: "岛主五竞",
-            type: "island",
-            category: "学科辅导",
-          },
+          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
-        "2025-07-30": [], // 周三空课
+        "2025-07-30": [],
         "2025-07-31": [
-          {
-            time: "12:30-15:00",
-            course: "岛主五竞",
-            type: "island",
-            category: "学科辅导",
-          },
-          {
-            time: "15:30-17:30",
-            course: "英语YH",
-            type: "english",
-            category: "学科辅导",
-          },
+          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" },
+          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
         ],
         "2025-08-01": [
-          {
-            time: "12:30-15:00",
-            course: "英语SMK (1点-3点)",
-            type: "smk",
-            category: "学科辅导",
-          },
-          {
-            time: "15:30-17:30",
-            course: "英语YH",
-            type: "english",
-            category: "学科辅导",
-          },
+          { time: "12:30-15:00", course: "英语SMK (1点-3点)", type: "smk", category: "学科辅导" },
+          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
         ],
         "2025-08-02": [
-          {
-            time: "12:30-15:00",
-            course: "岛主五竞",
-            type: "island",
-            category: "学科辅导",
-          },
+          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
         ],
-        "2025-08-03": [], // 周日空课
-
-        // 8月第一周 8.4(周一) - 8.10(周日) - 课程模式改变
+        "2025-08-03": [],
         "2025-08-04": [
-          {
-            time: "9:00-11:00",
-            course: "普老师刷题A",
-            type: "teacher",
-            category: "学科辅导",
-          },
-          {
-            time: "13:00-15:00",
-            course: "英语SMK (1点-3点)",
-            type: "smk",
-            category: "学科辅导",
-          },
-          {
-            time: "15:30-17:30",
-            course: "英语YH",
-            type: "english",
-            category: "学科辅导",
-          },
-          {
-            time: "19:00-21:00",
-            course: "普老师刷题A",
-            type: "teacher",
-            category: "学科辅导",
-          },
-        ],
-        "2025-08-05": [
-          {
-            time: "9:00-11:00",
-            course: "普老师刷题A",
-            type: "teacher",
-            category: "学科辅导",
-          },
-          {
-            time: "19:00-21:00",
-            course: "普老师刷题A",
-            type: "teacher",
-            category: "学科辅导",
-          },
-        ],
-        "2025-08-06": [
-          {
-            time: "9:00-11:00",
-            course: "普老师刷题A",
-            type: "teacher",
-            category: "学科辅导",
-          },
-          {
-            time: "15:30-17:30",
-            course: "英语YH",
-            type: "english",
-            category: "学科辅导",
-          },
-        ],
-        "2025-08-07": [
-          {
-            time: "9:00-11:00",
-            course: "普老师刷题A",
-            type: "teacher",
-            category: "学科辅导",
-          },
-          {
-            time: "19:00-21:00",
-            course: "普老师刷题A",
-            type: "teacher",
-            category: "学科辅导",
-          },
-        ],
-        "2025-08-08": [
-          {
-            time: "9:00-11:00",
-            course: "普老师刷题A",
-            type: "teacher",
-            category: "学科辅导",
-          },
-          {
-            time: "13:00-15:00",
-            course: "英语SMK (1点-3点)",
-            type: "smk",
-            category: "学科辅导",
-          },
-          {
-            time: "15:30-17:30",
-            course: "英语YH",
-            type: "english",
-            category: "学科辅导",
-          },
-          {
-            time: "19:00-21:00",
-            course: "普老师刷题A",
-            type: "teacher",
-            category: "学科辅导",
-          },
-        ],
-        "2025-08-09": [
-          {
-            time: "9:00-11:00",
-            course: "普老师刷题A",
-            type: "teacher",
-            category: "学科辅导",
-          },
-        ],
-        "2025-08-10": [
-          {
-            time: "9:00-11:00",
-            course: "普老师刷题A",
-            type: "teacher",
-            category: "学科辅导",
-          },
-        ],
-
-        // 8月第二周 8.11(周一) - 8.17(周日)
-        "2025-08-11": [
-          {
-            time: "13:00-15:00",
-            course: "英语SMK (1点-3点)",
-            type: "smk",
-            category: "学科辅导",
-          },
-          {
-            time: "15:30-17:30",
-            course: "英语YH",
-            type: "english",
-            category: "学科辅导",
-          },
-        ],
-        "2025-08-12": [
-          {
-            time: "15:30-17:30",
-            course: "英语YH",
-            type: "english",
-            category: "学科辅导",
-          },
-        ],
-        "2025-08-13": [
-          {
-            time: "15:30-17:30",
-            course: "英语YH",
-            type: "english",
-            category: "学科辅导",
-          },
-        ],
-        "2025-08-14": [
-          {
-            time: "15:30-17:30",
-            course: "英语YH",
-            type: "english",
-            category: "学科辅导",
-          },
-        ],
-        "2025-08-15": [
-          {
-            time: "13:00-15:00",
-            course: "英语SMK (1点-3点)",
-            type: "smk",
-            category: "学科辅导",
-          },
-          {
-            time: "15:30-17:30",
-            course: "英语YH",
-            type: "english",
-            category: "学科辅导",
-          },
-        ],
-        "2025-08-16": [], // 周六空课
-        "2025-08-17": [], // 周日空课
-
-        // 8月第三周 8.18(周一) - 8.24(周日)
-        "2025-08-18": [
-          {
-            time: "15:30-17:30",
-            course: "英语YH",
-            type: "english",
-            category: "学科辅导",
-          },
-        ],
-        "2025-08-19": [
-          {
-            time: "15:30-17:30",
-            course: "英语YH",
-            type: "english",
-            category: "学科辅导",
-          },
-        ],
-        "2025-08-20": [
-          {
-            time: "15:30-17:30",
-            course: "英语YH",
-            type: "english",
-            category: "学科辅导",
-          },
-        ],
-        "2025-08-21": [
-          {
-            time: "15:30-17:30",
-            course: "英语YH",
-            type: "english",
-            category: "学科辅导",
-          },
-        ],
-        "2025-08-22": [], // 周五空课
-        "2025-08-23": [
-          {
-            time: "19:00-21:00",
-            course: "普老师刷题A",
-            type: "teacher",
-            category: "学科辅导",
-          },
-        ],
-        "2025-08-24": [
-          {
-            time: "19:00-21:00",
-            course: "定位考",
-            type: "teacher",
-            category: "学科辅导",
-          },
-        ],
-
-        // 8月第四周 8.25(周一) - 8.31(周日)
-        "2025-08-25": [], // 周一空课
-        "2025-08-26": [
-          {
-            time: "15:30-17:30",
-            course: "英语YH",
-            type: "english",
-            category: "学科辅导",
-          },
-        ],
-        "2025-08-27": [
-          {
-            time: "15:30-17:30",
-            course: "英语YH",
-            type: "english",
-            category: "学科辅导",
-          },
-        ],
-        "2025-08-28": [], // 周四空课
-        "2025-08-29": [], // 周五空课
-        "2025-08-30": [], // 周六空课
-        "2025-08-31": [], // 周日空课
-      };学科辅导",
-          },
-        ],
-        "2025-08-16": [], // 周六空课
-        "2025-08-17": [], // 周日空课
-
-        // 8月第三周 8.18(周一) - 8.24(周日)
-        "2025-08-18": [
-          {
-            time: "15:30-17:30",
-            course: "英语YH",
-            type: "english",
-            category: "学科辅导",
-          },
-        ],
-        "2025-08-19": [
-          {
-            time: "15:30-17:30",
-            course: "英语YH",
-            type: "english",
-            category: "学科辅导",
-          },
-        ],
-        "2025-08-20": [
-          {
-            time: "15:30-17:30",
-            course: "英语YH",
-            type: "english",
-            category: "学科辅导",
-          },
-        ],
-        "2025-08-21": [
-          {
-            time: "15:30-17:30",
-            course: "英语YH",
-            type: "english",
-            category: "学科辅导",
-          },
-        ],
-        "2025-08-22": [], // 周五空课
-        "2025-08-23": [
-          {
-            time: "19:00-21:00",
-            course: "普老师刷题A",
-            type: "teacher",
-            category: "学科辅导",
-          },
-        ],
-        "2025-08-24": [
-          {
-            time: "19:00-21:00",
-            course: "定位考",
-            type: "teacher",
-            category: "学科辅导",
-          },
-        ],
-
-        // 8月第四周 8.25(周一) - 8.31(周日)
-        "2025-08-25": [], // 周一空课
-        "2025-08-26": [
-          {
-            time: "15:30-17:30",
-            course: "英语YH",
-            type: "english",
-            category: "学科辅导",
-          },
-        ],
-        "2025-08-27": [
-          {
-            time: "15:30-17:30",
-            course: "英语YH",
-            type: "english",
-            category: "学科辅导",
-          },
-        ],
-        "2025-08-28": [], // 周四空课
-        "2025-08-29": [], // 周五空课
-        "2025-08-30": [], // 周六空课
-        "2025-08-31": [], // 周日空课
+          { time: "9:00-11:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" },
+          { time: "13:00-15:00", course: "英语SMK (1点-3点)", type: "smk", category: "学科辅导" },
+          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" },
+          { time: "19:00-21:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
+        ]
       };
 
       var currentDate = new Date();
 
       function formatDate(date) {
-        return (
-          date.getFullYear() +
-          "-" +
-          String(date.getMonth() + 1).padStart(2, "0") +
-          "-" +
-          String(date.getDate()).padStart(2, "0")
-        );
+        return date.getFullYear() + "-" + 
+               String(date.getMonth() + 1).padStart(2, "0") + "-" + 
+               String(date.getDate()).padStart(2, "0");
       }
 
       function formatDisplayDate(date) {
-        var weekdays = [
-          "周日",
-          "周一",
-          "周二",
-          "周三",
-          "周四",
-          "周五",
-          "周六",
-        ];
-        return date.getFullYear() + "年" + (date.getMonth() + 1) + "月" + date.getDate() + "日 " + weekdays[date.getDay()];
+        var weekdays = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+        return date.getFullYear() + "年" + (date.getMonth() + 1) + "月" + 
+               date.getDate() + "日 " + weekdays[date.getDay()];
       }
 
       function updateDisplay() {
@@ -1238,15 +430,15 @@
         if (courses.length === 0) {
           scheduleContent.innerHTML = '<div class="no-courses">🎉 今天没有安排课程，可以好好休息哦！</div>';
         } else {
-          var courseHtml = "";
+          var html = "";
           for (var i = 0; i < courses.length; i++) {
             var course = courses[i];
-            courseHtml += '<div class="course-item course-' + course.type + '">' +
-              '<div class="course-time">' + course.time + '</div>' +
-              '<div class="course-name">' + course.course + '</div>' +
-              '</div>';
+            html += '<div class="course-item course-' + course.type + '">' +
+                    '<div class="course-time">' + course.time + '</div>' +
+                    '<div class="course-name">' + course.course + '</div>' +
+                    '</div>';
           }
-          scheduleContent.innerHTML = courseHtml;
+          scheduleContent.innerHTML = html;
         }
 
         updateStats(courses);
@@ -1285,269 +477,8 @@
         updateDisplay();
       }
 
-      function handlePrevDay() {
-        if (!isLongPressing) {
-          changeDate(-1);
-        }
-      }
-
-      function handleNextDay() {
-        if (!isLongPressing) {
-          changeDate(1);
-        }
-      }
-
-      function startLongPress(direction) {
-        isLongPressing = true;
-        longPressTimer = setTimeout(function() {
-          longPressInterval = setInterval(function() {
-            if (isLongPressing) {
-              changeDate(direction);
-            }
-          }, 300);
-        }, 500);
-      }
-
-      function stopLongPress() {
-        isLongPressing = false;
-        if (longPressTimer) {
-          clearTimeout(longPressTimer);
-          longPressTimer = null;
-        }
-        if (longPressInterval) {
-          clearInterval(longPressInterval);
-          longPressInterval = null;
-        }
-      }
-
-      function toggleEditPanel() {
-        var panel = document.getElementById("editPanel");
-        var button = document.querySelector(".edit-toggle");
-
-        if (panel.style.display === "none" || panel.style.display === "") {
-          panel.style.display = "block";
-          button.textContent = "✏️ 关闭编辑";
-          document.getElementById("editDate").value = formatDate(currentDate);
-        } else {
-          panel.style.display = "none";
-          button.textContent = "✏️ 编辑课程安排";
-        }
-      }
-
-      function handleCourseSelect() {
-        var select = document.getElementById("courseSelect");
-        var customGroup = document.getElementById("customCourseGroup");
-        var customInput = document.getElementById("customCourseName");
-
-        if (select.value === "custom") {
-          customGroup.style.display = "block";
-          customInput.focus();
-        } else {
-          customGroup.style.display = "none";
-          customInput.value = "";
-        }
-      }
-
-      function handleCourseSelect() {
-        var select = document.getElementById("courseSelect");
-        var customGroup = document.getElementById("customCourseGroup");
-        var customInput = document.getElementById("customCourseName");
-
-        if (select.value === "custom") {
-          customGroup.style.display = "block";
-          customInput.focus();
-        } else {
-          customGroup.style.display = "none";
-          customInput.value = "";
-        }
-      }
-
-      function getCourseName() {
-        var courseSelect = document.getElementById("courseSelect");
-        var customCourseName = document.getElementById("customCourseName");
-
-        if (courseSelect.value === "custom") {
-          return customCourseName.value.trim ? customCourseName.value.trim() : customCourseName.value;
-        } else {
-          return courseSelect.value;
-        }
-      }
-
-      function getCourseTypeFromName(courseName) {
-        if (courseName.indexOf("英语SMK") !== -1) return "smk";
-        if (courseName.indexOf("岛主") !== -1) return "island";
-        if (courseName.indexOf("普老师") !== -1 || courseName.indexOf("刷题") !== -1) return "teacher";
-        if (courseName.indexOf("英语YH") !== -1) return "english";
-        if (courseName.indexOf("游泳") !== -1 || courseName.indexOf("跑步") !== -1 || 
-            courseName.indexOf("篮球") !== -1 || courseName.indexOf("运动") !== -1) return "exercise";
-        if (courseName.indexOf("作业") !== -1 || courseName.indexOf("背诵") !== -1 || 
-            courseName.indexOf("练习") !== -1) return "homework";
-        if (courseName.indexOf("画画") !== -1 || courseName.indexOf("音乐") !== -1 || 
-            courseName.indexOf("钢琴") !== -1) return "art";
-        return "other";
-      }
-
-      function addCourse() {
-        var date = document.getElementById("editDate").value;
-        var startTime = document.getElementById("startTime").value;
-        var endTime = document.getElementById("endTime").value;
-        var courseName = getCourseName();
-        var courseCategory = document.getElementById("courseCategory").value;
-
-        if (!date || !startTime || !endTime || !courseName) {
-          showMessage("请填写完整信息！", "error");
-          return;
-        }
-
-        if (startTime >= endTime) {
-          showMessage("结束时间必须晚于开始时间！", "error");
-          return;
-        }
-
-        var timeStr = startTime + "-" + endTime;
-        var courseType = getCourseTypeFromName(courseName);
-
-        var newCourse = {
-          time: timeStr,
-          course: courseName,
-          type: courseType,
-          category: courseCategory,
-        };
-
-        if (!scheduleData[date]) {
-          scheduleData[date] = [];
-        }
-
-        scheduleData[date].push(newCourse);
-
-        scheduleData[date].sort(function(a, b) {
-          var timeA = a.time.split("-")[0];
-          var timeB = b.time.split("-")[0];
-          return timeA < timeB ? -1 : timeA > timeB ? 1 : 0;
-        });
-
-        showMessage("成功添加课程：" + courseName, "success");
-        clearForm();
-
-        if (date === formatDate(currentDate)) {
-          updateDisplay();
-        }
-
-        viewDateCourses();
-      }
-
-      function viewDateCourses() {
-        var date = document.getElementById("editDate").value;
-        if (!date) {
-          showMessage("请先选择日期！", "error");
-          return;
-        }
-
-        var courses = scheduleData[date] || [];
-        var courseList = document.getElementById("courseList");
-
-        if (courses.length === 0) {
-          courseList.innerHTML = '<p style="text-align: center; color: #666;">这一天还没有安排课程</p>';
-          return;
-        }
-
-        var html = '<h4 style="margin-bottom: 15px;">📅 ' + date + ' 的课程安排：</h4>';
-        for (var i = 0; i < courses.length; i++) {
-          var course = courses[i];
-          html += '<div class="course-list-item">' +
-            '<div class="course-info">' +
-            '<strong>' + course.time + '</strong> - ' + course.course +
-            '<br><small style="color: #666;">' + course.category + '</small>' +
-            '</div>' +
-            '<div class="course-actions">' +
-            '<button class="btn btn-danger btn-small" onclick="deleteCourse(\'' + date + '\', ' + i + ')">删除</button>' +
-            '</div>' +
-            '</div>';
-        }
-        courseList.innerHTML = html;
-      }
-
-      function deleteCourse(date, index) {
-        if (confirm("确定要删除这个课程吗？")) {
-          scheduleData[date].splice(index, 1);
-
-          if (scheduleData[date].length === 0) {
-            scheduleData[date] = [];
-          }
-
-          showMessage("课程已删除", "success");
-          viewDateCourses();
-
-          if (date === formatDate(currentDate)) {
-            updateDisplay();
-          }
-        }
-      }
-
-      function clearForm() {
-        document.getElementById("startTime").value = "";
-        document.getElementById("endTime").value = "";
-        document.getElementById("courseSelect").value = "";
-        document.getElementById("customCourseName").value = "";
-        document.getElementById("customCourseGroup").style.display = "none";
-        document.getElementById("courseCategory").value = "学科辅导";
-      }
-
-      function clearAllCourses() {
-        var date = document.getElementById("editDate").value;
-        if (!date) {
-          showMessage("请先选择日期！", "error");
-          return;
-        }
-
-        if (confirm("确定要清空 " + date + " 的所有课程吗？")) {
-          scheduleData[date] = [];
-          showMessage("已清空当天所有课程", "success");
-          viewDateCourses();
-
-          if (date === formatDate(currentDate)) {
-            updateDisplay();
-          }
-        }
-      }
-
-      function showMessage(text, type) {
-        var successMsg = document.getElementById("successMessage");
-        var errorMsg = document.getElementById("errorMessage");
-
-        successMsg.style.display = "none";
-        errorMsg.style.display = "none";
-
-        if (type === "success") {
-          successMsg.textContent = text;
-          successMsg.style.display = "block";
-          setTimeout(function() {
-            successMsg.style.display = "none";
-          }, 3000);
-        } else {
-          errorMsg.textContent = text;
-          errorMsg.style.display = "block";
-          setTimeout(function() {
-            errorMsg.style.display = "none";
-          }, 3000);
-        }
-      }
-
-      // 初始化
+      // 初始化显示
       updateDisplay();
-
-      // 每分钟检查课程提醒
-      setInterval(function() {
-        // 课程提醒逻辑
-      }, 60000);
-
-      // 初始化
-      updateDisplay();
-
-      // 每分钟检查课程提醒
-      setInterval(function() {
-        // 课程提醒逻辑
-      }, 60000);
     </script>
   </body>
 </html>
