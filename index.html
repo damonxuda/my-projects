@@ -269,9 +269,9 @@
 
       <div class="main-content">
         <div class="calendar-nav">
-          <button class="nav-btn" onclick="changeDate(-1)">← 前一天</button>
+          <button class="nav-btn" id="prevBtn">← 前一天</button>
           <div class="date-display" id="displayDate"></div>
-          <button class="nav-btn" onclick="changeDate(1)">后一天 →</button>
+          <button class="nav-btn" id="nextBtn">后一天 →</button>
         </div>
 
         <div class="today-schedule">
@@ -404,72 +404,113 @@
       };
 
       var currentDate = new Date();
+      
+      // 长按相关变量
+      var longPressTimer = null;
+      var longPressInterval = null;
+      var isLongPressing = false;
 
       function formatDate(date) {
-        return date.getFullYear() + "-" + 
-               String(date.getMonth() + 1).padStart(2, "0") + "-" + 
-               String(date.getDate()).padStart(2, "0");
+        var year = date.getFullYear();
+        var month = date.getMonth() + 1;
+        var day = date.getDate();
+        return year + "-" + (month < 10 ? "0" + month : month) + "-" + (day < 10 ? "0" + day : day);
       }
 
       function formatDisplayDate(date) {
         var weekdays = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
-        return date.getFullYear() + "年" + (date.getMonth() + 1) + "月" + 
-               date.getDate() + "日 " + weekdays[date.getDay()];
+        var year = date.getFullYear();
+        var month = date.getMonth() + 1;
+        var day = date.getDate();
+        var weekday = weekdays[date.getDay()];
+        return year + "年" + month + "月" + day + "日 " + weekday;
       }
 
       function updateDisplay() {
-        var dateStr = formatDate(currentDate);
-        var displayStr = formatDisplayDate(currentDate);
+        try {
+          var dateStr = formatDate(currentDate);
+          var displayStr = formatDisplayDate(currentDate);
+          var todayStr = formatDisplayDate(new Date());
 
-        document.getElementById("currentDate").textContent = formatDisplayDate(new Date());
-        document.getElementById("displayDate").textContent = displayStr;
-
-        var courses = scheduleData[dateStr] || [];
-        var scheduleContent = document.getElementById("scheduleContent");
-
-        if (courses.length === 0) {
-          scheduleContent.innerHTML = '<div class="no-courses">🎉 今天没有安排课程，可以好好休息哦！</div>';
-        } else {
-          var html = "";
-          for (var i = 0; i < courses.length; i++) {
-            var course = courses[i];
-            html += '<div class="course-item course-' + course.type + '">' +
-                    '<div class="course-time">' + course.time + '</div>' +
-                    '<div class="course-name">' + course.course + '</div>' +
-                    '</div>';
+          // 更安全的DOM操作
+          var currentDateEl = document.getElementById("currentDate");
+          var displayDateEl = document.getElementById("displayDate");
+          
+          if (currentDateEl) {
+            currentDateEl.innerHTML = todayStr;
           }
-          scheduleContent.innerHTML = html;
-        }
+          if (displayDateEl) {
+            displayDateEl.innerHTML = displayStr;
+          }
 
-        updateStats(courses);
+          var courses = scheduleData[dateStr] || [];
+          var scheduleContent = document.getElementById("scheduleContent");
+
+          if (scheduleContent) {
+            if (courses.length === 0) {
+              scheduleContent.innerHTML = '<div class="no-courses">🎉 今天没有安排课程，可以好好休息哦！</div>';
+            } else {
+              var html = "";
+              for (var i = 0; i < courses.length; i++) {
+                var course = courses[i];
+                html += '<div class="course-item course-' + course.type + '">' +
+                        '<div class="course-time">' + course.time + '</div>' +
+                        '<div class="course-name">' + course.course + '</div>' +
+                        '</div>';
+              }
+              scheduleContent.innerHTML = html;
+            }
+          }
+
+          updateStats(courses);
+        } catch (e) {
+          // 微信兼容性处理
+          console.log("Display update error:", e);
+        }
       }
 
       function updateStats(courses) {
-        document.getElementById("totalCourses").textContent = courses.length;
+        try {
+          var totalCoursesEl = document.getElementById("totalCourses");
+          var courseHoursEl = document.getElementById("courseHours");
+          var categoryCountEl = document.getElementById("categoryCount");
 
-        var totalHours = 0;
-        for (var i = 0; i < courses.length; i++) {
-          var course = courses[i];
-          var timeMatch = course.time.match(/(\d+):(\d+)-(\d+):(\d+)/);
-          if (timeMatch) {
-            var startHour = parseInt(timeMatch[1]);
-            var startMin = parseInt(timeMatch[2]);
-            var endHour = parseInt(timeMatch[3]);
-            var endMin = parseInt(timeMatch[4]);
-            var hours = (endHour * 60 + endMin - startHour * 60 - startMin) / 60;
-            totalHours += hours;
+          if (totalCoursesEl) {
+            totalCoursesEl.innerHTML = courses.length;
           }
-        }
-        document.getElementById("courseHours").textContent = totalHours.toFixed(1);
 
-        var categories = [];
-        for (var i = 0; i < courses.length; i++) {
-          var category = courses[i].category || "学科辅导";
-          if (categories.indexOf(category) === -1) {
-            categories.push(category);
+          var totalHours = 0;
+          for (var i = 0; i < courses.length; i++) {
+            var course = courses[i];
+            var timeMatch = course.time.match(/(\d+):(\d+)-(\d+):(\d+)/);
+            if (timeMatch) {
+              var startHour = parseInt(timeMatch[1]);
+              var startMin = parseInt(timeMatch[2]);
+              var endHour = parseInt(timeMatch[3]);
+              var endMin = parseInt(timeMatch[4]);
+              var hours = (endHour * 60 + endMin - startHour * 60 - startMin) / 60;
+              totalHours += hours;
+            }
           }
+          
+          if (courseHoursEl) {
+            courseHoursEl.innerHTML = totalHours.toFixed(1);
+          }
+
+          var categories = [];
+          for (var i = 0; i < courses.length; i++) {
+            var category = courses[i].category || "学科辅导";
+            if (categories.indexOf(category) === -1) {
+              categories.push(category);
+            }
+          }
+          
+          if (categoryCountEl) {
+            categoryCountEl.innerHTML = categories.length;
+          }
+        } catch (e) {
+          console.log("Stats update error:", e);
         }
-        document.getElementById("categoryCount").textContent = categories.length;
       }
 
       function changeDate(days) {
@@ -477,8 +518,81 @@
         updateDisplay();
       }
 
-      // 初始化显示
-      updateDisplay();
+      // 长按功能
+      function startLongPress(direction) {
+        isLongPressing = true;
+        longPressTimer = setTimeout(function() {
+          longPressInterval = setInterval(function() {
+            if (isLongPressing) {
+              changeDate(direction);
+            }
+          }, 300);
+        }, 500);
+      }
+
+      function stopLongPress() {
+        isLongPressing = false;
+        if (longPressTimer) {
+          clearTimeout(longPressTimer);
+          longPressTimer = null;
+        }
+        if (longPressInterval) {
+          clearInterval(longPressInterval);
+          longPressInterval = null;
+        }
+      }
+
+      function handleClick(direction) {
+        if (!isLongPressing) {
+          changeDate(direction);
+        }
+      }
+
+      // 事件绑定
+      function bindEvents() {
+        var prevBtn = document.getElementById('prevBtn');
+        var nextBtn = document.getElementById('nextBtn');
+
+        if (prevBtn) {
+          prevBtn.onclick = function() { handleClick(-1); };
+          prevBtn.onmousedown = function() { startLongPress(-1); };
+          prevBtn.onmouseup = stopLongPress;
+          prevBtn.onmouseleave = stopLongPress;
+          prevBtn.ontouchstart = function(e) { e.preventDefault(); startLongPress(-1); };
+          prevBtn.ontouchend = stopLongPress;
+        }
+
+        if (nextBtn) {
+          nextBtn.onclick = function() { handleClick(1); };
+          nextBtn.onmousedown = function() { startLongPress(1); };
+          nextBtn.onmouseup = stopLongPress;
+          nextBtn.onmouseleave = stopLongPress;
+          nextBtn.ontouchstart = function(e) { e.preventDefault(); startLongPress(1); };
+          nextBtn.ontouchend = stopLongPress;
+        }
+      }
+
+      // 初始化
+      function init() {
+        try {
+          updateDisplay();
+          bindEvents();
+        } catch (e) {
+          console.log("Init error:", e);
+          // 备用初始化
+          setTimeout(function() {
+            updateDisplay();
+            bindEvents();
+          }, 100);
+        }
+      }
+
+      // 页面加载完成后初始化
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
     </script>
   </body>
 </html>
