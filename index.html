@@ -265,35 +265,6 @@
         box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
       }
 
-      /* 连接状态指示 */
-      .connection-status {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 10px;
-        margin-bottom: 20px;
-        border-radius: 8px;
-        font-size: 0.9rem;
-      }
-
-      .status-connected {
-        background: #e8f5e8;
-        color: #2e7d32;
-        border: 1px solid #c8e6c9;
-      }
-
-      .status-disconnected {
-        background: #ffebee;
-        color: #c62828;
-        border: 1px solid #ffcdd2;
-      }
-
-      .status-loading {
-        background: #e3f2fd;
-        color: #1976d2;
-        border: 1px solid #bbdefb;
-      }
-
       /* 编辑器样式 */
       .editor-overlay {
         position: fixed;
@@ -562,25 +533,6 @@
           justify-content: flex-end;
         }
       }
-
-      .supabase-notice {
-        background: linear-gradient(135deg, #3ecf8e, #40ba93);
-        color: white;
-        padding: 15px;
-        margin: 20px 0;
-        border-radius: 8px;
-        text-align: center;
-        font-size: 0.9rem;
-      }
-
-      .config-warning {
-        background: #fff3cd;
-        color: #856404;
-        padding: 15px;
-        margin: 20px 0;
-        border-radius: 8px;
-        border: 1px solid #ffeaa7;
-      }
     </style>
   </head>
   <body>
@@ -697,44 +649,24 @@
         anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV4bmZyY2xhZ25kaWdtZHliaWNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyODMzMjUsImV4cCI6MjA2Njg1OTMyNX0.kDPQuEKP6pSAmcbNn2cuUZZDC5fBT_YYdAYAve9qY9w"
       };
 
-      // 检查是否配置了Supabase
-      if (!supabaseConfig.url) {
-        document.getElementById('configWarning').style.display = 'block';
-        document.getElementById('connectionStatus').innerHTML = '❌ 需要配置Supabase';
-        document.getElementById('connectionStatus').className = 'connection-status status-disconnected';
+      window.useSupabase = true;
+      
+      // 初始化Supabase
+      import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/+esm').then(({ createClient }) => {
+        const supabase = createClient(supabaseConfig.url, supabaseConfig.anonKey);
+        window.supabase = supabase;
         
-        // 显示配置说明
-        setTimeout(() => {
-          alert('Supabase配置步骤：\n\n1. 访问 https://supabase.com\n2. 创建新项目\n3. 在Settings > API中找到配置信息\n4. 复制URL和anon key到代码中\n5. 在Table Editor中创建schedules表\n\n详细步骤我马上告诉你！');
-        }, 2000);
-        
-        // 暂时使用localStorage作为备用
+        // 初始化应用
+        initApp();
+      }).catch(error => {
+        console.error('Supabase初始化失败:', error);
         window.useSupabase = false;
-      } else {
-        window.useSupabase = true;
-        
-        // 初始化Supabase
-        import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/+esm').then(({ createClient }) => {
-          const supabase = createClient(supabaseConfig.url, supabaseConfig.anonKey);
-          window.supabase = supabase;
-          
-          document.getElementById('connectionStatus').innerHTML = '✅ 已连接Supabase数据库';
-          document.getElementById('connectionStatus').className = 'connection-status status-connected';
-          
-          // 初始化应用
-          initApp();
-        }).catch(error => {
-          console.error('Supabase初始化失败:', error);
-          document.getElementById('connectionStatus').innerHTML = '❌ Supabase连接失败';
-          document.getElementById('connectionStatus').className = 'connection-status status-disconnected';
-          window.useSupabase = false;
-          initApp();
-        });
-      }
+        initApp();
+      });
     </script>
 
     <script>
-      // 默认课程数据（Supabase未配置时的备份数据）
+      // 默认课程数据
       const defaultSchedules = {
         "2025-06-30": [
           { time: "13:00-15:00", course: "英语SMK", type: "smk", category: "学科辅导" },
@@ -907,29 +839,10 @@
         // 初始化数据
         async init() {
           if (window.useSupabase && window.supabase) {
-            await this.initSupabaseTable();
             await this.loadFromSupabase();
             this.setupSupabaseListeners();
           } else {
             this.loadFromLocal();
-          }
-        },
-
-        // 初始化Supabase表结构
-        async initSupabaseTable() {
-          try {
-            // 检查表是否存在，如果不存在会创建
-            const { data, error } = await window.supabase
-              .from('schedules')
-              .select('*')
-              .limit(1);
-              
-            if (error && error.code === 'PGRST116') {
-              // 表不存在，需要用户手动创建
-              console.log('需要创建schedules表');
-            }
-          } catch (error) {
-            console.error('检查表结构失败:', error);
           }
         },
 
