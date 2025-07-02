@@ -45,7 +45,13 @@
     }"
     />
     <title>暑假课程日历提醒</title>
+
     <style>
+      /* ================================
+         CSS 样式部分 - 开始
+         ================================ */
+      
+      /* 基础样式 */
       * {
         margin: 0;
         padding: 0;
@@ -60,6 +66,7 @@
         touch-action: manipulation;
       }
 
+      /* 容器布局 */
       .container {
         max-width: 800px;
         margin: 0 auto;
@@ -69,6 +76,7 @@
         overflow: hidden;
       }
 
+      /* 头部样式 */
       .header {
         background: linear-gradient(135deg, #ff6b6b, #ffa726);
         color: white;
@@ -87,10 +95,48 @@
         opacity: 0.9;
       }
 
+      /* 主内容区域 */
       .main-content {
         padding: 30px;
       }
 
+      /* 导航按钮 */
+      .calendar-nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      .nav-btn {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.8rem;
+        transition: all 0.3s ease;
+        touch-action: manipulation;
+        user-select: none;
+      }
+
+      .nav-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+      }
+
+      .nav-btn:active {
+        transform: translateY(0);
+      }
+
+      .date-display {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #333;
+      }
+
+      /* 课程展示区域 */
       .today-schedule {
         background: #f8f9ff;
         border-radius: 12px;
@@ -133,45 +179,15 @@
         font-size: 1rem;
       }
 
-      .course-smk {
-        background: #ffe066;
-        border-left: 4px solid #ffd700;
-      }
-
-      .course-island {
-        background: #66e0ff;
-        border-left: 4px solid #00bcd4;
-      }
-
-      .course-teacher {
-        background: #ff9999;
-        border-left: 4px solid #f44336;
-      }
-
-      .course-english {
-        background: #99ff99;
-        border-left: 4px solid #4caf50;
-      }
-
-      .course-exercise {
-        background: #90ee90;
-        border-left: 4px solid #32cd32;
-      }
-
-      .course-homework {
-        background: #ffb6c1;
-        border-left: 4px solid #ff69b4;
-      }
-
-      .course-art {
-        background: #ffb3e6;
-        border-left: 4px solid #e91e63;
-      }
-
-      .course-other {
-        background: #e0e0e0;
-        border-left: 4px solid #757575;
-      }
+      /* 课程类型样式 */
+      .course-smk { background: #ffe066; border-left: 4px solid #ffd700; }
+      .course-island { background: #66e0ff; border-left: 4px solid #00bcd4; }
+      .course-teacher { background: #ff9999; border-left: 4px solid #f44336; }
+      .course-english { background: #99ff99; border-left: 4px solid #4caf50; }
+      .course-exercise { background: #90ee90; border-left: 4px solid #32cd32; }
+      .course-homework { background: #ffb6c1; border-left: 4px solid #ff69b4; }
+      .course-art { background: #ffb3e6; border-left: 4px solid #e91e63; }
+      .course-other { background: #e0e0e0; border-left: 4px solid #757575; }
 
       .no-courses {
         text-align: center;
@@ -180,41 +196,7 @@
         padding: 40px;
       }
 
-      .calendar-nav {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-      }
-
-      .nav-btn {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
-        border: none;
-        padding: 6px 12px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 0.8rem;
-        transition: all 0.3s ease;
-        touch-action: manipulation;
-        user-select: none;
-      }
-
-      .nav-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
-      }
-
-      .nav-btn:active {
-        transform: translateY(0);
-      }
-
-      .date-display {
-        font-size: 1.2rem;
-        font-weight: bold;
-        color: #333;
-      }
-
+      /* 统计卡片 */
       .stats {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -241,6 +223,7 @@
         margin-top: 5px;
       }
 
+      /* 编辑按钮 */
       .edit-toggle {
         background: linear-gradient(135deg, #ff6b6b, #ffa726);
         color: white;
@@ -318,6 +301,7 @@
         transform: scale(1.1);
       }
 
+      /* 表单样式 */
       .form-group {
         margin-bottom: 20px;
       }
@@ -364,6 +348,7 @@
         color: #666;
       }
 
+      /* 课程列表编辑 */
       .course-list {
         margin-bottom: 20px;
       }
@@ -400,6 +385,7 @@
         gap: 8px;
       }
 
+      /* 按钮样式 */
       .btn-small {
         padding: 6px 12px;
         border: none;
@@ -472,6 +458,7 @@
         border-top: 2px solid #f0f0f0;
       }
 
+      /* 快速时间选择 */
       .quick-times {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -496,7 +483,7 @@
         color: white;
       }
 
-      /* 移动端优化 */
+      /* 移动端适配 */
       @media screen and (max-width: 768px) {
         .editor-panel {
           padding: 20px;
@@ -527,9 +514,18 @@
           justify-content: flex-end;
         }
       }
+
+      /* ================================
+         CSS 样式部分 - 结束
+         ================================ */
     </style>
   </head>
+
   <body>
+    <!-- ================================
+         HTML 结构部分 - 开始
+         ================================ -->
+    
     <div class="container">
       <div class="header">
         <h1>🎓 子杰暑假课程安排</h1>
@@ -635,9 +631,16 @@
       </div>
     </div>
 
-    <!-- Supabase SDK -->
+    <!-- ================================
+         HTML 结构部分 - 结束
+         ================================ -->
+
+    <!-- Supabase SDK 加载 -->
     <script type="module">
-      // Supabase配置
+      // ================================
+      // Supabase 初始化部分 - 开始
+      // ================================
+      
       const supabaseConfig = {
         url: "https://exnfrclagndigmdybicg.supabase.co",
         anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV4bmZyY2xhZ25kaWdtZHliaWNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyODMzMjUsImV4cCI6MjA2Njg1OTMyNX0.kDPQuEKP6pSAmcbNn2cuUZZDC5fBT_YYdAYAve9qY9w"
@@ -657,10 +660,30 @@
         window.useSupabase = false;
         initApp();
       });
+
+      // ================================
+      // Supabase 初始化部分 - 结束
+      // ================================
     </script>
 
     <script>
-      // 默认课程数据
+      // ================================
+      // 配置和常量部分 - 开始
+      // ================================
+      
+      // 课程类型定义
+      const CourseTypes = {
+        smk: 'SMK英语',
+        island: '岛主五竞',
+        teacher: '普老师刷题',
+        english: '英语YH',
+        exercise: '体育锻炼',
+        homework: '作业时间',
+        art: '艺术课程',
+        other: '其他'
+      };
+
+      // 默认课程数据（旧格式，用于兼容和迁移）
       const defaultSchedules = {
         "2025-06-30": [
           { time: "13:00-15:00", course: "英语SMK", type: "smk", category: "学科辅导" },
@@ -676,247 +699,234 @@
         ],
         "2025-07-04": [
           { time: "13:00-15:00", course: "英语SMK", type: "smk", category: "学科辅导" }
-        ],
-        "2025-07-05": [
-          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
-        ],
-        "2025-07-06": [],
-        "2025-07-07": [
-          { time: "13:00-15:00", course: "英语SMK", type: "smk", category: "学科辅导" },
-          { time: "19:00-21:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
-        ],
-        "2025-07-08": [
-          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
-        ],
-        "2025-07-09": [],
-        "2025-07-10": [
-          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
-        ],
-        "2025-07-11": [
-          { time: "13:00-15:00", course: "英语SMK", type: "smk", category: "学科辅导" }
-        ],
-        "2025-07-12": [
-          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
-        ],
-        "2025-07-13": [],
-        "2025-07-14": [
-          { time: "13:00-15:00", course: "英语SMK", type: "smk", category: "学科辅导" },
-          { time: "19:00-21:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
-        ],
-        "2025-07-15": [
-          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
-        ],
-        "2025-07-16": [],
-        "2025-07-17": [
-          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
-        ],
-        "2025-07-18": [
-          { time: "13:00-15:00", course: "英语SMK", type: "smk", category: "学科辅导" }
-        ],
-        "2025-07-19": [
-          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
-        ],
-        "2025-07-20": [],
-        "2025-07-21": [
-          { time: "13:00-15:00", course: "英语SMK", type: "smk", category: "学科辅导" },
-          { time: "19:00-21:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
-        ],
-        "2025-07-22": [
-          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
-        ],
-        "2025-07-23": [],
-        "2025-07-24": [
-          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
-        ],
-        "2025-07-25": [
-          { time: "13:00-15:00", course: "英语SMK", type: "smk", category: "学科辅导" }
-        ],
-        "2025-07-26": [
-          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
-        ],
-        "2025-07-27": [],
-        "2025-07-28": [
-          { time: "13:00-15:00", course: "英语SMK", type: "smk", category: "学科辅导" },
-          { time: "19:00-21:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
-        ],
-        "2025-07-29": [
-          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
-        ],
-        "2025-07-30": [],
-        "2025-07-31": [
-          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
-        ],
-        "2025-08-01": [
-          { time: "13:00-15:00", course: "英语SMK", type: "smk", category: "学科辅导" },
-          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
-        ],
-        "2025-08-02": [
-          { time: "12:30-15:00", course: "岛主五竞", type: "island", category: "学科辅导" }
-        ],
-        "2025-08-03": [],
-        "2025-08-04": [
-          { time: "13:00-15:00", course: "英语SMK", type: "smk", category: "学科辅导" },
-          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" },
-          { time: "19:00-21:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
-        ],
-        "2025-08-05": [
-          { time: "9:00-11:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
-        ],
-        "2025-08-06": [
-          { time: "9:00-11:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" },
-          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
-        ],
-        "2025-08-07": [
-          { time: "9:00-11:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
-        ],
-        "2025-08-08": [
-          { time: "9:00-11:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" },
-          { time: "13:00-15:00", course: "英语SMK", type: "smk", category: "学科辅导" },
-          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
-        ],
-        "2025-08-09": [
-          { time: "9:00-11:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
-        ],
-        "2025-08-10": [
-          { time: "9:00-11:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
-        ],
-        "2025-08-11": [
-          { time: "13:00-15:00", course: "英语SMK", type: "smk", category: "学科辅导" },
-          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
-        ],
-        "2025-08-12": [],
-        "2025-08-13": [
-          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
-        ],
-        "2025-08-14": [],
-        "2025-08-15": [
-          { time: "13:00-15:00", course: "英语SMK", type: "smk", category: "学科辅导" },
-          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
-        ],
-        "2025-08-16": [],
-        "2025-08-17": [],
-        "2025-08-18": [
-          { time: "13:00-15:00", course: "英语SMK", type: "smk", category: "学科辅导" },
-          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
-        ],
-        "2025-08-19": [],
-        "2025-08-20": [
-          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
-        ],
-        "2025-08-21": [],
-        "2025-08-22": [
-          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
-        ],
-        "2025-08-23": [
-          { time: "19:00-21:00", course: "普老师刷题A", type: "teacher", category: "学科辅导" }
-        ],
-        "2025-08-24": [
-          { time: "19:00-21:00", course: "定位考", type: "teacher", category: "学科辅导" }
-        ],
-        "2025-08-25": [
-          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
-        ],
-        "2025-08-26": [],
-        "2025-08-27": [
-          { time: "15:30-17:30", course: "英语YH", type: "english", category: "学科辅导" }
-        ],
-        "2025-08-28": [],
-        "2025-08-29": [],
-        "2025-08-30": [],
-        "2025-08-31": []
+        ]
+        // 其他日期数据...
       };
 
-      // 数据管理模块
-      window.ScheduleData = {
-        schedules: {},
-        
-        // 初始化数据
-        async init() {
-          if (window.useSupabase && window.supabase) {
-            await this.loadFromSupabase();
-            this.setupSupabaseListeners();
-          } else {
-            this.loadFromLocal();
-          }
+      // ================================
+      // 配置和常量部分 - 结束
+      // ================================
+
+      // ================================
+      // 统一数据模型部分 - 开始
+      // ================================
+      
+      const ScheduleUtils = {
+        // 生成UUID
+        generateUUID() {
+          return crypto.randomUUID();
         },
 
-        // 从Supabase加载数据
-        async loadFromSupabase() {
+        // 创建新课程
+        createNew(date, start_time, end_time, course_name, course_type, note = '') {
+          return {
+            id: this.generateUUID(),
+            date,
+            start_time,
+            end_time,
+            course_name,
+            course_type,
+            category: '学科辅导',
+            note,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            created_by: 'github_app'
+          };
+        },
+
+        // 格式化时间显示
+        formatTimeDisplay(start_time, end_time) {
+          return `${start_time}-${end_time}`;
+        },
+
+        // 计算课程时长
+        calculateDuration(start_time, end_time) {
+          const start = new Date(`2000-01-01T${start_time}:00`);
+          const end = new Date(`2000-01-01T${end_time}:00`);
+          return (end - start) / (1000 * 60 * 60); // 转换为小时
+        },
+
+        // 按时间排序
+        sortByTime(schedules) {
+          return [...schedules].sort((a, b) => {
+            const timeA = new Date(`2000-01-01T${a.start_time}:00`);
+            const timeB = new Date(`2000-01-01T${b.start_time}:00`);
+            return timeA - timeB;
+          });
+        },
+
+        // 验证课程数据
+        validate(schedule) {
+          const errors = [];
+          
+          if (!schedule.course_name || schedule.course_name.trim() === '') {
+            errors.push('课程名称不能为空');
+          }
+          
+          if (!schedule.start_time || !schedule.end_time) {
+            errors.push('开始时间和结束时间不能为空');
+          }
+          
+          const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+          if (schedule.start_time && !timeRegex.test(schedule.start_time)) {
+            errors.push('开始时间格式错误');
+          }
+          
+          if (schedule.end_time && !timeRegex.test(schedule.end_time)) {
+            errors.push('结束时间格式错误');
+          }
+          
+          if (schedule.start_time && schedule.end_time) {
+            const start = new Date(`2000-01-01T${schedule.start_time}:00`);
+            const end = new Date(`2000-01-01T${schedule.end_time}:00`);
+            
+            if (start >= end) {
+              errors.push('结束时间必须晚于开始时间');
+            }
+          }
+          
+          return {
+            isValid: errors.length === 0,
+            errors: errors
+          };
+        },
+
+        // 转换为显示格式（兼容旧界面）
+        toDisplayFormat(schedule) {
+          return {
+            id: schedule.id,
+            time: this.formatTimeDisplay(schedule.start_time, schedule.end_time),
+            course: schedule.course_name,
+            type: schedule.course_type,
+            category: schedule.category,
+            note: schedule.note || ''
+          };
+        }
+      };
+
+      // ================================
+      // 统一数据模型部分 - 结束
+      // ================================
+
+      // ================================
+      // 数据库操作层 - 开始
+      // ================================
+      
+      // ================================
+      // 数据库操作层 - 开始
+      // ================================
+      
+      const DatabaseManager = {
+        // 从Supabase加载所有课程数据
+        async loadAllSchedules() {
           try {
-            this.schedules = { ...defaultSchedules };
+            console.log('从Supabase加载统一格式数据...');
             
             const { data, error } = await window.supabase
               .from('schedules')
-              .select('*');
+              .select('*')
+              .order('date')
+              .order('start_time');
               
             if (error) {
               console.error('从Supabase加载数据失败:', error);
-              this.loadFromLocal();
-              return;
+              return { success: false, error: error.message };
             }
 
-            // 合并Supabase数据
-            if (data && data.length > 0) {
-              data.forEach(row => {
-                if (row.date && row.courses) {
-                  this.schedules[row.date] = row.courses;
-                }
-              });
-            } else {
-              // 如果Supabase中没有数据，保存默认数据
-              await this.saveDefaultDataToSupabase();
-            }
+            console.log('从Supabase加载了', data?.length || 0, '条课程记录');
+            return { success: true, data: data || [] };
           } catch (error) {
             console.error('加载Supabase数据异常:', error);
-            this.loadFromLocal();
+            return { success: false, error: error.message };
           }
         },
 
-        // 保存默认数据到Supabase
-        async saveDefaultDataToSupabase() {
+        // 保存单个课程到Supabase
+        async saveSchedule(schedule) {
           try {
-            const promises = Object.keys(defaultSchedules).map(date => {
-              return window.supabase
-                .from('schedules')
-                .upsert({
-                  date: date,
-                  courses: defaultSchedules[date],
-                  updated_at: new Date().toISOString()
-                });
-            });
-            
-            await Promise.all(promises);
-            console.log('默认数据已保存到Supabase');
-          } catch (error) {
-            console.error('保存默认数据失败:', error);
-          }
-        },
-
-        // 保存到Supabase
-        async saveToSupabase(dateStr) {
-          if (!window.useSupabase || !window.supabase) return;
-          
-          try {
-            const { error } = await window.supabase
+            const { data, error } = await window.supabase
               .from('schedules')
-              .upsert({
-                date: dateStr,
-                courses: this.schedules[dateStr] || [],
-                updated_at: new Date().toISOString()
-              });
+              .insert(schedule)
+              .select()
+              .single();
               
             if (error) {
               console.error('保存到Supabase失败:', error);
+              return { success: false, error: error.message };
             }
+
+            return { success: true, data: data };
           } catch (error) {
-            console.error('Supabase保存异常:', error);
+            console.error('保存课程异常:', error);
+            return { success: false, error: error.message };
           }
         },
 
-        // 设置Supabase实时监听
-        setupSupabaseListeners() {
-          if (!window.useSupabase || !window.supabase) return;
-          
+        // 更新课程
+        async updateSchedule(id, updates) {
+          try {
+            const { data, error } = await window.supabase
+              .from('schedules')
+              .update(updates)
+              .eq('id', id)
+              .select()
+              .single();
+              
+            if (error) {
+              console.error('更新Supabase失败:', error);
+              return { success: false, error: error.message };
+            }
+
+            return { success: true, data: data };
+          } catch (error) {
+            console.error('更新课程异常:', error);
+            return { success: false, error: error.message };
+          }
+        },
+
+        // 删除课程
+        async deleteSchedule(id) {
+          try {
+            const { error } = await window.supabase
+              .from('schedules')
+              .delete()
+              .eq('id', id);
+              
+            if (error) {
+              console.error('删除Supabase数据失败:', error);
+              return { success: false, error: error.message };
+            }
+
+            return { success: true };
+          } catch (error) {
+            console.error('删除课程异常:', error);
+            return { success: false, error: error.message };
+          }
+        },
+
+        // 批量保存课程（用于迁移）
+        async batchSaveSchedules(schedules) {
+          try {
+            const { data, error } = await window.supabase
+              .from('schedules')
+              .insert(schedules)
+              .select();
+              
+            if (error) {
+              console.error('批量保存失败:', error);
+              return { success: false, error: error.message };
+            }
+
+            console.log('成功批量保存', data?.length || 0, '条记录');
+            return { success: true, data: data };
+          } catch (error) {
+            console.error('批量保存异常:', error);
+            return { success: false, error: error.message };
+          }
+        },
+
+        // 设置实时监听
+        setupRealtimeListeners(onUpdate) {
           try {
             const subscription = window.supabase
               .channel('schedule-changes')
@@ -926,112 +936,461 @@
                 table: 'schedules'
               }, (payload) => {
                 console.log('实时数据更新:', payload);
-                if (payload.new && payload.new.date) {
-                  this.schedules[payload.new.date] = payload.new.courses || [];
-                  if (typeof updateDisplay === 'function') {
-                    updateDisplay();
-                  }
+                if (onUpdate) {
+                  onUpdate(payload);
                 }
               })
               .subscribe();
 
             console.log('Supabase实时监听已启动');
+            return subscription;
           } catch (error) {
             console.error('设置实时监听失败:', error);
+            return null;
+          }
+        }
+      };
+
+      // ================================
+      // 数据库操作层 - 结束
+      // ================================
+
+      // ================================
+      // 课程管理业务逻辑层 - 开始
+      // ================================
+      
+      const ScheduleManager = {
+        schedules: {},
+        realtimeSubscription: null,
+        
+        // 初始化数据
+        async init() {
+          if (window.useSupabase && window.supabase) {
+            await this.loadFromDatabase();
+            this.setupRealtimeSync();
+          } else {
+            this.loadFromLocal();
+          }
+        },
+
+        // 从数据库加载数据
+        async loadFromDatabase() {
+          const result = await DatabaseManager.loadAllSchedules();
+          
+          if (result.success) {
+            // 按日期分组
+            this.schedules = {};
+            result.data.forEach(schedule => {
+              const dateStr = schedule.date;
+              if (!this.schedules[dateStr]) {
+                this.schedules[dateStr] = [];
+              }
+              this.schedules[dateStr].push(schedule);
+            });
+
+            // 如果数据库为空，迁移默认数据
+            if (result.data.length === 0) {
+              await this.migrateDefaultData();
+            }
+          } else {
+            console.error('数据库加载失败，使用默认数据');
+            this.loadDefaultData();
+          }
+        },
+
+        // 加载默认数据
+        loadDefaultData() {
+          this.schedules = {};
+          
+          // 转换默认数据为统一格式
+          Object.keys(defaultSchedules).forEach(date => {
+            this.schedules[date] = defaultSchedules[date].map(oldCourse => {
+              const timeMatch = oldCourse.time.match(/(\d+):(\d+)-(\d+):(\d+)/);
+              return ScheduleUtils.createNew(
+                date,
+                `${timeMatch[1]}:${timeMatch[2]}`,
+                `${timeMatch[3]}:${timeMatch[4]}`,
+                oldCourse.course,
+                oldCourse.type,
+                oldCourse.note || ''
+              );
+            });
+          });
+        },
+
+        // 迁移默认数据到数据库
+        async migrateDefaultData() {
+          console.log('迁移默认数据到数据库...');
+          this.loadDefaultData();
+          
+          const allSchedules = [];
+          Object.keys(this.schedules).forEach(date => {
+            this.schedules[date].forEach(schedule => {
+              allSchedules.push(schedule);
+            });
+          });
+
+          if (allSchedules.length > 0) {
+            const result = await DatabaseManager.batchSaveSchedules(allSchedules);
+            if (!result.success) {
+              console.error('迁移数据失败:', result.error);
+            }
+          }
+        },
+
+        // 设置实时同步
+        setupRealtimeSync() {
+          this.realtimeSubscription = DatabaseManager.setupRealtimeListeners((payload) => {
+            this.handleRealtimeUpdate(payload);
+          });
+        },
+
+        // 处理实时更新
+        handleRealtimeUpdate(payload) {
+          const { eventType, new: newRecord, old: oldRecord } = payload;
+          
+          if (eventType === 'INSERT' && newRecord) {
+            const dateStr = newRecord.date;
+            if (!this.schedules[dateStr]) {
+              this.schedules[dateStr] = [];
+            }
+            this.schedules[dateStr].push(newRecord);
+            this.schedules[dateStr] = ScheduleUtils.sortByTime(this.schedules[dateStr]);
+          } else if (eventType === 'UPDATE' && newRecord) {
+            const dateStr = newRecord.date;
+            if (this.schedules[dateStr]) {
+              const index = this.schedules[dateStr].findIndex(s => s.id === newRecord.id);
+              if (index !== -1) {
+                this.schedules[dateStr][index] = newRecord;
+                this.schedules[dateStr] = ScheduleUtils.sortByTime(this.schedules[dateStr]);
+              }
+            }
+          } else if (eventType === 'DELETE' && oldRecord) {
+            const dateStr = oldRecord.date;
+            if (this.schedules[dateStr]) {
+              this.schedules[dateStr] = this.schedules[dateStr].filter(s => s.id !== oldRecord.id);
+            }
+          }
+          
+          // 刷新UI显示
+          if (typeof UIManager !== 'undefined' && UIManager.updateDisplay) {
+            UIManager.updateDisplay();
           }
         },
 
         // 从localStorage加载（备用方案）
         loadFromLocal() {
           try {
-            const saved = localStorage.getItem('scheduleData_supabase_backup');
+            const saved = localStorage.getItem('scheduleData_unified_backup');
             if (saved) {
-              const parsed = JSON.parse(saved);
-              this.schedules = { ...defaultSchedules, ...parsed };
+              this.schedules = JSON.parse(saved);
             } else {
-              this.schedules = { ...defaultSchedules };
+              this.loadDefaultData();
             }
           } catch (error) {
             console.error('从localStorage加载失败:', error);
-            this.schedules = { ...defaultSchedules };
+            this.loadDefaultData();
           }
         },
 
         // 保存到localStorage（备用方案）
         saveToLocal() {
           try {
-            localStorage.setItem('scheduleData_supabase_backup', JSON.stringify(this.schedules));
+            localStorage.setItem('scheduleData_unified_backup', JSON.stringify(this.schedules));
           } catch (error) {
             console.error('保存到localStorage失败:', error);
           }
         },
 
-        // 获取指定日期的课程
+        // 获取指定日期的课程（统一格式）
         getScheduleByDate(dateStr) {
-          return this.schedules[dateStr] || [];
+          const schedules = this.schedules[dateStr] || [];
+          return ScheduleUtils.sortByTime(schedules);
+        },
+
+        // 获取指定日期的课程（显示格式，兼容旧界面）
+        getDisplayScheduleByDate(dateStr) {
+          const schedules = this.getScheduleByDate(dateStr);
+          return schedules.map(schedule => ScheduleUtils.toDisplayFormat(schedule));
         },
 
         // 添加课程
         async addCourse(dateStr, courseData) {
-          if (!this.schedules[dateStr]) {
-            this.schedules[dateStr] = [];
+          try {
+            // 验证数据
+            const validation = ScheduleUtils.validate(courseData);
+            if (!validation.isValid) {
+              throw new Error(validation.errors.join(', '));
+            }
+
+            // 创建新课程
+            const newSchedule = ScheduleUtils.createNew(
+              dateStr,
+              courseData.start_time,
+              courseData.end_time,
+              courseData.course_name,
+              courseData.course_type,
+              courseData.note || ''
+            );
+
+            // 保存到数据库
+            if (window.useSupabase && window.supabase) {
+              const result = await DatabaseManager.saveSchedule(newSchedule);
+              if (!result.success) {
+                throw new Error(result.error);
+              }
+              // 数据库保存成功，更新本地数据
+              if (!this.schedules[dateStr]) {
+                this.schedules[dateStr] = [];
+              }
+              this.schedules[dateStr].push(newSchedule);
+              this.schedules[dateStr] = ScheduleUtils.sortByTime(this.schedules[dateStr]);
+            } else {
+              // 直接保存到本地
+              if (!this.schedules[dateStr]) {
+                this.schedules[dateStr] = [];
+              }
+              this.schedules[dateStr].push(newSchedule);
+              this.schedules[dateStr] = ScheduleUtils.sortByTime(this.schedules[dateStr]);
+              this.saveToLocal();
+            }
+
+            return { success: true, data: newSchedule };
+          } catch (error) {
+            console.error('添加课程失败:', error);
+            return { success: false, error: error.message };
           }
-          
-          courseData.id = Date.now() + Math.random();
-          this.schedules[dateStr].push(courseData);
-          
-          if (window.useSupabase) {
-            await this.saveToSupabase(dateStr);
-          } else {
-            this.saveToLocal();
-          }
-          
-          return courseData.id;
         },
 
         // 更新课程
-        async updateCourse(dateStr, courseId, newData) {
-          if (!this.schedules[dateStr]) return false;
-          
-          const courseIndex = this.schedules[dateStr].findIndex(c => c.id == courseId);
-          if (courseIndex !== -1) {
-            newData.id = courseId;
-            this.schedules[dateStr][courseIndex] = newData;
+        async updateCourse(courseId, updates) {
+          try {
+            // 找到原课程
+            let originalSchedule = null;
+            let dateStr = null;
             
-            if (window.useSupabase) {
-              await this.saveToSupabase(dateStr);
+            for (const date in this.schedules) {
+              const schedule = this.schedules[date].find(s => s.id === courseId);
+              if (schedule) {
+                originalSchedule = schedule;
+                dateStr = date;
+                break;
+              }
+            }
+
+            if (!originalSchedule) {
+              throw new Error('课程不存在');
+            }
+
+            // 创建更新后的课程
+            const updatedSchedule = {
+              ...originalSchedule,
+              ...updates,
+              updated_at: new Date().toISOString()
+            };
+
+            // 验证更新后的数据
+            const validation = ScheduleUtils.validate(updatedSchedule);
+            if (!validation.isValid) {
+              throw new Error(validation.errors.join(', '));
+            }
+
+            // 保存到数据库
+            if (window.useSupabase && window.supabase) {
+              const result = await DatabaseManager.updateSchedule(courseId, updatedSchedule);
+              if (!result.success) {
+                throw new Error(result.error);
+              }
+              // 更新本地数据
+              const index = this.schedules[dateStr].findIndex(s => s.id === courseId);
+              this.schedules[dateStr][index] = updatedSchedule;
+              this.schedules[dateStr] = ScheduleUtils.sortByTime(this.schedules[dateStr]);
             } else {
+              // 直接更新本地
+              const index = this.schedules[dateStr].findIndex(s => s.id === courseId);
+              this.schedules[dateStr][index] = updatedSchedule;
+              this.schedules[dateStr] = ScheduleUtils.sortByTime(this.schedules[dateStr]);
               this.saveToLocal();
             }
-            return true;
+
+            return { success: true, data: updatedSchedule };
+          } catch (error) {
+            console.error('更新课程失败:', error);
+            return { success: false, error: error.message };
           }
-          return false;
         },
 
         // 删除课程
-        async deleteCourse(dateStr, courseId) {
-          if (!this.schedules[dateStr]) return false;
-          
-          const courseIndex = this.schedules[dateStr].findIndex(c => c.id == courseId);
-          if (courseIndex !== -1) {
-            this.schedules[dateStr].splice(courseIndex, 1);
+        async deleteCourse(courseId) {
+          try {
+            // 找到课程
+            let dateStr = null;
+            let courseIndex = -1;
             
-            if (window.useSupabase) {
-              await this.saveToSupabase(dateStr);
+            for (const date in this.schedules) {
+              const index = this.schedules[date].findIndex(s => s.id === courseId);
+              if (index !== -1) {
+                dateStr = date;
+                courseIndex = index;
+                break;
+              }
+            }
+
+            if (courseIndex === -1) {
+              throw new Error('课程不存在');
+            }
+
+            // 删除数据库数据
+            if (window.useSupabase && window.supabase) {
+              const result = await DatabaseManager.deleteSchedule(courseId);
+              if (!result.success) {
+                throw new Error(result.error);
+              }
+              // 删除本地数据
+              this.schedules[dateStr].splice(courseIndex, 1);
             } else {
+              // 直接删除本地
+              this.schedules[dateStr].splice(courseIndex, 1);
               this.saveToLocal();
             }
-            return true;
+
+            return { success: true };
+          } catch (error) {
+            console.error('删除课程失败:', error);
+            return { success: false, error: error.message };
           }
-          return false;
+        },
+
+        // 清理资源
+        cleanup() {
+          if (this.realtimeSubscription) {
+            this.realtimeSubscription.unsubscribe();
+          }
         }
       };
 
-      // 编辑器模块
-      window.ScheduleEditor = {
-        currentEditingId: null,
-        currentEditingDate: null,
+      // ================================
+      // 课程管理业务逻辑层 - 结束
+      // ================================
 
+      // ================================
+      // UI界面管理层 - 开始
+      // ================================
+      
+      const UIManager = {
+        currentDate: new Date(),
+
+        // 格式化日期
+        formatDate(date) {
+          const year = date.getFullYear();
+          const month = date.getMonth() + 1;
+          const day = date.getDate();
+          return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+        },
+
+        // 格式化显示日期
+        formatDisplayDate(date) {
+          const weekdays = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+          const year = date.getFullYear();
+          const month = date.getMonth() + 1;
+          const day = date.getDate();
+          const weekday = weekdays[date.getDay()];
+          return `${year}年${month}月${day}日 ${weekday}`;
+        },
+
+        // 更新主界面显示
+        updateDisplay() {
+          const dateStr = this.formatDate(this.currentDate);
+          const displayStr = this.formatDisplayDate(this.currentDate);
+          const todayStr = this.formatDisplayDate(new Date());
+
+          document.getElementById("currentDate").innerHTML = todayStr;
+          document.getElementById("displayDate").innerHTML = displayStr;
+
+          // 使用显示格式（兼容现有界面）
+          const courses = ScheduleManager.getDisplayScheduleByDate(dateStr);
+          const scheduleContent = document.getElementById("scheduleContent");
+
+          if (courses.length === 0) {
+            scheduleContent.innerHTML = '<div class="no-courses">🎉 今天没有安排课程，可以好好休息哦！</div>';
+          } else {
+            let html = "";
+            courses.forEach(course => {
+              html += `<div class="course-item course-${course.type}">
+                        <div class="course-time">${course.time}</div>
+                        <div class="course-name">${course.course}</div>
+                      </div>`;
+            });
+            scheduleContent.innerHTML = html;
+          }
+
+          this.updateStats(courses);
+        },
+
+        // 更新统计信息
+        updateStats(courses) {
+          document.getElementById("totalCourses").innerHTML = courses.length;
+
+          let totalHours = 0;
+          courses.forEach(course => {
+            const timeMatch = course.time.match(/(\d+):(\d+)-(\d+):(\d+)/);
+            if (timeMatch) {
+              const startHour = parseInt(timeMatch[1]);
+              const startMin = parseInt(timeMatch[2]);
+              const endHour = parseInt(timeMatch[3]);
+              const endMin = parseInt(timeMatch[4]);
+              const hours = (endHour * 60 + endMin - startHour * 60 - startMin) / 60;
+              totalHours += hours;
+            }
+          });
+          
+          document.getElementById("courseHours").innerHTML = totalHours.toFixed(1);
+
+          const categories = [...new Set(courses.map(c => c.category || "学科辅导"))];
+          document.getElementById("categoryCount").innerHTML = categories.length;
+        },
+
+        // 改变日期
+        changeDate(days) {
+          this.currentDate.setDate(this.currentDate.getDate() + days);
+          this.updateDisplay();
+        },
+
+        // 绑定事件
+        bindEvents() {
+          document.getElementById('prevBtn')?.addEventListener('click', () => this.changeDate(-1));
+          document.getElementById('nextBtn')?.addEventListener('click', () => this.changeDate(1));
+        },
+
+        // 显示成功消息
+        showSuccess(message) {
+          alert('✅ ' + message);
+        },
+
+        // 显示错误消息
+        showError(message) {
+          alert('❌ ' + message);
+        },
+
+        // 显示确认对话框
+        showConfirm(message) {
+          return confirm('❓ ' + message);
+        }
+      };
+
+      // ================================
+      // UI界面管理层 - 结束
+      // ================================
+
+      // ================================
+      // 编辑器模块 - 开始
+      // ================================
+      
+      const EditorManager = {
+        currentEditingId: null,
+        isOpen: false,
+
+        // 打开编辑器
         openEditor(date) {
           const today = new Date();
           const year = today.getFullYear();
@@ -1041,23 +1400,25 @@
           
           document.getElementById('editDate').value = dateStr;
           document.getElementById('editorOverlay').style.display = 'flex';
+          this.isOpen = true;
           
           this.loadDateCourses();
           this.clearForm();
         },
 
+        // 关闭编辑器
         closeEditor() {
           document.getElementById('editorOverlay').style.display = 'none';
+          this.isOpen = false;
           this.clearForm();
-          this.currentEditingId = null;
-          this.currentEditingDate = null;
         },
 
+        // 加载指定日期的课程列表
         loadDateCourses() {
           const dateStr = document.getElementById('editDate').value;
           if (!dateStr) return;
 
-          const courses = window.ScheduleData.getScheduleByDate(dateStr);
+          const courses = ScheduleManager.getDisplayScheduleByDate(dateStr);
           let courseListHtml = '';
 
           if (courses.length === 0) {
@@ -1071,8 +1432,8 @@
                     <div class="course-name-edit">${course.course}</div>
                   </div>
                   <div class="course-actions">
-                    <button class="btn-small btn-edit" onclick="handleEditCourse('${course.id}', '${dateStr}')">编辑</button>
-                    <button class="btn-small btn-delete" onclick="handleDeleteCourse('${course.id}', '${dateStr}')">删除</button>
+                    <button class="btn-small btn-edit" onclick="handleEditCourse('${course.id}')">编辑</button>
+                    <button class="btn-small btn-delete" onclick="handleDeleteCourse('${course.id}')">删除</button>
                   </div>
                 </div>`;
             });
@@ -1081,11 +1442,13 @@
           document.getElementById('courseList').innerHTML = courseListHtml;
         },
 
+        // 设置快速时间
         setQuickTime(startTime, endTime) {
           document.getElementById('startTime').value = startTime;
           document.getElementById('endTime').value = endTime;
         },
 
+        // 清空表单
         clearForm() {
           document.getElementById('startTime').value = '';
           document.getElementById('endTime').value = '';
@@ -1096,38 +1459,55 @@
           this.currentEditingId = null;
         },
 
-        editCourse(courseId, dateStr) {
-          const courses = window.ScheduleData.getScheduleByDate(dateStr);
-          const course = courses.find(c => c.id == courseId);
+        // 编辑课程
+        editCourse(courseId) {
+          // 找到课程数据
+          let targetSchedule = null;
           
-          if (!course) return;
-
-          const timeMatch = course.time.match(/(\d+):(\d+)-(\d+):(\d+)/);
-          if (timeMatch) {
-            document.getElementById('startTime').value = `${timeMatch[1]}:${timeMatch[2]}`;
-            document.getElementById('endTime').value = `${timeMatch[3]}:${timeMatch[4]}`;
+          for (const date in ScheduleManager.schedules) {
+            const schedule = ScheduleManager.schedules[date].find(s => s.id === courseId);
+            if (schedule) {
+              targetSchedule = schedule;
+              break;
+            }
+          }
+          
+          if (!targetSchedule) {
+            UIManager.showError('课程不存在');
+            return;
           }
 
-          document.getElementById('courseName').value = course.course;
-          document.getElementById('courseType').value = course.type;
-          document.getElementById('courseNote').value = course.note || '';
+          // 填充表单
+          document.getElementById('startTime').value = targetSchedule.start_time;
+          document.getElementById('endTime').value = targetSchedule.end_time;
+          document.getElementById('courseName').value = targetSchedule.course_name;
+          document.getElementById('courseType').value = targetSchedule.course_type;
+          document.getElementById('courseNote').value = targetSchedule.note || '';
           document.getElementById('saveBtn').innerHTML = '✅ 更新课程';
 
           this.currentEditingId = courseId;
-          this.currentEditingDate = dateStr;
         },
 
-        async deleteCourse(courseId, dateStr) {
-          if (confirm('确定要删除这门课程吗？')) {
-            await window.ScheduleData.deleteCourse(dateStr, courseId);
-            this.loadDateCourses();
+        // 删除课程
+        async deleteCourse(courseId) {
+          if (!UIManager.showConfirm('确定要删除这门课程吗？')) return;
+
+          try {
+            const result = await ScheduleManager.deleteCourse(courseId);
             
-            if (typeof updateDisplay === 'function') {
-              updateDisplay();
+            if (result.success) {
+              this.loadDateCourses();
+              UIManager.updateDisplay();
+              UIManager.showSuccess('课程删除成功！');
+            } else {
+              UIManager.showError('删除失败: ' + result.error);
             }
+          } catch (error) {
+            UIManager.showError('删除失败: ' + error.message);
           }
         },
 
+        // 保存课程
         async saveCourse() {
           const dateStr = document.getElementById('editDate').value;
           const startTime = document.getElementById('startTime').value;
@@ -1137,166 +1517,113 @@
           const courseNote = document.getElementById('courseNote').value.trim();
 
           if (!dateStr || !startTime || !endTime || !courseName) {
-            alert('请填写完整的课程信息（日期、时间、课程名称为必填项）');
-            return;
-          }
-
-          if (startTime >= endTime) {
-            alert('结束时间必须晚于开始时间');
+            UIManager.showError('请填写完整的课程信息（日期、时间、课程名称为必填项）');
             return;
           }
 
           const courseData = {
-            time: `${startTime}-${endTime}`,
-            course: courseName,
-            type: courseType,
-            category: "学科辅导",
+            start_time: startTime,
+            end_time: endTime,
+            course_name: courseName,
+            course_type: courseType,
             note: courseNote
           };
 
           try {
+            let result;
             if (this.currentEditingId) {
-              await window.ScheduleData.updateCourse(this.currentEditingDate, this.currentEditingId, courseData);
-              alert('课程更新成功！');
+              result = await ScheduleManager.updateCourse(this.currentEditingId, courseData);
+              if (result.success) {
+                UIManager.showSuccess('课程更新成功！');
+              }
             } else {
-              await window.ScheduleData.addCourse(dateStr, courseData);
-              alert('课程添加成功！');
+              result = await ScheduleManager.addCourse(dateStr, courseData);
+              if (result.success) {
+                UIManager.showSuccess('课程添加成功！');
+              }
             }
 
-            this.loadDateCourses();
-            this.clearForm();
-
-            if (typeof updateDisplay === 'function') {
-              updateDisplay();
+            if (result.success) {
+              this.loadDateCourses();
+              this.clearForm();
+              UIManager.updateDisplay();
+            } else {
+              UIManager.showError('保存失败: ' + result.error);
             }
           } catch (error) {
-            console.error('保存课程失败:', error);
-            alert('保存失败，请重试');
+            UIManager.showError('保存失败: ' + error.message);
           }
         }
       };
 
-      // 主应用代码
-      let currentDate = new Date();
+      // ================================
+      // 编辑器模块 - 结束
+      // ================================
 
-      function formatDate(date) {
-        const year = date.getFullYear();
-        const month = date.getMonth() + 1;
-        const day = date.getDate();
-        return `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
-      }
-
-      function formatDisplayDate(date) {
-        const weekdays = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
-        const year = date.getFullYear();
-        const month = date.getMonth() + 1;
-        const day = date.getDate();
-        const weekday = weekdays[date.getDay()];
-        return `${year}年${month}月${day}日 ${weekday}`;
-      }
-
-      function updateDisplay() {
-        const dateStr = formatDate(currentDate);
-        const displayStr = formatDisplayDate(currentDate);
-        const todayStr = formatDisplayDate(new Date());
-
-        document.getElementById("currentDate").innerHTML = todayStr;
-        document.getElementById("displayDate").innerHTML = displayStr;
-
-        const courses = window.ScheduleData.getScheduleByDate(dateStr);
-        const scheduleContent = document.getElementById("scheduleContent");
-
-        if (courses.length === 0) {
-          scheduleContent.innerHTML = '<div class="no-courses">🎉 今天没有安排课程，可以好好休息哦！</div>';
-        } else {
-          let html = "";
-          courses.forEach(course => {
-            html += `<div class="course-item course-${course.type}">
-                      <div class="course-time">${course.time}</div>
-                      <div class="course-name">${course.course}</div>
-                    </div>`;
-          });
-          scheduleContent.innerHTML = html;
-        }
-
-        updateStats(courses);
-      }
-
-      function updateStats(courses) {
-        document.getElementById("totalCourses").innerHTML = courses.length;
-
-        let totalHours = 0;
-        courses.forEach(course => {
-          const timeMatch = course.time.match(/(\d+):(\d+)-(\d+):(\d+)/);
-          if (timeMatch) {
-            const startHour = parseInt(timeMatch[1]);
-            const startMin = parseInt(timeMatch[2]);
-            const endHour = parseInt(timeMatch[3]);
-            const endMin = parseInt(timeMatch[4]);
-            const hours = (endHour * 60 + endMin - startHour * 60 - startMin) / 60;
-            totalHours += hours;
-          }
-        });
-        
-        document.getElementById("courseHours").innerHTML = totalHours.toFixed(1);
-
-        const categories = [...new Set(courses.map(c => c.category || "学科辅导"))];
-        document.getElementById("categoryCount").innerHTML = categories.length;
-      }
-
-      function changeDate(days) {
-        currentDate.setDate(currentDate.getDate() + days);
-        updateDisplay();
-      }
-
-      function bindEvents() {
-        document.getElementById('prevBtn')?.addEventListener('click', () => changeDate(-1));
-        document.getElementById('nextBtn')?.addEventListener('click', () => changeDate(1));
-      }
-
-      // 全局函数
+      // ================================
+      // 全局事件处理函数 - 开始
+      // ================================
+      
+      // 编辑按钮点击
       function handleEditClick() {
-        window.ScheduleEditor?.openEditor();
+        EditorManager.openEditor();
       }
 
+      // 关闭编辑器
       function handleCloseEditor() {
-        window.ScheduleEditor?.closeEditor();
+        EditorManager.closeEditor();
       }
 
+      // 加载日期课程
       function handleLoadDateCourses() {
-        window.ScheduleEditor?.loadDateCourses();
+        EditorManager.loadDateCourses();
       }
 
+      // 设置快速时间
       function handleSetQuickTime(start, end) {
-        window.ScheduleEditor?.setQuickTime(start, end);
+        EditorManager.setQuickTime(start, end);
       }
 
-      function handleEditCourse(courseId, dateStr) {
-        window.ScheduleEditor?.editCourse(courseId, dateStr);
+      // 编辑课程
+      function handleEditCourse(courseId) {
+        EditorManager.editCourse(courseId);
       }
 
-      function handleDeleteCourse(courseId, dateStr) {
-        window.ScheduleEditor?.deleteCourse(courseId, dateStr);
+      // 删除课程
+      function handleDeleteCourse(courseId) {
+        EditorManager.deleteCourse(courseId);
       }
 
+      // 保存课程
       function handleSaveCourse() {
-        window.ScheduleEditor?.saveCourse();
+        EditorManager.saveCourse();
       }
 
+      // ================================
+      // 全局事件处理函数 - 结束
+      // ================================
+
+      // ================================
+      // 应用初始化部分 - 开始
+      // ================================
+      
       // 初始化应用
       async function initApp() {
-        // 为现有课程添加ID
-        Object.keys(defaultSchedules).forEach(date => {
-          defaultSchedules[date].forEach((course, index) => {
-            if (!course.id) {
-              course.id = Date.now() + Math.random() + index;
-            }
-          });
-        });
-
-        await window.ScheduleData.init();
-        updateDisplay();
-        bindEvents();
+        console.log('🚀 初始化应用 - 使用统一数据模型');
+        
+        try {
+          // 初始化数据管理器
+          await ScheduleManager.init();
+          
+          // 初始化UI
+          UIManager.updateDisplay();
+          UIManager.bindEvents();
+          
+          console.log('✅ 应用初始化完成');
+        } catch (error) {
+          console.error('❌ 应用初始化失败:', error);
+          UIManager.showError('应用初始化失败: ' + error.message);
+        }
       }
 
       // 页面加载完成后初始化
@@ -1311,6 +1638,15 @@
           initApp();
         }
       }
+
+      // 页面卸载时清理资源
+      window.addEventListener('beforeunload', () => {
+        ScheduleManager.cleanup();
+      });
+
+      // ================================
+      // 应用初始化部分 - 结束
+      // ================================
     </script>
   </body>
 </html>
