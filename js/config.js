@@ -1,6 +1,6 @@
 // js/config.js
 window.supabaseUrl = 'https://exnfrclagndigmdybicg.supabase.co';
-window.supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV4bmZyY2xhZ25kaWdtZHliaWNnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyODMzMjUsImV4cCI6MjA2Njg1OTMyNX0.kDPQuEKP6pSAmcbNn2cuUZZDC5fBT_YYdAYAve9qY9w';
+window.supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzIwMDAwMDAwLCJleHAiOjIwNDAwMDAwMDB9.bI6czDaKgprMQVt2PlsT_M77m-4zHjWstdrWc3Rif7E';
 // 确保Supabase库加载完成后再初始化客户端
 document.addEventListener('DOMContentLoaded', function() {
   // 等待Supabase库加载
