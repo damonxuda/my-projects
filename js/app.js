@@ -316,7 +316,8 @@ const ScheduleManager = {
 
   getDisplayScheduleByDate(dateStr) {
     const schedules = this.getScheduleByDate(dateStr);
-    return schedules.map(schedule => ScheduleUtils.toDisplayFormat(schedule));
+    const sortedSchedules = ScheduleUtils.sortByTime(schedules);
+    return sortedSchedules.map(schedule => ScheduleUtils.toDisplayFormat(schedule));
   },
 
   async addCourse(dateStr, courseData) {
