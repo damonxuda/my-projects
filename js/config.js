@@ -5,6 +5,6 @@ window.supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 // 初始化客户端
 document.addEventListener('DOMContentLoaded', function() {
   if (window.supabase && window.supabase.createClient) {
-    window.supabase = supabase.createClient(window.supabaseUrl, window.supabaseKey);    
+    window.supabase = supabase;    
   }
 });
