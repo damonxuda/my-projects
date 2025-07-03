@@ -725,6 +725,13 @@ const EditorManager = {
         this.loadDateCourses();
         this.clearForm();
         UIManager.updateDisplay();
+        
+        const editDate = document.getElementById('editDate').value;
+        const currentDisplayDate = UIManager.formatDate(UIManager.currentDate);
+        if (editDate !== currentDisplayDate) {
+            UIManager.currentDate = new Date(editDate);
+            UIManager.updateDisplay();
+        }  
       } else {
         UIManager.showError('保存失败: ' + result.error);
       }
