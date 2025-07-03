@@ -779,14 +779,10 @@ async function initApp() {
 // 页面加载完成后初始化
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
-    if (!window.useSupabase) {
       initApp();
-    }
   });
 } else {
-  if (!window.useSupabase) {
     initApp();
-  }
 }
 
 // 页面卸载时清理资源
