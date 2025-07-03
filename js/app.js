@@ -724,9 +724,14 @@ const EditorManager = {
       if (result.success) {
         this.loadDateCourses();
         this.clearForm();
+
+        const editDate = document.getElementById('editDate').value;
+        if (ScheduleManager.schedules[editDate]) {
+            ScheduleManager.schedules[editDate] = ScheduleUtils.sortByTime(ScheduleManager.schedules[editDate]);
+        }
+        
         UIManager.updateDisplay();
         
-        const editDate = document.getElementById('editDate').value;
         const currentDisplayDate = UIManager.formatDate(UIManager.currentDate);
         if (editDate !== currentDisplayDate) {
             UIManager.currentDate = new Date(editDate);
