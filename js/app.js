@@ -641,8 +641,9 @@ const EditorManager = {
       return;
     }
 
-    document.getElementById('startTime').value = targetSchedule.start_time;
-    document.getElementById('endTime').value = targetSchedule.end_time;
+    
+    document.getElementById('startTime').value = targetSchedule.start_time.substring(0, 5);
+    document.getElementById('endTime').value = targetSchedule.end_time.substring(0, 5);
     document.getElementById('courseName').value = targetSchedule.course_name;
     document.getElementById('courseType').value = targetSchedule.course_type;
     document.getElementById('courseNote').value = targetSchedule.note || '';
