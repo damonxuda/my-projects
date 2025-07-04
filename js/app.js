@@ -1,5 +1,5 @@
 // ================================
-// 暑假课程表 - 主应用逻辑（修复版）
+// 暑假课程表 - 主应用逻辑（调试版）
 // ================================
 
 // 配置和常量
@@ -112,7 +112,7 @@ const ScheduleUtils = {
 const DatabaseManager = {
   async loadAllSchedules() {
     try {
-      console.log('从Supabase加载统一格式数据...');
+      console.log('🔗 [' + new Date().toLocaleTimeString() + '] 开始向Supabase发起查询请求');
       
       const { data, error } = await window.supabase
         .from('schedules')
@@ -121,14 +121,14 @@ const DatabaseManager = {
         .order('start_time');
         
       if (error) {
-        console.error('从Supabase加载数据失败:', error);
+        console.error('❌ [' + new Date().toLocaleTimeString() + '] Supabase查询失败:', error);
         return { success: false, error: error.message };
       }
 
-      console.log('从Supabase加载了', data?.length || 0, '条课程记录');
+      console.log('📥 [' + new Date().toLocaleTimeString() + '] Supabase查询成功，返回', data?.length || 0, '条记录');
       return { success: true, data: data || [] };
     } catch (error) {
-      console.error('加载Supabase数据异常:', error);
+      console.error('💥 [' + new Date().toLocaleTimeString() + '] Supabase查询异常:', error);
       return { success: false, error: error.message };
     }
   },
@@ -224,18 +224,26 @@ const ScheduleManager = {
   realtimeSubscription: null,
   
   async init() {
+    console.log('📊 [' + new Date().toLocaleTimeString() + '] 开始初始化 ScheduleManager');
+    
     if (window.useSupabase && window.supabase) {
+      console.log('🔄 [' + new Date().toLocaleTimeString() + '] 使用Supabase模式，开始从数据库加载');
       await this.loadFromDatabase();
       this.setupRealtimeSync();
     } else {
+      console.log('💾 [' + new Date().toLocaleTimeString() + '] 使用本地存储模式');
       this.loadFromLocal();
     }
+    
+    console.log('📊 [' + new Date().toLocaleTimeString() + '] ScheduleManager 初始化完成');
   },
 
   async loadFromDatabase() {
+    console.log('📂 [' + new Date().toLocaleTimeString() + '] 开始从数据库加载数据');
     const result = await DatabaseManager.loadAllSchedules();
     
     if (result.success) {
+      console.log('📋 [' + new Date().toLocaleTimeString() + '] 开始整理数据，原始记录数:', result.data.length);
       this.schedules = {};
       result.data.forEach(schedule => {
         const dateStr = schedule.date;
@@ -244,8 +252,32 @@ const ScheduleManager = {
         }
         this.schedules[dateStr].push(schedule);
       });
+      console.log('✅ [' + new Date().toLocaleTimeString() + '] 应用初始化完成');
+  } catch (error) {
+    console.error('❌ [' + new Date().toLocaleTimeString() + '] 应用初始化失败:', error);
+    UIManager.showError('应用初始化失败: ' + error.message);
+  }
+}
+
+// 页面加载完成后初始化
+if (document.readyState === 'loading') {
+  console.log('⏳ [' + new Date().toLocaleTimeString() + '] 文档还在加载中，等待DOMContentLoaded事件');
+  document.addEventListener('DOMContentLoaded', () => {
+      console.log('📄 [' + new Date().toLocaleTimeString() + '] DOMContentLoaded事件触发');
+      initApp();
+  });
+} else {
+    console.log('✅ [' + new Date().toLocaleTimeString() + '] 文档已加载完成，直接初始化');
+    initApp();
+}
+
+// 页面卸载时清理资源
+window.addEventListener('beforeunload', () => {
+  ScheduleManager.cleanup();
+}); [' + new Date().toLocaleTimeString() + '] 数据整理完成，包含日期:', Object.keys(this.schedules).join(', '));
+      console.log('📊 [' + new Date().toLocaleTimeString() + '] 各日期课程数量:', Object.keys(this.schedules).map(date => `${date}:${this.schedules[date].length}`).join(', '));
     } else {
-      console.error('数据库加载失败');
+      console.error('❌ [' + new Date().toLocaleTimeString() + '] 数据库加载失败:', result.error);
       this.schedules = {};
     }
   },
@@ -478,6 +510,8 @@ const UIManager = {
 
   updateDisplay() {
     const dateStr = this.formatDate(this.currentDate);
+    console.log('🎨 [' + new Date().toLocaleTimeString() + '] 开始更新UI显示，当前日期:', dateStr);
+    
     const displayStr = this.formatDisplayDate(this.currentDate);
     const todayStr = this.formatDisplayDate(new Date());
 
@@ -485,11 +519,15 @@ const UIManager = {
     document.getElementById("displayDate").innerHTML = displayStr;
 
     const courses = ScheduleManager.getDisplayScheduleByDate(dateStr);
+    console.log('📚 [' + new Date().toLocaleTimeString() + '] 获取到', courses.length, '门课程，课程详情:', courses.map(c => `${c.time} ${c.course}`).join(', '));
+    
     const scheduleContent = document.getElementById("scheduleContent");
 
     if (courses.length === 0) {
+      console.log('📅 [' + new Date().toLocaleTimeString() + '] 当日无课程，显示空状态');
       scheduleContent.innerHTML = '<div class="no-courses">🎉 今天没有安排课程，可以好好休息哦！</div>';
     } else {
+      console.log('📋 [' + new Date().toLocaleTimeString() + '] 开始渲染课程列表');
       let html = "";
       courses.forEach(course => {
         html += `<div class="course-item course-${course.type}">
@@ -498,9 +536,11 @@ const UIManager = {
                 </div>`;
       });
       scheduleContent.innerHTML = html;
+      console.log('✅ [' + new Date().toLocaleTimeString() + '] 课程列表渲染完成');
     }
 
     this.updateStats(courses);
+    console.log('🎨 [' + new Date().toLocaleTimeString() + '] UI显示更新完成');
   },
 
   // 修复：统计计算算法
@@ -777,25 +817,34 @@ function handleSaveCourse() {
 
 // 应用初始化
 async function initApp() {
-  console.log('🚀 初始化应用 - 使用统一数据模型');
+  console.log('🚀 [' + new Date().toLocaleTimeString() + '] 开始初始化应用 - 使用统一数据模型');
   
   try {
+    console.log('📊 [' + new Date().toLocaleTimeString() + '] 开始初始化 ScheduleManager');
     await ScheduleManager.init();
+    console.log('📊 [' + new Date().toLocaleTimeString() + '] ScheduleManager 初始化完成，数据量:', Object.keys(ScheduleManager.schedules).length, '个日期');
+    
+    console.log('🎨 [' + new Date().toLocaleTimeString() + '] 开始更新UI显示');
     UIManager.updateDisplay();
+    console.log('🎨 [' + new Date().toLocaleTimeString() + '] UI显示更新完成');
+    
     UIManager.bindEvents();
-    console.log('✅ 应用初始化完成');
+    console.log('✅ [' + new Date().toLocaleTimeString() + '] 应用初始化完成');
   } catch (error) {
-    console.error('❌ 应用初始化失败:', error);
+    console.error('❌ [' + new Date().toLocaleTimeString() + '] 应用初始化失败:', error);
     UIManager.showError('应用初始化失败: ' + error.message);
   }
 }
 
 // 页面加载完成后初始化
 if (document.readyState === 'loading') {
+  console.log('⏳ [' + new Date().toLocaleTimeString() + '] 文档还在加载中，等待DOMContentLoaded事件');
   document.addEventListener('DOMContentLoaded', () => {
+      console.log('📄 [' + new Date().toLocaleTimeString() + '] DOMContentLoaded事件触发');
       initApp();
   });
 } else {
+    console.log('✅ [' + new Date().toLocaleTimeString() + '] 文档已加载完成，直接初始化');
     initApp();
 }
 
