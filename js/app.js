@@ -726,13 +726,16 @@ const EditorManager = {
         this.loadDateCourses();
         this.clearForm();
 
-        const editDate = document.getElementById('editDate').value;
-        if (ScheduleManager.schedules[editDate]) {
-            ScheduleManager.schedules[editDate] = ScheduleUtils.sortByTime(ScheduleManager.schedules[editDate]);
-        }
-        
-        UIManager.updateDisplay();
-        
+      // 修复排序问题：强制重新排序和更新UI
+      const editDate = document.getElementById('editDate').value;
+      if (ScheduleManager.schedules[editDate]) {
+          ScheduleManager.schedules[editDate] = ScheduleUtils.sortByTime(ScheduleManager.schedules[editDate]);
+      }
+      UIManager.updateDisplay();
+
+      // 修复编辑器体验：自动关闭编辑器
+      this.closeEditor();
+
         const currentDisplayDate = UIManager.formatDate(UIManager.currentDate);
         if (editDate !== currentDisplayDate) {
             UIManager.currentDate = new Date(editDate);
