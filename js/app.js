@@ -59,9 +59,16 @@ const ScheduleUtils = {
 
   sortByTime(schedules) {
     return [...schedules].sort((a, b) => {
-      const timeA = new Date(`2000-01-01T${a.start_time}:00`);
-      const timeB = new Date(`2000-01-01T${b.start_time}:00`);
-      return timeA - timeB;
+
+    // 统一时间格式，确保都是 HH:MM:SS 格式
+    const formatTime = (time) => {
+      if (!time) return '00:00:00';
+      return time.length === 5 ? `${time}:00` : time;
+    };
+
+    const timeA = new Date(`2000-01-01T${formatTime(a.start_time)}`);
+    const timeB = new Date(`2000-01-01T${formatTime(b.start_time)}`);
+    return timeA - timeB;
     });
   },
 
