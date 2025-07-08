@@ -1,4 +1,3 @@
-
 // ================================
 // 暑假课程表 - 主应用逻辑（修复版）
 // ================================
@@ -570,12 +569,18 @@ const EditorManager = {
   currentEditingId: null,
   isOpen: false,
 
+  // 🔧 修复：正确处理传入的日期参数
   openEditor(date) {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = today.getMonth() + 1;
-    const day = today.getDate();
-    const dateStr = date || `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+    // 🔧 修复：使用传入的日期或当前选择的日期，而不是今天的日期
+    let dateStr;
+    if (date) {
+      dateStr = date;
+    } else {
+      // 使用当前 UI 显示的日期，而不是今天的日期
+      dateStr = UIManager.formatDate(UIManager.currentDate);
+    }
+    
+    console.log('打开编辑器，使用日期:', dateStr); // 调试信息
     
     document.getElementById('editDate').value = dateStr;
     document.getElementById('editorOverlay').style.display = 'flex';
@@ -733,21 +738,19 @@ const EditorManager = {
         this.loadDateCourses();
         this.clearForm();
 
-      // 修复排序问题：强制重新排序和更新UI
-      const editDate = document.getElementById('editDate').value;
-      if (ScheduleManager.schedules[editDate]) {
-          ScheduleManager.schedules[editDate] = ScheduleUtils.sortByTime(ScheduleManager.schedules[editDate]);
-      }
-      UIManager.updateDisplay();
+        // 修复排序问题：强制重新排序和更新UI
+        const editDate = document.getElementById('editDate').value;
+        if (ScheduleManager.schedules[editDate]) {
+            ScheduleManager.schedules[editDate] = ScheduleUtils.sortByTime(ScheduleManager.schedules[editDate]);
+        }
 
-      // 修复编辑器体验：自动关闭编辑器
-      this.closeEditor();
+        // 🔧 修复：编辑完成后保持在编辑的日期
+        const editDateObj = new Date(editDate + 'T00:00:00');
+        UIManager.currentDate = editDateObj;
+        UIManager.updateDisplay();
 
-        const currentDisplayDate = UIManager.formatDate(UIManager.currentDate);
-        if (editDate !== currentDisplayDate) {
-            UIManager.currentDate = new Date(editDate);
-            UIManager.updateDisplay();
-        }  
+        // 修复编辑器体验：自动关闭编辑器
+        this.closeEditor();
       } else {
         UIManager.showError('保存失败: ' + result.error);
       }
@@ -757,9 +760,12 @@ const EditorManager = {
   }
 };
 
-// 全局事件处理函数
+// 🔧 修复：全局事件处理函数 - 传递当前选择的日期
 function handleEditClick() {
-  EditorManager.openEditor();
+  // 传递当前 UI 显示的日期
+  const currentDateStr = UIManager.formatDate(UIManager.currentDate);
+  console.log('点击编辑按钮，当前选择的日期:', currentDateStr); // 调试信息
+  EditorManager.openEditor(currentDateStr);
 }
 
 function handleCloseEditor() {
