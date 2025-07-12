@@ -20,6 +20,66 @@ const ScheduleUtils = {
     return crypto.randomUUID();
   },
 
+getSmartColorClass(schedule) {
+  // 第一优先级：检查新的 category 字段
+  if (schedule.category) {
+    const categoryColorMap = {
+      '数学': 'smk',      // 黄色
+      '英语': 'english',  // 绿色  
+      '中文': 'teacher',  // 红色
+      '体锻': 'exercise', // 浅绿色
+      '其他': 'other'     // 灰色
+    };
+    
+    if (categoryColorMap[schedule.category]) {
+      console.log(`使用新分类: ${schedule.category} -> ${categoryColorMap[schedule.category]}`);
+      return categoryColorMap[schedule.category];
+    }
+  }
+  
+  // 第二优先级：向后兼容原有的 course_type
+  if (schedule.course_type) {
+    const typeColorMap = {
+      'smk': 'smk',
+      'island': 'island',
+      'teacher': 'teacher',
+      'english': 'english',
+      'exercise': 'exercise',
+      'homework': 'homework',
+      'art': 'art',
+      'other': 'other'
+    };
+    
+    if (typeColorMap[schedule.course_type]) {
+      console.log(`使用旧分类: ${schedule.course_type} -> ${typeColorMap[schedule.course_type]}`);
+      return typeColorMap[schedule.course_type];
+    }
+  }
+  
+  // 第三优先级：基于课程名称的备用识别
+  const courseName = schedule.course_name || '';
+  if (courseName.includes('普老师') || courseName.includes('岛主') || 
+      courseName.includes('蘑菇') || courseName.includes('方程')) {
+    console.log(`按名称识别为数学: ${courseName}`);
+    return 'smk';  // 数学类 → 黄色
+  }
+  if (courseName.includes('英语') || courseName.includes('Day')) {
+    console.log(`按名称识别为英语: ${courseName}`);
+    return 'english';  // 英语类 → 绿色
+  }
+  if (courseName.includes('写字')) {
+    console.log(`按名称识别为中文: ${courseName}`);
+    return 'teacher';  // 中文类 → 红色
+  }
+  if (courseName.includes('游泳') || courseName.includes('篮球')) {
+    console.log(`按名称识别为体锻: ${courseName}`);
+    return 'exercise';  // 体锻类 → 浅绿色
+  }
+  
+  console.log(`使用默认分类: ${courseName}`);
+  return 'other';  // 默认灰色
+},
+
   createNew(date, start_time, end_time, course_name, course_type, note = '') {
     return {
       id: this.generateUUID(),
@@ -108,7 +168,7 @@ const ScheduleUtils = {
       id: schedule.id,
       time: this.formatTimeDisplay(schedule.start_time, schedule.end_time),
       course: schedule.course_name,
-      type: schedule.course_type,
+      type: this.getSmartColorClass(schedule),
       category: schedule.category,
       note: schedule.note || ''
     };
