@@ -2,16 +2,13 @@
 // 暑假课程表 - 主应用逻辑（修复版）
 // ================================
 
-// 配置和常量
+// 配置和常量 - 修复：统一为新的5类分类系统
 const CourseTypes = {
-  smk: 'SMK英语',
-  island: '岛主五竞',
-  teacher: '普老师刷题',
-  english: '英语YH',
-  exercise: '体育锻炼',
-  homework: '作业时间',
-  art: '艺术课程',
-  other: '其他'
+  英语: '英语',
+  数学: '数学', 
+  体锻: '体锻',
+  中文: '中文',
+  其他: '其他'
 };
 
 // 统一数据模型工具
@@ -41,6 +38,7 @@ getSmartColorClass(schedule) {
     return 'other';  // 默认灰色
   },
 
+  // 修复：正确设置category字段
   createNew(date, start_time, end_time, course_name, course_type, note = '') {
     return {
       id: this.generateUUID(),
@@ -49,7 +47,7 @@ getSmartColorClass(schedule) {
       end_time,
       course_name,
       course_type,
-      category: '学科辅导',
+      category: course_type || '其他',  // 修复：使用传入的course_type作为category
       note,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -186,7 +184,6 @@ const DatabaseManager = {
       const { data, error } = await window.supabase
         .from('schedules')
         .update(updates)
-        .eq('id', id)
         .select()
         .single();
         
@@ -411,6 +408,7 @@ const ScheduleManager = {
       const updatedSchedule = {
         ...originalSchedule,
         ...updates,
+        category: updates.course_type || updates.category || originalSchedule.category,  // 修复：确保category正确更新
         updated_at: new Date().toISOString()
       };
 
@@ -558,7 +556,7 @@ const UIManager = {
     // 确保显示正数，保留一位小数
     document.getElementById("courseHours").innerHTML = Math.max(0, totalHours).toFixed(1);
 
-    const categories = [...new Set(courses.map(c => c.category || "学科辅导"))];
+    const categories = [...new Set(courses.map(c => c.category || "其他"))];  // 修复：使用"其他"作为默认值
     document.getElementById("categoryCount").innerHTML = categories.length;
   },
 
@@ -654,7 +652,7 @@ const EditorManager = {
     document.getElementById('startTime').value = '';
     document.getElementById('endTime').value = '';
     document.getElementById('courseName').value = '';
-    document.getElementById('courseType').value = 'smk';
+    document.getElementById('courseType').value = '英语';  // 修复：改为新的默认分类
     document.getElementById('courseNote').value = '';
     document.getElementById('saveBtn').innerHTML = '➕ 添加课程';
     this.currentEditingId = null;
@@ -680,7 +678,8 @@ const EditorManager = {
     document.getElementById('startTime').value = targetSchedule.start_time.substring(0, 5);
     document.getElementById('endTime').value = targetSchedule.end_time.substring(0, 5);
     document.getElementById('courseName').value = targetSchedule.course_name;
-    document.getElementById('courseType').value = targetSchedule.course_type;
+    // 修复：优先使用category字段，如果没有则使用course_type字段
+    document.getElementById('courseType').value = targetSchedule.category || targetSchedule.course_type || '英语';
     document.getElementById('courseNote').value = targetSchedule.note || '';
     document.getElementById('saveBtn').innerHTML = '✅ 更新课程';
 
