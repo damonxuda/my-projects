@@ -257,7 +257,8 @@ const ScheduleManager = {
   async init() {
     if (window.useSupabase && window.supabase) {
       await this.loadFromDatabase();
-      this.setupRealtimeSync();
+      // 暂时禁用实时连接
+      //    this.setupRealtimeSync();
     } else {
       this.loadFromLocal();
     }
