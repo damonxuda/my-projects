@@ -1,6 +1,11 @@
 // ================================
-// 暑假课程表 - 主应用逻辑（修复版）
+// 暑假课程表 - 主应用逻辑（支持环境切换版）
 // ================================
+
+// 获取表配置
+const getTableName = (table) => {
+  return window.appConfig?.tableConfig?.[table] || table;
+};
 
 // 配置和常量 - 修复：统一为新的5类分类系统
 const CourseTypes = {
@@ -141,7 +146,7 @@ const DatabaseManager = {
       console.log('从Supabase加载统一格式数据...');
       
       const { data, error } = await window.supabase
-        .from('schedules')
+        .from(getTableName('schedules'))  // 使用动态表名
         .select('*')
         .order('date')
         .order('start_time');
@@ -162,7 +167,7 @@ const DatabaseManager = {
   async saveSchedule(schedule) {
     try {
       const { data, error } = await window.supabase
-        .from('schedules')
+        .from(getTableName('schedules'))  // 使用动态表名
         .insert(schedule)
         .select()
         .single();
@@ -182,8 +187,9 @@ const DatabaseManager = {
   async updateSchedule(id, updates) {
     try {
       const { data, error } = await window.supabase
-        .from('schedules')
+        .from(getTableName('schedules'))  // 使用动态表名
         .update(updates)
+        .eq('id', id)
         .select()
         .single();
         
@@ -202,7 +208,7 @@ const DatabaseManager = {
   async deleteSchedule(id) {
     try {
       const { error } = await window.supabase
-        .from('schedules')
+        .from(getTableName('schedules'))  // 使用动态表名
         .delete()
         .eq('id', id);
         
@@ -225,7 +231,7 @@ const DatabaseManager = {
         .on('postgres_changes', {
           event: '*',
           schema: 'public',
-          table: 'schedules'
+          table: getTableName('schedules')  // 使用动态表名
         }, (payload) => {
           console.log('实时数据更新:', payload);
           if (onUpdate) {
