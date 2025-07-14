@@ -2,8 +2,8 @@
 // 暑假课程表 - 配置文件（支持测试/生产环境）
 // ================================
 
-// 环境判断：非 GitHub Pages 域名则为开发/测试环境
-const isProduction = window.location.hostname === 'damonxuda.github.io';
+// 环境开关：改这一行就能切换整个环境
+const isProduction = false; // false=测试环境, true=生产环境
 
 console.log('当前环境:', isProduction ? '生产环境' : '测试环境');
 console.log('当前域名:', window.location.hostname);
