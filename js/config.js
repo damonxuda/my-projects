@@ -3,7 +3,7 @@
 // ================================
 
 // 环境开关：改这一行就能切换整个环境
-const isProduction = true; // false=测试环境, true=生产环境
+const isProduction = false; // false=测试环境, true=生产环境
 
 console.log('当前环境:', isProduction ? '生产环境' : '测试环境');
 console.log('当前域名:', window.location.hostname);
