@@ -9,7 +9,7 @@ console.log('当前环境:', isProduction ? '生产环境' : '测试环境');
 console.log('当前域名:', window.location.hostname);
 
 // Supabase 配置
-const supabaseUrl = 'https://wytqlpwelznkoxhygfc.supabase.co';
+const supabaseUrl = 'https://wytqlpwleznkoxhygfc.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5dHFscHdsZWx6bmtveGh5Z2ZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1Mzk4NDAsImV4cCI6MjA2NzExNTg0MH0.bMPiovIGFAqdC-BQwozDBN9FhbCPwszwG9gUJ-oc7Ok'; // 请填入你的API Key
 
 // 表名配置：根据环境使用不同的表名
