@@ -659,7 +659,7 @@ const EditorManager = {
     document.getElementById('startTime').value = '';
     document.getElementById('endTime').value = '';
     document.getElementById('courseName').value = '';
-    document.getElementById('courseType').value = '英语';  // 修复：改为新的默认分类
+    document.getElementById('courseCategory').value = '英语';  // 修复：改为新的默认分类
     document.getElementById('courseNote').value = '';
     document.getElementById('saveBtn').innerHTML = '➕ 添加课程';
     this.currentEditingId = null;
@@ -686,7 +686,7 @@ const EditorManager = {
     document.getElementById('endTime').value = targetSchedule.end_time.substring(0, 5);
     document.getElementById('courseName').value = targetSchedule.course_name;
     // 修复：优先使用category字段，如果没有则使用course_type字段
-    document.getElementById('courseType').value = targetSchedule.category || targetSchedule.course_type || '英语';
+    document.getElementById('courseCategory').value = targetSchedule.category || targetSchedule.course_type || '英语';
     document.getElementById('courseNote').value = targetSchedule.note || '';
     document.getElementById('saveBtn').innerHTML = '✅ 更新课程';
 
@@ -716,7 +716,7 @@ const EditorManager = {
     const startTime = document.getElementById('startTime').value;
     const endTime = document.getElementById('endTime').value;
     const courseName = document.getElementById('courseName').value.trim();
-    const courseType = document.getElementById('courseType').value;
+    const courseType = document.getElementById('courseCategory').value;
     const courseNote = document.getElementById('courseNote').value.trim();
 
     if (!dateStr) {
@@ -743,7 +743,7 @@ const EditorManager = {
       start_time: startTime,
       end_time: endTime,
       course_name: courseName,
-      course_type: courseType,
+      course_type: courseCategory,
       note: courseNote
     };
 
