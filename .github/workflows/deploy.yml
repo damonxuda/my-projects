@@ -32,27 +32,52 @@ jobs:
                      -b ${{ secrets.COS_BUCKET }} \
                      -r ${{ secrets.COS_REGION }}
     
-    # 4. 同步文件到 COS
+    # 4. 准备要上传的文件
+    - name: Prepare files for upload
+      run: |
+        # 创建临时目录，只复制需要的文件
+        mkdir -p ./deploy-temp
+        
+        # 复制网站文件
+        cp index.html ./deploy-temp/ 2>/dev/null || true
+        cp -r css ./deploy-temp/ 2>/dev/null || true
+        cp -r js ./deploy-temp/ 2>/dev/null || true
+        cp -r images ./deploy-temp/ 2>/dev/null || true
+        cp -r assets ./deploy-temp/ 2>/dev/null || true
+        
+        # 显示要上传的文件
+        echo "Files to upload:"
+        find ./deploy-temp -type f
+    
+    # 5. 同步文件到 COS
     - name: Upload to COS
       run: |
-        # 上传所有文件到 COS，删除远程多余文件
-        coscmd upload -r -s --delete ./ /
+        # 上传准备好的文件到 COS，自动确认删除
+        cd deploy-temp
+        echo "y" | coscmd upload -r -s --delete ./ /
         
-        # 设置 index.html 的正确 Content-Type 和 Content-Disposition
+        # 设置 index.html 的正确权限
         coscmd putobjectacl --grant-read "*" index.html || true
     
-    # 5. 设置文件的正确 Headers（解决下载问题）
+    # 6. 设置文件的正确 Headers
     - name: Set file headers
       run: |
-        # 为 HTML 文件设置正确的 Content-Type
-        find . -name "*.html" -type f | while read file; do
+        # 为 HTML 文件设置正确的权限
+        coscmd putobjectacl --grant-read "*" index.html || true
+        
+        # 为其他文件设置权限
+        find ./deploy-temp -name "*.html" -type f | while read file; do
           filename=$(basename "$file")
-          echo "Setting headers for $filename"
-          # 注意：coscmd 可能不支持直接设置 headers，这里主要是确保权限正确
+          echo "Setting permissions for $filename"
           coscmd putobjectacl --grant-read "*" "$filename" || true
         done
     
-    # 6. 输出部署结果
+    # 7. 清理临时文件
+    - name: Cleanup
+      run: |
+        rm -rf ./deploy-temp
+    
+    # 8. 输出部署结果
     - name: Deploy Success
       run: |
         echo "🎉 部署成功!"
