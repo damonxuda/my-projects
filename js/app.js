@@ -23,25 +23,24 @@ const ScheduleUtils = {
   },
 
 getSmartColorClass(schedule) {
-    // 第一优先级：检查新的 category 字段
-    if (schedule.category) {
-      const categoryColorMap = {
-        '英语': 'course-english',      // 黄色 (#ffe066)
-        '数学': 'course-maths',   // 蓝色 (#66e0ff)
-        '体锻': 'course-exercise',  // 绿色 (#99ff99)
-        '中文': 'course-teacher',  // 红色 (#ff9999)
-        '其他': 'course-other'     // 灰色 (#e0e0e0)
-      };
-      
-      if (categoryColorMap[schedule.category]) {
-        console.log(`使用默认分类 - category值: "${schedule.category}", course_name: "${schedule.course_name}"`);
-        return categoryColorMap[schedule.category];
-      }
-    }
+  if (schedule.category) {
+    const categoryColorMap = {
+      '英语': 'course-english',      // 黄色
+      '数学': 'course-maths',        // 蓝色
+      '体锻': 'course-exercise',     // 绿色
+      '中文': 'course-teacher',      // 红色
+      '其他': 'course-other'         // 灰色
+    };
     
-    console.log(`使用默认分类: ${schedule.course_name || 'unknown'}`);
-    return 'course-other';  // 默认灰色
-  },
+    if (categoryColorMap[schedule.category]) {
+      console.log(`使用新分类: ${schedule.category} -> ${categoryColorMap[schedule.category]}`);
+      return categoryColorMap[schedule.category];
+    }
+  }
+  
+  console.log(`使用默认分类 - category值: "${schedule.category}", course_name: "${schedule.course_name}"`);
+  return 'course-other';
+}
 
   // 修复：正确设置category字段
   createNew(date, start_time, end_time, course_name, course_type, note = '') {
