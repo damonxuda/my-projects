@@ -33,12 +33,10 @@ const ScheduleUtils = {
       };
       
       if (categoryColorMap[schedule.category]) {
-        console.log(`使用新分类: ${schedule.category} -> ${categoryColorMap[schedule.category]}`);
         return categoryColorMap[schedule.category];
       }
     }
     
-    console.log(`使用默认分类 - category值: "${schedule.category}", course_name: "${schedule.course_name}"`);
     return 'course-other';
   },
 
@@ -683,8 +681,7 @@ const EditorManager = {
     document.getElementById('startTime').value = targetSchedule.start_time.substring(0, 5);
     document.getElementById('endTime').value = targetSchedule.end_time.substring(0, 5);
     document.getElementById('courseName').value = targetSchedule.course_name;
-    // 修复：优先使用category字段，如果没有则使用course_type字段
-    document.getElementById('courseCategory').value = targetSchedule.category || targetSchedule.course_type || '英语';
+    document.getElementById('courseCategory').value = targetSchedule.category || '英语';
     document.getElementById('courseNote').value = targetSchedule.note || '';
     document.getElementById('saveBtn').innerHTML = '✅ 更新课程';
 
