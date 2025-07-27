@@ -743,7 +743,7 @@ const EditorManager = {
       start_time: startTime,
       end_time: endTime,
       course_name: courseName,
-      course_type: courseCategory,
+      category: courseCategory,
       note: courseNote
     };
 
