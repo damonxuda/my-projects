@@ -130,15 +130,33 @@ body {
   font-size: 1rem;
 }
 
-/* 课程类型样式 */
-.course-smk { background: #ffe066; border-left: 4px solid #ffd700; }
-.course-island { background: #66e0ff; border-left: 4px solid #00bcd4; }
-.course-teacher { background: #ff9999; border-left: 4px solid #f44336; }
-.course-english { background: #99ff99; border-left: 4px solid #4caf50; }
-.course-exercise { background: #90ee90; border-left: 4px solid #32cd32; }
-.course-homework { background: #ffb6c1; border-left: 4px solid #ff69b4; }
-.course-art { background: #ffb3e6; border-left: 4px solid #e91e63; }
-.course-other { background: #e0e0e0; border-left: 4px solid #757575; }
+/* ================================
+   课程类型样式 - 与小程序对齐的5类分类
+   ================================ */
+.course-english { 
+  background: #ffe066; 
+  border-left: 4px solid #ffd700; 
+}  /* 英语-黄色 */
+
+.course-maths { 
+  background: #66e0ff; 
+  border-left: 4px solid #00bcd4; 
+}  /* 数学-蓝色 */
+
+.course-exercise { 
+  background: #90ee90; 
+  border-left: 4px solid #32cd32; 
+}  /* 体锻-浅绿 */
+
+.course-teacher { 
+  background: #ff9999; 
+  border-left: 4px solid #f44336; 
+}  /* 中文-红色 */
+
+.course-other { 
+  background: #e0e0e0; 
+  border-left: 4px solid #757575; 
+}  /* 其他-灰色 */
 
 .no-courses {
   text-align: center;
