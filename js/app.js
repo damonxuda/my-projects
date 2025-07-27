@@ -34,7 +34,7 @@ getSmartColorClass(schedule) {
       };
       
       if (categoryColorMap[schedule.category]) {
-        console.log(`使用新分类: ${schedule.category} -> ${categoryColorMap[schedule.category]}`);
+        console.log(`使用默认分类 - category值: "${schedule.category}", course_name: "${schedule.course_name}"`);
         return categoryColorMap[schedule.category];
       }
     }
@@ -51,7 +51,6 @@ getSmartColorClass(schedule) {
       start_time,
       end_time,
       course_name,
-      course_type,
       category: course_type || '其他',  // 修复：使用传入的course_type作为category
       note,
       created_at: new Date().toISOString(),
