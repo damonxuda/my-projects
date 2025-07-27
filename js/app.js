@@ -40,7 +40,7 @@ getSmartColorClass(schedule) {
   
   console.log(`使用默认分类 - category值: "${schedule.category}", course_name: "${schedule.course_name}"`);
   return 'course-other';
-}
+},
 
   // 修复：正确设置category字段
   createNew(date, start_time, end_time, course_name, course_type, note = '') {
