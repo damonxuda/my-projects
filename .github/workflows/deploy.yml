@@ -1,10 +1,8 @@
 name: Deploy to Tencent COS
-
 # 当推送到 main 分支时触发
 on:
   push:
     branches: [ main ]
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -49,7 +47,15 @@ jobs:
         echo "Files to upload:"
         find ./deploy-temp -type f
     
-    # 5. 同步文件到 COS
+    # 5. 设置存储桶权限
+    - name: Set bucket permissions
+      run: |
+        # 设置存储桶为公有读私有写
+        echo "Setting bucket to public-read..."
+        coscmd putbucketacl --acl public-read
+        echo "Bucket permissions set successfully!"
+    
+    # 6. 同步文件到 COS
     - name: Upload to COS
       run: |
         # 上传准备好的文件到 COS，自动确认删除
@@ -59,7 +65,7 @@ jobs:
         # 设置 index.html 的正确权限
         coscmd putobjectacl --grant-read "*" index.html || true
     
-    # 6. 设置文件的正确 Headers
+    # 7. 设置文件的正确 Headers
     - name: Set file headers
       run: |
         # 为 HTML 文件设置正确的权限
@@ -72,12 +78,19 @@ jobs:
           coscmd putobjectacl --grant-read "*" "$filename" || true
         done
     
-    # 7. 清理临时文件
+    # 8. 确认存储桶权限
+    - name: Verify bucket permissions
+      run: |
+        echo "Verifying bucket permissions..."
+        coscmd getbucketacl || true
+        echo "Deployment completed!"
+    
+    # 9. 清理临时文件
     - name: Cleanup
       run: |
         rm -rf ./deploy-temp
     
-    # 8. 输出部署结果
+    # 10. 输出部署结果
     - name: Deploy Success
       run: |
         echo "🎉 部署成功!"
