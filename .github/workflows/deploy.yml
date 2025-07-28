@@ -52,7 +52,7 @@ jobs:
       run: |
         # 设置存储桶为公有读私有写
         echo "Setting bucket to public-read..."
-        coscmd putbucketacl --acl public-read
+        coscmd putbucketacl --grant-read uri=http://cam.qcloud.com/groups/global/AllUsers
         echo "Bucket permissions set successfully!"
     
     # 6. 同步文件到 COS
