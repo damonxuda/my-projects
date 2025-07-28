@@ -1,8 +1,10 @@
 name: Deploy to Tencent COS
+
 # 当推送到 main 分支时触发
 on:
   push:
     branches: [ main ]
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -12,25 +14,36 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
     
-    # 2. 安装和配置 coscmd 工具
+    # 2. 设置 Python 环境
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
         python-version: '3.x'
     
+    # 3. 安装依赖
+    - name: Install dependencies
+      run: npm ci
+    
+    # 4. 构建项目
+    - name: Build project
+      run: npm run build
+    
+    # 5. 安装 COSCMD
     - name: Install coscmd
       run: |
         pip install coscmd
+        echo "COSCMD installed successfully"
     
-    # 3. 配置 coscmd
+    # 6. 配置 COSCMD
     - name: Configure coscmd
       run: |
         coscmd config -a ${{ secrets.TENCENT_SECRET_ID }} \
                      -s ${{ secrets.TENCENT_SECRET_KEY }} \
                      -b ${{ secrets.COS_BUCKET }} \
                      -r ${{ secrets.COS_REGION }}
+        echo "COSCMD configured successfully"
     
-    # 4. 准备要上传的文件
+    # 7. 准备要上传的文件
     - name: Prepare files for upload
       run: |
         # 创建临时目录，只复制需要的文件
@@ -47,50 +60,59 @@ jobs:
         echo "Files to upload:"
         find ./deploy-temp -type f
     
-    # 5. 设置存储桶权限
-    - name: Set bucket permissions
+    # 8. 上传文件并设置权限（关键改进）
+    - name: Upload to COS with permissions
       run: |
-        # 设置存储桶为公有读私有写
-        echo "Setting bucket to public-read..."
-        coscmd putbucketacl --grant-read anyone
-        echo "Bucket permissions set successfully!"
-    
-    # 6. 同步文件到 COS
-    - name: Upload to COS
-      run: |
-        # 上传准备好的文件到 COS，自动确认删除
+        echo "Uploading files with public-read permissions..."
         cd deploy-temp
-        echo "y" | coscmd upload -r -s --delete ./ /
         
-        # 设置 index.html 的正确权限
-        coscmd putobjectacl --grant-read "*" index.html || true
+        # 核心改进：上传时直接设置ACL权限，避免后续权限设置失败
+        coscmd upload -rs -f -H "{'x-cos-acl':'public-read'}" ./ /
+        
+        echo "Upload completed successfully"
     
-    # 7. 设置文件的正确 Headers
-    - name: Set file headers
+    # 9. 特殊处理 index.html 的 Content-Disposition
+    - name: Fix index.html Content-Disposition
       run: |
-        # 为 HTML 文件设置正确的权限
-        coscmd putobjectacl --grant-read "*" index.html || true
+        echo "Setting Content-Disposition for index.html..."
+        cd deploy-temp
         
-        # 为其他文件设置权限
+        # 重新上传 index.html 并设置正确的 Content-Disposition 和权限
+        coscmd upload -f -H "{'x-cos-acl':'public-read','Content-Disposition':'inline','Content-Type':'text/html'}" index.html /index.html
+        
+        echo "index.html Content-Disposition and permissions fixed"
+    
+    # 9. 验证上传结果
+    - name: Verify upload
+      run: |
+        echo "Verifying uploaded files..."
+        coscmd list -ar
+        
+        echo "Checking index.html info..."
+        coscmd info index.html || echo "Could not get index.html info"
+    
+    # 10. 备用权限设置（如果上述方法不生效）
+    - name: Backup permission setting
+      continue-on-error: true
+      run: |
+        echo "Setting backup file permissions..."
+        
+        # 为关键文件单独设置权限（保持你原来的语法）
+        coscmd putobjectacl --grant-read "*" index.html || echo "Failed to set index.html permissions"
+        
+        # 为其他HTML文件设置权限
         find ./deploy-temp -name "*.html" -type f | while read file; do
           filename=$(basename "$file")
           echo "Setting permissions for $filename"
-          coscmd putobjectacl --grant-read "*" "$filename" || true
+          coscmd putobjectacl --grant-read "*" "$filename" || echo "Failed to set $filename permissions"
         done
     
-    # 8. 确认存储桶权限
-    - name: Verify bucket permissions
-      run: |
-        echo "Verifying bucket permissions..."
-        coscmd getbucketacl || true
-        echo "Deployment completed!"
-    
-    # 9. 清理临时文件
+    # 11. 清理临时文件
     - name: Cleanup
       run: |
         rm -rf ./deploy-temp
     
-    # 10. 输出部署结果
+    # 12. 输出部署结果
     - name: Deploy Success
       run: |
         echo "🎉 部署成功!"
