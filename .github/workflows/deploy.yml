@@ -20,21 +20,13 @@ jobs:
       with:
         python-version: '3.x'
     
-    # 3. 安装依赖
-    - name: Install dependencies
-      run: npm ci
-    
-    # 4. 构建项目
-    - name: Build project
-      run: npm run build
-    
-    # 5. 安装 COSCMD
+    # 3. 安装 COSCMD
     - name: Install coscmd
       run: |
         pip install coscmd
         echo "COSCMD installed successfully"
     
-    # 6. 配置 COSCMD
+    # 4. 配置 COSCMD
     - name: Configure coscmd
       run: |
         coscmd config -a ${{ secrets.TENCENT_SECRET_ID }} \
@@ -43,46 +35,29 @@ jobs:
                      -r ${{ secrets.COS_REGION }}
         echo "COSCMD configured successfully"
     
-    # 7. 准备要上传的文件
-    - name: Prepare files for upload
+    # 5. 上传所有静态文件并设置公有读权限
+    - name: Upload all static files with public-read permissions
       run: |
-        # 创建临时目录，只复制需要的文件
-        mkdir -p ./deploy-temp
+        echo "Uploading all static files with public-read permissions..."
         
-        # 复制网站文件
-        cp index.html ./deploy-temp/ 2>/dev/null || true
-        cp -r css ./deploy-temp/ 2>/dev/null || true
-        cp -r js ./deploy-temp/ 2>/dev/null || true
-        cp -r images ./deploy-temp/ 2>/dev/null || true
-        cp -r assets ./deploy-temp/ 2>/dev/null || true
+        # 上传所有静态网站文件，设置公有读权限，并排除不需要的文件
+        coscmd upload -rs -f -H "{'x-cos-acl':'public-read'}" ./ / \
+          --ignore ".git/*,.github/*,node_modules/*,.DS_Store,*.md,README*,LICENSE*,*.yml,*.yaml,.env*,*.zip,*.tar,*.gz,package*.json,tsconfig.json,webpack.config.js,gulpfile.js,Gruntfile.js,.gitignore,.gitattributes,.editorconfig,.eslintrc*,.prettierrc*,*.log"
         
-        # 显示要上传的文件
-        echo "Files to upload:"
-        find ./deploy-temp -type f
+        echo "✅ All static files uploaded with public-read permissions"
+        echo "📁 Supported file types: HTML, CSS, JS, PNG, JPG, GIF, SVG, WOFF, TTF, JSON, XML, PDF, etc."
     
-    # 8. 上传文件并设置权限（关键改进）
-    - name: Upload to COS with permissions
-      run: |
-        echo "Uploading files with public-read permissions..."
-        cd deploy-temp
-        
-        # 核心改进：上传时直接设置ACL权限，避免后续权限设置失败
-        coscmd upload -rs -f -H "{'x-cos-acl':'public-read'}" ./ /
-        
-        echo "Upload completed successfully"
-    
-    # 9. 特殊处理 index.html 的 Content-Disposition
-    - name: Fix index.html Content-Disposition
+    # 6. 特殊处理 index.html 的 Content-Disposition
+    - name: Set index.html Content-Disposition
       run: |
         echo "Setting Content-Disposition for index.html..."
-        cd deploy-temp
         
-        # 重新上传 index.html 并设置正确的 Content-Disposition 和权限
+        # 重新上传 index.html，在保持公有读权限的同时添加 Content-Disposition
         coscmd upload -f -H "{'x-cos-acl':'public-read','Content-Disposition':'inline','Content-Type':'text/html'}" index.html /index.html
         
-        echo "index.html Content-Disposition and permissions fixed"
+        echo "✅ index.html Content-Disposition set to inline"
     
-    # 9. 验证上传结果
+    # 7. 验证上传结果
     - name: Verify upload
       run: |
         echo "Verifying uploaded files..."
@@ -90,30 +65,33 @@ jobs:
         
         echo "Checking index.html info..."
         coscmd info index.html || echo "Could not get index.html info"
+        
+        echo "Upload verification completed"
     
-    # 10. 备用权限设置（如果上述方法不生效）
+    # 8. 备用权限设置（如果上述方法不生效）
     - name: Backup permission setting
       continue-on-error: true
       run: |
-        echo "Setting backup file permissions..."
+        echo "Setting backup permissions for all uploaded files..."
         
-        # 为关键文件单独设置权限（保持你原来的语法）
-        coscmd putobjectacl --grant-read "*" index.html || echo "Failed to set index.html permissions"
-        
-        # 为其他HTML文件设置权限
-        find ./deploy-temp -name "*.html" -type f | while read file; do
-          filename=$(basename "$file")
-          echo "Setting permissions for $filename"
-          coscmd putobjectacl --grant-read "*" "$filename" || echo "Failed to set $filename permissions"
+        # 获取所有上传的文件列表，为每个文件设置权限
+        coscmd list -ar | grep -v "^Directory" | awk '{print $NF}' | while read file; do
+          if [ -n "$file" ] && [ "$file" != "." ]; then
+            echo "Setting permissions for: $file"
+            coscmd putobjectacl --grant-read "*" "$file" || echo "Failed to set permissions for $file"
+          fi
         done
     
-    # 11. 清理临时文件
-    - name: Cleanup
-      run: |
-        rm -rf ./deploy-temp
-    
-    # 12. 输出部署结果
+    # 9. 部署成功
     - name: Deploy Success
       run: |
         echo "🎉 部署成功!"
-        echo "网站地址: https://${{ secrets.COS_BUCKET }}.cos-website.${{ secrets.COS_REGION }}.myqcloud.com"
+        echo ""
+        echo "📁 上传的文件："
+        coscmd list -ar | head -20
+        echo ""
+        echo "🌐 网站地址: https://${{ secrets.COS_BUCKET }}.cos-website.${{ secrets.COS_REGION }}.myqcloud.com"
+        echo ""
+        echo "✅ 所有文件已设置为公有读私有写权限"
+        echo "✅ index.html 已设置 Content-Disposition: inline"
+        echo "✅ 支持所有静态网站文件类型"
