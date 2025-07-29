@@ -40,31 +40,44 @@ jobs:
       run: |
         echo "Uploading all static files with public-read permissions..."
         
-        # 上传所有静态网站文件，设置公有读权限，并排除不需要的文件
+        # 同步上传所有静态网站文件，设置公有读权限，并排除不需要的文件
         coscmd upload -rs -f -H "{'x-cos-acl':'public-read'}" ./ / \
           --ignore ".git/*,.github/*,node_modules/*,.DS_Store,*.md,README*,LICENSE*,*.yml,*.yaml,.env*,*.zip,*.tar,*.gz,package*.json,tsconfig.json,webpack.config.js,gulpfile.js,Gruntfile.js,.gitignore,.gitattributes,.editorconfig,.eslintrc*,.prettierrc*,*.log"
         
         echo "✅ All static files uploaded with public-read permissions"
         echo "📁 Supported file types: HTML, CSS, JS, PNG, JPG, GIF, SVG, WOFF, TTF, JSON, XML, PDF, etc."
     
-    # 6. 特殊处理 index.html 的 Content-Disposition
-    - name: Set index.html Content-Disposition
+    # 6. 设置存储桶静态网站配置（解决下载问题）
+    - name: Configure static website hosting
       run: |
-        echo "Setting Content-Disposition for index.html..."
+        echo "Configuring static website hosting..."
         
-        # 重新上传 index.html，在保持公有读权限的同时添加 Content-Disposition
-        coscmd upload -f -H "{'x-cos-acl':'public-read','Content-Disposition':'inline','Content-Type':'text/html'}" index.html /index.html
-        
-        echo "✅ index.html Content-Disposition set to inline"
+        # 尝试设置存储桶为静态网站模式（可能需要手动在控制台设置）
+        echo "Note: Make sure static website hosting is enabled in COS console"
+        echo "Index document should be set to: index.html"
+        echo "Error document can be set to: 404.html or index.html"
     
-    # 7. 验证上传结果
-    - name: Verify upload
+    # 7. 特殊处理 index.html 的 Content-Disposition
+    - name: Set index.html Content-Disposition and headers
       run: |
-        echo "Verifying uploaded files..."
+        echo "Setting Content-Disposition and headers for index.html..."
+        
+        # 重新上传 index.html 并设置简化的头部信息（基于实际成功经验）
+        coscmd upload -f -H "{'x-cos-acl':'public-read','Content-Type':'text/html','Content-Disposition':'inline'}" index.html /index.html
+        
+        echo "✅ index.html Content-Disposition set to inline with simplified headers"
+    
+    # 8. 验证上传结果
+    - name: Verify upload and timestamps
+      run: |
+        echo "Verifying uploaded files and timestamps..."
         coscmd list -ar
         
-        echo "Checking index.html info..."
+        echo "Checking specific files info..."
         coscmd info index.html || echo "Could not get index.html info"
+        coscmd info css/styles.css || echo "Could not get styles.css info"
+        coscmd info js/app.js || echo "Could not get app.js info"
+        coscmd info js/config.js || echo "Could not get config.js info"
         
         echo "Upload verification completed"
     
@@ -82,7 +95,7 @@ jobs:
           fi
         done
     
-    # 9. 部署成功
+    # 10. 部署成功
     - name: Deploy Success
       run: |
         echo "🎉 部署成功!"
@@ -90,8 +103,15 @@ jobs:
         echo "📁 上传的文件："
         coscmd list -ar | head -20
         echo ""
-        echo "🌐 网站地址: https://${{ secrets.COS_BUCKET }}.cos-website.${{ secrets.COS_REGION }}.myqcloud.com"
+        echo "🌐 请使用静态网站域名访问（重要）:"
+        echo "   ✅ 静态网站域名: https://${{ secrets.COS_BUCKET }}.cos-website.${{ secrets.COS_REGION }}.myqcloud.com"
+        echo "   ❌ 直接访问域名: https://${{ secrets.COS_BUCKET }}.cos.${{ secrets.COS_REGION }}.myqcloud.com （会下载文件）"
         echo ""
-        echo "✅ 所有文件已设置为公有读私有写权限"
+        echo "✅ 所有文件已同步并设置为公有读私有写权限"
         echo "✅ index.html 已设置 Content-Disposition: inline"
-        echo "✅ 支持所有静态网站文件类型"
+        echo "✅ 使用同步模式，只上传变化的文件"
+        echo ""
+        echo "⚠️  如果静态网站域名仍然下载而不是显示，请在COS控制台检查："
+        echo "   1. 基础配置 → 静态网站 → 确保已开启"
+        echo "   2. 索引文档设置为: index.html"
+        echo "   3. 错误文档可设置为: index.html 或 404.html"
