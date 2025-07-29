@@ -29,7 +29,6 @@ jobs:
         
         # 同步上传所有静态网站文件，设置公有读权限，并排除不需要的文件
         aws s3 sync ./ s3://${{ secrets.AWS_S3_BUCKET_NAME }}/ \
-          --acl public-read \
           --delete \
           --exclude ".git/*" \
           --exclude ".github/*" \
