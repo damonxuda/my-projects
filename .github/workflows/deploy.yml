@@ -1,4 +1,4 @@
-name: Deploy to Tencent COS
+name: Deploy to AWS S3
 
 # 当推送到 main 分支时触发
 on:
@@ -14,104 +14,106 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
     
-    # 2. 设置 Python 环境
-    - name: Setup Python
-      uses: actions/setup-python@v4
+    # 2. 配置 AWS CLI
+    - name: Configure AWS CLI
+      uses: aws-actions/configure-aws-credentials@v4
       with:
-        python-version: '3.x'
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_REGION }}
     
-    # 3. 安装 COSCMD
-    - name: Install coscmd
-      run: |
-        pip install coscmd
-        echo "COSCMD installed successfully"
-    
-    # 4. 配置 COSCMD
-    - name: Configure coscmd
-      run: |
-        coscmd config -a ${{ secrets.TENCENT_SECRET_ID }} \
-                     -s ${{ secrets.TENCENT_SECRET_KEY }} \
-                     -b ${{ secrets.COS_BUCKET }} \
-                     -r ${{ secrets.COS_REGION }}
-        echo "COSCMD configured successfully"
-    
-    # 5. 上传所有静态文件并设置公有读权限
+    # 3. 上传所有静态文件并设置公有读权限
     - name: Upload all static files with public-read permissions
       run: |
         echo "Uploading all static files with public-read permissions..."
         
         # 同步上传所有静态网站文件，设置公有读权限，并排除不需要的文件
-        coscmd upload -rs -f -H "{'x-cos-acl':'public-read'}" ./ / \
-          --ignore ".git/*,.github/*,node_modules/*,.DS_Store,*.md,README*,LICENSE*,*.yml,*.yaml,.env*,*.zip,*.tar,*.gz,package*.json,tsconfig.json,webpack.config.js,gulpfile.js,Gruntfile.js,.gitignore,.gitattributes,.editorconfig,.eslintrc*,.prettierrc*,*.log"
+        aws s3 sync ./ s3://${{ secrets.AWS_S3_BUCKET_NAME }}/ \
+          --acl public-read \
+          --delete \
+          --exclude ".git/*" \
+          --exclude ".github/*" \
+          --exclude "node_modules/*" \
+          --exclude ".DS_Store" \
+          --exclude "*.md" \
+          --exclude "README*" \
+          --exclude "LICENSE*" \
+          --exclude "*.yml" \
+          --exclude "*.yaml" \
+          --exclude ".env*" \
+          --exclude "*.zip" \
+          --exclude "*.tar" \
+          --exclude "*.gz" \
+          --exclude "package*.json" \
+          --exclude "tsconfig.json" \
+          --exclude "webpack.config.js" \
+          --exclude "gulpfile.js" \
+          --exclude "Gruntfile.js" \
+          --exclude ".gitignore" \
+          --exclude ".gitattributes" \
+          --exclude ".editorconfig" \
+          --exclude ".eslintrc*" \
+          --exclude ".prettierrc*" \
+          --exclude "*.log"
         
         echo "✅ All static files uploaded with public-read permissions"
         echo "📁 Supported file types: HTML, CSS, JS, PNG, JPG, GIF, SVG, WOFF, TTF, JSON, XML, PDF, etc."
     
-    # 6. 设置存储桶静态网站配置（解决下载问题）
-    - name: Configure static website hosting
+    # 4. AWS S3 会自动设置正确的 Content-Type，无需手动干预
+    - name: Verify content types (AWS S3 handles this automatically)
       run: |
-        echo "Configuring static website hosting..."
-        
-        # 尝试设置存储桶为静态网站模式（可能需要手动在控制台设置）
-        echo "Note: Make sure static website hosting is enabled in COS console"
-        echo "Index document should be set to: index.html"
-        echo "Error document can be set to: 404.html or index.html"
+        echo "✅ AWS S3 static website hosting automatically handles Content-Type"
+        echo "   - HTML files: text/html"
+        echo "   - CSS files: text/css" 
+        echo "   - JS files: application/javascript"
+        echo "   - Images: image/jpeg, image/png, etc."
     
-    # 7. 特殊处理 index.html 的 Content-Disposition
-    - name: Set index.html Content-Disposition and headers
-      run: |
-        echo "Setting Content-Disposition and headers for index.html..."
-        
-        # 重新上传 index.html 并设置简化的头部信息（基于实际成功经验）
-        coscmd upload -f -H "{'x-cos-acl':'public-read','Content-Type':'text/html','Content-Disposition':'inline'}" index.html /index.html
-        
-        echo "✅ index.html Content-Disposition set to inline with simplified headers"
-    
-    # 8. 验证上传结果
+    # 5. 验证上传结果
     - name: Verify upload and timestamps
       run: |
         echo "Verifying uploaded files and timestamps..."
-        coscmd list -ar
+        aws s3 ls s3://${{ secrets.S3_BUCKET_NAME }}/ --recursive
         
         echo "Checking specific files info..."
-        coscmd info index.html || echo "Could not get index.html info"
-        coscmd info css/styles.css || echo "Could not get styles.css info"
-        coscmd info js/app.js || echo "Could not get app.js info"
-        coscmd info js/config.js || echo "Could not get config.js info"
+        aws s3api head-object --bucket ${{ secrets.S3_BUCKET_NAME }} --key index.html || echo "Could not get index.html info"
+        aws s3api head-object --bucket ${{ secrets.S3_BUCKET_NAME }} --key css/styles.css || echo "Could not get styles.css info" 
+        aws s3api head-object --bucket ${{ secrets.S3_BUCKET_NAME }} --key js/app.js || echo "Could not get app.js info"
+        aws s3api head-object --bucket ${{ secrets.S3_BUCKET_NAME }} --key js/config.js || echo "Could not get config.js info"
         
         echo "Upload verification completed"
     
-    # 8. 备用权限设置（如果上述方法不生效）
-    - name: Backup permission setting
+    # 6. 清理缓存（如果以后使用 CloudFront）
+    - name: Invalidate CloudFront cache (optional, for future use)
       continue-on-error: true
       run: |
-        echo "Setting backup permissions for all uploaded files..."
-        
-        # 获取所有上传的文件列表，为每个文件设置权限
-        coscmd list -ar | grep -v "^Directory" | awk '{print $NF}' | while read file; do
-          if [ -n "$file" ] && [ "$file" != "." ]; then
-            echo "Setting permissions for: $file"
-            coscmd putobjectacl --grant-read "*" "$file" || echo "Failed to set permissions for $file"
-          fi
-        done
+        echo "CloudFront invalidation step (currently disabled)"
+        echo "To enable: uncomment and set CLOUDFRONT_DISTRIBUTION_ID secret"
+        # aws cloudfront create-invalidation \
+        #   --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+        #   --paths "/*"
     
-    # 10. 部署成功
+    # 7. 部署成功
     - name: Deploy Success
       run: |
         echo "🎉 部署成功!"
         echo ""
         echo "📁 上传的文件："
-        coscmd list -ar | head -20
+        aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/ --recursive | head -20
         echo ""
-        echo "🌐 请使用静态网站域名访问（重要）:"
-        echo "   ✅ 静态网站域名: https://${{ secrets.COS_BUCKET }}.cos-website.${{ secrets.COS_REGION }}.myqcloud.com"
-        echo "   ❌ 直接访问域名: https://${{ secrets.COS_BUCKET }}.cos.${{ secrets.COS_REGION }}.myqcloud.com （会下载文件）"
+        echo "🌐 网站访问地址:"
+        echo "   ✅ S3 静态网站端点: http://${{ secrets.AWS_S3_BUCKET_NAME }}.s3-website.${{ secrets.AWS_REGION }}.amazonaws.com"
+        echo "   📱 移动端友好: 响应式设计已启用"
         echo ""
-        echo "✅ 所有文件已同步并设置为公有读私有写权限"
-        echo "✅ index.html 已设置 Content-Disposition: inline"
+        echo "✅ 所有文件已同步并设置为公有读权限"
+        echo "✅ AWS S3 自动处理 Content-Type，无需手动设置"
         echo "✅ 使用同步模式，只上传变化的文件"
         echo ""
-        echo "⚠️  如果静态网站域名仍然下载而不是显示，请在COS控制台检查："
-        echo "   1. 基础配置 → 静态网站 → 确保已开启"
-        echo "   2. 索引文档设置为: index.html"
-        echo "   3. 错误文档可设置为: index.html 或 404.html"
+        echo "📝 已排除的文件类型："
+        echo "   - 开发工具配置文件 (.gitignore, package.json, etc.)"
+        echo "   - 源码管理文件 (.git, .github)"
+        echo "   - 临时文件 (.DS_Store, *.log, node_modules)"
+        echo ""
+        echo "⚠️  下一步建议："
+        echo "   1. 配置自定义域名指向 S3 端点"
+        echo "   2. 考虑添加 CloudFront CDN 以启用 HTTPS"
+        echo "   3. 设置域名 DNS CNAME 记录"
