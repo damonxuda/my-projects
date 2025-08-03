@@ -123,10 +123,30 @@ jobs:
             echo "⚠️  Quiz Management directory not found, skipping deployment"
           fi
 
-      # 6. 验证部署结果
+      # 6. 部署根目录文件
+      - name: Deploy root files
+        run: |
+          echo "🚀 Deploying root directory files..."
+
+          # 上传根目录的 index.html（如果存在）
+          if [ -f "./index.html" ]; then
+            aws s3 cp ./index.html s3://${{ secrets.AWS_S3_BUCKET_NAME }}/index.html
+            echo "✅ Root index.html deployed"
+          else
+            echo "ℹ️  No root index.html found"
+          fi
+
+      # 7. 验证部署结果
       - name: Verify deployments
         run: |
           echo "📁 Verifying deployed projects..."
+
+          # 检查根目录 index.html
+          if aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/index.html >/dev/null 2>&1; then
+            echo "✅ Root index.html found in S3"
+          else
+            echo "❌ Root index.html not found in S3"
+          fi
 
           # 检查 schedule 部署
           if aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/schedule/ >/dev/null 2>&1; then
@@ -144,7 +164,7 @@ jobs:
             echo "ℹ️  Quiz Management files not found in S3 (may not be created yet)"
           fi
 
-      # 7. 清理缓存（如果使用 CloudFront）
+      # 8. 清理缓存（如果使用 CloudFront）
       - name: Invalidate CloudFront cache (optional)
         continue-on-error: true
         run: |
@@ -164,7 +184,7 @@ jobs:
           #     --paths $PATHS_TO_INVALIDATE
           # fi
 
-      # 8. 部署成功报告
+      # 9. 部署成功报告
       - name: Deploy Success Report
         run: |
           echo "🎉 多项目部署完成!"
