@@ -1,118 +1,191 @@
-name: Deploy to AWS S3
+name: Deploy Multi-Project to AWS S3
 
 # 当推送到 main 分支时触发
 on:
   push:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
-    # 1. 检出代码
-    - name: Checkout
-      uses: actions/checkout@v4
-    
-    # 2. 配置 AWS CLI
-    - name: Configure AWS CLI
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
-    
-    # 3. 上传所有静态文件并设置公有读权限
-    - name: Upload all static files with public-read permissions
-      run: |
-        echo "Uploading all static files with public-read permissions..."
-        
-        # 同步上传所有静态网站文件，设置公有读权限，并排除不需要的文件
-        aws s3 sync ./ s3://${{ secrets.AWS_S3_BUCKET_NAME }}/ \
-          --delete \
-          --exclude ".git/*" \
-          --exclude ".github/*" \
-          --exclude "node_modules/*" \
-          --exclude ".DS_Store" \
-          --exclude "*.md" \
-          --exclude "README*" \
-          --exclude "LICENSE*" \
-          --exclude "*.yml" \
-          --exclude "*.yaml" \
-          --exclude ".env*" \
-          --exclude "*.zip" \
-          --exclude "*.tar" \
-          --exclude "*.gz" \
-          --exclude "package*.json" \
-          --exclude "tsconfig.json" \
-          --exclude "webpack.config.js" \
-          --exclude "gulpfile.js" \
-          --exclude "Gruntfile.js" \
-          --exclude ".gitignore" \
-          --exclude ".gitattributes" \
-          --exclude ".editorconfig" \
-          --exclude ".eslintrc*" \
-          --exclude ".prettierrc*" \
-          --exclude "*.log"
-        
-        echo "✅ All static files uploaded with public-read permissions"
-        echo "📁 Supported file types: HTML, CSS, JS, PNG, JPG, GIF, SVG, WOFF, TTF, JSON, XML, PDF, etc."
-    
-    # 4. AWS S3 会自动设置正确的 Content-Type，无需手动干预
-    - name: Verify content types (AWS S3 handles this automatically)
-      run: |
-        echo "✅ AWS S3 static website hosting automatically handles Content-Type"
-        echo "   - HTML files: text/html"
-        echo "   - CSS files: text/css" 
-        echo "   - JS files: application/javascript"
-        echo "   - Images: image/jpeg, image/png, etc."
-    
-    # 5. 验证上传结果
-    - name: Verify upload and timestamps
-      run: |
-        echo "Verifying uploaded files and timestamps..."
-        aws s3 ls s3://${{ secrets.S3_BUCKET_NAME }}/ --recursive
-        
-        echo "Checking specific files info..."
-        aws s3api head-object --bucket ${{ secrets.S3_BUCKET_NAME }} --key index.html || echo "Could not get index.html info"
-        aws s3api head-object --bucket ${{ secrets.S3_BUCKET_NAME }} --key css/styles.css || echo "Could not get styles.css info" 
-        aws s3api head-object --bucket ${{ secrets.S3_BUCKET_NAME }} --key js/app.js || echo "Could not get app.js info"
-        aws s3api head-object --bucket ${{ secrets.S3_BUCKET_NAME }} --key js/config.js || echo "Could not get config.js info"
-        
-        echo "Upload verification completed"
-    
-    # 6. 清理缓存（如果以后使用 CloudFront）
-    - name: Invalidate CloudFront cache (optional, for future use)
-      continue-on-error: true
-      run: |
-        echo "CloudFront invalidation step (currently disabled)"
-        echo "To enable: uncomment and set CLOUDFRONT_DISTRIBUTION_ID secret"
-        # aws cloudfront create-invalidation \
-        #   --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
-        #   --paths "/*"
-    
-    # 7. 部署成功
-    - name: Deploy Success
-      run: |
-        echo "🎉 部署成功!"
-        echo ""
-        echo "📁 上传的文件："
-        aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/ --recursive | head -20
-        echo ""
-        echo "🌐 网站访问地址:"
-        echo "   ✅ S3 静态网站端点: http://${{ secrets.AWS_S3_BUCKET_NAME }}.s3-website.${{ secrets.AWS_REGION }}.amazonaws.com"
-        echo "   📱 移动端友好: 响应式设计已启用"
-        echo ""
-        echo "✅ 所有文件已同步并设置为公有读权限"
-        echo "✅ AWS S3 自动处理 Content-Type，无需手动设置"
-        echo "✅ 使用同步模式，只上传变化的文件"
-        echo ""
-        echo "📝 已排除的文件类型："
-        echo "   - 开发工具配置文件 (.gitignore, package.json, etc.)"
-        echo "   - 源码管理文件 (.git, .github)"
-        echo "   - 临时文件 (.DS_Store, *.log, node_modules)"
-        echo ""
-        echo "⚠️  下一步建议："
-        echo "   1. 配置自定义域名指向 S3 端点"
-        echo "   2. 考虑添加 CloudFront CDN 以启用 HTTPS"
-        echo "   3. 设置域名 DNS CNAME 记录"
+      # 1. 检出代码
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2 # 获取前两个commit用于变化检测
+
+      # 2. 配置 AWS CLI
+      - name: Configure AWS CLI
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # 3. 检测项目变化
+      - name: Detect changed projects
+        id: changes
+        run: |
+          echo "Detecting changes in projects..."
+
+          # 检测 course-schedule 项目变化
+          if git diff --name-only HEAD~1 HEAD | grep -q "^course-schedule/"; then
+            echo "course_schedule_changed=true" >> $GITHUB_OUTPUT
+            echo "✅ Course Schedule project has changes"
+          else
+            echo "course_schedule_changed=false" >> $GITHUB_OUTPUT
+            echo "➖ Course Schedule project has no changes"
+          fi
+
+          # 检测 quiz-management 项目变化
+          if git diff --name-only HEAD~1 HEAD | grep -q "^quiz-management/"; then
+            echo "quiz_management_changed=true" >> $GITHUB_OUTPUT
+            echo "✅ Quiz Management project has changes"
+          else
+            echo "quiz_management_changed=false" >> $GITHUB_OUTPUT
+            echo "➖ Quiz Management project has no changes"
+          fi
+
+          # 检测是否是首次部署或强制部署
+          if [[ "${{ github.event.forced }}" == "true" ]] || [[ $(git rev-list --count HEAD) -le 1 ]]; then
+            echo "force_deploy=true" >> $GITHUB_OUTPUT
+            echo "🔄 Force deploy mode - will deploy all projects"
+          else
+            echo "force_deploy=false" >> $GITHUB_OUTPUT
+          fi
+
+      # 4. 部署 Course Schedule 项目
+      - name: Deploy Course Schedule
+        if: steps.changes.outputs.course_schedule_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        run: |
+          echo "🚀 Deploying Course Schedule to /course-schedule path..."
+
+          # 同步上传 course-schedule 项目到 S3 的 course-schedule 路径
+          aws s3 sync ./course-schedule/ s3://${{ secrets.AWS_S3_BUCKET_NAME }}/course-schedule/ \
+            --delete \
+            --exclude ".DS_Store" \
+            --exclude "*.md" \
+            --exclude "README*" \
+            --exclude "LICENSE*" \
+            --exclude ".env*" \
+            --exclude "*.zip" \
+            --exclude "*.tar" \
+            --exclude "*.gz" \
+            --exclude "package*.json" \
+            --exclude "tsconfig.json" \
+            --exclude "webpack.config.js" \
+            --exclude "gulpfile.js" \
+            --exclude "Gruntfile.js" \
+            --exclude ".gitignore" \
+            --exclude ".gitattributes" \
+            --exclude ".editorconfig" \
+            --exclude ".eslintrc*" \
+            --exclude ".prettierrc*" \
+            --exclude "*.log"
+
+          echo "✅ Course Schedule deployed to /course-schedule path"
+
+      # 5. 部署 Quiz Management 项目
+      - name: Deploy Quiz Management
+        if: steps.changes.outputs.quiz_management_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        run: |
+          echo "🚀 Deploying Quiz Management to /quiz path..."
+
+          # 检查 quiz-management 目录是否存在
+          if [ -d "./quiz-management" ]; then
+            # 同步上传 quiz-management 项目到 S3 的 quiz 路径
+            aws s3 sync ./quiz-management/ s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/ \
+              --delete \
+              --exclude ".DS_Store" \
+              --exclude "*.md" \
+              --exclude "README*" \
+              --exclude "LICENSE*" \
+              --exclude ".env*" \
+              --exclude "*.zip" \
+              --exclude "*.tar" \
+              --exclude "*.gz" \
+              --exclude "package*.json" \
+              --exclude "tsconfig.json" \
+              --exclude "webpack.config.js" \
+              --exclude "gulpfile.js" \
+              --exclude "Gruntfile.js" \
+              --exclude ".gitignore" \
+              --exclude ".gitattributes" \
+              --exclude ".editorconfig" \
+              --exclude ".eslintrc*" \
+              --exclude ".prettierrc*" \
+              --exclude "*.log"
+            
+            echo "✅ Quiz Management deployed to /quiz path"
+          else
+            echo "⚠️  Quiz Management directory not found, skipping deployment"
+          fi
+
+      # 6. 验证部署结果
+      - name: Verify deployments
+        run: |
+          echo "📁 Verifying deployed projects..."
+
+          # 检查 course-schedule 部署
+          if aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/course-schedule/ >/dev/null 2>&1; then
+            echo "✅ Course Schedule files found in S3"
+            aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/course-schedule/ --recursive | head -5
+          else
+            echo "❌ Course Schedule files not found in S3"
+          fi
+
+          # 检查 quiz-management 部署
+          if aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/ >/dev/null 2>&1; then
+            echo "✅ Quiz Management files found in S3"
+            aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/ --recursive | head -5
+          else
+            echo "ℹ️  Quiz Management files not found in S3 (may not be created yet)"
+          fi
+
+      # 7. 清理缓存（如果使用 CloudFront）
+      - name: Invalidate CloudFront cache (optional)
+        continue-on-error: true
+        run: |
+          echo "CloudFront invalidation step (currently disabled)"
+          echo "To enable: uncomment and set CLOUDFRONT_DISTRIBUTION_ID secret"
+          # 如果启用 CloudFront，取消注释以下代码
+          # PATHS_TO_INVALIDATE=""
+          # if [[ "${{ steps.changes.outputs.course_schedule_changed }}" == "true" ]]; then
+          #   PATHS_TO_INVALIDATE="${PATHS_TO_INVALIDATE} /course-schedule/*"
+          # fi
+          # if [[ "${{ steps.changes.outputs.quiz_management_changed }}" == "true" ]]; then
+          #   PATHS_TO_INVALIDATE="${PATHS_TO_INVALIDATE} /quiz/*"
+          # fi
+          # if [[ -n "$PATHS_TO_INVALIDATE" ]]; then
+          #   aws cloudfront create-invalidation \
+          #     --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+          #     --paths $PATHS_TO_INVALIDATE
+          # fi
+
+      # 8. 部署成功报告
+      - name: Deploy Success Report
+        run: |
+          echo "🎉 多项目部署完成!"
+          echo ""
+          echo "📊 本次部署摘要:"
+          echo "   Course Schedule 变化: ${{ steps.changes.outputs.course_schedule_changed }}"
+          echo "   Quiz Management 变化: ${{ steps.changes.outputs.quiz_management_changed }}"
+          echo "   强制部署模式: ${{ steps.changes.outputs.force_deploy }}"
+          echo ""
+          echo "🌐 项目访问地址:"
+          echo "   📚 Course Schedule: http://${{ secrets.AWS_S3_BUCKET_NAME }}.s3-website.${{ secrets.AWS_REGION }}.amazonaws.com/course-schedule/"
+          echo "   🧠 Quiz Management: http://${{ secrets.AWS_S3_BUCKET_NAME }}.s3-website.${{ secrets.AWS_REGION }}.amazonaws.com/quiz/"
+          echo ""
+          echo "✅ 功能特性:"
+          echo "   - 智能变化检测：只部署有变化的项目"
+          echo "   - 路径分离：每个项目独立的访问路径"
+          echo "   - 历史保留：保持原有 Git 历史完整性"
+          echo "   - 扩展性：轻松添加更多项目"
+          echo ""
+          echo "📝 下一步建议:"
+          echo "   1. 创建 quiz-management 项目目录和文件"
+          echo "   2. 测试两个项目的独立访问"
+          echo "   3. 考虑配置自定义域名和 HTTPS"
+          echo "   4. 后续可添加更多项目到同一仓库"
