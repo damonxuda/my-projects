@@ -30,13 +30,13 @@ jobs:
         run: |
           echo "Detecting changes in projects..."
 
-          # 检测 course-schedule 项目变化
-          if git diff --name-only HEAD~1 HEAD | grep -q "^course-schedule/"; then
-            echo "course_schedule_changed=true" >> $GITHUB_OUTPUT
-            echo "✅ Course Schedule project has changes"
+          # 检测 schedule 项目变化
+          if git diff --name-only HEAD~1 HEAD | grep -q "^schedule/"; then
+            echo "schedule_changed=true" >> $GITHUB_OUTPUT
+            echo "✅ Schedule project has changes"
           else
-            echo "course_schedule_changed=false" >> $GITHUB_OUTPUT
-            echo "➖ Course Schedule project has no changes"
+            echo "schedule_changed=false" >> $GITHUB_OUTPUT
+            echo "➖ Schedule project has no changes"
           fi
 
           # 检测 quiz-management 项目变化
@@ -56,14 +56,14 @@ jobs:
             echo "force_deploy=false" >> $GITHUB_OUTPUT
           fi
 
-      # 4. 部署 Course Schedule 项目
-      - name: Deploy Course Schedule
-        if: steps.changes.outputs.course_schedule_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+      # 4. 部署 Schedule 项目
+      - name: Deploy Schedule
+        if: steps.changes.outputs.schedule_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
         run: |
-          echo "🚀 Deploying Course Schedule to /course-schedule path..."
+          echo "🚀 Deploying Schedule to /schedule path..."
 
-          # 同步上传 course-schedule 项目到 S3 的 course-schedule 路径
-          aws s3 sync ./course-schedule/ s3://${{ secrets.AWS_S3_BUCKET_NAME }}/course-schedule/ \
+          # 同步上传 schedule 项目到 S3 的 schedule 路径
+          aws s3 sync ./schedule/ s3://${{ secrets.AWS_S3_BUCKET_NAME }}/schedule/ \
             --delete \
             --exclude ".DS_Store" \
             --exclude "*.md" \
@@ -85,7 +85,7 @@ jobs:
             --exclude ".prettierrc*" \
             --exclude "*.log"
 
-          echo "✅ Course Schedule deployed to /course-schedule path"
+          echo "✅ Schedule deployed to /schedule path"
 
       # 5. 部署 Quiz Management 项目
       - name: Deploy Quiz Management
@@ -128,12 +128,12 @@ jobs:
         run: |
           echo "📁 Verifying deployed projects..."
 
-          # 检查 course-schedule 部署
-          if aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/course-schedule/ >/dev/null 2>&1; then
-            echo "✅ Course Schedule files found in S3"
-            aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/course-schedule/ --recursive | head -5
+          # 检查 schedule 部署
+          if aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/schedule/ >/dev/null 2>&1; then
+            echo "✅ Schedule files found in S3"
+            aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/schedule/ --recursive | head -5
           else
-            echo "❌ Course Schedule files not found in S3"
+            echo "❌ Schedule files not found in S3"
           fi
 
           # 检查 quiz-management 部署
@@ -152,8 +152,8 @@ jobs:
           echo "To enable: uncomment and set CLOUDFRONT_DISTRIBUTION_ID secret"
           # 如果启用 CloudFront，取消注释以下代码
           # PATHS_TO_INVALIDATE=""
-          # if [[ "${{ steps.changes.outputs.course_schedule_changed }}" == "true" ]]; then
-          #   PATHS_TO_INVALIDATE="${PATHS_TO_INVALIDATE} /course-schedule/*"
+          # if [[ "${{ steps.changes.outputs.schedule_changed }}" == "true" ]]; then
+          #   PATHS_TO_INVALIDATE="${PATHS_TO_INVALIDATE} /schedule/*"
           # fi
           # if [[ "${{ steps.changes.outputs.quiz_management_changed }}" == "true" ]]; then
           #   PATHS_TO_INVALIDATE="${PATHS_TO_INVALIDATE} /quiz/*"
@@ -170,12 +170,12 @@ jobs:
           echo "🎉 多项目部署完成!"
           echo ""
           echo "📊 本次部署摘要:"
-          echo "   Course Schedule 变化: ${{ steps.changes.outputs.course_schedule_changed }}"
+          echo "   Schedule 变化: ${{ steps.changes.outputs.schedule_changed }}"
           echo "   Quiz Management 变化: ${{ steps.changes.outputs.quiz_management_changed }}"
           echo "   强制部署模式: ${{ steps.changes.outputs.force_deploy }}"
           echo ""
           echo "🌐 项目访问地址:"
-          echo "   📚 Course Schedule: http://${{ secrets.AWS_S3_BUCKET_NAME }}.s3-website.${{ secrets.AWS_REGION }}.amazonaws.com/course-schedule/"
+          echo "   📚 Schedule: http://${{ secrets.AWS_S3_BUCKET_NAME }}.s3-website.${{ secrets.AWS_REGION }}.amazonaws.com/schedule/"
           echo "   🧠 Quiz Management: http://${{ secrets.AWS_S3_BUCKET_NAME }}.s3-website.${{ secrets.AWS_REGION }}.amazonaws.com/quiz/"
           echo ""
           echo "✅ 功能特性:"
