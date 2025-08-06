@@ -9,8 +9,8 @@ console.log('当前环境:', isProduction ? '生产环境' : '测试环境');
 console.log('当前域名:', window.location.hostname);
 
 // Supabase 配置
-const supabaseUrl = 'https://wytqlpwlelznkoxhygfc.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind5dHFscHdsZWx6bmtveGh5Z2ZjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1Mzk4NDAsImV4cCI6MjA2NzExNTg0MH0.bMPiovIGFAqdC-BQwozDBN9FhbCPwszwG9gUJ-oc7Ok'; // 请填入你的API Key
+const supabaseUrl = 'https://qeedsnqbudbogqpcerqb.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlZWRzbnFidWRib2dxcGNlcnFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NjMxOTIsImV4cCI6MjA3MDAzOTE5Mn0.-hWnQwcpvXjX1dMJcNaQC7AUp8jYC9ozhgjFzSHeAGo'; // 请填入你的API Key
 
 // 表名配置：根据环境使用不同的表名
 const tableConfig = {
