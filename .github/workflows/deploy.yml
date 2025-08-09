@@ -126,7 +126,7 @@ jobs:
 
       # 6a. Install Quiz Dependencies
       - name: Install Quiz Dependencies
-        if: steps.changes.outputs.quiz_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        if: steps.changes.outputs.quiz_changed == 'true' || steps.changes.outputs.force_deploy == 'true' || true
         working-directory: ./quiz
         run: |
           echo "📦 Installing dependencies..."
@@ -134,7 +134,7 @@ jobs:
 
       # 6b. Build Quiz Application
       - name: Build Quiz Application
-        if: steps.changes.outputs.quiz_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        if: steps.changes.outputs.quiz_changed == 'true' || steps.changes.outputs.force_deploy == 'true' || true
         working-directory: ./quiz
         run: |
           echo "🔧 Setting environment variables..."
@@ -147,7 +147,7 @@ jobs:
 
       # 6c. Deploy Quiz to S3
       - name: Deploy Quiz to S3
-        if: steps.changes.outputs.quiz_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        if: steps.changes.outputs.quiz_changed == 'true' || steps.changes.outputs.force_deploy == 'true' || true
         run: |
           echo "☁️ Uploading to S3..."
           aws s3 sync ./quiz/build/ s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/ \
