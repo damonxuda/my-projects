@@ -1,0 +1,31 @@
+{
+  "name": "@my/auth",
+  "version": "1.0.0",
+  "description": "统一认证模块 - 支持多应用复用",
+  "main": "src/index.js",
+  "module": "src/index.js",
+  "files": [
+    "src/"
+  ],
+  "scripts": {
+    "dev": "echo 'This is a library package, use in other projects'",
+    "build": "echo 'No build needed for development'",
+    "test": "echo 'Tests will be added later'"
+  },
+  "keywords": [
+    "auth",
+    "supabase",
+    "react",
+    "authentication"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "@supabase/supabase-js": ">=2.0.0"
+  },
+  "devDependencies": {
+    "react": "^18.2.0",
+    "@supabase/supabase-js": "^2.39.0"
+  }
+}

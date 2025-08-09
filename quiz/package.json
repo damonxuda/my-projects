@@ -1,0 +1,82 @@
+{
+  "name": "quiz-management-system",
+  "version": "1.0.0",
+  "description": "智能题库管理系统 - 专为小学奥数学习设计",
+  "private": true,
+  "homepage": "https://damonxuda.site/quiz",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.53.0",
+    "lucide-react": "^0.263.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "^5.0.1"
+  },
+  "scripts": {
+    "start": "craco start",
+    "build": "craco build",
+    "test": "craco test",
+    "eject": "react-scripts eject",
+    "lint": "eslint src/ --ext .js,.jsx",
+    "lint:fix": "eslint src/ --ext .js,.jsx --fix",
+    "format": "prettier --write src/**/*.{js,jsx,css,md}",
+    "analyze": "npm run build && npx bundle-analyzer build/static/js/*.js",
+    "deploy:test": "npm run build && echo 'Test build completed successfully'",
+    "deploy:prod": "npm run build && aws s3 sync build/ s3://your-bucket/quiz/ --delete"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/damonxuda/my-projects.git",
+    "directory": "quiz"
+  },
+  "bugs": {
+    "url": "https://github.com/damonxuda/my-projects/issues"
+  },
+  "keywords": [
+    "quiz",
+    "education",
+    "math",
+    "learning",
+    "react",
+    "supabase",
+    "tailwind"
+  ],
+  "author": "damonxuda",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ],
+    "rules": {
+      "no-unused-vars": "warn",
+      "no-console": "off",
+      "react-hooks/exhaustive-deps": "warn"
+    }
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "@craco/craco": "^7.1.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "autoprefixer": "^10.4.0",
+    "eslint": "^8.0.0",
+    "postcss": "^8.4.0",
+    "prettier": "^3.0.0",
+    "tailwindcss": "^3.3.0"
+  }
+}

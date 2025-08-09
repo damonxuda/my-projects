@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#3b82f6" />
+  <meta name="description" content="智能题库管理系统 - 专为小学奥数学习设计" />
+  <meta name="keywords" content="奥数,题库,学习,管理系统,小学数学" />
+  <meta name="author" content="damonxuda" />
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://damonxuda.site/quiz" />
+  <meta property="og:title" content="智能题库管理系统" />
+  <meta property="og:description" content="专为小学奥数学习设计的智能题库管理系统" />
+  
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="https://damonxuda.site/quiz" />
+  <meta property="twitter:title" content="智能题库管理系统" />
+  <meta property="twitter:description" content="专为小学奥数学习设计的智能题库管理系统" />
+  
+  <title>智能题库管理系统</title>
+  
+  <!-- 预加载关键资源 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  
+  <!-- 可选：Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    /* 预加载样式，避免闪烁 */
+    body {
+      margin: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+        sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      background-color: #f8fafc;
+    }
+    
+    /* 加载动画 */
+    .loading-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f8fafc;
+    }
+    
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #e2e8f0;
+      border-top: 4px solid #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .loading-text {
+      margin-top: 16px;
+      color: #64748b;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <noscript>
+    <div style="text-align: center; padding: 50px; font-family: Arial, sans-serif;">
+      <h2>需要启用 JavaScript</h2>
+      <p>此应用需要 JavaScript 才能正常运行，请在浏览器中启用 JavaScript。</p>
+    </div>
+  </noscript>
+  
+  <!-- React 应用挂载点 -->
+  <div id="root">
+    <!-- 加载动画（React 加载前显示） -->
+    <div class="loading-container">
+      <div style="text-align: center;">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">正在加载题库管理系统...</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 可选：错误处理脚本 -->
+  <script>
+    // 全局错误处理
+    window.addEventListener('error', function(e) {
+      console.error('应用启动错误:', e.error);
+      // 可以在这里添加错误上报逻辑
+    });
+    
+    // React 错误边界不能捕获的错误处理
+    window.addEventListener('unhandledrejection', function(e) {
+      console.error('未处理的 Promise 拒绝:', e.reason);
+    });
+  </script>
+</body>
+</html>
