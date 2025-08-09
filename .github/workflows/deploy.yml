@@ -117,33 +117,42 @@ jobs:
 
           # 检查 quiz 目录是否存在
           if [ -d "./quiz" ]; then
-            cd ./quiz
-            
-            # 安装依赖
-            echo "📦 Installing dependencies..."
-            npm ci
-            
-            # 设置环境变量（生产环境）
-            echo "🔧 Setting environment variables..."
-            echo "REACT_APP_SUPABASE_URL=${{ secrets.REACT_APP_SUPABASE_URL }}" >> .env.production
-            echo "REACT_APP_SUPABASE_ANON_KEY=${{ secrets.REACT_APP_SUPABASE_ANON_KEY }}" >> .env.production
-            echo "GENERATE_SOURCEMAP=false" >> .env.production
-            
-            # 构建项目
-            echo "🏗️ Building React application..."
-            npm run build
-            
-            # 部署构建结果到 S3
-            echo "☁️ Uploading to S3..."
-            aws s3 sync ./build/ s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/ \
-              --delete \
-              --exclude ".DS_Store"
-            
+            echo "✅ Quiz directory found, starting build process..."
             echo "✅ Quiz Management built and deployed to /quiz path"
-            cd ..
           else
             echo "⚠️  Quiz directory not found, skipping deployment"
           fi
+
+      # 6a. Install Quiz Dependencies
+      - name: Install Quiz Dependencies
+        if: steps.changes.outputs.quiz_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        working-directory: ./quiz
+        run: |
+          echo "📦 Installing dependencies..."
+          npm ci
+
+      # 6b. Build Quiz Application
+      - name: Build Quiz Application
+        if: steps.changes.outputs.quiz_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        working-directory: ./quiz
+        run: |
+          echo "🔧 Setting environment variables..."
+          echo "REACT_APP_SUPABASE_URL=${{ secrets.REACT_APP_SUPABASE_URL }}" >> .env.production
+          echo "REACT_APP_SUPABASE_ANON_KEY=${{ secrets.REACT_APP_SUPABASE_ANON_KEY }}" >> .env.production
+          echo "GENERATE_SOURCEMAP=false" >> .env.production
+
+          echo "🏗️ Building React application..."
+          npm run build
+
+      # 6c. Deploy Quiz to S3
+      - name: Deploy Quiz to S3
+        if: steps.changes.outputs.quiz_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        run: |
+          echo "☁️ Uploading to S3..."
+          aws s3 sync ./quiz/build/ s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/ \
+            --delete \
+            --exclude ".DS_Store"
+          echo "✅ Quiz Management deployed to /quiz path"
 
       # 7. 部署根目录文件
       - name: Deploy root files
