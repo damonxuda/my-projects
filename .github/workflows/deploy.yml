@@ -22,6 +22,7 @@ jobs:
         with:
           node-version: "18"
           cache: "npm"
+          cache-dependency-path: "quiz/package-lock.json"
 
       # 3. 配置 AWS CLI
       - name: Configure AWS CLI
