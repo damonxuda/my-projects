@@ -727,6 +727,8 @@ const QuizApp = () => {
 
 // 主应用组件 - 包装认证
 const App = () => {
+  console.log('=== App component rendering ===');
+  console.log('Login component:', Login);
   return (
     <AuthProvider supabaseClient={supabaseClient}>
       <AuthGuard fallback={<div style={{padding: '50px', fontSize: '24px', background: 'lightblue', textAlign: 'center'}}>测试：未登录应该显示这里</div>}>
