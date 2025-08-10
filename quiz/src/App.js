@@ -729,7 +729,7 @@ const QuizApp = () => {
 const App = () => {
   return (
     <AuthProvider supabaseClient={supabaseClient}>
-      <AuthGuard fallback={<Login />}>
+      <AuthGuard fallback={<div style={{padding: '50px', fontSize: '24px', background: 'lightblue', textAlign: 'center'}}>测试：未登录应该显示这里</div>}>
         <QuizApp />
       </AuthGuard>
     </AuthProvider>
