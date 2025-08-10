@@ -1,5 +1,6 @@
 // ✅ 统一使用新的auth模块导入
 import { AuthProvider, useAuth, AuthGuard, createSupabaseClientFromEnv } from '../../auth/src';
+import Login from '../../auth/src/components/Login';
 import React, { useState, useEffect } from 'react';
 import { Star, Edit2, Database, Github, LogOut, User, Users } from 'lucide-react';
 import QuestionInput from './components/QuestionInput/index.js';
@@ -728,7 +729,7 @@ const QuizApp = () => {
 const App = () => {
   return (
     <AuthProvider supabaseClient={supabaseClient}>
-      <AuthGuard>
+      <AuthGuard fallback={<Login />}>
         <QuizApp />
       </AuthGuard>
     </AuthProvider>
