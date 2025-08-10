@@ -192,13 +192,24 @@ const AuthGuard = ({
 }) => {
   const { user, userProfile, loading, isUserApproved, isAdmin, signOut } = useAuth();
 
+  // === 添加调试信息 ===
+  console.log('=== AuthGuard Debug Info ===');
+  console.log('loading:', loading);
+  console.log('user:', user);
+  console.log('userProfile:', userProfile);
+  console.log('requireApproval:', requireApproval);
+  console.log('fallback:', fallback);
+  console.log('=== End Debug Info ===');
+
   // 显示加载状态
   if (loading) {
+    console.log('=== AuthGuard: Showing loading component');
     return loadingComponent || <DefaultLoadingSpinner />;
   }
 
   // 用户未登录
   if (!user) {
+    console.log('=== AuthGuard: No user, showing fallback');
     return fallback;
   }
 
