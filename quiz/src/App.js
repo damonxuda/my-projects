@@ -731,7 +731,7 @@ const App = () => {
   console.log('Login component:', Login);
   return (
     <AuthProvider supabaseClient={supabaseClient}>
-      <AuthGuard fallback={<div style={{padding: '50px', fontSize: '24px', background: 'lightblue', textAlign: 'center'}}>测试：未登录应该显示这里</div>}>
+      <AuthGuard fallback={<Login />}>
         <QuizApp />
       </AuthGuard>
     </AuthProvider>
