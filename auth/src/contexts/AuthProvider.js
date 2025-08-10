@@ -42,9 +42,11 @@ export const AuthProvider = ({
     const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
+        console.log('=== Session user:', session?.user); // 新增
         setUser(session?.user ?? null);
         
         if (session?.user) {
+          console.log('=== Calling fetchUserProfile for:', session.user.id); // 新增
           await fetchUserProfile(session.user.id);
           
           // 如果是新用户登录且没有 profile，创建一个
@@ -63,19 +65,30 @@ export const AuthProvider = ({
 
   // 获取用户档案信息
   const fetchUserProfile = async (userId) => {
+    console.log('=== fetchUserProfile called with userId:', userId);
+    console.log('=== supabaseClient:', supabaseClient);
+    
     try {
+      console.log('=== About to query user_profiles table');
+      console.log('=== Skipping test query, going directly to main query...');
+
+      // 直接执行业务查询
       const { data, error } = await supabaseClient
         .from('user_profiles')
         .select('*')
         .eq('id', userId)
         .single();
 
+      console.log('=== fetchUserProfile result:', { data, error });
+
       if (error && error.code !== 'PGRST116') { // PGRST116 = 没有找到记录
         console.error('Error fetching user profile:', error);
       } else {
+        console.log('=== Setting userProfile to:', data);
         setUserProfile(data);
       }
     } catch (error) {
+      console.error('=== fetchUserProfile catch error:', error);
       console.error('Error fetching user profile:', error);
     }
   };
