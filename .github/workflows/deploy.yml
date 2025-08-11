@@ -149,11 +149,15 @@ jobs:
       - name: Deploy Quiz to S3
         if: steps.changes.outputs.quiz_changed == 'true' || steps.changes.outputs.force_deploy == 'true' || true
         run: |
-          echo "☁️ Uploading to S3..."
+          echo "☁️ Force clearing S3 bucket and uploading fresh files..."
+          # 先完全删除整个 quiz 目录
+          aws s3 rm s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/ --recursive
+          echo "🗑️ Cleared existing quiz files"
+          # 然后重新上传，设置强制不缓存的头部
           aws s3 sync ./quiz/build/ s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/ \
-            --delete \
+            --cache-control "no-cache, no-store, must-revalidate" \
             --exclude ".DS_Store"
-          echo "✅ Quiz Management deployed to /quiz path"
+          echo "✅ Quiz Management forcefully deployed with no-cache headers"
 
       # 7. 部署根目录文件
       - name: Deploy root files
