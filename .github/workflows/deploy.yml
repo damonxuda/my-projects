@@ -159,6 +159,47 @@ jobs:
             --exclude ".DS_Store"
           echo "✅ Quiz Management forcefully deployed with no-cache headers"
 
+      # 在上面的步骤之后，添加这个新的调试步骤：
+      - name: Debug - Verify S3 Upload and Check Content
+        run: |
+          echo "📁 === S3 文件验证和内容检查 ==="
+          echo ""
+          echo "🔍 1. 检查 S3 上的所有 quiz 文件:"
+          aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/ --recursive --summarize
+          echo ""
+          echo "🔍 2. 检查 JS 文件目录:"
+          aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/static/js/
+          echo ""
+          echo "🔍 3. 查找主要的 JS 文件并检查内容:"
+          # 获取主要的 JS 文件名
+          MAIN_JS=$(aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/static/js/ | grep main | awk '{print $4}' | head -1)
+          if [ ! -z "$MAIN_JS" ]; then
+            echo "找到主要 JS 文件: $MAIN_JS"
+            echo "下载并检查内容..."
+            aws s3 cp s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/static/js/$MAIN_JS temp_main.js
+            echo ""
+            echo "🔍 4. 检查是否包含缓存测试标识符:"
+            if grep -q "CACHE_BUSTER_TEST_20240811_2145" temp_main.js; then
+              echo "✅ 找到新的缓存测试标识符！"
+            else
+              echo "❌ 没有找到新的缓存测试标识符"
+            fi
+            echo ""
+            echo "🔍 5. 检查是否还有旧的 TestApp:"
+            if grep -q "TestApp component rendering" temp_main.js; then
+              echo "❌ 仍然包含旧的 TestApp 代码"
+            else
+              echo "✅ 没有找到旧的 TestApp 代码"
+            fi
+            echo ""
+            echo "🔍 6. 显示文件的前几行（用于调试）:"
+            head -10 temp_main.js
+          else
+            echo "❌ 没有找到主要的 JS 文件"
+          fi
+          echo ""
+          echo "📊 === 调试总结 ==="
+
       # 7. 部署根目录文件
       - name: Deploy root files
         run: |
