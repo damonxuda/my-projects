@@ -7,11 +7,11 @@ import QuestionInput from './components/QuestionInput/index.js';
 import db from './services/DatabaseService.js';
 import UserManagement from './components/admin/UserManagement';
 
-const supabaseClient = createSupabaseClientFromEnv();
+// 🧪 缓存测试标识符 - 用于验证部署是否使用最新代码
+console.log('=== CACHE_BUSTER_TEST_20240811_2145 ===');
+console.log('=== App component rendering ===');
 
-console.log('Supabase client created:', supabaseClient);
-console.log('Supabase client type:', typeof supabaseClient);
-console.log('Supabase client keys:', Object.keys(supabaseClient || {}));
+const supabaseClient = createSupabaseClientFromEnv();
 
 const QuizApp = () => {
   const [activeTab, setActiveTab] = useState('input');
@@ -727,8 +727,6 @@ const QuizApp = () => {
 
 // 主应用组件 - 包装认证
 const App = () => {
-  console.log('=== App component rendering ===');
-  console.log('Login component:', Login);
   return (
     <AuthProvider supabaseClient={supabaseClient}>
       <AuthGuard fallback={<Login />}>
@@ -738,4 +736,4 @@ const App = () => {
   );
 };
 
-export default App;// Force rebuild Mon Aug 11 17:58:29 CST 2025
+export default App;
