@@ -62,13 +62,17 @@ export const AuthProvider = ({
     return () => subscription.unsubscribe();
   }, [supabaseClient]);
 
-  // 获取用户档案信息 - 生产版本
+  // 获取用户档案信息 - 最终修复版本
   const fetchUserProfile = async (userId) => {
     try {
+      console.log('Fetching user profile for:', userId);
+      
       const { data, error } = await supabaseClient
         .from('user_profiles')
         .select('*')
         .eq('id', userId);
+
+      console.log('Query result:', { data, error });
 
       if (error) {
         console.error('Error fetching user profile:', error);
@@ -77,14 +81,16 @@ export const AuthProvider = ({
       }
 
       if (data && data.length > 0) {
+        console.log('User profile found:', data[0]);
         setUserProfile(data[0]);
         return data[0];
       } else {
+        console.log('No user profile found');
         setUserProfile(null);
         return null;
       }
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      console.error('Catch block error:', error);
       setUserProfile(null);
       return null;
     }
