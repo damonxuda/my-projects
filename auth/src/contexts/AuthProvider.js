@@ -71,6 +71,7 @@ export const AuthProvider = ({
     try {
       console.log('=== About to query user_profiles table');
       console.log('=== Skipping test query, going directly to main query...');
+      console.log('=== About to execute query...');
 
       // 直接执行业务查询
       const { data, error } = await supabaseClient
@@ -79,6 +80,7 @@ export const AuthProvider = ({
         .eq('id', userId)
         .single();
 
+      console.log('=== Raw result received:', { data, error });  
       console.log('=== fetchUserProfile result:', { data, error });
 
       if (error && error.code !== 'PGRST116') { // PGRST116 = 没有找到记录
