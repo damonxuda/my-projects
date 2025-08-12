@@ -1,0 +1,15 @@
+{
+  "name": "shared",
+  "version": "1.0.0",
+  "description": "Shared utilities and services for the quiz management system",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["utilities", "shared", "supabase"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  }
+}
