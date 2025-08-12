@@ -62,90 +62,51 @@ export const AuthProvider = ({
     return () => subscription.unsubscribe();
   }, [supabaseClient]);
 
-  // 获取用户档案信息 - 关键调试版本
+  // 获取用户档案信息 - 简化版本测试
   const fetchUserProfile = async (userId) => {
     console.log('\n🚀 === FETCHUSERPROFILE START ===');
     console.log('📋 fetchUserProfile called with userId:', userId);
-    console.log('🔧 supabaseClient type:', typeof supabaseClient);
-    console.log('🔧 supabaseClient methods:', Object.keys(supabaseClient || {}));
     
     try {
-      console.log('⚡ Step 1: Creating query builder...');
-      const queryBuilder = supabaseClient.from('user_profiles');
-      console.log('✅ Query builder created:', !!queryBuilder);
-      console.log('🔧 Query builder type:', typeof queryBuilder);
+      // 先测试最简单的查询
+      console.log('🧪 Testing simple count query first...');
+      const { count, error: countError } = await supabaseClient
+        .from('user_profiles')
+        .select('*', { count: 'exact', head: true });
       
-      console.log('⚡ Step 2: Adding select...');
-      const selectQuery = queryBuilder.select('*');
-      console.log('✅ Select added:', !!selectQuery);
-      console.log('🔧 Select query type:', typeof selectQuery);
-      
-      console.log('⚡ Step 3: Adding eq filter...');
-      const filteredQuery = selectQuery.eq('id', userId);
-      console.log('✅ Filter added:', !!filteredQuery);
-      console.log('🔧 Filtered query type:', typeof filteredQuery);
-      
-      console.log('⚡ Step 4: Adding single...');
-      const singleQuery = filteredQuery.single();
-      console.log('✅ Single added:', !!singleQuery);
-      console.log('🔧 Single query type:', typeof singleQuery);
-      
-      console.log('⚡ Step 5: Executing query with await...');
-      console.log('⏰ Timestamp before query:', new Date().toISOString());
-      
-      // 分步检查返回值，添加超时和更强的错误处理
-      console.log('🔍 About to await singleQuery...');
-      
-      let result;
-      try {
-        // 添加超时机制
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Query timeout after 10 seconds')), 10000);
-        });
-        
-        console.log('🔍 Starting Promise.race with timeout...');
-        result = await Promise.race([singleQuery, timeoutPromise]);
-        console.log('🔍 Promise.race completed!');
-        
-      } catch (queryError) {
-        console.error('💥 Direct query error caught:', queryError);
-        console.error('💥 Query error name:', queryError.name);
-        console.error('💥 Query error message:', queryError.message);
-        throw queryError; // 重新抛出，让外层catch处理
+      if (countError) {
+        console.error('❌ Count query failed:', countError);
+        return null;
       }
       
-      console.log('🔍 Await completed! Raw result type:', typeof result);
-      console.log('🔍 Result is null?', result === null);
-      console.log('🔍 Result is undefined?', result === undefined);
-      console.log('🔍 Result keys:', result ? Object.keys(result) : 'N/A');
+      console.log('✅ Count query succeeded. Total rows:', count);
       
-      console.log('⏰ Timestamp after query:', new Date().toISOString());
-      console.log('🎉 Query executed successfully!');
-      console.log('📦 Raw result (full):', JSON.stringify(result, null, 2));
-      console.log('📦 Result data:', result?.data);
-      console.log('📦 Result error:', result?.error);
-
-      const { data, error } = result;
-
-      if (error && error.code !== 'PGRST116') { 
-        console.error('❌ Query error (not PGRST116):', error);
-        setUserProfile(null);
+      // 然后测试不带 single() 的查询
+      console.log('🧪 Testing query without single()...');
+      const { data: allData, error: allError } = await supabaseClient
+        .from('user_profiles')
+        .select('*')
+        .eq('id', userId);
+      
+      if (allError) {
+        console.error('❌ Query without single failed:', allError);
         return null;
-      } else if (error && error.code === 'PGRST116') {
-        console.log('📭 No user profile found (PGRST116)');
-        setUserProfile(null);
-        return null;
+      }
+      
+      console.log('✅ Query without single succeeded:', allData);
+      
+      if (allData && allData.length > 0) {
+        console.log('✅ User profile found:', allData[0]);
+        setUserProfile(allData[0]);
+        return allData[0];
       } else {
-        console.log('✅ User profile found:', data);
-        setUserProfile(data);
-        return data;
+        console.log('📭 No user profile found');
+        setUserProfile(null);
+        return null;
       }
       
     } catch (error) {
       console.error('💥 fetchUserProfile catch block error:', error);
-      console.error('💥 Error name:', error.name);
-      console.error('💥 Error message:', error.message);
-      console.error('💥 Error stack:', error.stack);
       setUserProfile(null);
       return null;
     } finally {
