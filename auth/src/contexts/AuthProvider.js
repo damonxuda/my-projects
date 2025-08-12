@@ -93,9 +93,27 @@ export const AuthProvider = ({
       console.log('⚡ Step 5: Executing query with await...');
       console.log('⏰ Timestamp before query:', new Date().toISOString());
       
-      // 分步检查返回值
+      // 分步检查返回值，添加超时和更强的错误处理
       console.log('🔍 About to await singleQuery...');
-      const result = await singleQuery;
+      
+      let result;
+      try {
+        // 添加超时机制
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Query timeout after 10 seconds')), 10000);
+        });
+        
+        console.log('🔍 Starting Promise.race with timeout...');
+        result = await Promise.race([singleQuery, timeoutPromise]);
+        console.log('🔍 Promise.race completed!');
+        
+      } catch (queryError) {
+        console.error('💥 Direct query error caught:', queryError);
+        console.error('💥 Query error name:', queryError.name);
+        console.error('💥 Query error message:', queryError.message);
+        throw queryError; // 重新抛出，让外层catch处理
+      }
+      
       console.log('🔍 Await completed! Raw result type:', typeof result);
       console.log('🔍 Result is null?', result === null);
       console.log('🔍 Result is undefined?', result === undefined);
