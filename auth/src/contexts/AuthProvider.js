@@ -62,55 +62,31 @@ export const AuthProvider = ({
     return () => subscription.unsubscribe();
   }, [supabaseClient]);
 
-  // 获取用户档案信息 - 简化版本测试
+  // 获取用户档案信息 - 生产版本
   const fetchUserProfile = async (userId) => {
-    console.log('\n🚀 === FETCHUSERPROFILE START ===');
-    console.log('📋 fetchUserProfile called with userId:', userId);
-    
     try {
-      // 先测试最简单的查询
-      console.log('🧪 Testing simple count query first...');
-      const { count, error: countError } = await supabaseClient
-        .from('user_profiles')
-        .select('*', { count: 'exact', head: true });
-      
-      if (countError) {
-        console.error('❌ Count query failed:', countError);
-        return null;
-      }
-      
-      console.log('✅ Count query succeeded. Total rows:', count);
-      
-      // 然后测试不带 single() 的查询
-      console.log('🧪 Testing query without single()...');
-      const { data: allData, error: allError } = await supabaseClient
+      const { data, error } = await supabaseClient
         .from('user_profiles')
         .select('*')
         .eq('id', userId);
-      
-      if (allError) {
-        console.error('❌ Query without single failed:', allError);
-        return null;
-      }
-      
-      console.log('✅ Query without single succeeded:', allData);
-      
-      if (allData && allData.length > 0) {
-        console.log('✅ User profile found:', allData[0]);
-        setUserProfile(allData[0]);
-        return allData[0];
-      } else {
-        console.log('📭 No user profile found');
+
+      if (error) {
+        console.error('Error fetching user profile:', error);
         setUserProfile(null);
         return null;
       }
-      
+
+      if (data && data.length > 0) {
+        setUserProfile(data[0]);
+        return data[0];
+      } else {
+        setUserProfile(null);
+        return null;
+      }
     } catch (error) {
-      console.error('💥 fetchUserProfile catch block error:', error);
+      console.error('Error fetching user profile:', error);
       setUserProfile(null);
       return null;
-    } finally {
-      console.log('🏁 === FETCHUSERPROFILE END ===\n');
     }
   };
 
