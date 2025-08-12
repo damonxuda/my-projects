@@ -93,11 +93,17 @@ export const AuthProvider = ({
       console.log('⚡ Step 5: Executing query with await...');
       console.log('⏰ Timestamp before query:', new Date().toISOString());
       
+      // 分步检查返回值
+      console.log('🔍 About to await singleQuery...');
       const result = await singleQuery;
+      console.log('🔍 Await completed! Raw result type:', typeof result);
+      console.log('🔍 Result is null?', result === null);
+      console.log('🔍 Result is undefined?', result === undefined);
+      console.log('🔍 Result keys:', result ? Object.keys(result) : 'N/A');
       
       console.log('⏰ Timestamp after query:', new Date().toISOString());
       console.log('🎉 Query executed successfully!');
-      console.log('📦 Raw result:', result);
+      console.log('📦 Raw result (full):', JSON.stringify(result, null, 2));
       console.log('📦 Result data:', result?.data);
       console.log('📦 Result error:', result?.error);
 
