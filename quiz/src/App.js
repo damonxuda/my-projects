@@ -2,7 +2,7 @@
 import { createSupabaseClientFromEnv } from '../../shared/supabase';
 
 // 认证相关从auth-clerk导入
-import { ClerkAuthProvider, useAuth, SignedIn, SignedOut, SignInButton, UserProfile } from 'auth-clerk';
+import { ClerkAuthProvider, useAuth, SignedIn, SignedOut, SignInButton, UserProfile } from '../../auth-clerk';
 
 //其余保持不变
 import React, { useState, useEffect } from 'react';

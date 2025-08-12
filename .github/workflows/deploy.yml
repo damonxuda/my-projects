@@ -47,13 +47,22 @@ jobs:
             echo "➖ Schedule project has no changes"
           fi
 
-          # 检测 auth 项目变化
-          if git diff --name-only HEAD~1 HEAD | grep -q "^auth/"; then
+          # 检测 auth-clerk 项目变化
+          if git diff --name-only HEAD~1 HEAD | grep -q "^auth-clerk/"; then
             echo "auth_changed=true" >> $GITHUB_OUTPUT
-            echo "✅ Auth project has changes"
+            echo "✅ Auth-clerk project has changes"
           else
             echo "auth_changed=false" >> $GITHUB_OUTPUT
-            echo "➖ Auth project has no changes"
+            echo "➖ Auth-clerk project has no changes"
+          fi
+
+          # 检测 shared 项目变化
+          if git diff --name-only HEAD~1 HEAD | grep -q "^shared/"; then
+            echo "shared_changed=true" >> $GITHUB_OUTPUT
+            echo "✅ Shared project has changes"
+          else
+            echo "shared_changed=false" >> $GITHUB_OUTPUT
+            echo "➖ Shared project has no changes"
           fi
 
           # 检测 quiz 项目变化
@@ -65,10 +74,10 @@ jobs:
             echo "➖ Quiz project has no changes"
           fi
 
-          # 如果auth变化，quiz也需要重新构建（因为quiz依赖auth）
-          if [[ "$(cat $GITHUB_OUTPUT | grep auth_changed=true)" ]]; then
+          # 如果auth-clerk或shared变化，quiz也需要重新构建（因为quiz依赖它们）
+          if [[ "$(cat $GITHUB_OUTPUT | grep -E 'auth_changed=true|shared_changed=true')" ]]; then
             echo "quiz_changed=true" >> $GITHUB_OUTPUT
-            echo "🔄 Auth changed, forcing Quiz rebuild"
+            echo "🔄 Auth-clerk or Shared changed, forcing Quiz rebuild"
           fi
 
           # 检测是否是首次部署或强制部署
@@ -88,25 +97,15 @@ jobs:
           # 同步上传 schedule 项目到 S3 的 schedule 路径
           aws s3 sync ./schedule/ s3://${{ secrets.AWS_S3_BUCKET_NAME }}/schedule/ \
             --delete \
-            --exclude ".DS_Store" \
             --exclude "*.md" \
             --exclude "README*" \
             --exclude "LICENSE*" \
-            --exclude ".env*" \
-            --exclude "*.zip" \
-            --exclude "*.tar" \
-            --exclude "*.gz" \
             --exclude "package*.json" \
-            --exclude "tsconfig.json" \
-            --exclude "webpack.config.js" \
-            --exclude "gulpfile.js" \
-            --exclude "Gruntfile.js" \
+            --exclude "*.config.js" \
+            --exclude "*.config.json" \
             --exclude ".gitignore" \
-            --exclude ".gitattributes" \
-            --exclude ".editorconfig" \
             --exclude ".eslintrc*" \
-            --exclude ".prettierrc*" \
-            --exclude "*.log"
+            --exclude ".prettierrc*"
 
           echo "✅ Schedule deployed to /schedule path"
 
@@ -126,20 +125,28 @@ jobs:
 
       # 6a. Install Quiz Dependencies
       - name: Install Quiz Dependencies
-        if: steps.changes.outputs.quiz_changed == 'true' || steps.changes.outputs.force_deploy == 'true' || true
+        if: steps.changes.outputs.quiz_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
         working-directory: ./quiz
         run: |
           echo "📦 Installing dependencies..."
           npm ci
 
+          echo "📦 Installing shared dependencies..."
+          cd ../shared && npm ci
+
+          echo "📦 Installing auth-clerk dependencies..."
+          cd ../auth-clerk && npm ci
+
       # 6b. Build Quiz Application
       - name: Build Quiz Application
-        if: steps.changes.outputs.quiz_changed == 'true' || steps.changes.outputs.force_deploy == 'true' || true
+        if: steps.changes.outputs.quiz_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
         working-directory: ./quiz
         run: |
           echo "🔧 Setting environment variables..."
           echo "REACT_APP_SUPABASE_URL=${{ secrets.REACT_APP_SUPABASE_URL }}" >> .env.production
           echo "REACT_APP_SUPABASE_ANON_KEY=${{ secrets.REACT_APP_SUPABASE_ANON_KEY }}" >> .env.production
+          echo "REACT_APP_CLERK_PUBLISHABLE_KEY=${{ secrets.REACT_APP_CLERK_PUBLISHABLE_KEY }}" >> .env.production
+          echo "REACT_APP_ADMIN_EMAILS=${{ secrets.REACT_APP_ADMIN_EMAILS }}" >> .env.production
           echo "GENERATE_SOURCEMAP=false" >> .env.production
 
           echo "🏗️ Building React application..."
@@ -147,7 +154,7 @@ jobs:
 
       # 6c. Deploy Quiz to S3
       - name: Deploy Quiz to S3
-        if: steps.changes.outputs.quiz_changed == 'true' || steps.changes.outputs.force_deploy == 'true' || true
+        if: steps.changes.outputs.quiz_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
         run: |
           echo "☁️ Force clearing S3 bucket and uploading fresh files..."
           # 先完全删除整个 quiz 目录
@@ -159,48 +166,52 @@ jobs:
             --exclude ".DS_Store"
           echo "✅ Quiz Management forcefully deployed with no-cache headers"
 
-      # 在上面的步骤之后，添加这个新的调试步骤：
-      - name: Debug - Verify S3 Upload and Check Content
+      # 7. 验证部署和Clerk认证
+      - name: Verify Clerk Authentication Setup
         run: |
-          echo "📁 === S3 文件验证和内容检查 ==="
+          echo "🔐 === Clerk认证系统验证 ==="
           echo ""
-          echo "🔍 1. 检查 S3 上的所有 quiz 文件:"
+          echo "🔍 1. 检查 S3 上的 quiz 文件:"
           aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/ --recursive --summarize
           echo ""
           echo "🔍 2. 检查 JS 文件目录:"
           aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/static/js/
           echo ""
-          echo "🔍 3. 查找主要的 JS 文件并检查内容:"
+          echo "🔍 3. 验证环境变量配置:"
           # 获取主要的 JS 文件名
           MAIN_JS=$(aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/static/js/ | grep main | awk '{print $4}' | head -1)
           if [ ! -z "$MAIN_JS" ]; then
             echo "找到主要 JS 文件: $MAIN_JS"
-            echo "下载并检查内容..."
+            echo "下载并检查Clerk集成..."
             aws s3 cp s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/static/js/$MAIN_JS temp_main.js
             echo ""
-            echo "🔍 4. 检查是否包含缓存测试标识符:"
-            if grep -q "CACHE_BUSTER_TEST_20240811_2145" temp_main.js; then
-              echo "✅ 找到新的缓存测试标识符！"
+            echo "🔍 4. 检查Clerk组件集成:"
+            if grep -q "ClerkAuthProvider\|SignedIn\|SignedOut" temp_main.js; then
+              echo "✅ 找到Clerk认证组件！"
             else
-              echo "❌ 没有找到新的缓存测试标识符"
+              echo "❌ 没有找到Clerk认证组件"
             fi
             echo ""
-            echo "🔍 5. 检查是否还有旧的 TestApp:"
-            if grep -q "TestApp component rendering" temp_main.js; then
-              echo "❌ 仍然包含旧的 TestApp 代码"
+            echo "🔍 5. 检查是否移除了旧的Supabase认证:"
+            if grep -q "AuthProvider.*supabase\|useAuth.*auth-legacy" temp_main.js; then
+              echo "⚠️ 仍然包含旧的Supabase认证代码"
             else
-              echo "✅ 没有找到旧的 TestApp 代码"
+              echo "✅ 已成功移除旧的认证代码"
             fi
             echo ""
-            echo "🔍 6. 显示文件的前几行（用于调试）:"
-            head -10 temp_main.js
+            echo "🔍 6. 检查管理员邮箱配置:"
+            if grep -q "REACT_APP_ADMIN_EMAILS" temp_main.js; then
+              echo "✅ 找到管理员邮箱配置"
+            else
+              echo "❌ 没有找到管理员邮箱配置"
+            fi
           else
             echo "❌ 没有找到主要的 JS 文件"
           fi
           echo ""
-          echo "📊 === 调试总结 ==="
+          echo "📊 === Clerk认证验证总结 ==="
 
-      # 7. 部署根目录文件
+      # 8. 部署根目录文件
       - name: Deploy root files
         run: |
           echo "🚀 Deploying root directory files..."
@@ -213,7 +224,7 @@ jobs:
             echo "ℹ️  No root index.html found"
           fi
 
-      # 8. 验证部署结果
+      # 9. 验证部署结果
       - name: Verify deployments
         run: |
           echo "📁 Verifying deployed projects..."
@@ -241,7 +252,7 @@ jobs:
             echo "ℹ️  Quiz Management files not found in S3 (may not be created yet)"
           fi
 
-      # 9. 清理缓存（如果使用 CloudFront）
+      # 10. 清理缓存（如果使用 CloudFront）
       - name: Invalidate CloudFront cache (optional)
         continue-on-error: true
         run: |
@@ -261,28 +272,34 @@ jobs:
           #     --paths $PATHS_TO_INVALIDATE
           # fi
 
-      # 10. 部署成功报告
+      # 11. 部署成功报告
       - name: Deploy Success Report
         run: |
-          echo "🎉 多项目部署完成!"
+          echo "🎉 多项目部署完成 - Clerk认证系统已启用!"
           echo ""
           echo "📊 本次部署摘要:"
           echo "   Schedule 变化: ${{ steps.changes.outputs.schedule_changed }}"
-          echo "   Auth 变化: ${{ steps.changes.outputs.auth_changed }}"
+          echo "   Auth-clerk 变化: ${{ steps.changes.outputs.auth_changed }}"
+          echo "   Shared 变化: ${{ steps.changes.outputs.shared_changed }}"
           echo "   Quiz 变化: ${{ steps.changes.outputs.quiz_changed }}"
           echo "   强制部署模式: ${{ steps.changes.outputs.force_deploy }}"
+          echo ""
+          echo "🔐 认证系统:"
+          echo "   认证服务: Clerk (替代Supabase认证)"
+          echo "   用户管理: 双重验证 (Clerk + 管理员审批)"
+          echo "   知识产权保护: 启用审批制访问控制"
           echo ""
           echo "🌐 项目访问地址:"
           echo "   📚 Schedule: http://${{ secrets.AWS_S3_BUCKET_NAME }}.s3-website.${{ secrets.AWS_REGION }}.amazonaws.com/schedule/"
           echo "   🧠 Quiz Management: http://${{ secrets.AWS_S3_BUCKET_NAME }}.s3-website.${{ secrets.AWS_REGION }}.amazonaws.com/quiz/"
           echo ""
           echo "✅ 功能特性:"
-          echo "   - 智能变化检测：只部署有变化的项目"
-          echo "   - React 构建：自动构建quiz项目"
-          echo "   - 路径分离：每个项目独立的访问路径"
-          echo "   - 依赖检测：auth变化时自动重建quiz"
+          echo "   - Clerk身份认证: 安全的用户注册和登录"
+          echo "   - 智能变化检测: 只部署有变化的项目"
+          echo "   - 模块化架构: auth-clerk + shared + quiz"
+          echo "   - 管理员权限: 基于邮箱的管理员控制"
           echo ""
           echo "📝 下一步建议:"
-          echo "   1. 创建 Supabase 项目并配置 GitHub Secrets"
-          echo "   2. 测试两个项目的独立访问"
-          echo "   3. 考虑配置自定义域名和 HTTPS"
+          echo "   1. 使用管理员邮箱登录并测试权限"
+          echo "   2. 测试用户注册和审批流程"
+          echo "   3. 验证题库访问权限控制"
