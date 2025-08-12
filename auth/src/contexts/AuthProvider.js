@@ -41,12 +41,11 @@ export const AuthProvider = ({
     // 监听认证状态变化
     const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
-        console.log('=== Session user:', session?.user); // 新增
+        console.log('🔄 Auth state changed:', event, session?.user?.email);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          console.log('=== Calling fetchUserProfile for:', session.user.id); // 新增
+          console.log('👤 User logged in, fetching profile...');
           await fetchUserProfile(session.user.id);
           
           // 如果是新用户登录且没有 profile，创建一个
@@ -63,35 +62,70 @@ export const AuthProvider = ({
     return () => subscription.unsubscribe();
   }, [supabaseClient]);
 
-  // 获取用户档案信息
+  // 获取用户档案信息 - 关键调试版本
   const fetchUserProfile = async (userId) => {
-    console.log('=== fetchUserProfile called with userId:', userId);
-    console.log('=== supabaseClient:', supabaseClient);
+    console.log('\n🚀 === FETCHUSERPROFILE START ===');
+    console.log('📋 fetchUserProfile called with userId:', userId);
+    console.log('🔧 supabaseClient type:', typeof supabaseClient);
+    console.log('🔧 supabaseClient methods:', Object.keys(supabaseClient || {}));
     
     try {
-      console.log('=== About to query user_profiles table');
-      console.log('=== Skipping test query, going directly to main query...');
-      console.log('=== About to execute query...');
+      console.log('⚡ Step 1: Creating query builder...');
+      const queryBuilder = supabaseClient.from('user_profiles');
+      console.log('✅ Query builder created:', !!queryBuilder);
+      console.log('🔧 Query builder type:', typeof queryBuilder);
+      
+      console.log('⚡ Step 2: Adding select...');
+      const selectQuery = queryBuilder.select('*');
+      console.log('✅ Select added:', !!selectQuery);
+      console.log('🔧 Select query type:', typeof selectQuery);
+      
+      console.log('⚡ Step 3: Adding eq filter...');
+      const filteredQuery = selectQuery.eq('id', userId);
+      console.log('✅ Filter added:', !!filteredQuery);
+      console.log('🔧 Filtered query type:', typeof filteredQuery);
+      
+      console.log('⚡ Step 4: Adding single...');
+      const singleQuery = filteredQuery.single();
+      console.log('✅ Single added:', !!singleQuery);
+      console.log('🔧 Single query type:', typeof singleQuery);
+      
+      console.log('⚡ Step 5: Executing query with await...');
+      console.log('⏰ Timestamp before query:', new Date().toISOString());
+      
+      const result = await singleQuery;
+      
+      console.log('⏰ Timestamp after query:', new Date().toISOString());
+      console.log('🎉 Query executed successfully!');
+      console.log('📦 Raw result:', result);
+      console.log('📦 Result data:', result?.data);
+      console.log('📦 Result error:', result?.error);
 
-      // 直接执行业务查询
-      const { data, error } = await supabaseClient
-        .from('user_profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      const { data, error } = result;
 
-      console.log('=== Raw result received:', { data, error });  
-      console.log('=== fetchUserProfile result:', { data, error });
-
-      if (error && error.code !== 'PGRST116') { // PGRST116 = 没有找到记录
-        console.error('Error fetching user profile:', error);
+      if (error && error.code !== 'PGRST116') { 
+        console.error('❌ Query error (not PGRST116):', error);
+        setUserProfile(null);
+        return null;
+      } else if (error && error.code === 'PGRST116') {
+        console.log('📭 No user profile found (PGRST116)');
+        setUserProfile(null);
+        return null;
       } else {
-        console.log('=== Setting userProfile to:', data);
+        console.log('✅ User profile found:', data);
         setUserProfile(data);
+        return data;
       }
+      
     } catch (error) {
-      console.error('=== fetchUserProfile catch error:', error);
-      console.error('Error fetching user profile:', error);
+      console.error('💥 fetchUserProfile catch block error:', error);
+      console.error('💥 Error name:', error.name);
+      console.error('💥 Error message:', error.message);
+      console.error('💥 Error stack:', error.stack);
+      setUserProfile(null);
+      return null;
+    } finally {
+      console.log('🏁 === FETCHUSERPROFILE END ===\n');
     }
   };
 
@@ -146,7 +180,6 @@ export const AuthProvider = ({
 
       if (error) throw error;
 
-      // 注册成功后，profile 会在 onAuthStateChange 中创建
       console.log('Signup successful:', data);
       return { data, error: null };
     } catch (error) {
@@ -209,7 +242,6 @@ export const AuthProvider = ({
     isAdmin,
     fetchUserProfile,
     ensureUserProfile,
-    // 提供supabaseClient给组件使用
     supabaseClient,
   };
 
