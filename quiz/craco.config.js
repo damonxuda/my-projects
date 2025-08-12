@@ -9,6 +9,16 @@ module.exports = {
       );
       webpackConfig.resolve.plugins.splice(scopePluginIndex, 1);
       
+      // ✨ 添加 resolve alias 确保只有一个React实例 - 这是解决多实例问题的关键
+      webpackConfig.resolve.alias = {
+        ...webpackConfig.resolve.alias,
+        react: path.resolve(__dirname, 'node_modules/react'),
+        'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
+      };
+
+      // ✨ 确保 resolve.symlinks 为 false (对monorepo很重要)
+      webpackConfig.resolve.symlinks = false;
+      
       // 找到babel-loader配置并扩展include路径
       const oneOfRules = webpackConfig.module.rules.find(rule => rule.oneOf);
       if (oneOfRules) {
