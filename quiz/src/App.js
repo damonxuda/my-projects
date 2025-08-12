@@ -1,6 +1,10 @@
-// ✅ 统一使用新的auth模块导入
-import { AuthProvider, useAuth, AuthGuard, createSupabaseClientFromEnv } from '../../auth/src';
-import Login from '../../auth/src/components/Login';
+// 公共服务从shared导入
+import { createSupabaseClientFromEnv } from '../../shared/supabase';
+// 认证相关从auth-legacy导入（临时，后续用Clerk替换）
+import { AuthProvider, useAuth, AuthGuard } from '../../auth-legacy/src';
+import Login from '../../auth-legacy/src/components/Login';
+
+//其余保持不变
 import React, { useState, useEffect } from 'react';
 import { Star, Edit2, Database, Github, LogOut, User, Users } from 'lucide-react';
 import QuestionInput from './components/QuestionInput/index.js';

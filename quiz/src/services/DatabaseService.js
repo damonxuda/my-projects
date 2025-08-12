@@ -1,5 +1,5 @@
 // Real Supabase Database Service
-import { createSupabaseClientFromEnv, SUPABASE_CONFIG } from '../../../auth/src';
+import { createSupabaseClientFromEnv, SUPABASE_CONFIG } from '../../../shared/supabase';
 
 class DatabaseService {
   constructor() {

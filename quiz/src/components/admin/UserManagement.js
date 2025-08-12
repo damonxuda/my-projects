@@ -1,6 +1,9 @@
 // src/components/admin/UserManagement.js
 import React, { useState, useEffect } from 'react';
-import { useAuth, createSupabaseClientFromEnv } from '../../../../auth/src';
+
+import { createSupabaseClientFromEnv } from '../../../../shared/supabase';
+import { useAuth } from '../../../../auth-legacy/src';
+
 import LoadingSpinner from '../common/LoadingSpinner';
 
 // 创建supabase客户端实例
