@@ -1,4 +1,4 @@
-// Real Supabase Database Service
+// Real Supabase Database Service with Clerk Authentication
 import { createSupabaseClientFromEnv, SUPABASE_CONFIG } from '../../../shared/supabase';
 
 class DatabaseService {
@@ -20,333 +20,270 @@ class DatabaseService {
   }
 
   // ===============================
+  // 权限检查方法
+  // ===============================
+
+  async checkUserAccess(clerkUserId) {
+    try {
+      const { data: userProfile, error } = await this.supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('clerk_user_id', clerkUserId)
+        .eq('status', 'approved')
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+        throw error;
+      }
+
+      return {
+        isApproved: !!userProfile,
+        userProfile: userProfile || null
+      };
+    } catch (error) {
+      console.error('Error checking user access:', error);
+      return { isApproved: false, userProfile: null };
+    }
+  }
+
+  async ensureUserProfile(clerkUser) {
+    try {
+      // 检查用户档案是否存在
+      const { data: existingProfile, error: selectError } = await this.supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('clerk_user_id', clerkUser.id)
+        .single();
+
+      if (selectError && selectError.code !== 'PGRST116') {
+        throw selectError;
+      }
+
+      // 如果档案不存在，创建新档案
+      if (!existingProfile) {
+        const { data: newProfile, error: insertError } = await this.supabase
+          .from('user_profiles')
+          .insert({
+            clerk_user_id: clerkUser.id,
+            email: clerkUser.emailAddresses[0]?.emailAddress,
+            status: 'pending',
+            requested_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        return newProfile;
+      }
+
+      return existingProfile;
+    } catch (error) {
+      console.error('Error ensuring user profile:', error);
+      throw error;
+    }
+  }
+
+  // 权限验证装饰器
+  async withAccessCheck(operation, clerkUser = null) {
+    if (!clerkUser) {
+      throw new Error('用户未登录');
+    }
+
+    // 确保用户档案存在
+    await this.ensureUserProfile(clerkUser);
+
+    // 检查访问权限
+    const { isApproved } = await this.checkUserAccess(clerkUser.id);
+    
+    if (!isApproved) {
+      throw new Error('用户未通过审批，无法访问题库内容');
+    }
+
+    return await operation();
+  }
+
+  // ===============================
   // 题目相关操作
   // ===============================
   
-  async addQuestion(questionData) {
-    try {
-      const { data, error } = await this.supabase
-        .from(this.tables.questions)
-        .insert([{
-          title: questionData.title,
-          content: questionData.content,
-          type: questionData.type || 'multiple_choice',
-          options: questionData.options,
-          correct_answer: questionData.correctAnswer,
-          explanation: questionData.explanation,
-          difficulty: questionData.difficulty || 1,
-          is_active: true
-        }])
-        .select()
-        .single();
+  async addQuestion(questionData, clerkUser = null) {
+    return await this.withAccessCheck(async () => {
+      try {
+        const { data, error } = await this.supabase
+          .from(this.tables.questions)
+          .insert([{
+            question_type: questionData.questionType,
+            question_text: questionData.questionText,
+            answer: questionData.answer,
+            solution_steps: questionData.solutionSteps,
+            tags: questionData.tags || [],
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }])
+          .select()
+          .single();
 
-      if (error) throw error;
-      
-      // 如果有标签，添加标签关联
-      if (questionData.tags && questionData.tags.length > 0) {
-        await this.addQuestionTags(data.id, questionData.tags);
+        if (error) throw error;
+        return { success: true, data };
+      } catch (error) {
+        console.error('Error adding question:', error);
+        return { success: false, error: error.message };
       }
-
-      return { success: true, data };
-    } catch (error) {
-      console.error('Error adding question:', error);
-      return { success: false, error: error.message };
-    }
+    }, clerkUser);
   }
 
-  async getQuestions(filters = {}) {
-    try {
-      let query = this.supabase
-        .from(this.tables.questions)
-        .select(`
-          *,
-          question_tags (
-            tags (
-              id,
-              name,
-              color
-            )
-          )
-        `)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
+  async getQuestions(filters = {}, clerkUser = null) {
+    return await this.withAccessCheck(async () => {
+      try {
+        let query = this.supabase
+          .from(this.tables.questions)
+          .select('*')
+          .order('created_at', { ascending: false });
 
-      // 应用过滤器
-      if (filters.difficulty) {
-        query = query.eq('difficulty', filters.difficulty);
+        // 应用过滤器
+        if (filters.tags && filters.tags.length > 0) {
+          query = query.contains('tags', filters.tags);
+        }
+
+        if (filters.search) {
+          query = query.or(`question_text.ilike.%${filters.search}%,answer.ilike.%${filters.search}%`);
+        }
+
+        const { data, error } = await query;
+        
+        if (error) throw error;
+        return { success: true, data };
+      } catch (error) {
+        console.error('Error getting questions:', error);
+        return { success: false, error: error.message };
       }
-      
-      if (filters.type) {
-        query = query.eq('type', filters.type);
+    }, clerkUser);
+  }
+
+  async getQuestionById(id, clerkUser = null) {
+    return await this.withAccessCheck(async () => {
+      try {
+        const { data, error } = await this.supabase
+          .from(this.tables.questions)
+          .select('*')
+          .eq('id', id)
+          .single();
+
+        if (error) throw error;
+        return { success: true, data };
+      } catch (error) {
+        console.error('Error getting question:', error);
+        return { success: false, error: error.message };
       }
+    }, clerkUser);
+  }
 
-      if (filters.search) {
-        query = query.or(`title.ilike.%${filters.search}%,content.ilike.%${filters.search}%`);
+  async updateQuestion(id, updates, clerkUser = null) {
+    return await this.withAccessCheck(async () => {
+      try {
+        const { data, error } = await this.supabase
+          .from(this.tables.questions)
+          .update({
+            ...updates,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        return { success: true, data };
+      } catch (error) {
+        console.error('Error updating question:', error);
+        return { success: false, error: error.message };
       }
-
-      const { data, error } = await query;
-      
-      if (error) throw error;
-
-      // 格式化数据，将标签扁平化
-      const formattedData = data.map(question => ({
-        ...question,
-        tags: question.question_tags?.map(qt => qt.tags) || []
-      }));
-
-      return { success: true, data: formattedData };
-    } catch (error) {
-      console.error('Error getting questions:', error);
-      return { success: false, error: error.message };
-    }
+    }, clerkUser);
   }
 
-  async getQuestionById(id) {
-    try {
-      const { data, error } = await this.supabase
-        .from(this.tables.questions)
-        .select(`
-          *,
-          question_tags (
-            tags (
-              id,
-              name,
-              color
-            )
-          )
-        `)
-        .eq('id', id)
-        .eq('is_active', true)
-        .single();
+  async deleteQuestion(id, clerkUser = null) {
+    return await this.withAccessCheck(async () => {
+      try {
+        const { error } = await this.supabase
+          .from(this.tables.questions)
+          .delete()
+          .eq('id', id);
 
-      if (error) throw error;
-
-      // 格式化标签
-      const formattedData = {
-        ...data,
-        tags: data.question_tags?.map(qt => qt.tags) || []
-      };
-
-      return { success: true, data: formattedData };
-    } catch (error) {
-      console.error('Error getting question:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  async updateQuestion(id, updates) {
-    try {
-      const { data, error } = await this.supabase
-        .from(this.tables.questions)
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // 如果更新了标签，重新设置标签关联
-      if (updates.tags !== undefined) {
-        await this.updateQuestionTags(id, updates.tags);
+        if (error) throw error;
+        return { success: true };
+      } catch (error) {
+        console.error('Error deleting question:', error);
+        return { success: false, error: error.message };
       }
-
-      return { success: true, data };
-    } catch (error) {
-      console.error('Error updating question:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  async deleteQuestion(id) {
-    try {
-      const { error } = await this.supabase
-        .from(this.tables.questions)
-        .update({ is_active: false })  // 软删除
-        .eq('id', id);
-
-      if (error) throw error;
-      return { success: true };
-    } catch (error) {
-      console.error('Error deleting question:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  // ===============================
-  // 标签相关操作
-  // ===============================
-
-  async getTags() {
-    try {
-      const { data, error } = await this.supabase
-        .from(this.tables.tags)
-        .select('*')
-        .order('name');
-
-      if (error) throw error;
-      return { success: true, data };
-    } catch (error) {
-      console.error('Error getting tags:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  async addTag(tagData) {
-    try {
-      const { data, error } = await this.supabase
-        .from(this.tables.tags)
-        .insert([{
-          name: tagData.name,
-          color: tagData.color || '#3B82F6',
-          description: tagData.description
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-      return { success: true, data };
-    } catch (error) {
-      console.error('Error adding tag:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  async addQuestionTags(questionId, tagIds) {
-    try {
-      const tagAssociations = tagIds.map(tagId => ({
-        question_id: questionId,
-        tag_id: tagId
-      }));
-
-      const { error } = await this.supabase
-        .from(this.tables.question_tags)
-        .insert(tagAssociations);
-
-      if (error) throw error;
-      return { success: true };
-    } catch (error) {
-      console.error('Error adding question tags:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  async updateQuestionTags(questionId, tagIds) {
-    try {
-      // 先删除现有关联
-      await this.supabase
-        .from(this.tables.question_tags)
-        .delete()
-        .eq('question_id', questionId);
-
-      // 如果有新标签，添加新关联
-      if (tagIds && tagIds.length > 0) {
-        await this.addQuestionTags(questionId, tagIds);
-      }
-
-      return { success: true };
-    } catch (error) {
-      console.error('Error updating question tags:', error);
-      return { success: false, error: error.message };
-    }
+    }, clerkUser);
   }
 
   // ===============================
   // 答题记录相关操作
   // ===============================
 
-  async recordAttempt(attemptData) {
-    try {
-      const { data, error } = await this.supabase
-        .from(this.tables.attempts)
-        .insert([{
-          question_id: attemptData.questionId,
-          user_answer: attemptData.userAnswer,
-          is_correct: attemptData.isCorrect,
-          response_time: attemptData.responseTime,
-          user_id: attemptData.userId,
-          session_id: attemptData.sessionId
-        }])
-        .select()
-        .single();
+  async recordAttempt(attemptData, clerkUser = null) {
+    return await this.withAccessCheck(async () => {
+      try {
+        const { data, error } = await this.supabase
+          .from(this.tables.attempts)
+          .insert([{
+            question_id: attemptData.questionId,
+            mastery_score: attemptData.masteryScore,
+            is_marked_wrong: attemptData.isMarkedWrong || false,
+            created_at: new Date().toISOString()
+          }])
+          .select()
+          .single();
 
-      if (error) throw error;
-      return { success: true, data };
-    } catch (error) {
-      console.error('Error recording attempt:', error);
-      return { success: false, error: error.message };
-    }
+        if (error) throw error;
+        return { success: true, data };
+      } catch (error) {
+        console.error('Error recording attempt:', error);
+        return { success: false, error: error.message };
+      }
+    }, clerkUser);
   }
 
-  async getAttempts(filters = {}) {
-    try {
-      let query = this.supabase
-        .from(this.tables.attempts)
-        .select(`
-          *,
-          questions (
-            id,
-            title,
-            difficulty
-          )
-        `)
-        .order('attempted_at', { ascending: false });
+  async getAttempts(filters = {}, clerkUser = null) {
+    return await this.withAccessCheck(async () => {
+      try {
+        let query = this.supabase
+          .from(this.tables.attempts)
+          .select('*')
+          .order('created_at', { ascending: false });
 
-      if (filters.userId) {
-        query = query.eq('user_id', filters.userId);
+        if (filters.questionId) {
+          query = query.eq('question_id', filters.questionId);
+        }
+
+        const { data, error } = await query;
+        
+        if (error) throw error;
+        return { success: true, data };
+      } catch (error) {
+        console.error('Error getting attempts:', error);
+        return { success: false, error: error.message };
       }
-
-      if (filters.sessionId) {
-        query = query.eq('session_id', filters.sessionId);
-      }
-
-      if (filters.questionId) {
-        query = query.eq('question_id', filters.questionId);
-      }
-
-      const { data, error } = await query;
-      
-      if (error) throw error;
-      return { success: true, data };
-    } catch (error) {
-      console.error('Error getting attempts:', error);
-      return { success: false, error: error.message };
-    }
+    }, clerkUser);
   }
 
   // ===============================
-  // 统计相关操作
+  // 兼容旧API的方法（用于App.js过渡）
   // ===============================
 
-  async getStatistics(userId = null, sessionId = null) {
-    try {
-      let filter = {};
-      if (userId) filter.user_id = userId;
-      if (sessionId) filter.session_id = sessionId;
+  async selectQuestions(clerkUser = null) {
+    const result = await this.getQuestions({}, clerkUser);
+    return { data: result.success ? result.data : [], error: result.success ? null : result.error };
+  }
 
-      const { data: attempts, error } = await this.supabase
-        .from(this.tables.attempts)
-        .select('*')
-        .match(filter);
+  async selectAttempts(clerkUser = null) {
+    const result = await this.getAttempts({}, clerkUser);
+    return { data: result.success ? result.data : [], error: result.success ? null : result.error };
+  }
 
-      if (error) throw error;
-
-      const stats = {
-        totalQuestions: attempts.length,
-        correctAnswers: attempts.filter(a => a.is_correct).length,
-        averageTime: attempts.length > 0 ? 
-          attempts.reduce((sum, a) => sum + (a.response_time || 0), 0) / attempts.length : 0,
-        accuracy: attempts.length > 0 ? 
-          (attempts.filter(a => a.is_correct).length / attempts.length) * 100 : 0
-      };
-
-      return { success: true, data: stats };
-    } catch (error) {
-      console.error('Error getting statistics:', error);
-      return { success: false, error: error.message };
-    }
+  async insertAttempt(attemptData, clerkUser = null) {
+    const result = await this.recordAttempt(attemptData, clerkUser);
+    return { data: result.success ? result.data : null, error: result.success ? null : result.error };
   }
 
   // ===============================
@@ -372,6 +309,31 @@ class DatabaseService {
       console.error('❌ Supabase connection failed:', error);
       return { success: false, error: error.message };
     }
+  }
+
+  getConnectionStatus() {
+    return {
+      mode: 'production',
+      status: this.supabase ? 'connected' : 'disconnected'
+    };
+  }
+
+  // 清空数据（开发/测试用）
+  async clearAll(clerkUser = null) {
+    return await this.withAccessCheck(async () => {
+      try {
+        // 先清空attempts
+        await this.supabase.from(this.tables.attempts).delete().neq('id', 0);
+        // 再清空questions  
+        await this.supabase.from(this.tables.questions).delete().neq('id', 0);
+        
+        console.log('✅ All data cleared');
+        return { success: true };
+      } catch (error) {
+        console.error('Error clearing data:', error);
+        return { success: false, error: error.message };
+      }
+    }, clerkUser);
   }
 }
 

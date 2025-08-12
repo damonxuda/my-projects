@@ -1,13 +1,12 @@
 // src/components/QuestionInput/ImportForm.js
-// 智能导入表单组件
+// 智能导入表单组件 - Clerk权限版本
 
 import React, { useState } from 'react';
 import { Check, X, Edit2, AlertCircle, FileText } from 'lucide-react';
 import LabelEditor from './LabelEditor';
 import { parseMarkdownQuestions, validateParseResult, detectDuplicates } from '../../utils/markdownParser';
-import databaseService from '../../services/DatabaseService';
 
-const ImportForm = ({ onImport, existingQuestions, onClose }) => {
+const ImportForm = ({ onQuestionsImported, onCancel, existingQuestions, db, user, mathCategories }) => {
   const [importText, setImportText] = useState('');
   const [baseTags, setBaseTags] = useState([]);
   const [showLabelEditor, setShowLabelEditor] = useState(false);
@@ -27,6 +26,11 @@ const ImportForm = ({ onImport, existingQuestions, onClose }) => {
 
     if (baseTags.length === 0) {
       alert('请先设置课程标签');
+      return;
+    }
+
+    if (!user) {
+      alert('请先登录再预览题目');
       return;
     }
 
@@ -64,32 +68,59 @@ const ImportForm = ({ onImport, existingQuestions, onClose }) => {
       return;
     }
 
+    if (!user) {
+      alert('请先登录再导入题目');
+      return;
+    }
+
     setIsProcessing(true);
     
     try {
       const { questions } = previewResults;
       const savedQuestions = [];
+      const failedQuestions = [];
 
-      // 保存到数据库
+      // 保存到数据库，使用Clerk权限验证
       for (const question of questions) {
-        const { data, error } = await databaseService.insertQuestion(question);
-        if (error) throw new Error(error);
-        savedQuestions.push(data);
+        try {
+          const result = await db.addQuestion(question, user);
+          if (result.success) {
+            savedQuestions.push(result.data);
+          } else {
+            failedQuestions.push({ question, error: result.error });
+          }
+        } catch (error) {
+          failedQuestions.push({ question, error: error.message });
+        }
       }
 
-      // 更新UI
-      onImport(prev => [...prev, ...savedQuestions]);
-      
-      // 重置状态
-      setImportText('');
-      setBaseTags([]);
-      setPreviewResults(null);
-      
-      alert(`成功导入 ${savedQuestions.length} 道题目！`);
-      onClose();
+      if (savedQuestions.length > 0) {
+        // 通知父组件更新题目列表
+        onQuestionsImported(savedQuestions);
+        
+        // 重置状态
+        setImportText('');
+        setBaseTags([]);
+        setPreviewResults(null);
+        
+        if (failedQuestions.length > 0) {
+          alert(`成功导入 ${savedQuestions.length} 道题目，${failedQuestions.length} 道题目导入失败。`);
+        } else {
+          alert(`成功导入 ${savedQuestions.length} 道题目！`);
+        }
+      } else {
+        throw new Error('所有题目导入失败');
+      }
     } catch (error) {
       console.error('导入失败:', error);
-      alert('导入失败: ' + error.message);
+      
+      if (error.message.includes('未通过审批')) {
+        alert('您的账户正在审核中，暂无权限导入题目。请等待管理员批准。');
+      } else if (error.message.includes('未登录')) {
+        alert('请先登录再导入题目。');
+      } else {
+        alert('导入失败: ' + error.message);
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -102,6 +133,11 @@ const ImportForm = ({ onImport, existingQuestions, onClose }) => {
     setShowLabelEditor(false);
   };
 
+  // 检查用户权限
+  const canImport = () => {
+    return user && user.emailAddresses && user.emailAddresses.length > 0;
+  };
+
   return (
     <div className="bg-blue-50 p-6 rounded-lg space-y-4">
       <h3 className="text-lg font-semibold text-blue-800 mb-4 flex items-center gap-2">
@@ -109,12 +145,25 @@ const ImportForm = ({ onImport, existingQuestions, onClose }) => {
         智能导入 - AI解析文档
       </h3>
 
+      {/* 权限检查提示 */}
+      {!canImport() && (
+        <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg">
+          <div className="flex items-center gap-2">
+            <AlertCircle size={16} className="text-amber-600" />
+            <span className="font-medium text-amber-800">
+              您需要登录并通过管理员审批后才能导入题目。
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* 标签编辑器 */}
       {showLabelEditor ? (
         <LabelEditor
           onConfirm={handleTagsConfirmed}
           onCancel={() => setShowLabelEditor(false)}
           initialTags={baseTags}
+          mathCategories={mathCategories}
         />
       ) : (
         <div className="space-y-4">
@@ -127,7 +176,12 @@ const ImportForm = ({ onImport, existingQuestions, onClose }) => {
               </div>
               <button
                 onClick={() => setShowLabelEditor(true)}
-                className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+                disabled={!canImport()}
+                className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+                  canImport()
+                    ? 'bg-purple-500 hover:bg-purple-600 text-white'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
               >
                 <Edit2 size={16} />
                 设置课程标签
@@ -139,7 +193,12 @@ const ImportForm = ({ onImport, existingQuestions, onClose }) => {
                 <span className="font-medium text-gray-700">已设置的标签：</span>
                 <button
                   onClick={() => setShowLabelEditor(true)}
-                  className="text-purple-600 hover:text-purple-700 text-sm flex items-center gap-1"
+                  disabled={!canImport()}
+                  className={`text-sm flex items-center gap-1 ${
+                    canImport()
+                      ? 'text-purple-600 hover:text-purple-700'
+                      : 'text-gray-400 cursor-not-allowed'
+                  }`}
                 >
                   <Edit2 size={14} />
                   修改标签
@@ -178,7 +237,7 @@ const ImportForm = ({ onImport, existingQuestions, onClose }) => {
 **最终答案: 答案内容**
 
 ## 例2. 下一道题目..."
-              disabled={isProcessing}
+              disabled={isProcessing || !canImport()}
             />
           </div>
 
@@ -242,20 +301,38 @@ const ImportForm = ({ onImport, existingQuestions, onClose }) => {
             </div>
           )}
 
+          {/* 用户状态信息 */}
+          {canImport() && (
+            <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
+              <p className="text-sm text-green-800">
+                ✅ <strong>权限验证：</strong>您有权限导入题目。导入操作将记录您的身份信息。
+              </p>
+            </div>
+          )}
+
           {/* 操作按钮 */}
           <div className="flex gap-2">
             {!previewResults ? (
               <>
                 <button
                   onClick={handlePreview}
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-                  disabled={!importText.trim() || baseTags.length === 0 || isProcessing}
+                  className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+                    canImport() && !isProcessing && importText.trim() && baseTags.length > 0
+                      ? 'bg-blue-500 hover:bg-blue-600 text-white'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                  disabled={!canImport() || !importText.trim() || baseTags.length === 0 || isProcessing}
                 >
                   {isProcessing ? '解析中...' : '预览解析结果'}
                 </button>
                 <button
                   onClick={resetForm}
-                  className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg"
+                  disabled={!canImport()}
+                  className={`px-4 py-2 rounded-lg ${
+                    canImport()
+                      ? 'bg-gray-500 hover:bg-gray-600 text-white'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
                 >
                   重置
                 </button>
@@ -264,15 +341,24 @@ const ImportForm = ({ onImport, existingQuestions, onClose }) => {
               <>
                 <button
                   onClick={handleImport}
-                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-                  disabled={previewResults.uniqueCount === 0 || isProcessing}
+                  className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
+                    canImport() && previewResults.uniqueCount > 0 && !isProcessing
+                      ? 'bg-green-500 hover:bg-green-600 text-white'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                  disabled={!canImport() || previewResults.uniqueCount === 0 || isProcessing}
                 >
                   <Check size={16} />
                   {isProcessing ? '导入中...' : `确认导入 ${previewResults.uniqueCount} 道题目`}
                 </button>
                 <button
                   onClick={() => setPreviewResults(null)}
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg"
+                  disabled={!canImport()}
+                  className={`px-4 py-2 rounded-lg ${
+                    canImport()
+                      ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
                 >
                   重新解析
                 </button>
@@ -280,7 +366,7 @@ const ImportForm = ({ onImport, existingQuestions, onClose }) => {
             )}
             
             <button
-              onClick={onClose}
+              onClick={onCancel}
               className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
             >
               <X size={16} />

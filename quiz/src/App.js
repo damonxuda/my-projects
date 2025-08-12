@@ -1,19 +1,15 @@
 // 公共服务从shared导入
 import { createSupabaseClientFromEnv } from '../../shared/supabase';
-// 认证相关从auth-legacy导入（临时，后续用Clerk替换）
-import { AuthProvider, useAuth, AuthGuard } from '../../auth-legacy/src';
-import Login from '../../auth-legacy/src/components/Login';
+
+// 认证相关从auth-clerk导入
+import { ClerkAuthProvider, useAuth, SignedIn, SignedOut, SignInButton, UserProfile } from 'auth-clerk';
 
 //其余保持不变
 import React, { useState, useEffect } from 'react';
-import { Star, Edit2, Database, Github, LogOut, User, Users } from 'lucide-react';
+import { Star, Edit2, Database, Github, User, Users } from 'lucide-react';
 import QuestionInput from './components/QuestionInput/index.js';
 import db from './services/DatabaseService.js';
 import UserManagement from './components/admin/UserManagement';
-
-// 🧪 缓存测试标识符 - 用于验证部署是否使用最新代码
-console.log('=== CACHE_BUSTER_TEST_20240811_2145 ===');
-console.log('=== App component rendering ===');
 
 const supabaseClient = createSupabaseClientFromEnv();
 
@@ -24,12 +20,10 @@ const QuizApp = () => {
   const [loading, setLoading] = useState(true);
   const [editingQuestion, setEditingQuestion] = useState(null);
   
-  // 认证状态
-  const { user, userProfile, signOut, isAdmin } = useAuth();
+  // 认证状态 - 使用Clerk
+  const { user, isSignedIn, isAdmin, loading: authLoading } = useAuth();
   
-  // 调试和部署状态
-  const [debugInfo, setDebugInfo] = useState([]);
-  const [showDebug, setShowDebug] = useState(false);
+  // 部署状态
   const [deploymentStatus, setDeploymentStatus] = useState({
     database: 'mock',
     ready: false,
@@ -41,13 +35,6 @@ const QuizApp = () => {
       deploymentTested: false
     }
   });
-  
-  const addDebugInfo = (message) => {
-    if (showDebug) {
-      const timestamp = new Date().toLocaleTimeString();
-      setDebugInfo(prev => [...prev.slice(-4), `${timestamp}: ${message}`]);
-    }
-  };
   
   // 筛选状态
   const [filters, setFilters] = useState({
@@ -66,39 +53,37 @@ const QuizApp = () => {
   // 初始化数据加载
   useEffect(() => {
     const initializeSystem = async () => {
+      if (!isSignedIn || authLoading || !user) return;
+      
       try {
         // 初始化数据库连接
         await db.initializeSupabase();
         
-        // 加载数据
-        const { data: questionsData, error: questionsError } = await db.selectQuestions();
-        const { data: attemptsData, error: attemptsError } = await db.selectAttempts();
+        // 加载数据（传入Clerk用户信息进行权限验证）
+        const { data: questionsData, error: questionsError } = await db.selectQuestions(user);
+        const { data: attemptsData, error: attemptsError } = await db.selectAttempts(user);
         
         if (questionsError || attemptsError) {
-          throw new Error('数据加载失败');
+          throw new Error('数据加载失败: ' + (questionsError || attemptsError));
         }
         
         setQuestions(questionsData || []);
         setAttempts(attemptsData || []);
-        
-        addDebugInfo('系统初始化完成');
       } catch (error) {
         console.error('系统初始化失败:', error);
-        addDebugInfo('系统初始化失败: ' + error.message);
+        // 如果是权限问题，显示特定错误信息
+        if (error.message.includes('未通过审批')) {
+          alert('您的账户正在审核中，请等待管理员批准后再访问题库内容。');
+        } else {
+          alert('系统初始化失败，请联系管理员。');
+        }
       } finally {
         setLoading(false);
       }
     };
     
     initializeSystem();
-  }, []);
-
-  // 登出处理
-  const handleSignOut = async () => {
-    if (window.confirm('确定要退出登录吗？')) {
-      await signOut();
-    }
-  };
+  }, [isSignedIn, authLoading, user]);
 
   // 学习记录操作
   const addAttempt = async (questionId, score, isWrong = false) => {
@@ -110,47 +95,56 @@ const QuizApp = () => {
     };
     
     try {
-      const { data, error } = await db.insertAttempt(attempt);
-      if (error) throw error;
+      const { data, error } = await db.insertAttempt(attempt, user);
+      if (error) throw new Error(error);
       
       setAttempts([...attempts, data]);
       updateQuestionMasteryTag(questionId, score, isWrong);
     } catch (error) {
       console.error('记录学习失败:', error);
+      if (error.message.includes('未通过审批')) {
+        alert('您的账户正在审核中，无法记录学习数据。');
+      } else {
+        alert('记录学习失败，请重试。');
+      }
     }
   };
 
   const updateQuestion = async (id, updates) => {
     try {
-      const { data, error } = await db.updateQuestion(id, updates);
-      if (error) throw error;
+      const { data, error } = await db.updateQuestion(id, updates, user);
+      if (error) throw new Error(error);
       
       setQuestions(questions.map(q => q.id === id ? { ...q, ...updates } : q));
       setEditingQuestion(null);
       alert('题目更新成功！');
     } catch (error) {
       console.error('更新失败:', error);
-      alert('更新失败，请检查数据库连接');
+      if (error.message.includes('未通过审批')) {
+        alert('您没有权限修改题目。');
+      } else {
+        alert('更新失败，请检查网络连接。');
+      }
     }
   };
 
   const deleteQuestion = async (id) => {
-    const confirmDelete = () => {
-    return window.confirm('确定要删除这道题目吗？');
-  };
-
-    if (!confirmDelete()) return;
+    if (!window.confirm('确定要删除这道题目吗？')) return;
     
     try {
-      const { error } = await db.deleteQuestion(id);
-      if (error) throw error;
+      const { error } = await db.deleteQuestion(id, user);
+      if (error) throw new Error(error);
       
       setQuestions(questions.filter(q => q.id !== id));
       setAttempts(attempts.filter(a => a.questionId !== id));
       alert('题目删除成功！');
     } catch (error) {
       console.error('删除失败:', error);
-      alert('删除失败，请检查数据库连接');
+      if (error.message.includes('未通过审批')) {
+        alert('您没有权限删除题目。');
+      } else {
+        alert('删除失败，请检查网络连接。');
+      }
     }
   };
 
@@ -271,20 +265,21 @@ const QuizApp = () => {
           <div className="bg-gray-100 p-3 rounded font-mono text-xs">
             <p>REACT_APP_SUPABASE_URL=your-supabase-project-url</p>
             <p>REACT_APP_SUPABASE_ANON_KEY=your-supabase-anon-key</p>
+            <p>REACT_APP_CLERK_PUBLISHABLE_KEY=your-clerk-key</p>
             <p>NODE_ENV=production</p>
           </div>
-          <p className="text-orange-600 mt-2">⚠️ 部署前需要创建真实的Supabase项目并配置以上环境变量</p>
+          <p className="text-orange-600 mt-2">⚠️ 部署前需要配置Supabase和Clerk环境变量</p>
         </div>
       </div>
     </div>
   );
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="max-w-6xl mx-auto p-6 bg-gray-50 min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">正在从数据库加载题目...</p>
+          <p className="mt-4 text-gray-600">正在加载...</p>
         </div>
       </div>
     );
@@ -300,22 +295,13 @@ const QuizApp = () => {
               <h1 className="text-xl font-bold text-gray-900">题库管理系统</h1>
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <User size={16} />
-                <span>{user?.email}</span>
-                {userProfile?.status === 'approved' && (
-                  <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">已认证</span>
-                )}
-                {isAdmin() && (
+                <span>{user?.emailAddresses?.[0]?.emailAddress || user?.firstName}</span>
+                {isAdmin && (
                   <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">管理员</span>
                 )}
               </div>
             </div>
-            <button
-              onClick={handleSignOut}
-              className="flex items-center space-x-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <LogOut size={16} />
-              <span>退出登录</span>
-            </button>
+            <UserProfile showWelcome={false} afterSignOutUrl="/" />
           </div>
         </div>
 
@@ -362,7 +348,7 @@ const QuizApp = () => {
               🚀 部署
             </button>
             {/* 管理员才能看到用户管理 */}
-            {isAdmin() && (
+            {isAdmin && (
               <button
                 onClick={() => setActiveTab('users')}
                 className={`py-4 px-2 border-b-2 font-medium text-sm ${
@@ -383,48 +369,36 @@ const QuizApp = () => {
             <div>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">录入新题目</h2>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setShowDebug(!showDebug)}
-                    className={`px-4 py-2 rounded-lg text-white ${showDebug ? 'bg-orange-500 hover:bg-orange-600' : 'bg-gray-500 hover:bg-gray-600'}`}
-                  >
-                    🔍 {showDebug ? '关闭' : '开启'}调试
-                  </button>
-                  <button
-                    onClick={() => {
-                      db.clearAll();
+                <button
+                  onClick={async () => {
+                    try {
+                      const { error } = await db.clearAll(user);
+                      if (error) throw new Error(error);
+                      
                       setQuestions([]);
                       setAttempts([]);
-                      setDebugInfo([]);
-                      if (showDebug) addDebugInfo('手动清空所有数据');
                       alert('已清空所有数据！');
-                    }}
-                    className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-                  >
-                    🗑️ 清空数据
-                  </button>
-                </div>
+                    } catch (error) {
+                      console.error('清空数据失败:', error);
+                      if (error.message.includes('未通过审批')) {
+                        alert('您没有权限清空数据。');
+                      } else {
+                        alert('清空数据失败，请重试。');
+                      }
+                    }
+                  }}
+                  className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+                >
+                  🗑️ 清空数据
+                </button>
               </div>
-
-              {/* 调试信息面板 */}
-              {showDebug && debugInfo.length > 0 && (
-                <div className="bg-gray-900 text-green-400 p-4 rounded-lg mb-6 font-mono text-sm">
-                  <h4 className="text-white mb-2">🔍 调试信息：</h4>
-                  <div className="max-h-24 overflow-y-auto">
-                    {debugInfo.map((info, index) => (
-                      <div key={index}>{info}</div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {/* QuestionInput 组件 */}
               <QuestionInput 
                 questions={questions}
                 setQuestions={setQuestions}
                 db={db}
-                addDebugInfo={addDebugInfo}
-                showDebug={showDebug}
+                user={user}
               />
 
               {/* 数据库统计 */}
@@ -704,7 +678,7 @@ const QuizApp = () => {
                     <li>2. 配置环境变量到部署平台</li>
                     <li>3. 修改DatabaseService切换到真实Supabase客户端</li>
                     <li>4. 测试数据迁移和API调用</li>
-                    <li>5. 部署到Vercel或GitHub Pages</li>
+                    <li>5. 部署到生产环境</li>
                   </ol>
                 </div>
               </div>
@@ -712,7 +686,7 @@ const QuizApp = () => {
               <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
                 <h4 className="font-medium text-yellow-800 mb-2">⚠️ 当前状态</h4>
                 <p className="text-yellow-700 text-sm">
-                  系统已完成90%开发，使用Mock数据库运行。需要配置真实Supabase数据库后即可投入生产使用。
+                  系统已完成认证迁移到Clerk，使用Mock数据库运行。需要配置真实Supabase数据库后即可投入生产使用。
                   所有核心功能已验证完成，包括智能导入、标签管理、熟练度跟踪等。
                 </p>
               </div>
@@ -720,7 +694,7 @@ const QuizApp = () => {
           )}
 
           {/* 用户管理 - 只有管理员能看到 */}
-          {activeTab === 'users' && isAdmin() && (
+          {activeTab === 'users' && isAdmin && (
             <UserManagement />
           )}
         </div>
@@ -729,14 +703,28 @@ const QuizApp = () => {
   );
 };
 
-// 主应用组件 - 包装认证
+// 主应用组件 - 包装Clerk认证
 const App = () => {
   return (
-    <AuthProvider supabaseClient={supabaseClient}>
-      <AuthGuard fallback={<Login />}>
+    <ClerkAuthProvider publishableKey={process.env.REACT_APP_CLERK_PUBLISHABLE_KEY}>
+      <SignedOut>
+        <div className="max-w-md mx-auto mt-20 p-6 bg-white rounded-lg shadow-lg">
+          <h1 className="text-2xl font-bold text-center mb-6">小学奥数题库管理系统</h1>
+          <p className="text-gray-600 text-center mb-6">请登录以使用系统功能</p>
+          <div className="flex justify-center">
+            <SignInButton mode="modal">
+              <button className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium">
+                登录
+              </button>
+            </SignInButton>
+          </div>
+        </div>
+      </SignedOut>
+      
+      <SignedIn>
         <QuizApp />
-      </AuthGuard>
-    </AuthProvider>
+      </SignedIn>
+    </ClerkAuthProvider>
   );
 };
 
