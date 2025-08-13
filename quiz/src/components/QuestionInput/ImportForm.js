@@ -1,5 +1,5 @@
 // src/components/QuestionInput/ImportForm.js
-// 智能导入表单组件 - Clerk权限版本
+// 智能导入表单组件 - 简化版 (仅Clerk认证)
 
 import React, { useState } from 'react';
 import { Check, X, Edit2, AlertCircle, FileText } from 'lucide-react';
@@ -80,10 +80,10 @@ const ImportForm = ({ onQuestionsImported, onCancel, existingQuestions, db, user
       const savedQuestions = [];
       const failedQuestions = [];
 
-      // 保存到数据库，使用Clerk权限验证
+      // 保存到数据库 (简化版 - 无权限验证)
       for (const question of questions) {
         try {
-          const result = await db.addQuestion(question, user);
+          const result = await db.addQuestion(question);
           if (result.success) {
             savedQuestions.push(result.data);
           } else {
@@ -113,14 +113,7 @@ const ImportForm = ({ onQuestionsImported, onCancel, existingQuestions, db, user
       }
     } catch (error) {
       console.error('导入失败:', error);
-      
-      if (error.message.includes('未通过审批')) {
-        alert('您的账户正在审核中，暂无权限导入题目。请等待管理员批准。');
-      } else if (error.message.includes('未登录')) {
-        alert('请先登录再导入题目。');
-      } else {
-        alert('导入失败: ' + error.message);
-      }
+      alert('导入失败: ' + error.message);
     } finally {
       setIsProcessing(false);
     }
@@ -133,7 +126,7 @@ const ImportForm = ({ onQuestionsImported, onCancel, existingQuestions, db, user
     setShowLabelEditor(false);
   };
 
-  // 检查用户权限
+  // 简化的权限检查 - 只需要登录
   const canImport = () => {
     return user && user.emailAddresses && user.emailAddresses.length > 0;
   };
@@ -145,13 +138,13 @@ const ImportForm = ({ onQuestionsImported, onCancel, existingQuestions, db, user
         智能导入 - AI解析文档
       </h3>
 
-      {/* 权限检查提示 */}
+      {/* 简化的权限检查提示 */}
       {!canImport() && (
         <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg">
           <div className="flex items-center gap-2">
             <AlertCircle size={16} className="text-amber-600" />
             <span className="font-medium text-amber-800">
-              您需要登录并通过管理员审批后才能导入题目。
+              请先登录后再导入题目。
             </span>
           </div>
         </div>
@@ -301,11 +294,11 @@ const ImportForm = ({ onQuestionsImported, onCancel, existingQuestions, db, user
             </div>
           )}
 
-          {/* 用户状态信息 */}
+          {/* 简化的用户状态信息 */}
           {canImport() && (
             <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
               <p className="text-sm text-green-800">
-                ✅ <strong>权限验证：</strong>您有权限导入题目。导入操作将记录您的身份信息。
+                ✅ <strong>已登录：</strong>您可以导入题目到题库。
               </p>
             </div>
           )}

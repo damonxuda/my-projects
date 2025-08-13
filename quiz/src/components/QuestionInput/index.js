@@ -19,8 +19,8 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
     }
 
     try {
-      // 使用DatabaseService的addQuestion方法，传入用户信息
-      const result = await db.addQuestion(question, user);
+      // 简化版：不传递用户信息，直接调用数据库
+      const result = await db.addQuestion(question);
       if (!result.success) throw new Error(result.error);
       
       setQuestions([...questions, result.data]);
@@ -28,14 +28,7 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
       alert('题目添加成功并保存到数据库！');
     } catch (error) {
       console.error('添加失败:', error);
-      
-      if (error.message.includes('未通过审批')) {
-        alert('您的账户正在审核中，暂无权限添加题目。请等待管理员批准。');
-      } else if (error.message.includes('未登录')) {
-        alert('请先登录再添加题目。');
-      } else {
-        alert('添加失败：' + error.message);
-      }
+      alert('添加失败：' + error.message);
     }
   };
 
@@ -49,10 +42,10 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
       const successfulImports = [];
       const failedImports = [];
 
-      // 逐个添加题目，确保权限检查
+      // 简化版：直接添加题目，无权限检查
       for (const question of questionsToImport) {
         try {
-          const result = await db.addQuestion(question, user);
+          const result = await db.addQuestion(question);
           if (result.success) {
             successfulImports.push(result.data);
           } else {
@@ -77,29 +70,22 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
       }
     } catch (error) {
       console.error('批量导入失败:', error);
-      
-      if (error.message.includes('未通过审批')) {
-        alert('您的账户正在审核中，暂无权限导入题目。请等待管理员批准。');
-      } else if (error.message.includes('未登录')) {
-        alert('请先登录再导入题目。');
-      } else {
-        alert('导入失败：' + error.message);
-      }
+      alert('导入失败：' + error.message);
     }
   };
 
-  // 检查用户权限
+  // 简化的权限检查 - 只需要登录
   const canAddQuestions = () => {
     return user && user.emailAddresses && user.emailAddresses.length > 0;
   };
 
   return (
     <div>
-      {/* 权限提示 */}
+      {/* 简化的权限提示 */}
       {!canAddQuestions() && (
         <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
           <p className="text-sm text-amber-800">
-            🔒 <strong>权限提示：</strong>您需要登录并通过管理员审批后才能添加或导入题目。
+            🔒 <strong>权限提示：</strong>请先登录后再添加或导入题目。
           </p>
         </div>
       )}
@@ -154,14 +140,14 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
         />
       )}
       
-      {/* 用户状态信息 */}
+      {/* 简化的用户状态信息 */}
       {user && (
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-blue-800">
-            👤 <strong>当前用户：</strong>{user.emailAddresses?.[0]?.emailAddress}
+        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+          <p className="text-sm text-green-800">
+            ✅ <strong>已登录：</strong>{user.emailAddresses?.[0]?.emailAddress}
           </p>
-          <p className="text-xs text-blue-600 mt-1">
-            所有题目操作都会记录您的身份信息以确保数据安全。
+          <p className="text-xs text-green-600 mt-1">
+            您可以添加和导入题目到题库。
           </p>
         </div>
       )}
