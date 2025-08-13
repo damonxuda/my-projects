@@ -183,7 +183,7 @@ export const useAuth = () => {
     if (userLoaded && isSignedIn && isAdmin()) {
       fetchAllUsers();
     }
-  }, [userLoaded, isSignedIn, fetchAllUsers]);
+  }, [userLoaded, isSignedIn]);
 
   return {
     // 原有功能
