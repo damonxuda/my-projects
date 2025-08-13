@@ -9,6 +9,10 @@ export { default as UserProfile } from './components/UserProfile';
 // 认证hooks
 export { useAuth } from './hooks/useAuth';
 
+// 新增：权限管理组件
+export { default as ModuleAccessGuard } from './components/ModuleAccessGuard.jsx';
+export { default as UserManagement } from './components/UserManagement.jsx';
+
 // Clerk组件直接导出（方便使用）
 export { 
   SignedIn, 

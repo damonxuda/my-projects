@@ -1,11 +1,10 @@
 // 认证相关从auth-clerk导入
-import { ClerkAuthProvider, useAuth, SignedIn, SignedOut, SignInButton, UserProfile } from '../../auth-clerk';
+import { ClerkAuthProvider, useAuth, ModuleAccessGuard, UserManagement, UserProfile } from '../../auth-clerk/src';
 
 import React, { useState, useEffect } from 'react';
 import { Star, Edit2, Database, Github, User, Users } from 'lucide-react';
 import QuestionInput from './components/QuestionInput/index.js';
 import db from './services/DatabaseService.js';
-import UserManagement from './components/admin/UserManagement';
 
 const QuizApp = () => {
   const [activeTab, setActiveTab] = useState('input');
@@ -655,23 +654,9 @@ const QuizApp = () => {
 const App = () => {
   return (
     <ClerkAuthProvider publishableKey={process.env.REACT_APP_CLERK_PUBLISHABLE_KEY}>
-      <SignedOut>
-        <div className="max-w-md mx-auto mt-20 p-6 bg-white rounded-lg shadow-lg">
-          <h1 className="text-2xl font-bold text-center mb-6">小学奥数题库管理系统</h1>
-          <p className="text-gray-600 text-center mb-6">请登录以使用系统功能</p>
-          <div className="flex justify-center">
-            <SignInButton mode="modal">
-              <button className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium">
-                登录
-              </button>
-            </SignInButton>
-          </div>
-        </div>
-      </SignedOut>
-      
-      <SignedIn>
+      <ModuleAccessGuard module="quiz">
         <QuizApp />
-      </SignedIn>
+      </ModuleAccessGuard>
     </ClerkAuthProvider>
   );
 };
