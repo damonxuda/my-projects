@@ -9,7 +9,7 @@ export const useAuth = () => {
   
   // 用户管理相关状态
   const [users, setUsers] = useState([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [loading, setLoading] = useState(false); // ✅ 改名为 loading
 
   // 管理员邮箱列表 - 可以通过环境变量配置
   const getAdminEmails = () => {
@@ -78,92 +78,99 @@ export const useAuth = () => {
 
   // 获取所有用户（管理员功能）
   const fetchAllUsers = useCallback(async () => {
-    if (!isAdmin()) return;
+    if (!isAdmin()) {
+      return;
+    }
     
-    setLoadingUsers(true);
+    setLoading(true); // ✅ 使用 loading
     try {
-      // 使用 Clerk 的 users API 获取所有用户
-      const response = await clerk.users?.getUserList({
-        limit: 100,
-        orderBy: '-created_at'
-      });
-      setUsers(response?.data || []);
+      const response = await fetch('https://58mcnl40hj.execute-api.ap-northeast-1.amazonaws.com/user_management');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // 根据你的Lambda返回格式调整
+      setUsers(data.users || []);
+
     } catch (error) {
       console.error('获取用户列表失败:', error);
       setUsers([]);
     } finally {
-      setLoadingUsers(false);
+      setLoading(false); // ✅ 使用 loading
     }
-  }, [clerk, isAdmin]);
+  }, [isAdmin]);
 
-  // 为用户分配模块权限（管理员功能）
+  // ✅ 新增：为用户分配模块权限（通过Lambda API）
   const assignModuleAccess = async (userId, modules) => {
     if (!isAdmin()) {
       throw new Error('只有管理员可以分配权限');
     }
 
     try {
-      // 获取目标用户
-      const targetUser = await clerk.users?.getUser(userId);
-      if (!targetUser) {
-        throw new Error('用户不存在');
-      }
-
-      // 更新用户的 publicMetadata
-      const updatedMetadata = {
-        ...targetUser.publicMetadata,
-        authorized_modules: modules,
-        approved_by: user.emailAddresses[0].emailAddress,
-        approved_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      await targetUser.update({
-        publicMetadata: updatedMetadata
+      const response = await fetch('https://58mcnl40hj.execute-api.ap-northeast-1.amazonaws.com/user_management', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'assign_modules',
+          userId: userId,
+          modules: modules,
+          approvedBy: user.emailAddresses[0].emailAddress
+        })
       });
 
-      // 刷新用户列表
-      await fetchAllUsers();
-      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || '分配权限失败');
+      }
+
       return { success: true };
     } catch (error) {
       console.error('分配权限失败:', error);
-      return { success: false, error: error.message };
+      throw error;
     }
   };
 
-  // 撤销用户的模块权限（管理员功能）
-  const revokeModuleAccess = async (userId, moduleToRemove) => {
+  // ✅ 新增：撤销用户权限（通过Lambda API）
+  const revokeModuleAccess = async (userId) => {
     if (!isAdmin()) {
       throw new Error('只有管理员可以撤销权限');
     }
 
     try {
-      const targetUser = await clerk.users?.getUser(userId);
-      if (!targetUser) {
-        throw new Error('用户不存在');
-      }
-
-      const currentModules = targetUser.publicMetadata?.authorized_modules || [];
-      const updatedModules = currentModules.filter(module => module !== moduleToRemove);
-
-      const updatedMetadata = {
-        ...targetUser.publicMetadata,
-        authorized_modules: updatedModules,
-        updated_by: user.emailAddresses[0].emailAddress,
-        updated_at: new Date().toISOString()
-      };
-
-      await targetUser.update({
-        publicMetadata: updatedMetadata
+      const response = await fetch('https://58mcnl40hj.execute-api.ap-northeast-1.amazonaws.com/user_management', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'revoke_modules',
+          userId: userId,
+          revokedBy: user.emailAddresses[0].emailAddress
+        })
       });
 
-      await fetchAllUsers();
-      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || '撤销权限失败');
+      }
+
       return { success: true };
     } catch (error) {
       console.error('撤销权限失败:', error);
-      return { success: false, error: error.message };
+      throw error;
     }
   };
 
@@ -172,9 +179,9 @@ export const useAuth = () => {
     if (!targetUser) return { modules: [], approvedBy: null, approvedAt: null };
     
     return {
-      modules: targetUser.publicMetadata?.authorized_modules || [],
-      approvedBy: targetUser.publicMetadata?.approved_by || null,
-      approvedAt: targetUser.publicMetadata?.approved_at || null
+      modules: targetUser.modules || targetUser.publicMetadata?.authorized_modules || [],
+      approvedBy: targetUser.approved_by || targetUser.publicMetadata?.approved_by || null,
+      approvedAt: targetUser.approved_at || targetUser.publicMetadata?.approved_at || null
     };
   };
 
@@ -183,7 +190,7 @@ export const useAuth = () => {
     if (userLoaded && isSignedIn && isAdmin()) {
       fetchAllUsers();
     }
-  }, [userLoaded, isSignedIn]);
+  }, [userLoaded, isSignedIn, user]);
 
   return {
     // 原有功能
@@ -201,7 +208,7 @@ export const useAuth = () => {
     getUserPermissionInfo,
     // 管理员功能
     users,
-    loadingUsers,
+    loading: loading, // ✅ 导出 loading 而不是 loadingUsers
     fetchAllUsers,
     assignModuleAccess,
     revokeModuleAccess,

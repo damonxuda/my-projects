@@ -1,52 +1,39 @@
 // auth-clerk/src/components/UserManagement.jsx
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { useClerk } from '@clerk/clerk-react';
 
 const UserManagement = () => {
-  const { isAdmin, user: currentUser } = useAuth();
-  const clerk = useClerk();
+  const { 
+    isAdmin, 
+    user: currentUser,
+    users,                    // ✅ 使用 useAuth 的用户数据
+    loading,                  // ✅ 使用 useAuth 的加载状态
+    fetchAllUsers,           // ✅ 使用 useAuth 的获取函数
+    assignModuleAccess,      // ✅ 使用 useAuth 的权限分配函数
+    revokeModuleAccess       // ✅ 使用 useAuth 的权限撤销函数
+  } = useAuth();
   
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  console.log('🔍 UserManagement组件中的users:', users);
+  console.log('🔍 users.length:', users.length);
+
   const [processingUser, setProcessingUser] = useState(null);
   const [filter, setFilter] = useState('pending'); // pending, approved, all
   const [availableModules] = useState(['quiz', 'future1', 'future2']);
 
   useEffect(() => {
     if (isAdmin) {
-      fetchUsers();
+      console.log('👤 管理员登录，获取用户列表');
+      fetchAllUsers();
     }
   }, [isAdmin]);
-
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      
-      // 使用 Clerk API 获取所有用户
-      const response = await clerk.users?.getUserList({
-        limit: 100, // 获取更多用户
-        orderBy: '-created_at' // 按创建时间倒序
-      });
-      
-      if (response?.data) {
-        setUsers(response.data);
-      }
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      alert('获取用户列表失败');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // 获取用户权限信息
   const getUserPermissions = (user) => {
     return {
-      modules: user.publicMetadata?.authorized_modules || [],
-      approvedBy: user.publicMetadata?.approved_by || null,
-      approvedAt: user.publicMetadata?.approved_at || null,
-      lastUpdated: user.publicMetadata?.updated_at || null
+      modules: user.modules || [],
+      approvedBy: user.approved_by || null,
+      approvedAt: user.approved_at || null,
+      lastUpdated: user.updated_at || null
     };
   };
 
@@ -59,30 +46,16 @@ const UserManagement = () => {
     return 'pending';
   };
 
-  // 为用户分配模块权限
+  // 为用户分配模块权限 - 使用 useAuth 的 Lambda API
   const assignModulePermission = async (userId, modules) => {
     try {
       setProcessingUser(userId);
       
-      const targetUser = await clerk.users?.getUser(userId);
-      if (!targetUser) {
-        throw new Error('用户不存在');
-      }
-
-      const updatedMetadata = {
-        ...targetUser.publicMetadata,
-        authorized_modules: modules,
-        approved_by: currentUser.emailAddresses[0].emailAddress,
-        approved_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      await targetUser.update({
-        publicMetadata: updatedMetadata
-      });
-
+      // 使用 useAuth 的 assignModuleAccess 函数
+      await assignModuleAccess(userId, modules);
+      
       // 刷新用户列表
-      await fetchUsers();
+      await fetchAllUsers();
       alert('权限分配成功！');
     } catch (error) {
       console.error('Error assigning permissions:', error);
@@ -92,7 +65,7 @@ const UserManagement = () => {
     }
   };
 
-  // 撤销用户权限
+  // 撤销用户权限 - 使用 useAuth 的 Lambda API
   const revokeAllPermissions = async (userId) => {
     if (!window.confirm('确定要撤销该用户的所有权限吗？')) {
       return;
@@ -101,24 +74,10 @@ const UserManagement = () => {
     try {
       setProcessingUser(userId);
       
-      const targetUser = await clerk.users?.getUser(userId);
-      if (!targetUser) {
-        throw new Error('用户不存在');
-      }
+      // 使用 useAuth 的 revokeModuleAccess 函数
+      await revokeModuleAccess(userId);
 
-      const updatedMetadata = {
-        ...targetUser.publicMetadata,
-        authorized_modules: [],
-        revoked_by: currentUser.emailAddresses[0].emailAddress,
-        revoked_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      };
-
-      await targetUser.update({
-        publicMetadata: updatedMetadata
-      });
-
-      await fetchUsers();
+      await fetchAllUsers();
       alert('权限已撤销！');
     } catch (error) {
       console.error('Error revoking permissions:', error);
@@ -299,7 +258,8 @@ const UserManagement = () => {
             {filteredUsers.map((user) => {
               const status = getUserStatus(user);
               const permissions = getUserPermissions(user);
-              const userEmail = user.emailAddresses?.[0]?.emailAddress || '无邮箱';
+              // 注意：Lambda API 返回的用户数据结构可能不同
+              const userEmail = user.email || user.emailAddresses?.[0]?.emailAddress || '无邮箱';
               
               return (
                 <li key={user.id} className="px-6 py-4">
@@ -403,7 +363,7 @@ const UserManagement = () => {
       {/* 刷新按钮 */}
       <div className="mt-6 flex justify-between items-center">
         <button
-          onClick={fetchUsers}
+          onClick={fetchAllUsers}
           disabled={loading}
           className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
         >
