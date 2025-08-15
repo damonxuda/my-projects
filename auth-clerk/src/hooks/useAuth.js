@@ -2,6 +2,9 @@
 import { useUser, useAuth as useClerkAuth, useClerk } from '@clerk/clerk-react';
 import { useState, useEffect, useCallback } from 'react';
 
+// ✅ Function URL常量
+const LAMBDA_API_URL = 'https://ykyc7xcyfmacka6oqeqgfhrtt40xvynm.lambda-url.ap-northeast-1.on.aws/';
+
 export const useAuth = () => {
   const { user, isLoaded: userLoaded } = useUser();
   const { isSignedIn, isLoaded: authLoaded } = useClerkAuth();
@@ -9,7 +12,7 @@ export const useAuth = () => {
   
   // 用户管理相关状态
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(false); // ✅ 改名为 loading
+  const [loading, setLoading] = useState(false);
 
   // 管理员邮箱列表 - 可以通过环境变量配置
   const getAdminEmails = () => {
@@ -82,71 +85,74 @@ export const useAuth = () => {
       return;
     }
     
-    setLoading(true); // ✅ 使用 loading
+    setLoading(true);
     try {
-      const response = await fetch('https://58mcnl40hj.execute-api.ap-northeast-1.amazonaws.com/user_management');
+      const response = await fetch(LAMBDA_API_URL);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       const data = await response.json();
-      
-      // 根据你的Lambda返回格式调整
       setUsers(data.users || []);
 
     } catch (error) {
       console.error('获取用户列表失败:', error);
       setUsers([]);
     } finally {
-      setLoading(false); // ✅ 使用 loading
+      setLoading(false);
     }
   }, [isAdmin]);
 
-  // ✅ 新增：为用户分配模块权限（通过Lambda API）
+  // ✅ 为用户分配模块权限（通过Lambda API）
   const assignModuleAccess = async (userId, modules) => {
     if (!isAdmin()) {
       throw new Error('只有管理员可以分配权限');
     }
 
     try {
-      const response = await fetch('https://58mcnl40hj.execute-api.ap-northeast-1.amazonaws.com/user_management', {
+      const requestBody = {
+        action: 'assign_modules',
+        userId: userId,
+        modules: modules,
+        approvedBy: user.emailAddresses[0].emailAddress
+      };
+      
+      const response = await fetch(LAMBDA_API_URL, {
         method: 'POST',
+        mode: 'cors',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          action: 'assign_modules',
-          userId: userId,
-          modules: modules,
-          approvedBy: user.emailAddresses[0].emailAddress
-        })
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
 
       const result = await response.json();
+      
       if (!result.success) {
         throw new Error(result.error || '分配权限失败');
       }
 
       return { success: true };
     } catch (error) {
-      console.error('分配权限失败:', error);
+      console.error('权限分配失败:', error);
       throw error;
     }
   };
 
-  // ✅ 新增：撤销用户权限（通过Lambda API）
+  // ✅ 撤销用户权限（通过Lambda API）
   const revokeModuleAccess = async (userId) => {
     if (!isAdmin()) {
       throw new Error('只有管理员可以撤销权限');
     }
 
     try {
-      const response = await fetch('https://58mcnl40hj.execute-api.ap-northeast-1.amazonaws.com/user_management', {
+      const response = await fetch(LAMBDA_API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -199,7 +205,7 @@ export const useAuth = () => {
     isLoaded: userLoaded && authLoaded,
     isAdmin: isAdmin(),
     isOwner: isOwner(),
-    loading: !userLoaded || !authLoaded,
+    authLoading: !userLoaded || !authLoaded,
     // 导出函数供其他组件使用
     getAdminEmails,
     // 新增的模块权限功能
@@ -208,7 +214,7 @@ export const useAuth = () => {
     getUserPermissionInfo,
     // 管理员功能
     users,
-    loading: loading, // ✅ 导出 loading 而不是 loadingUsers
+    loading: loading,
     fetchAllUsers,
     assignModuleAccess,
     revokeModuleAccess,

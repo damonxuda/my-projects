@@ -10,3 +10,5 @@ docs-local/
 .DS_Store
 Thumbs.db
 *.log
+lambda-user-management/
+*.zip

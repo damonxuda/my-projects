@@ -46,19 +46,41 @@ const UserManagement = () => {
     return 'pending';
   };
 
-  // 为用户分配模块权限 - 使用 useAuth 的 Lambda API
+  // 为用户分配模块权限 - 使用 useAuth 的 Lambda API (调试版本)
   const assignModulePermission = async (userId, modules) => {
     try {
+      console.log('🚀 [DEBUG] 开始分配权限:', { userId, modules });
+      console.log('🔍 [DEBUG] assignModuleAccess 函数类型:', typeof assignModuleAccess);
+      console.log('🔍 [DEBUG] assignModuleAccess 函数:', assignModuleAccess);
+      console.log('🔍 [DEBUG] useAuth 返回的所有属性:', { 
+        isAdmin, 
+        currentUser, 
+        users: users?.length, 
+        loading, 
+        fetchAllUsers: typeof fetchAllUsers,
+        assignModuleAccess: typeof assignModuleAccess,
+        revokeModuleAccess: typeof revokeModuleAccess
+      });
+      
       setProcessingUser(userId);
       
-      // 使用 useAuth 的 assignModuleAccess 函数
+      console.log('📞 [DEBUG] 即将调用 assignModuleAccess...');
+      
+      // 检查函数是否存在
+      if (typeof assignModuleAccess !== 'function') {
+        throw new Error('assignModuleAccess 不是一个函数！类型: ' + typeof assignModuleAccess);
+      }
+      
       await assignModuleAccess(userId, modules);
+      
+      console.log('✅ [DEBUG] assignModuleAccess 调用完成');
       
       // 刷新用户列表
       await fetchAllUsers();
       alert('权限分配成功！');
     } catch (error) {
-      console.error('Error assigning permissions:', error);
+      console.error('❌ [DEBUG] 权限分配失败:', error);
+      console.error('❌ [DEBUG] 错误堆栈:', error.stack);
       alert('权限分配失败：' + error.message);
     } finally {
       setProcessingUser(null);
@@ -87,8 +109,9 @@ const UserManagement = () => {
     }
   };
 
-  // 处理快速批准（给予quiz权限）
+  // 处理快速批准（给予quiz权限）- 调试版本
   const handleQuickApprove = async (userId) => {
+    console.log('🎯 [DEBUG] 快速批准被点击:', userId);
     await assignModulePermission(userId, ['quiz']);
   };
 
