@@ -53,11 +53,16 @@ const QuizApp = () => {
         alert('系统初始化失败，请联系管理员。');
       } finally {
         setLoading(false);
+
+      // 普通用户自动切换到可访问的选项卡
+        if (!isAdmin && (activeTab === 'input' || activeTab === 'deploy' || activeTab === 'users')) {
+        setActiveTab('browse');
       }
-    };
+    }
+  };
     
     initializeSystem();
-  }, [isSignedIn, authLoading, user]);
+  }, [isSignedIn, authLoading, user, isAdmin, activeTab]);
 
   // 学习记录操作 (使用新API)
   const addAttempt = async (questionId, score, isWrong = false) => {
@@ -253,16 +258,20 @@ const QuizApp = () => {
 
         <div className="border-b border-gray-200">
           <nav className="flex space-x-8 px-6">
-            <button
-              onClick={() => setActiveTab('input')}
-              className={`py-4 px-2 border-b-2 font-medium text-sm ${
-                activeTab === 'input' 
-                  ? 'border-blue-500 text-blue-600' 
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              录入题目
-            </button>
+            {/* 录入题目 - 只有管理员可见 */}
+            {isAdmin && (
+              <button
+                onClick={() => setActiveTab('input')}
+                className={`py-4 px-2 border-b-2 font-medium text-sm ${
+                  activeTab === 'input' 
+                    ? 'border-blue-500 text-blue-600' 
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                录入题目
+              </button>
+            )}
+            
             <button
               onClick={() => setActiveTab('browse')}
               className={`py-4 px-2 border-b-2 font-medium text-sm ${
@@ -273,6 +282,7 @@ const QuizApp = () => {
             >
               浏览题库 ({questions.length})
             </button>
+            
             <button
               onClick={() => setActiveTab('practice')}
               className={`py-4 px-2 border-b-2 font-medium text-sm ${
@@ -283,17 +293,22 @@ const QuizApp = () => {
             >
               练习模式
             </button>
-            <button
-              onClick={() => setActiveTab('deploy')}
-              className={`py-4 px-2 border-b-2 font-medium text-sm ${
-                activeTab === 'deploy' 
-                  ? 'border-blue-500 text-blue-600' 
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              🚀 系统状态
-            </button>
-            {/* 管理员才能看到用户管理 */}
+            
+            {/* 系统状态 - 只有管理员可见 */}
+            {isAdmin && (
+              <button
+                onClick={() => setActiveTab('deploy')}
+                className={`py-4 px-2 border-b-2 font-medium text-sm ${
+                  activeTab === 'deploy' 
+                    ? 'border-blue-500 text-blue-600' 
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                🚀 系统状态
+              </button>
+            )}
+            
+            {/* 用户管理 - 只有管理员可见 */}
             {isAdmin && (
               <button
                 onClick={() => setActiveTab('users')}
