@@ -2,22 +2,34 @@
 import { ClerkAuthProvider, useAuth, ModuleAccessGuard, UserManagement, UserProfile } from '../../auth-clerk/src';
 
 import React, { useState, useEffect } from 'react';
-import { Star, Edit2, Database, Github, User, Users, Eye, EyeOff } from 'lucide-react';
+import { Star, Edit2, Database, Github, User, Users, Eye, EyeOff, Trash2 } from 'lucide-react';
 import QuestionInput from './components/QuestionInput/index.js';
 import db from './services/DatabaseService.js';
 
 // 练习题目组件
-const PracticeQuestion = ({ question, index, onRate, getAverageScore, isMarkedWrong }) => {
+const PracticeQuestion = ({ question, index, onRate, onToggleWrong, getCurrentScore, isMarkedWrong, isAdmin }) => {
   const [showAnswer, setShowAnswer] = useState(false);
 
-  const renderStars = (score) => {
-    return Array.from({length: 5}, (_, i) => (
-      <Star 
-        key={i} 
-        size={16} 
-        className={i < score ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'} 
-      />
-    ));
+  // 渲染可点击的评分星星
+  const renderClickableStars = (currentScore) => {
+    return (
+      <div className="flex items-center gap-1">
+        {Array.from({length: 5}, (_, i) => (
+          <button
+            key={i}
+            onClick={() => onRate(i + 1)}
+            className="text-yellow-400 hover:text-yellow-500 transition-colors"
+            title={`${i + 1}星熟练度`}
+          >
+            <Star 
+              size={18} 
+              className={i < currentScore ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300 hover:text-yellow-300'} 
+            />
+          </button>
+        ))}
+        <span className="text-sm text-gray-500 ml-2">({currentScore}星)</span>
+      </div>
+    );
   };
 
   return (
@@ -33,9 +45,7 @@ const PracticeQuestion = ({ question, index, onRate, getAverageScore, isMarkedWr
                 {question.question_number}
               </span>
             )}
-            <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs">
-              {question.question_type}
-            </span>
+
             {question.papers && (
               <>
                 <span className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded text-xs">
@@ -46,6 +56,11 @@ const PracticeQuestion = ({ question, index, onRate, getAverageScore, isMarkedWr
                 </span>
               </>
             )}
+            {isMarkedWrong(question.id) && (
+              <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-xs">
+                错题
+              </span>
+            )}
           </div>
           {question.papers && (
             <div className="text-sm text-gray-600 mb-2">
@@ -53,9 +68,17 @@ const PracticeQuestion = ({ question, index, onRate, getAverageScore, isMarkedWr
             </div>
           )}
         </div>
-        <div className="flex items-center gap-1">
-          {renderStars(Math.round(getAverageScore(question.id)))}
-          <span className="text-sm text-gray-500 ml-1">({getAverageScore(question.id)})</span>
+        {/* 右上角：点击评分星星 + 显示当前评分 */}
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <button
+              className="text-gray-500 hover:text-blue-500 p-1"
+              title="管理员编辑"
+            >
+              <Edit2 size={16} />
+            </button>
+          )}
+          {renderClickableStars(getCurrentScore(question.id))}
         </div>
       </div>
       
@@ -82,24 +105,17 @@ const PracticeQuestion = ({ question, index, onRate, getAverageScore, isMarkedWr
         )}
       </div>
       
+      {/* 左下角：只保留错题标记按钮 */}
       <div className="flex gap-2 pt-4 border-t border-gray-100">
-        <span className="text-sm text-gray-500">熟悉度评分：</span>
-        {[1,2,3,4,5].map(score => (
-          <button
-            key={score}
-            onClick={() => onRate(score, false)}
-            className="text-yellow-400 hover:text-yellow-500 flex items-center"
-            title={`${score}星熟练度`}
-          >
-            <Star size={20} />
-            <span className="text-xs ml-1">{score}</span>
-          </button>
-        ))}
         <button
-          onClick={() => onRate(1, true)}
-          className="ml-4 text-red-500 hover:text-red-600 text-sm px-2 py-1 border border-red-300 rounded"
+          onClick={() => onToggleWrong()}
+          className={`px-3 py-1 text-sm border rounded ${
+            isMarkedWrong(question.id)
+              ? 'bg-red-50 text-red-600 border-red-300 hover:bg-red-100'
+              : 'text-red-500 hover:text-red-600 border-red-300 hover:bg-red-50'
+          }`}
         >
-          ❌ 标记错题
+          ❌ {isMarkedWrong(question.id) ? '取消错题' : '标记错题'}
         </button>
       </div>
     </div>
@@ -170,12 +186,12 @@ const QuizApp = () => {
   }, [isSignedIn, authLoading, user, isAdmin, activeTab]);
 
   // 学习记录操作
-  const addAttempt = async (questionId, score, isWrong = false) => {
+  const addAttempt = async (questionId, score) => {
     const attempt = {
       questionId,
       userId: user.id,
       masteryScore: score,
-      isMarkedWrong: isWrong
+      isMarkedWrong: false
     };
     
     try {
@@ -183,10 +199,32 @@ const QuizApp = () => {
       if (!result.success) throw new Error(result.error);
       
       setAttempts([...attempts, result.data]);
-      alert(`已记录 ${score} 星评分${isWrong ? '并标记为错题' : ''}！`);
+      alert(`已记录 ${score} 星评分！`);
     } catch (error) {
       console.error('记录学习失败:', error);
       alert('记录学习失败，请重试。');
+    }
+  };
+
+  // 切换错题状态
+  const toggleWrongQuestion = async (questionId) => {
+    const currentlyWrong = isMarkedWrong(questionId);
+    try {
+      const attempt = {
+        questionId,
+        userId: user.id,
+        masteryScore: null, // 错题切换不记录分数
+        isMarkedWrong: !currentlyWrong
+      };
+      
+      const result = await db.recordAttempt(attempt);
+      if (!result.success) throw new Error(result.error);
+      
+      setAttempts([...attempts, result.data]);
+      alert(`已${currentlyWrong ? '取消' : '标记为'}错题！`);
+    } catch (error) {
+      console.error('标记错题失败:', error);
+      alert('标记错题失败，请重试。');
     }
   };
 
@@ -214,16 +252,22 @@ const QuizApp = () => {
     return attempts.filter(a => a.question_id === questionId);
   };
 
-  // 计算题目平均分
-  const getAverageScore = (questionId) => {
-    const questionAttempts = getQuestionAttempts(questionId);
-    if (questionAttempts.length === 0) return 0;
-    return (questionAttempts.reduce((sum, a) => sum + a.mastery_score, 0) / questionAttempts.length).toFixed(1);
+  // 获取当前用户对题目的最新评分
+  const getCurrentScore = (questionId) => {
+    const userAttempts = attempts
+      .filter(a => a.question_id === questionId && a.user_id === user.id && a.mastery_score > 0)
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    
+    return userAttempts.length > 0 ? userAttempts[0].mastery_score : 0;
   };
 
-  // 检查是否标记为错题
+  // 检查当前用户是否标记为错题
   const isMarkedWrong = (questionId) => {
-    return attempts.some(a => a.question_id === questionId && a.is_marked_wrong);
+    const userAttempts = attempts
+      .filter(a => a.question_id === questionId && a.user_id === user.id)
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    
+    return userAttempts.length > 0 ? userAttempts[0].is_marked_wrong : false;
   };
 
   // 筛选题目
@@ -237,8 +281,8 @@ const QuizApp = () => {
            (!filters.paperId || q.paper_id === filters.paperId) &&
            (!filters.courseName || paper.course_name === filters.courseName) &&
            (!filters.masteryLevel || 
-            (filters.masteryLevel === 'unfamiliar' && getAverageScore(q.id) <= 2) ||
-            (filters.masteryLevel === 'familiar' && getAverageScore(q.id) >= 4) ||
+            (filters.masteryLevel === 'unfamiliar' && getCurrentScore(q.id) > 0 && getCurrentScore(q.id) <= 2) ||
+            (filters.masteryLevel === 'familiar' && getCurrentScore(q.id) >= 4) ||
             (filters.masteryLevel === 'wrong' && isMarkedWrong(q.id)));
   });
 
@@ -252,14 +296,26 @@ const QuizApp = () => {
     return [...new Set(papers.map(p => p.semester))].filter(Boolean);
   };
 
-  const renderStars = (score) => {
-    return Array.from({length: 5}, (_, i) => (
-      <Star 
-        key={i} 
-        size={16} 
-        className={i < score ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'} 
-      />
-    ));
+  // 渲染可点击的评分星星（用于浏览模式）
+  const renderClickableStars = (questionId, currentScore) => {
+    return (
+      <div className="flex items-center gap-1">
+        {Array.from({length: 5}, (_, i) => (
+          <button
+            key={i}
+            onClick={() => addAttempt(questionId, i + 1)}
+            className="text-yellow-400 hover:text-yellow-500 transition-colors"
+            title={`${i + 1}星熟练度`}
+          >
+            <Star 
+              size={16} 
+              className={i < currentScore ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300 hover:text-yellow-300'} 
+            />
+          </button>
+        ))}
+        <span className="text-sm text-gray-500 ml-2">({currentScore}星)</span>
+      </div>
+    );
   };
 
   // 部署检查面板
@@ -425,32 +481,8 @@ const QuizApp = () => {
         <div className="p-6">
           {activeTab === 'input' && (
             <div>
-              <div className="flex justify-between items-center mb-6">
+              <div className="mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">录入新题目</h2>
-                {/* 清空数据按钮 - 只有管理员可见 */}
-                {isAdmin && (
-                  <button
-                    onClick={async () => {
-                      if (!window.confirm('确定要清空所有数据吗？此操作不可撤销！')) return;
-                      
-                      try {
-                        const result = await db.clearAll();
-                        if (!result.success) throw new Error(result.error);
-                        
-                        setQuestions([]);
-                        setPapers([]);
-                        setAttempts([]);
-                        alert('已清空所有数据！');
-                      } catch (error) {
-                        console.error('清空数据失败:', error);
-                        alert('清空数据失败，请重试。');
-                      }
-                    }}
-                    className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-                  >
-                    🗑️ 清空数据
-                  </button>
-                )}
               </div>
 
               {/* QuestionInput 组件 */}
@@ -583,11 +615,11 @@ const QuizApp = () => {
                   >
                     <option value="">所有熟练度</option>
                     <option value="wrong">错题</option>
-                    <option value="unfamiliar">不熟练(≤2星)</option>
+                    <option value="unfamiliar">不熟悉(≤2星)</option>
                     <option value="familiar">熟练(≥4星)</option>
                   </select>
                   <button
-                    onClick={() => setFilters({teacher: '', semester: '', category: '', paperId: '', masteryLevel: ''})}
+                    onClick={() => setFilters({teacher: '', semester: '', category: '', paperId: '', masteryLevel: '', courseName: ''})}
                     className="px-3 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg"
                   >
                     清除筛选
@@ -601,11 +633,8 @@ const QuizApp = () => {
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex-1">
                         <div className="flex flex-wrap items-center gap-2 mb-2">
-                          <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded font-medium">
-                            {q.question_type}
-                          </span>
                           {q.question_number && (
-                            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                            <span className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded font-medium">
                               {q.question_number}
                             </span>
                           )}
@@ -624,6 +653,11 @@ const QuizApp = () => {
                               )}
                             </>
                           )}
+                          {isMarkedWrong(q.id) && (
+                            <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">
+                              错题
+                            </span>
+                          )}
                         </div>
                         {q.papers && (
                           <div className="text-sm text-gray-600 mb-2">
@@ -631,17 +665,44 @@ const QuizApp = () => {
                           </div>
                         )}
                       </div>
+                      {/* 右上角：管理员编辑按钮 + 点击评分星星 */}
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => setEditingQuestion(editingQuestion === q.id ? null : q.id)}
-                          className="text-gray-500 hover:text-blue-500"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <div className="flex items-center gap-1">
-                          {renderStars(Math.round(getAverageScore(q.id)))}
-                          <span className="text-sm text-gray-500 ml-1">({getAverageScore(q.id)})</span>
-                        </div>
+                        {isAdmin && (
+                          <>
+                            <button
+                              onClick={() => setEditingQuestion(editingQuestion === q.id ? null : q.id)}
+                              className="text-gray-500 hover:text-blue-500 p-1"
+                              title="管理员编辑题目"
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                            <button
+                              onClick={async () => {
+                                if (!window.confirm('确定要删除这道题目吗？此操作不可撤销！')) return;
+                                
+                                try {
+                                  const result = await db.deleteQuestion(q.id);
+                                  if (!result.success) throw new Error(result.error);
+                                  
+                                  // 重新加载题目列表
+                                  const questionsResult = await db.getQuestions();
+                                  if (questionsResult.success) {
+                                    setQuestions(questionsResult.data || []);
+                                  }
+                                  alert('题目删除成功！');
+                                } catch (error) {
+                                  console.error('删除失败:', error);
+                                  alert('删除失败：' + error.message);
+                                }
+                              }}
+                              className="text-gray-500 hover:text-red-500 p-1"
+                              title="管理员删除题目"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </>
+                        )}
+                        {renderClickableStars(q.id, getCurrentScore(q.id))}
                       </div>
                     </div>
                     
@@ -655,24 +716,83 @@ const QuizApp = () => {
                       <p className="text-gray-700 whitespace-pre-line">{q.answer}</p>
                     </div>
                     
+                    {/* 编辑表单 */}
+                    {editingQuestion === q.id && isAdmin && (
+                      <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
+                        <h5 className="font-medium text-gray-900 mb-3">编辑题目</h5>
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">题号</label>
+                            <input
+                              type="text"
+                              defaultValue={q.question_number || ''}
+                              className="w-full p-2 border border-gray-300 rounded text-sm"
+                              placeholder="例：例1、第1题、习题3"
+                              id={`number-${q.id}`}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">题目内容</label>
+                            <textarea
+                              defaultValue={q.question_text}
+                              className="w-full p-2 border border-gray-300 rounded text-sm"
+                              rows={3}
+                              id={`text-${q.id}`}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">答案</label>
+                            <textarea
+                              defaultValue={q.answer}
+                              className="w-full p-2 border border-gray-300 rounded text-sm"
+                              rows={3}
+                              id={`answer-${q.id}`}
+                            />
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={async () => {
+                                const number = document.getElementById(`number-${q.id}`).value;
+                                const text = document.getElementById(`text-${q.id}`).value;
+                                const answer = document.getElementById(`answer-${q.id}`).value;
+                                
+                                if (!text.trim() || !answer.trim()) {
+                                  alert('题目内容和答案不能为空');
+                                  return;
+                                }
+                                
+                                await updateQuestion(q.id, {
+                                  question_number: number,
+                                  question_text: text,
+                                  answer: answer
+                                });
+                              }}
+                              className="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm"
+                            >
+                              保存
+                            </button>
+                            <button
+                              onClick={() => setEditingQuestion(null)}
+                              className="px-3 py-1 bg-gray-500 hover:bg-gray-600 text-white rounded text-sm"
+                            >
+                              取消
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* 左下角：只保留错题标记按钮 */}
                     <div className="flex gap-2 pt-4 border-t border-gray-100">
-                      <span className="text-sm text-gray-500">熟悉度评分：</span>
-                      {[1,2,3,4,5].map(score => (
-                        <button
-                          key={score}
-                          onClick={() => addAttempt(q.id, score)}
-                          className="text-yellow-400 hover:text-yellow-500 flex items-center"
-                          title={`${score}星熟练度`}
-                        >
-                          <Star size={20} />
-                          <span className="text-xs ml-1">{score}</span>
-                        </button>
-                      ))}
                       <button
-                        onClick={() => addAttempt(q.id, 1, true)}
-                        className="ml-4 text-red-500 hover:text-red-600 text-sm px-2 py-1 border border-red-300 rounded"
+                        onClick={() => toggleWrongQuestion(q.id)}
+                        className={`px-3 py-1 text-sm border rounded ${
+                          isMarkedWrong(q.id)
+                            ? 'bg-red-50 text-red-600 border-red-300 hover:bg-red-100'
+                            : 'text-red-500 hover:text-red-600 border-red-300 hover:bg-red-50'
+                        }`}
                       >
-                        ❌ 标记错题
+                        ❌ {isMarkedWrong(q.id) ? '取消错题' : '标记错题'}
                       </button>
                     </div>
                   </div>
@@ -764,25 +884,25 @@ const QuizApp = () => {
               {/* 练习统计 */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div className="bg-red-50 border border-red-200 p-6 rounded-lg">
-                  <h3 className="text-lg font-semibold text-red-800 mb-2">❌ 错题复习</h3>
-                  <p className="text-red-600 mb-4">复习已标记的错题</p>
+                  <h3 className="text-lg font-semibold text-red-800 mb-2">❌ 我的错题</h3>
+                  <p className="text-red-600 mb-4">我标记的错题</p>
                   <p className="text-2xl font-bold text-red-800">
-                    {attempts.filter(a => a.is_marked_wrong).length}
+                    {questions.filter(q => isMarkedWrong(q.id)).length}
                   </p>
                   <p className="text-sm text-red-600">道错题</p>
                 </div>
                 
                 <div className="bg-yellow-50 border border-yellow-200 p-6 rounded-lg">
                   <h3 className="text-lg font-semibold text-yellow-800 mb-2">⭐ 不熟悉题目</h3>
-                  <p className="text-yellow-600 mb-4">评分1-2星的题目</p>
+                  <p className="text-yellow-600 mb-4">我评分1-2星的题目</p>
                   <p className="text-2xl font-bold text-yellow-800">
-                    {questions.filter(q => getAverageScore(q.id) <= 2 && getAverageScore(q.id) > 0).length}
+                    {questions.filter(q => getCurrentScore(q.id) > 0 && getCurrentScore(q.id) <= 2).length}
                   </p>
                   <p className="text-sm text-yellow-600">道题目</p>
                 </div>
                 
                 <div className="bg-green-50 border border-green-200 p-6 rounded-lg">
-                  <h3 className="text-lg font-semibold text-green-800 mb-2">🎲 当前范围</h3>
+                  <h3 className="text-lg font-semibold text-green-800 mb-2">🎯 当前范围</h3>
                   <p className="text-green-600 mb-4">根据筛选条件</p>
                   <p className="text-2xl font-bold text-green-800">
                     {filteredQuestions.length}
@@ -804,9 +924,11 @@ const QuizApp = () => {
                         key={q.id} 
                         question={q} 
                         index={index + 1}
-                        onRate={(score, isWrong) => addAttempt(q.id, score, isWrong)}
-                        getAverageScore={getAverageScore}
+                        onRate={(score) => addAttempt(q.id, score)}
+                        onToggleWrong={() => toggleWrongQuestion(q.id)}
+                        getCurrentScore={getCurrentScore}
                         isMarkedWrong={isMarkedWrong}
+                        isAdmin={isAdmin}
                       />
                     ))}
                     {filteredQuestions.length > 20 && (
