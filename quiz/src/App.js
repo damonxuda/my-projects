@@ -6,6 +6,17 @@ import { Star, Edit2, Database, Github, User, Users, Eye, EyeOff, Trash2 } from 
 import QuestionInput from './components/QuestionInput/index.js';
 import db from './services/DatabaseService.js';
 
+// 安全的HTML渲染函数
+const renderSafeHTML = (htmlContent) => {
+  // 简单的净化：移除script标签和事件处理器
+  let cleanContent = htmlContent
+    .replace(/<script[^>]*>.*?<\/script>/gi, '')
+    .replace(/on\w+="[^"]*"/gi, '')
+    .replace(/javascript:/gi, '');
+  
+  return { __html: cleanContent };
+};
+
 // 练习题目组件
 const PracticeQuestion = ({ question, index, onRate, onToggleWrong, getCurrentScore, isMarkedWrong, isAdmin }) => {
   const [showAnswer, setShowAnswer] = useState(false);
@@ -84,7 +95,10 @@ const PracticeQuestion = ({ question, index, onRate, onToggleWrong, getCurrentSc
       
       <div className="mb-4">
         <h4 className="font-medium text-gray-900 mb-2">题目：</h4>
-        <p className="text-gray-700 whitespace-pre-line">{question.question_text}</p>
+        <div 
+          className="text-gray-700 whitespace-pre-line"
+          dangerouslySetInnerHTML={renderSafeHTML(question.question_text)}
+        />
       </div>
       
       <div className="mb-4">
@@ -100,7 +114,10 @@ const PracticeQuestion = ({ question, index, onRate, onToggleWrong, getCurrentSc
         </div>
         {showAnswer && (
           <div className="bg-gray-50 p-3 rounded border">
-            <p className="text-gray-700 whitespace-pre-line">{question.answer}</p>
+            <div 
+              className="text-gray-700 whitespace-pre-line"
+              dangerouslySetInnerHTML={renderSafeHTML(question.answer)}
+            />
           </div>
         )}
       </div>
@@ -154,6 +171,9 @@ const QuizApp = () => {
       try {
         // 初始化数据库连接
         await db.initializeSupabase();
+
+        // 添加这行调试代码
+        await db.debugDatabaseState();
         
         // 并行加载所有数据
         const [questionsResult, papersResult, attemptsResult] = await Promise.all([
@@ -708,12 +728,18 @@ const QuizApp = () => {
                     
                     <div className="mb-4">
                       <h4 className="font-medium text-gray-900 mb-2">题目：</h4>
-                      <p className="text-gray-700 whitespace-pre-line">{q.question_text}</p>
+                      <div 
+                        className="text-gray-700 whitespace-pre-line"
+                        dangerouslySetInnerHTML={renderSafeHTML(q.question_text)}
+                      />
                     </div>
                     
                     <div className="mb-4">
                       <h4 className="font-medium text-gray-900 mb-2">答案：</h4>
-                      <p className="text-gray-700 whitespace-pre-line">{q.answer}</p>
+                      <div 
+                        className="text-gray-700 whitespace-pre-line"
+                        dangerouslySetInnerHTML={renderSafeHTML(q.answer)}
+                      />
                     </div>
                     
                     {/* 编辑表单 */}

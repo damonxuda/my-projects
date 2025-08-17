@@ -15,16 +15,16 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
     title: '',
     teacher: '',
     semester: '',
-    courseName: '',
-    mathCategory: ''
+    course_name: '',
+    math_category: ''
   });
 
   // 单题表单状态
   const [questionForm, setQuestionForm] = useState({
     paperId: '',
-    questionType: '例题',
-    questionNumber: '',
-    questionText: '',
+    question_type: '例题',
+    question_number: '',
+    question_text: '',
     answer: ''
   });
 
@@ -32,16 +32,16 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
   const [batchForm, setBatchForm] = useState({
     teacher: '',
     semester: '',
-    courseName: '',
-    mathCategory: '',
+    course_name: '',
+    math_category: '',
     markdownText: ''
   });
 
   // 自动生成试卷标题
-  const generatePaperTitle = (teacher, semester, courseName, mathCategory) => {
-    const parts = [teacher, semester, courseName].filter(Boolean);
+  const generatePaperTitle = (teacher, semester, course_name, math_category) => {
+    const parts = [teacher, semester, course_name].filter(Boolean);
     if (parts.length === 0) {
-      return `${mathCategory}练习题`;
+      return `${math_category}练习题`;
     }
     return parts.join('');
   };
@@ -76,9 +76,9 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
     try {
       const result = await db.addQuestion({
         paperId: questionForm.paperId,
-        questionType: questionForm.questionType,
-        questionNumber: questionForm.questionNumber,
-        questionText: questionForm.questionText,
+        question_type: questionForm.question_type,
+        question_number: questionForm.question_number,
+        question_text: questionForm.question_text,
         answer: questionForm.answer
       });
 
@@ -92,9 +92,9 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
       
       setQuestionForm({
         paperId: '',
-        questionType: '例题',
-        questionNumber: '',
-        questionText: '',
+        question_type: '例题',
+        question_number: '',
+        question_text: '',
         answer: ''
       });
       setShowAddForm(false);
@@ -105,18 +105,18 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
     }
   };
 
-  // 试卷+题目批量添加
+  // 试卷+题目批量添加 - 修复版本
   const handleBatchImport = async (e) => {
     e.preventDefault();
     
-    if (!batchForm.teacher || !batchForm.semester || !batchForm.courseName || !batchForm.mathCategory || !batchForm.markdownText) {
+    if (!batchForm.teacher || !batchForm.semester || !batchForm.course_name || !batchForm.math_category || !batchForm.markdownText) {
       alert('请填写所有必填项：老师、学期、课程名、数学分类和题目内容');
       return;
     }
 
     try {
       // 自动生成试卷标题
-      const title = generatePaperTitle(batchForm.teacher, batchForm.semester, batchForm.courseName, batchForm.mathCategory);
+      const title = generatePaperTitle(batchForm.teacher, batchForm.semester, batchForm.course_name, batchForm.math_category);
       
       // 解析Markdown格式的题目
       const parseResult = db.parseMarkdownQuestions(batchForm.markdownText);
@@ -133,16 +133,19 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
           title: title,
           teacher: batchForm.teacher,
           semester: batchForm.semester,
-          courseName: batchForm.courseName,
-          mathCategory: batchForm.mathCategory
+          course_name: batchForm.course_name,
+          math_category: batchForm.math_category
         },
         questions
       );
 
       if (!result.success) throw new Error(result.error);
 
-      // 更新界面数据
-      setPapers([...papers, result.data.paper]);
+      // 重新从数据库获取最新试卷列表，确保显示正确
+      const papersResult = await db.getPapers();
+      if (papersResult.success) {
+        setPapers(papersResult.data || []);
+      }
       
       const questionsResult = await db.getQuestions();
       if (questionsResult.success) {
@@ -152,18 +155,18 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
       setBatchForm({
         teacher: '',
         semester: '',
-        courseName: '',
-        mathCategory: '',
+        course_name: '',
+        math_category: '',
         markdownText: ''
       });
       setShowBatchImport(false);
       
-      const { questions: successQuestions, failed: failedQuestions } = result.data;
-      if (failedQuestions.length > 0) {
-        alert(`试卷"${title}"创建成功！成功导入 ${successQuestions.length} 道题目，${failedQuestions.length} 道题目导入失败。`);
-      } else {
-        alert(`试卷"${title}"创建成功！成功导入 ${successQuestions.length} 道题目！`);
-      }
+      // 修复：正确获取导入的题目数量
+      const importedQuestions = result.data.questions || [];
+      const questionCount = importedQuestions.length;
+      
+      alert(`试卷"${title}"创建成功！成功导入 ${questionCount} 道题目！`);
+      
     } catch (error) {
       console.error('批量导入失败:', error);
       alert('导入失败：' + error.message);
@@ -253,8 +256,8 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
                 </label>
                 <input
                   type="text"
-                  value={batchForm.courseName}
-                  onChange={(e) => setBatchForm({...batchForm, courseName: e.target.value})}
+                  value={batchForm.course_name}
+                  onChange={(e) => setBatchForm({...batchForm, course_name: e.target.value})}
                   placeholder="请输入课程名"
                   className="w-full p-2 border border-gray-300 rounded-lg"
                   required
@@ -265,8 +268,8 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
                   数学分类 *
                 </label>
                 <select
-                  value={batchForm.mathCategory}
-                  onChange={(e) => setBatchForm({...batchForm, mathCategory: e.target.value})}
+                  value={batchForm.math_category}
+                  onChange={(e) => setBatchForm({...batchForm, math_category: e.target.value})}
                   className="w-full p-2 border border-gray-300 rounded-lg"
                   required
                 >
@@ -363,8 +366,8 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
                   题目类型 *
                 </label>
                 <select
-                  value={questionForm.questionType}
-                  onChange={(e) => setQuestionForm({...questionForm, questionType: e.target.value})}
+                  value={questionForm.question_type}
+                  onChange={(e) => setQuestionForm({...questionForm, question_type: e.target.value})}
                   className="w-full p-2 border border-gray-300 rounded-lg"
                 >
                   {QUESTION_TYPES.map(type => (
@@ -378,8 +381,8 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
                 </label>
                 <input
                   type="text"
-                  value={questionForm.questionNumber}
-                  onChange={(e) => setQuestionForm({...questionForm, questionNumber: e.target.value})}
+                  value={questionForm.question_number}
+                  onChange={(e) => setQuestionForm({...questionForm, question_number: e.target.value})}
                   placeholder="例：例1、第1题"
                   className="w-full p-2 border border-gray-300 rounded-lg"
                 />
@@ -389,8 +392,8 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
                   题目内容 *
                 </label>
                 <textarea
-                  value={questionForm.questionText}
-                  onChange={(e) => setQuestionForm({...questionForm, questionText: e.target.value})}
+                  value={questionForm.question_text}
+                  onChange={(e) => setQuestionForm({...questionForm, question_text: e.target.value})}
                   placeholder="请输入题目内容..."
                   className="w-full p-3 border border-gray-300 rounded-lg"
                   rows={4}
