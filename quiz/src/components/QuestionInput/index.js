@@ -5,6 +5,127 @@ import { Plus, BookOpen, Upload } from 'lucide-react';
 const MATH_CATEGORIES = ['计算', '计数', '几何', '数论', '应用题', '行程', '组合'];
 const QUESTION_TYPES = ['例题', '习题'];
 
+// Zip上传组件
+const ZipUploadComponent = ({ onImagesUploaded, db }) => {
+  const [uploading, setUploading] = useState(false);
+  const [uploadResults, setUploadResults] = useState(null);
+
+  const handleZipUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // 验证文件类型
+    if (!file.name.toLowerCase().endsWith('.zip')) {
+      alert('请选择zip格式的文件');
+      return;
+    }
+
+    // 验证文件大小（限制50MB）
+    if (file.size > 50 * 1024 * 1024) {
+      alert('zip文件不能超过50MB');
+      return;
+    }
+
+    setUploading(true);
+    setUploadResults(null);
+
+    try {
+      console.log('开始上传zip文件...');
+      const result = await db.uploadImagesFromZip(file);
+      
+      if (result.success) {
+        setUploadResults(result);
+        
+        // 创建图片映射表给父组件
+        const imageMap = {};
+        result.uploads.forEach(upload => {
+          imageMap[upload.originalName] = {
+            url: upload.url,
+            storageName: upload.storageName
+          };
+        });
+        
+        onImagesUploaded(imageMap);
+        
+        alert(`成功上传 ${result.uploadedCount} 张图片！${result.errors.length > 0 ? `${result.errors.length} 张图片上传失败。` : ''}`);
+      } else {
+        alert('上传失败：' + result.error);
+      }
+    } catch (error) {
+      console.error('上传出错:', error);
+      alert('上传出错：' + error.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+      <h4 className="font-medium text-green-800 mb-3">📦 批量上传几何图片</h4>
+      
+      <div className="mb-4">
+        <input
+          type="file"
+          accept=".zip"
+          onChange={handleZipUpload}
+          disabled={uploading}
+          className="mb-2"
+        />
+        {uploading && (
+          <div className="flex items-center gap-2 text-blue-600 text-sm">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            正在处理zip文件并上传图片...
+          </div>
+        )}
+        <p className="text-xs text-green-600">
+          💡 选择包含所有几何图片的zip文件（01.png, 02.png, 03.png...）
+        </p>
+      </div>
+
+      {/* 上传结果显示 */}
+      {uploadResults && (
+        <div className="mt-4 p-3 bg-white rounded border">
+          <h5 className="font-medium text-green-700 mb-2">✅ 上传完成</h5>
+          <div className="text-sm text-gray-700 space-y-1">
+            <p>成功上传: <span className="font-medium text-green-600">{uploadResults.uploadedCount}</span> 张图片</p>
+            {uploadResults.errors.length > 0 && (
+              <p>失败: <span className="font-medium text-red-600">{uploadResults.errors.length}</span> 张图片</p>
+            )}
+          </div>
+          
+          {/* 显示上传的图片列表 */}
+          {uploadResults.uploads.length > 0 && (
+            <div className="mt-3">
+              <p className="text-sm font-medium text-gray-700 mb-2">已上传的图片:</p>
+              <div className="flex flex-wrap gap-2">
+                {uploadResults.uploads.map((upload, index) => (
+                  <span key={index} className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
+                    {upload.originalName}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* 显示错误信息 */}
+          {uploadResults.errors.length > 0 && (
+            <div className="mt-3">
+              <p className="text-sm font-medium text-red-700 mb-2">上传失败的文件:</p>
+              <div className="space-y-1">
+                {uploadResults.errors.map((error, index) => (
+                  <div key={index} className="text-xs text-red-600">
+                    {error.filename}: {error.error}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const QuestionInput = ({ questions, setQuestions, db, user }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showBatchImport, setShowBatchImport] = useState(false);
@@ -28,7 +149,7 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
     answer: ''
   });
 
-  // 批量导入状态
+  // 批量导入状态（新增imageMap）
   const [batchForm, setBatchForm] = useState({
     teacher: '',
     semester: '',
@@ -36,6 +157,9 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
     math_category: '',
     markdownText: ''
   });
+
+  // 图片映射状态（新增）
+  const [imageMap, setImageMap] = useState({});
 
   // 自动生成试卷标题
   const generatePaperTitle = (teacher, semester, course_name, math_category) => {
@@ -105,8 +229,8 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
     }
   };
 
-  // 试卷+题目批量添加 - 修复版本
-  const handleBatchImport = async (e) => {
+  // 试卷+题目批量添加（修改版，支持图片映射）
+  const handleBatchImport = async (e, imageMap = {}) => {
     e.preventDefault();
     
     if (!batchForm.teacher || !batchForm.semester || !batchForm.course_name || !batchForm.math_category || !batchForm.markdownText) {
@@ -118,8 +242,8 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
       // 自动生成试卷标题
       const title = generatePaperTitle(batchForm.teacher, batchForm.semester, batchForm.course_name, batchForm.math_category);
       
-      // 解析Markdown格式的题目
-      const parseResult = db.parseMarkdownQuestions(batchForm.markdownText);
+      // 解析Markdown格式的题目，传入图片映射
+      const parseResult = db.parseMarkdownQuestions(batchForm.markdownText, imageMap);
       if (!parseResult.success) throw new Error(parseResult.error);
       
       const questions = parseResult.data;
@@ -127,7 +251,7 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
         throw new Error('没有解析到有效的题目，请检查格式');
       }
 
-      // 添加试卷和题目
+      // 添加试卷和题目，传入图片映射
       const result = await db.addPaperWithQuestions(
         {
           title: title,
@@ -136,12 +260,13 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
           course_name: batchForm.course_name,
           math_category: batchForm.math_category
         },
-        questions
+        questions,
+        imageMap
       );
 
       if (!result.success) throw new Error(result.error);
 
-      // 重新从数据库获取最新试卷列表，确保显示正确
+      // 重新加载试卷列表
       const papersResult = await db.getPapers();
       if (papersResult.success) {
         setPapers(papersResult.data || []);
@@ -159,6 +284,7 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
         math_category: '',
         markdownText: ''
       });
+      setImageMap({}); // 清空图片映射
       setShowBatchImport(false);
       
       // 修复：正确获取导入的题目数量
@@ -171,6 +297,12 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
       console.error('批量导入失败:', error);
       alert('导入失败：' + error.message);
     }
+  };
+
+  // 图片上传完成回调（新增）
+  const handleImagesUploaded = (uploadedImageMap) => {
+    setImageMap(uploadedImageMap);
+    console.log('图片映射已更新:', uploadedImageMap);
   };
 
   // 权限检查
@@ -217,11 +349,18 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
         </button>
       </div>
 
-      {/* 批量导入表单 */}
+      {/* 批量导入表单（修改版，集成zip上传） */}
       {showBatchImport && canAddQuestions() && (
         <div className="mb-6 p-6 bg-gray-50 border border-gray-200 rounded-lg">
           <h3 className="text-lg font-semibold mb-4">📝 批量导入试卷和题目</h3>
-          <form onSubmit={handleBatchImport}>
+          
+          {/* Zip上传组件 */}
+          <ZipUploadComponent 
+            onImagesUploaded={handleImagesUploaded}
+            db={db}
+          />
+          
+          <form onSubmit={(e) => handleBatchImport(e, imageMap)}>
             {/* 试卷信息 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
@@ -284,37 +423,36 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
             {/* 题目内容 */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                题目内容（Claude预处理的标准MD格式）*
+                题目内容（包含图片标签的Markdown格式）*
               </label>
               <textarea
                 value={batchForm.markdownText}
                 onChange={(e) => setBatchForm({...batchForm, markdownText: e.target.value})}
-                placeholder={`请粘贴Claude预处理的标准MD格式题目：
+                placeholder={`请粘贴标准MD格式题目：
 
 【例1】
-这里是第一道例题的题目内容...
+如图所示，正方形ABCD的边长为6cm...
 
-答案：这里是第一道题的答案
+【图片】01.png
 
----
+求阴影部分的面积。
 
-【第1题】
-这里是第一道习题的题目内容...
-
-答案：这里是答案
+答案：18平方厘米
 
 ---
 
 【例2】
-第二道例题...
+观察下面的三角形...
 
-答案：答案内容`}
+【图片】02.png
+
+答案：...`}
                 className="w-full p-3 border border-gray-300 rounded-lg font-mono text-sm"
                 rows={12}
                 required
               />
               <p className="text-xs text-gray-500 mt-1">
-                💡 请粘贴已由Claude预处理的标准MD格式，系统将自动解析【】题号、题目内容和答案
+                💡 先上传zip文件，然后粘贴包含【图片】标签的题目内容
               </p>
             </div>
 
@@ -322,22 +460,32 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
               <button
                 type="submit"
                 className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+                disabled={Object.keys(imageMap).length === 0}
               >
-                批量导入
+                批量导入试卷
               </button>
               <button
                 type="button"
-                onClick={() => setShowBatchImport(false)}
+                onClick={() => {
+                  setShowBatchImport(false);
+                  setImageMap({}); // 清空图片映射
+                }}
                 className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg"
               >
                 取消
               </button>
             </div>
+            
+            {Object.keys(imageMap).length === 0 && (
+              <p className="text-xs text-orange-600 mt-2">
+                ⚠️ 请先上传包含图片的zip文件
+              </p>
+            )}
           </form>
         </div>
       )}
 
-      {/* 单题添加表单 */}
+      {/* 单题添加表单（保持原有） */}
       {showAddForm && canAddQuestions() && (
         <div className="mb-6 p-6 bg-gray-50 border border-gray-200 rounded-lg">
           <h3 className="text-lg font-semibold mb-4">➕ 添加单道题目</h3>
@@ -434,7 +582,7 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
         </div>
       )}
 
-      {/* 试卷列表 */}
+      {/* 试卷列表（保持原有） */}
       {papers.length > 0 && (
         <div className="bg-white p-4 rounded-lg border">
           <h4 className="font-medium text-gray-800 mb-3">📚 现有试卷列表</h4>
@@ -451,7 +599,7 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
         </div>
       )}
 
-      {/* 用户状态信息 */}
+      {/* 用户状态信息（保持原有） */}
       {user && (
         <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
           <p className="text-sm text-green-800">
