@@ -4,6 +4,7 @@ import { ClerkAuthProvider, useAuth, ModuleAccessGuard, UserManagement, UserProf
 import React, { useState, useEffect } from 'react';
 import { Star, Edit2, Database, Github, User, Users, Eye, EyeOff, Trash2 } from 'lucide-react';
 import QuestionInput from './components/QuestionInput/index.js';
+import QuestionPrintController from './components/QuestionPrintController';
 import db from './services/DatabaseService.js';
 
 // 安全的HTML渲染函数
@@ -907,71 +908,40 @@ const QuizApp = () => {
                 </div>
               </div>
 
-              {/* 练习统计 */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <div className="bg-red-50 border border-red-200 p-6 rounded-lg">
-                  <h3 className="text-lg font-semibold text-red-800 mb-2">❌ 我的错题</h3>
-                  <p className="text-red-600 mb-4">我标记的错题</p>
-                  <p className="text-2xl font-bold text-red-800">
-                    {questions.filter(q => isMarkedWrong(q.id)).length}
-                  </p>
-                  <p className="text-sm text-red-600">道错题</p>
-                </div>
-                
-                <div className="bg-yellow-50 border border-yellow-200 p-6 rounded-lg">
-                  <h3 className="text-lg font-semibold text-yellow-800 mb-2">⭐ 不熟悉题目</h3>
-                  <p className="text-yellow-600 mb-4">我评分1-2星的题目</p>
-                  <p className="text-2xl font-bold text-yellow-800">
-                    {questions.filter(q => getCurrentScore(q.id) > 0 && getCurrentScore(q.id) <= 2).length}
-                  </p>
-                  <p className="text-sm text-yellow-600">道题目</p>
-                </div>
-                
-                <div className="bg-green-50 border border-green-200 p-6 rounded-lg">
-                  <h3 className="text-lg font-semibold text-green-800 mb-2">🎯 当前范围</h3>
-                  <p className="text-green-600 mb-4">根据筛选条件</p>
-                  <p className="text-2xl font-bold text-green-800">
-                    {filteredQuestions.length}
-                  </p>
-                  <p className="text-sm text-green-600">道题目可练习</p>
-                </div>
-              </div>
-
-              {/* 练习题目列表 */}
+              {/* 🔴 新增：打印功能 */}
               {filteredQuestions.length > 0 && (
-                <div className="bg-white rounded-lg border">
-                  <div className="px-6 py-4 border-b border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-900">🎯 开始练习</h3>
-                    <p className="text-sm text-gray-600">共 {filteredQuestions.length} 道题目</p>
-                  </div>
-                  <div className="p-6 space-y-4">
-                    {filteredQuestions.slice(0, 20).map((q, index) => (
-                      <PracticeQuestion 
-                        key={q.id} 
-                        question={q} 
-                        index={index + 1}
-                        onRate={(score) => addAttempt(q.id, score)}
-                        onToggleWrong={() => toggleWrongQuestion(q.id)}
-                        getCurrentScore={getCurrentScore}
-                        isMarkedWrong={isMarkedWrong}
-                        isAdmin={isAdmin}
-                      />
-                    ))}
-                    {filteredQuestions.length > 20 && (
-                      <div className="text-center py-4 text-gray-500">
-                        显示前20道题目，共{filteredQuestions.length}道。调整筛选条件可缩小范围。
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <QuestionPrintController 
+                  questions={filteredQuestions}
+                  filterInfo={{
+                    teacher: filters.teacher,
+                    mathCategory: filters.category,
+                    courseName: filters.courseName,
+                    semester: filters.semester
+                  }}
+                />
               )}
 
+            {/* 实际的题目显示 */}
+            <div className="space-y-6">
+              {filteredQuestions.map((question, index) => (
+                <PracticeQuestion
+                  key={question.id}
+                  question={question}
+                  index={index + 1}
+                  onRate={(score) => addAttempt(question.id, score)}
+                  onToggleWrong={() => toggleWrongQuestion(question.id)}
+                  getCurrentScore={getCurrentScore}
+                  isMarkedWrong={isMarkedWrong}
+                  isAdmin={isAdmin}
+                />
+              ))}
+              
               {filteredQuestions.length === 0 && (
                 <div className="text-center py-12 text-gray-500">
-                  <p>没有符合条件的题目</p>
-                  <p className="text-sm mt-2">请调整筛选条件或添加更多题目到题库</p>
+                  {questions.length === 0 ? '数据库中还没有题目，去添加第一套试卷吧！' : '没有符合条件的题目'}
                 </div>
               )}
+            </div>
             </div>
           )}
 

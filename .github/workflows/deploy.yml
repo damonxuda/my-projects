@@ -125,7 +125,7 @@ jobs:
 
       # 7. 构建并部署 Videos 项目（修正为React项目）
       - name: Install Videos Dependencies
-        if: steps.changes.outputs.videos_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        if: steps.changes.outputs.videos_changed == 'true' || steps.changes.outputs.force_deploy == 'true' || true
         run: |
           echo "📦 Installing Videos dependencies..."
           if [ -d "./videos" ]; then
@@ -138,7 +138,7 @@ jobs:
           fi
 
       - name: Build Videos Application
-        if: steps.changes.outputs.videos_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        if: steps.changes.outputs.videos_changed == 'true' || steps.changes.outputs.force_deploy == 'true' || true
         working-directory: ./videos
         run: |
           echo "🔧 Setting environment variables..."
@@ -150,7 +150,7 @@ jobs:
           npm run build
 
       - name: Deploy Videos to S3
-        if: steps.changes.outputs.videos_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        if: steps.changes.outputs.videos_changed == 'true' || steps.changes.outputs.force_deploy == 'true' || true
         run: |
           echo "☁️ Deploying Videos to damonxuda-videos bucket..."
           aws s3 rm s3://damonxuda-videos/videos/ --recursive
