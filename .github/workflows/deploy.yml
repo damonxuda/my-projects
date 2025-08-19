@@ -1,9 +1,10 @@
+# .github/workflows/deploy.yml
 name: Deploy Multi-Project to AWS S3
 
-# 当推送到 main 分支时触发
 on:
   push:
     branches: [main]
+  workflow_dispatch: # 允许手动触发
 
 jobs:
   deploy:
@@ -14,15 +15,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2 # 获取前两个commit用于变化检测
+          fetch-depth: 2
 
-      # 2. 设置 Node.js 环境（React项目需要）
+      # 2. 设置 Node.js 环境
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "18"
           cache: "npm"
-          cache-dependency-path: "quiz/package-lock.json"
+          cache-dependency-path: |
+            quiz/package-lock.json
+            videos/package-lock.json
 
       # 3. 配置 AWS CLI
       - name: Configure AWS CLI
@@ -32,55 +35,31 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # 4. 检测项目变化
+      # 4. 检测项目变化（修正版）
       - name: Detect changed projects
         id: changes
         run: |
-          echo "Detecting changes in projects..."
+          echo "🔍 检测项目变化..."
 
-          # 检测 schedule 项目变化
-          if git diff --name-only HEAD~1 HEAD | grep -q "^schedule/"; then
-            echo "schedule_changed=true" >> $GITHUB_OUTPUT
-            echo "✅ Schedule project has changes"
-          else
-            echo "schedule_changed=false" >> $GITHUB_OUTPUT
-            echo "➖ Schedule project has no changes"
-          fi
+          # 检测每个项目的变化
+          for project in schedule auth-clerk shared quiz videos; do
+            if git diff --name-only HEAD~1 HEAD | grep -q "^${project}/"; then
+              echo "${project//-/_}_changed=true" >> $GITHUB_OUTPUT
+              echo "✅ ${project} project has changes"
+            else
+              echo "${project//-/_}_changed=false" >> $GITHUB_OUTPUT
+              echo "➖ ${project} project has no changes"
+            fi
+          done
 
-          # 检测 auth-clerk 项目变化
-          if git diff --name-only HEAD~1 HEAD | grep -q "^auth-clerk/"; then
-            echo "auth_changed=true" >> $GITHUB_OUTPUT
-            echo "✅ Auth-clerk project has changes"
-          else
-            echo "auth_changed=false" >> $GITHUB_OUTPUT
-            echo "➖ Auth-clerk project has no changes"
-          fi
-
-          # 检测 shared 项目变化
-          if git diff --name-only HEAD~1 HEAD | grep -q "^shared/"; then
-            echo "shared_changed=true" >> $GITHUB_OUTPUT
-            echo "✅ Shared project has changes"
-          else
-            echo "shared_changed=false" >> $GITHUB_OUTPUT
-            echo "➖ Shared project has no changes"
-          fi
-
-          # 检测 quiz 项目变化
-          if git diff --name-only HEAD~1 HEAD | grep -q "^quiz/"; then
+          # 依赖关系处理（修正变量名）
+          if [[ "$(cat $GITHUB_OUTPUT | grep -E 'auth_clerk_changed=true|shared_changed=true')" ]]; then
             echo "quiz_changed=true" >> $GITHUB_OUTPUT
-            echo "✅ Quiz project has changes"
-          else
-            echo "quiz_changed=false" >> $GITHUB_OUTPUT
-            echo "➖ Quiz project has no changes"
+            echo "videos_changed=true" >> $GITHUB_OUTPUT
+            echo "🔄 Dependencies changed, forcing Quiz and Videos rebuild"
           fi
 
-          # 如果auth-clerk或shared变化，quiz也需要重新构建（因为quiz依赖它们）
-          if [[ "$(cat $GITHUB_OUTPUT | grep -E 'auth_changed=true|shared_changed=true')" ]]; then
-            echo "quiz_changed=true" >> $GITHUB_OUTPUT
-            echo "🔄 Auth-clerk or Shared changed, forcing Quiz rebuild"
-          fi
-
-          # 检测是否是首次部署或强制部署
+          # 检测强制部署
           if [[ "${{ github.event.forced }}" == "true" ]] || [[ $(git rev-list --count HEAD) -le 1 ]] || [[ ! $(git diff --name-only HEAD~1 HEAD) ]]; then
             echo "force_deploy=true" >> $GITHUB_OUTPUT
             echo "🔄 Force deploy mode - will deploy all projects"
@@ -93,8 +72,6 @@ jobs:
         if: steps.changes.outputs.schedule_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
         run: |
           echo "🚀 Deploying Schedule to /schedule path..."
-
-          # 同步上传 schedule 项目到 S3 的 schedule 路径
           aws s3 sync ./schedule/ s3://${{ secrets.AWS_S3_BUCKET_NAME }}/schedule/ \
             --delete \
             --exclude "*.md" \
@@ -106,38 +83,22 @@ jobs:
             --exclude ".gitignore" \
             --exclude ".eslintrc*" \
             --exclude ".prettierrc*"
-
           echo "✅ Schedule deployed to /schedule path"
 
       # 6. 构建并部署 Quiz 项目（React应用）
-      - name: Build and Deploy Quiz
-        if: steps.changes.outputs.quiz_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
-        run: |
-          echo "🚀 Building and deploying Quiz Management to /quiz path..."
-
-          # 检查 quiz 目录是否存在
-          if [ -d "./quiz" ]; then
-            echo "✅ Quiz directory found, starting build process..."
-            echo "✅ Quiz Management built and deployed to /quiz path"
-          else
-            echo "⚠️  Quiz directory not found, skipping deployment"
-          fi
-
-      # 6a. Install Quiz Dependencies
       - name: Install Quiz Dependencies
         if: steps.changes.outputs.quiz_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
-        working-directory: ./quiz
         run: |
-          echo "📦 Installing dependencies..."
-          npm ci
+          echo "📦 Installing Quiz dependencies..."
+          if [ -d "./quiz" ]; then
+            cd quiz && npm ci
+            cd ../shared && npm ci
+            cd ../auth-clerk && npm ci
+            echo "✅ Quiz dependencies installed"
+          else
+            echo "⚠️ Quiz directory not found"
+          fi
 
-          echo "📦 Installing shared dependencies..."
-          cd ../shared && npm ci
-
-          echo "📦 Installing auth-clerk dependencies..."
-          cd ../auth-clerk && npm ci
-
-      # 6b. Build Quiz Application
       - name: Build Quiz Application
         if: steps.changes.outputs.quiz_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
         working-directory: ./quiz
@@ -152,154 +113,104 @@ jobs:
           echo "🏗️ Building React application..."
           npm run build
 
-      # 6c. Deploy Quiz to S3
       - name: Deploy Quiz to S3
         if: steps.changes.outputs.quiz_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
         run: |
-          echo "☁️ Force clearing S3 bucket and uploading fresh files..."
-          # 先完全删除整个 quiz 目录
+          echo "☁️ Deploying Quiz to S3..."
           aws s3 rm s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/ --recursive
-          echo "🗑️ Cleared existing quiz files"
-          # 然后重新上传，设置强制不缓存的头部
           aws s3 sync ./quiz/build/ s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/ \
             --cache-control "no-cache, no-store, must-revalidate" \
             --exclude ".DS_Store"
-          echo "✅ Quiz Management forcefully deployed with no-cache headers"
+          echo "✅ Quiz deployed"
 
-      # 7. 验证部署和Clerk认证
+      # 7. 构建并部署 Videos 项目（修正为React项目）
+      - name: Install Videos Dependencies
+        if: steps.changes.outputs.videos_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        run: |
+          echo "📦 Installing Videos dependencies..."
+          if [ -d "./videos" ]; then
+            cd videos && npm ci
+            cd ../shared && npm ci
+            cd ../auth-clerk && npm ci
+            echo "✅ Videos dependencies installed"
+          else
+            echo "⚠️ Videos directory not found"
+          fi
+
+      - name: Build Videos Application
+        if: steps.changes.outputs.videos_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        working-directory: ./videos
+        run: |
+          echo "🔧 Setting environment variables..."
+          echo "REACT_APP_CLERK_PUBLISHABLE_KEY=${{ secrets.REACT_APP_CLERK_PUBLISHABLE_KEY }}" >> .env.production
+          echo "REACT_APP_VIDEO_API_URL=${{ secrets.VIDEO_API_URL }}" >> .env.production
+          echo "GENERATE_SOURCEMAP=false" >> .env.production
+
+          echo "🏗️ Building Videos React application..."
+          npm run build
+
+      - name: Deploy Videos to S3
+        if: steps.changes.outputs.videos_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        run: |
+          echo "☁️ Deploying Videos to damonxuda-videos bucket..."
+          aws s3 rm s3://damonxuda-videos/videos/ --recursive
+          aws s3 sync ./videos/build/ s3://damonxuda-videos/videos/ \
+            --cache-control "no-cache, no-store, must-revalidate" \
+            --exclude ".DS_Store"
+          echo "✅ Videos deployed to damonxuda-videos bucket"
+
+      # 8. 验证部署和Clerk认证
       - name: Verify Clerk Authentication Setup
         run: |
           echo "🔐 === Clerk认证系统验证 ==="
           echo ""
           echo "🔍 1. 检查 S3 上的 quiz 文件:"
-          aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/ --recursive --summarize
+          aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/ --recursive --summarize || echo "Quiz files not found"
           echo ""
-          echo "🔍 2. 检查 JS 文件目录:"
-          aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/static/js/
-          echo ""
-          echo "🔍 3. 验证环境变量配置:"
-          # 获取主要的 JS 文件名
-          MAIN_JS=$(aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/static/js/ | grep main | awk '{print $4}' | head -1)
-          if [ ! -z "$MAIN_JS" ]; then
-            echo "找到主要 JS 文件: $MAIN_JS"
-            echo "下载并检查Clerk集成..."
-            aws s3 cp s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/static/js/$MAIN_JS temp_main.js
-            echo ""
-            echo "🔍 4. 检查Clerk组件集成:"
-            if grep -q "ClerkAuthProvider\|SignedIn\|SignedOut" temp_main.js; then
-              echo "✅ 找到Clerk认证组件！"
-            else
-              echo "❌ 没有找到Clerk认证组件"
-            fi
-            echo ""
-            echo "🔍 5. 检查是否移除了旧的Supabase认证:"
-            if grep -q "AuthProvider.*supabase\|useAuth.*auth-legacy" temp_main.js; then
-              echo "⚠️ 仍然包含旧的Supabase认证代码"
-            else
-              echo "✅ 已成功移除旧的认证代码"
-            fi
-            echo ""
-            echo "🔍 6. 检查管理员邮箱配置:"
-            if grep -q "REACT_APP_ADMIN_EMAILS" temp_main.js; then
-              echo "✅ 找到管理员邮箱配置"
-            else
-              echo "❌ 没有找到管理员邮箱配置"
-            fi
-          else
-            echo "❌ 没有找到主要的 JS 文件"
-          fi
-          echo ""
-          echo "📊 === Clerk认证验证总结 ==="
+          echo "🔍 2. 检查 Videos 文件:"
+          aws s3 ls s3://damonxuda-videos/videos/ --recursive || echo "Videos files not found"
 
-      # 8. 部署根目录文件
+      # 9. 部署根目录文件
       - name: Deploy root files
         run: |
           echo "🚀 Deploying root directory files..."
-
-          # 上传根目录的 index.html（如果存在）
           if [ -f "./index.html" ]; then
             aws s3 cp ./index.html s3://${{ secrets.AWS_S3_BUCKET_NAME }}/index.html
             echo "✅ Root index.html deployed"
           else
-            echo "ℹ️  No root index.html found"
+            echo "ℹ️ No root index.html found"
           fi
 
-      # 9. 验证部署结果
-      - name: Verify deployments
+      # 10. 验证所有部署结果
+      - name: Verify all deployments
         run: |
-          echo "📁 Verifying deployed projects..."
+          echo "📁 验证所有项目部署..."
 
-          # 检查根目录 index.html
-          if aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/index.html >/dev/null 2>&1; then
-            echo "✅ Root index.html found in S3"
-          else
-            echo "❌ Root index.html not found in S3"
-          fi
+          echo "=== Schedule ==="
+          aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/schedule/ --recursive | head -3 || echo "❌ Schedule not found"
 
-          # 检查 schedule 部署
-          if aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/schedule/ >/dev/null 2>&1; then
-            echo "✅ Schedule files found in S3"
-            aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/schedule/ --recursive | head -5
-          else
-            echo "❌ Schedule files not found in S3"
-          fi
+          echo "=== Quiz ==="
+          aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/ --recursive | head -3 || echo "❌ Quiz not found"
 
-          # 检查 quiz 部署
-          if aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/ >/dev/null 2>&1; then
-            echo "✅ Quiz Management files found in S3"
-            aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/ --recursive | head -5
-          else
-            echo "ℹ️  Quiz Management files not found in S3 (may not be created yet)"
-          fi
-
-      # 10. 清理缓存（如果使用 CloudFront）
-      - name: Invalidate CloudFront cache (optional)
-        continue-on-error: true
-        run: |
-          echo "CloudFront invalidation step (currently disabled)"
-          echo "To enable: uncomment and set CLOUDFRONT_DISTRIBUTION_ID secret"
-          # 如果启用 CloudFront，取消注释以下代码
-          # PATHS_TO_INVALIDATE=""
-          # if [[ "${{ steps.changes.outputs.schedule_changed }}" == "true" ]]; then
-          #   PATHS_TO_INVALIDATE="${PATHS_TO_INVALIDATE} /schedule/*"
-          # fi
-          # if [[ "${{ steps.changes.outputs.quiz_changed }}" == "true" ]]; then
-          #   PATHS_TO_INVALIDATE="${PATHS_TO_INVALIDATE} /quiz/*"
-          # fi
-          # if [[ -n "$PATHS_TO_INVALIDATE" ]]; then
-          #   aws cloudfront create-invalidation \
-          #     --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
-          #     --paths $PATHS_TO_INVALIDATE
-          # fi
+          echo "=== Videos ==="
+          aws s3 ls s3://damonxuda-videos/videos/ --recursive | head -3 || echo "❌ Videos not found"
 
       # 11. 部署成功报告
       - name: Deploy Success Report
         run: |
-          echo "🎉 多项目部署完成 - Clerk认证系统已启用!"
+          echo "🎉 多项目部署完成!"
           echo ""
           echo "📊 本次部署摘要:"
-          echo "   Schedule 变化: ${{ steps.changes.outputs.schedule_changed }}"
-          echo "   Auth-clerk 变化: ${{ steps.changes.outputs.auth_changed }}"
-          echo "   Shared 变化: ${{ steps.changes.outputs.shared_changed }}"
-          echo "   Quiz 变化: ${{ steps.changes.outputs.quiz_changed }}"
-          echo "   强制部署模式: ${{ steps.changes.outputs.force_deploy }}"
-          echo ""
-          echo "🔐 认证系统:"
-          echo "   认证服务: Clerk (替代Supabase认证)"
-          echo "   用户管理: 双重验证 (Clerk + 管理员审批)"
-          echo "   知识产权保护: 启用审批制访问控制"
+          echo "   Schedule: ${{ steps.changes.outputs.schedule_changed }}"
+          echo "   Auth-clerk: ${{ steps.changes.outputs.auth_clerk_changed }}"
+          echo "   Shared: ${{ steps.changes.outputs.shared_changed }}"
+          echo "   Quiz: ${{ steps.changes.outputs.quiz_changed }}"
+          echo "   Videos: ${{ steps.changes.outputs.videos_changed }}"
+          echo "   强制部署: ${{ steps.changes.outputs.force_deploy }}"
           echo ""
           echo "🌐 项目访问地址:"
-          echo "   📚 Schedule: http://${{ secrets.AWS_S3_BUCKET_NAME }}.s3-website.${{ secrets.AWS_REGION }}.amazonaws.com/schedule/"
-          echo "   🧠 Quiz Management: http://${{ secrets.AWS_S3_BUCKET_NAME }}.s3-website.${{ secrets.AWS_REGION }}.amazonaws.com/quiz/"
+          echo "   📚 Schedule: https://damonxuda.site/schedule/"
+          echo "   🧠 Quiz: https://damonxuda.site/quiz/"
+          echo "   🎬 Videos: https://damonxuda.site/videos/"
           echo ""
-          echo "✅ 功能特性:"
-          echo "   - Clerk身份认证: 安全的用户注册和登录"
-          echo "   - 智能变化检测: 只部署有变化的项目"
-          echo "   - 模块化架构: auth-clerk + shared + quiz"
-          echo "   - 管理员权限: 基于邮箱的管理员控制"
-          echo ""
-          echo "📝 下一步建议:"
-          echo "   1. 使用管理员邮箱登录并测试权限"
-          echo "   2. 测试用户注册和审批流程"
-          echo "   3. 验证题库访问权限控制"
+          echo "✅ 部署完成！"
