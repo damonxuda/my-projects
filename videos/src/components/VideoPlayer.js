@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Play, Download } from 'lucide-react';
-import { useClerk } from 'auth-clerk';
+import { useClerk } from '@clerk/clerk-react';
 
 const VideoPlayer = ({ video, apiUrl, onClose }) => {
   const [videoUrl, setVideoUrl] = useState('');

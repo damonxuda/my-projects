@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { ModuleAccessGuard, useClerk } from 'auth-clerk';
+import { useClerk } from '@clerk/clerk-react';
+import ModuleAccessGuard from '../../../auth-clerk/src/components/ModuleAccessGuard';
 import VideoPlayer from './VideoPlayer';
 import FileCard from './FileCard';
 import Breadcrumb from './Breadcrumb';
