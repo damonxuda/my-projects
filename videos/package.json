@@ -5,8 +5,7 @@
   "private": true,
   "homepage": "https://damonxuda.site/videos",
   "dependencies": {
-    "auth-clerk": "file:../auth-clerk",
-    "shared": "file:../shared",
+    "@clerk/clerk-react": "^5.42.2",
     "lucide-react": "^0.263.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
