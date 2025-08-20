@@ -1,16 +1,17 @@
+// Videos项目应该改为：
+import { ClerkAuthProvider, useAuth, ModuleAccessGuard } from '../../auth-clerk/src';
 import React from 'react';
-import { ClerkProvider } from '@clerk/clerk-react';
 import VideoLibrary from './components/VideoLibrary';
 import './App.css';
 
-function App() {
+const App = () => {
   return (
-    <ClerkProvider publishableKey={process.env.REACT_APP_CLERK_PUBLISHABLE_KEY}>
-      <div className="App">
+    <ClerkAuthProvider publishableKey={process.env.REACT_APP_CLERK_PUBLISHABLE_KEY}>
+      <ModuleAccessGuard module="videos">
         <VideoLibrary />
-      </div>
-    </ClerkProvider>
+      </ModuleAccessGuard>
+    </ClerkAuthProvider>
   );
-}
+};
 
 export default App;
