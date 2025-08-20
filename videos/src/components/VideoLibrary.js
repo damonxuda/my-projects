@@ -12,13 +12,19 @@ const VideoLibrary = () => {
   const [error, setError] = useState('');
   const [selectedVideo, setSelectedVideo] = useState(null);
   
-  // 只使用 auth-clerk 的 useAuth hook - 与Quiz保持一致
-  const { user, isSignedIn, isAdmin } = useAuth();
+  // 使用 auth-clerk 的 useAuth hook - 包含新的视频API方法
+  const { 
+    user, 
+    isSignedIn, 
+    isAdmin, 
+    fetchVideoList, // ✅ 新增：使用封装好的视频API方法
+    getVideoUrl    // ✅ 新增：使用封装好的视频URL方法
+  } = useAuth();
 
-  // API基础URL
+  // API基础URL（现在通过useAuth方法调用，不需要直接使用）
   const API_BASE_URL = process.env.REACT_APP_VIDEO_API_URL;
 
-  // 使用auth-clerk模式的API调用 - 参考useAuth中的fetchAllUsers
+  // 使用auth-clerk封装的API调用方法
   const loadItems = async (path = '') => {
     setLoading(true);
     setError('');
@@ -28,30 +34,20 @@ const VideoLibrary = () => {
         throw new Error('用户未登录');
       }
 
-      // 这里应该扩展useAuth来包含video API调用
-      // 或者创建一个类似fetchAllUsers的方法
-      // 暂时直接调用，但需要token - 这里需要改进架构
+      console.log('🎬 VideoLibrary: 开始加载视频列表, path:', path);
       
-      const response = await fetch(
-        `${API_BASE_URL}/videos/list?path=${encodeURIComponent(path)}`,
-        {
-          headers: { 
-            'Content-Type': 'application/json'
-            // TODO: 需要在useAuth中添加getToken方法
-          }
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`加载失败: ${response.status}`);
-      }
+      // ✅ 使用useAuth提供的fetchVideoList方法（内部已处理token）
+      const data = await fetchVideoList(path);
       
-      const data = await response.json();
+      console.log('✅ VideoLibrary: 获取到数据:', data.length, '个文件');
+      
       const processedItems = processFileList(data, path);
       setItems(processedItems);
       
+      console.log('✅ VideoLibrary: 处理后的items:', processedItems.length, '个项目');
+      
     } catch (err) {
-      console.error('加载失败:', err);
+      console.error('❌ VideoLibrary: 加载失败:', err);
       setError(err.message || '加载失败，请刷新重试');
     } finally {
       setLoading(false);
@@ -125,6 +121,29 @@ const VideoLibrary = () => {
     loadItems(path);
   };
 
+  // ✅ 视频播放处理 - 使用useAuth的getVideoUrl方法
+  const handleVideoPlay = async (video) => {
+    try {
+      console.log('🎬 VideoLibrary: 请求播放视频:', video.key);
+      
+      // 使用useAuth提供的getVideoUrl方法（内部已处理token）
+      const urlData = await getVideoUrl(video.key);
+      
+      console.log('✅ VideoLibrary: 获取到播放URL');
+      
+      // 设置包含播放URL的视频对象
+      setSelectedVideo({
+        ...video,
+        playUrl: urlData.url,
+        expiresAt: urlData.expiresAt
+      });
+      
+    } catch (error) {
+      console.error('❌ VideoLibrary: 获取视频URL失败:', error);
+      alert('获取视频播放地址失败：' + error.message);
+    }
+  };
+
   // 初始加载 - 与Quiz模式保持一致
   useEffect(() => {
     if (isSignedIn && user) {
@@ -182,6 +201,7 @@ const VideoLibrary = () => {
                     <p>用户邮箱: {user?.emailAddresses?.[0]?.emailAddress}</p>
                     <p>管理员: {isAdmin ? '是' : '否'}</p>
                     <p>当前路径: {currentPath || '根目录'}</p>
+                    <p>useAuth方法: fetchVideoList={typeof fetchVideoList}, getVideoUrl={typeof getVideoUrl}</p>
                   </div>
                 </details>
               </div>
@@ -214,7 +234,7 @@ const VideoLibrary = () => {
                     key={`${item.type}-${item.name}-${index}`}
                     item={item}
                     onFolderClick={navigateToPath}
-                    onVideoPlay={setSelectedVideo}
+                    onVideoPlay={handleVideoPlay} // ✅ 使用新的播放处理函数
                   />
                 ))}
               </div>

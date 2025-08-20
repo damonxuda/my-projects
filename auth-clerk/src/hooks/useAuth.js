@@ -5,9 +5,12 @@ import { useState, useEffect, useCallback } from 'react';
 // ✅ Function URL常量
 const LAMBDA_API_URL = 'https://ykyc7xcyfmacka6oqeqgfhrtt40xvynm.lambda-url.ap-northeast-1.on.aws/';
 
+// ✅ 新增：视频API URL
+const VIDEO_API_URL = 'https://len2k4bksqc6jqwapucqpczccu0jugyb.lambda-url.ap-northeast-1.on.aws';
+
 export const useAuth = () => {
   const { user, isLoaded: userLoaded } = useUser();
-  const { isSignedIn, isLoaded: authLoaded } = useClerkAuth();
+  const { isSignedIn, isLoaded: authLoaded, getToken } = useClerkAuth(); // ✅ 新增getToken
   const clerk = useClerk();
   
   // 用户管理相关状态
@@ -79,7 +82,7 @@ export const useAuth = () => {
     };
   };
 
-  // 获取所有用户（管理员功能）
+  // 获取所有用户（管理员功能）- 保持原有逻辑不变
   const fetchAllUsers = useCallback(async () => {
     if (!isAdmin()) {
       return;
@@ -104,7 +107,7 @@ export const useAuth = () => {
     }
   }, [isAdmin]);
 
-  // ✅ 为用户分配模块权限（通过Lambda API）
+  // ✅ 为用户分配模块权限（通过Lambda API）- 保持原有逻辑不变
   const assignModuleAccess = async (userId, modules) => {
     if (!isAdmin()) {
       throw new Error('只有管理员可以分配权限');
@@ -145,7 +148,7 @@ export const useAuth = () => {
     }
   };
 
-  // ✅ 撤销用户权限（通过Lambda API）
+  // ✅ 撤销用户权限（通过Lambda API）- 保持原有逻辑不变
   const revokeModuleAccess = async (userId) => {
     if (!isAdmin()) {
       throw new Error('只有管理员可以撤销权限');
@@ -180,7 +183,7 @@ export const useAuth = () => {
     }
   };
 
-  // 获取用户的权限信息（为UserManagement组件使用）
+  // 获取用户的权限信息（为UserManagement组件使用）- 保持原有逻辑不变
   const getUserPermissions = (targetUser) => {
     if (!targetUser) return { modules: [], approvedBy: null, approvedAt: null };
     
@@ -191,7 +194,78 @@ export const useAuth = () => {
     };
   };
 
-  // 自动加载用户列表（如果是管理员）
+  // ===== ✅ 新增：视频相关API方法 =====
+  
+  // 获取视频列表（带token认证）
+  const fetchVideoList = async (path = '') => {
+    try {
+      console.log('🎬 开始获取视频列表, path:', path);
+      
+      // 获取Clerk token
+      const token = await getToken();
+      console.log('🔑 获取到token:', token ? '有效' : '无效');
+      
+      const response = await fetch(
+        `${VIDEO_API_URL}/videos/list?path=${encodeURIComponent(path)}`,
+        {
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      console.log('📡 API响应状态:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+      
+      const data = await response.json();
+      console.log('✅ 获取视频列表成功:', data.length, '个文件');
+      return data;
+      
+    } catch (error) {
+      console.error('❌ 获取视频列表失败:', error);
+      throw error;
+    }
+  };
+
+  // 获取视频播放URL（带token认证）
+  const getVideoUrl = async (videoKey) => {
+    try {
+      console.log('🎬 获取视频播放URL, key:', videoKey);
+      
+      // 获取Clerk token
+      const token = await getToken();
+      
+      const response = await fetch(
+        `${VIDEO_API_URL}/videos/url/${encodeURIComponent(videoKey)}`,
+        {
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+      
+      const data = await response.json();
+      console.log('✅ 获取视频URL成功');
+      return data;
+      
+    } catch (error) {
+      console.error('❌ 获取视频URL失败:', error);
+      throw error;
+    }
+  };
+
+  // 自动加载用户列表（如果是管理员）- 保持原有逻辑不变
   useEffect(() => {
     if (userLoaded && isSignedIn && isAdmin()) {
       fetchAllUsers();
@@ -199,7 +273,7 @@ export const useAuth = () => {
   }, [userLoaded, isSignedIn, user]);
 
   return {
-    // 原有功能
+    // 原有功能 - 完全不变
     user,
     isSignedIn: !!isSignedIn,
     isLoaded: userLoaded && authLoaded,
@@ -212,12 +286,16 @@ export const useAuth = () => {
     hasModuleAccess,
     getUserModules,
     getUserPermissionInfo,
-    // 管理员功能
+    // 管理员功能 - 完全不变
     users,
     loading: loading,
     fetchAllUsers,
     assignModuleAccess,
     revokeModuleAccess,
-    getUserPermissions
+    getUserPermissions,
+    
+    // ✅ 新增：视频相关方法
+    fetchVideoList,
+    getVideoUrl
   };
 };
