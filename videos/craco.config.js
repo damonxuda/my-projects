@@ -29,6 +29,7 @@ module.exports = {
         if (babelLoader) {
           // 扩展babel-loader的include范围，包含auth-clerk文件夹
           const authPath = path.resolve(__dirname, '../auth-clerk');
+          
           if (Array.isArray(babelLoader.include)) {
             babelLoader.include.push(authPath);
           } else {
@@ -40,17 +41,4 @@ module.exports = {
       return webpackConfig;
     },
   },
-  style: {
-    tailwind: {
-      loaderOptions: {
-        postcssOptions: {
-          ident: 'postcss',
-          plugins: [
-            require('tailwindcss'),
-            require('autoprefixer'),
-          ],
-        },
-      },
-    },
-  },
-};
+}

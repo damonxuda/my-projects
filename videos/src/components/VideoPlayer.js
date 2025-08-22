@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { X, Play, Download } from 'lucide-react';
-import { useClerk } from '@clerk/clerk-react';
+import { useAuth } from '../../../auth-clerk/src';
 
 const VideoPlayer = ({ video, apiUrl, onClose }) => {
   const [videoUrl, setVideoUrl] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const { session } = useClerk();
+  const { getToken, isSignedIn } = useAuth();
 
   useEffect(() => {
     const loadVideoUrl = async () => {
       try {
-        const token = await session?.getToken();
+        const token = await getToken();
         if (!token) {
           throw new Error('未找到认证token');
         }
@@ -35,10 +35,10 @@ const VideoPlayer = ({ video, apiUrl, onClose }) => {
       }
     };
 
-    if (video && session) {
+    if (video && isSignedIn) {
       loadVideoUrl();
     }
-  }, [video, session, apiUrl]);
+  }, [video, isSignedIn, apiUrl, getToken]);
 
   if (!video) return null;
 
