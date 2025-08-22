@@ -18,7 +18,8 @@ const VideoLibrary = () => {
     isSignedIn, 
     isAdmin, 
     fetchVideoList, // ✅ 新增：使用封装好的视频API方法
-    getVideoUrl    // ✅ 新增：使用封装好的视频URL方法
+    getVideoUrl,    // ✅ 新增：使用封装好的视频URL方法
+    getToken
   } = useAuth();
 
   // API基础URL（现在通过useAuth方法调用，不需要直接使用）
@@ -124,23 +125,35 @@ const VideoLibrary = () => {
   // ✅ 视频播放处理 - 使用useAuth的getVideoUrl方法
   const handleVideoPlay = async (video) => {
     try {
-      console.log('🎬 VideoLibrary: 请求播放视频:', video.key);
+      console.log('=== 开始调试 ===');
+      console.log('1. video对象:', video);
+      console.log('2. API_BASE_URL:', API_BASE_URL, typeof API_BASE_URL);
       
-      // 使用useAuth提供的getVideoUrl方法（内部已处理token）
-      const urlData = await getVideoUrl(video.key);
+      const token = await getToken();
+      console.log('3. token类型:', typeof token);
+      console.log('4. token前10位:', token?.substring(0, 10));
       
-      console.log('✅ VideoLibrary: 获取到播放URL');
+      const encodedKey = encodeURIComponent(video.key);
+      console.log('5. 编码后的key:', encodedKey);
       
-      // 设置包含播放URL的视频对象
-      setSelectedVideo({
-        ...video,
-        playUrl: urlData.url,
-        expiresAt: urlData.expiresAt
+      const url = `${API_BASE_URL}/videos/url/${encodedKey}`;
+      console.log('6. 完整URL:', url);
+      
+      console.log('7. 即将发送fetch请求');
+      
+      // 在这里添加一行来捕获确切的错误位置
+      const response = await fetch(url, {
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
       });
       
+      console.log('8. fetch请求成功');
+      
     } catch (error) {
-      console.error('❌ VideoLibrary: 获取视频URL失败:', error);
-      alert('获取视频播放地址失败：' + error.message);
+      console.error('❌ 详细错误:', error);
+      console.error('❌ 错误堆栈:', error.stack);
     }
   };
 

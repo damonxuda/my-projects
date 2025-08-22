@@ -296,6 +296,7 @@ export const useAuth = () => {
     
     // ✅ 新增：视频相关方法
     fetchVideoList,
-    getVideoUrl
+    getVideoUrl,
+    getToken
   };
 };
