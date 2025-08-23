@@ -11,25 +11,58 @@ const VideoPlayer = ({ video, apiUrl, onClose }) => {
   useEffect(() => {
     const loadVideoUrl = async () => {
       try {
+        console.log('🎬 开始加载视频URL');
+        console.log('📋 video对象:', video);
+        console.log('🌐 apiUrl:', apiUrl);
+        
         const token = await getToken();
-        if (!token) {
-          throw new Error('未找到认证token');
+        console.log('🎫 获取到token:', token ? '有效' : '无效');
+        
+        const requestUrl = `${apiUrl}/videos/url/${encodeURIComponent(video.key)}`;
+        console.log('📡 完整请求URL:', requestUrl);
+        console.log('🔑 video.key:', video.key);
+        
+        const response = await fetch(requestUrl, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        console.log('📨 响应状态码:', response.status);
+        console.log('📨 响应状态文本:', response.statusText);
+        console.log('📨 响应头:', Object.fromEntries(response.headers.entries()));
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('❌ 响应错误内容:', errorText);
+          throw new Error(`获取视频URL失败: ${response.status} ${response.statusText}`);
         }
 
-        const response = await fetch(
-          `${apiUrl}/videos/url/${encodeURIComponent(video.key)}`,
-          {
-            headers: { Authorization: `Bearer ${token}` }
-          }
-        );
-
-        if (!response.ok) throw new Error('获取视频URL失败');
-
-        const data = await response.json();
-        setVideoUrl(data.url);
+        const responseText = await response.text();
+        console.log('📄 原始响应文本:', responseText);
+        
+        let data;
+        try {
+          data = JSON.parse(responseText);
+          console.log('📦 解析后的JSON数据:', data);
+        } catch (parseError) {
+          console.error('❌ JSON解析失败:', parseError);
+          console.log('📄 无法解析的响应:', responseText);
+          throw new Error('服务器返回的数据格式错误');
+        }
+        
+        console.log('🎯 data.url:', data.url);
+        console.log('🎯 预签名URL长度:', data.url ? data.url.length : '未找到url字段');
+        
+        if (data.url) {
+          console.log('✅ 设置videoUrl:', data.url);
+          setVideoUrl(data.url);
+        } else {
+          console.error('❌ 响应中没有url字段');
+          throw new Error('服务器返回的数据中没有视频URL');
+        }
+        
       } catch (err) {
-        console.error('加载视频失败:', err);
-        setError('加载视频失败，请重试');
+        console.error('❌ 完整错误信息:', err);
+        setError(`加载视频失败: ${err.message}`);
       } finally {
         setLoading(false);
       }

@@ -12,20 +12,18 @@ const VideoLibrary = () => {
   const [error, setError] = useState('');
   const [selectedVideo, setSelectedVideo] = useState(null);
   
-  // 使用 auth-clerk 的 useAuth hook - 包含新的视频API方法
   const { 
     user, 
     isSignedIn, 
     isAdmin, 
-    fetchVideoList, // ✅ 新增：使用封装好的视频API方法
-    getVideoUrl,    // ✅ 新增：使用封装好的视频URL方法
+    fetchVideoList,
+    getVideoUrl,
     getToken
   } = useAuth();
 
-  // API基础URL（现在通过useAuth方法调用，不需要直接使用）
   const API_BASE_URL = process.env.REACT_APP_VIDEO_API_URL;
 
-  // 使用auth-clerk封装的API调用方法
+  // 加载视频列表
   const loadItems = async (path = '') => {
     setLoading(true);
     setError('');
@@ -35,20 +33,16 @@ const VideoLibrary = () => {
         throw new Error('用户未登录');
       }
 
-      console.log('🎬 VideoLibrary: 开始加载视频列表, path:', path);
+      console.log('VideoLibrary: 加载视频列表, path:', path);
       
-      // ✅ 使用useAuth提供的fetchVideoList方法（内部已处理token）
       const data = await fetchVideoList(path);
-      
-      console.log('✅ VideoLibrary: 获取到数据:', data.length, '个文件');
-      
       const processedItems = processFileList(data, path);
       setItems(processedItems);
       
-      console.log('✅ VideoLibrary: 处理后的items:', processedItems.length, '个项目');
+      console.log('VideoLibrary: 加载完成,', processedItems.length, '个项目');
       
     } catch (err) {
-      console.error('❌ VideoLibrary: 加载失败:', err);
+      console.error('VideoLibrary: 加载失败:', err);
       setError(err.message || '加载失败，请刷新重试');
     } finally {
       setLoading(false);
@@ -122,42 +116,13 @@ const VideoLibrary = () => {
     loadItems(path);
   };
 
-  // ✅ 视频播放处理 - 使用useAuth的getVideoUrl方法
-  const handleVideoPlay = async (video) => {
-    try {
-      console.log('=== 开始调试 ===');
-      console.log('1. video对象:', video);
-      console.log('2. API_BASE_URL:', API_BASE_URL, typeof API_BASE_URL);
-      
-      const token = await getToken();
-      console.log('3. token类型:', typeof token);
-      console.log('4. token前10位:', token?.substring(0, 10));
-      
-      const encodedKey = encodeURIComponent(video.key);
-      console.log('5. 编码后的key:', encodedKey);
-      
-      const url = `${API_BASE_URL}/videos/url/${encodedKey}`;
-      console.log('6. 完整URL:', url);
-      
-      console.log('7. 即将发送fetch请求');
-      
-      // 在这里添加一行来捕获确切的错误位置
-      const response = await fetch(url, {
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      console.log('8. fetch请求成功');
-      
-    } catch (error) {
-      console.error('❌ 详细错误:', error);
-      console.error('❌ 错误堆栈:', error.stack);
-    }
+  // 视频播放处理
+  const handleVideoPlay = (video) => {
+    console.log('🎬 点击视频:', video.name);
+    setSelectedVideo(video);
   };
 
-  // 初始加载 - 与Quiz模式保持一致
+  // 初始加载
   useEffect(() => {
     if (isSignedIn && user) {
       loadItems();
@@ -171,7 +136,6 @@ const VideoLibrary = () => {
           <h1 className="text-4xl font-bold text-gray-800 mb-4">
             🎬 视频中心
           </h1>
-          {/* 调试信息 - 与Quiz保持一致的用户信息显示 */}
           <div className="text-sm text-gray-600 mb-4">
             用户: {user?.emailAddresses?.[0]?.emailAddress} | 
             {isAdmin && <span className="text-blue-600"> [管理员]</span>} |
@@ -214,7 +178,6 @@ const VideoLibrary = () => {
                     <p>用户邮箱: {user?.emailAddresses?.[0]?.emailAddress}</p>
                     <p>管理员: {isAdmin ? '是' : '否'}</p>
                     <p>当前路径: {currentPath || '根目录'}</p>
-                    <p>useAuth方法: fetchVideoList={typeof fetchVideoList}, getVideoUrl={typeof getVideoUrl}</p>
                   </div>
                 </details>
               </div>
@@ -247,7 +210,7 @@ const VideoLibrary = () => {
                     key={`${item.type}-${item.name}-${index}`}
                     item={item}
                     onFolderClick={navigateToPath}
-                    onVideoPlay={handleVideoPlay} // ✅ 使用新的播放处理函数
+                    onVideoPlay={handleVideoPlay}
                   />
                 ))}
               </div>
