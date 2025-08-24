@@ -72,7 +72,7 @@ jobs:
         if: steps.changes.outputs.schedule_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
         run: |
           echo "🚀 Deploying Schedule to /schedule path..."
-          aws s3 sync ./schedule/ s3://${{ secrets.AWS_S3_BUCKET_NAME }}/schedule/ \
+          aws s3 sync ./schedule/ s3://damonxuda-projects/schedule/ \
             --delete \
             --exclude "*.md" \
             --exclude "README*" \
@@ -84,6 +84,7 @@ jobs:
             --exclude ".eslintrc*" \
             --exclude ".prettierrc*"
           echo "✅ Schedule deployed to /schedule path"
+          echo "📁 Schedule: https://damonxuda.site/schedule/"
 
       # 6. 构建并部署 Quiz 项目（React应用）
       - name: Install Quiz Dependencies
@@ -117,11 +118,12 @@ jobs:
         if: steps.changes.outputs.quiz_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
         run: |
           echo "☁️ Deploying Quiz to S3..."
-          aws s3 rm s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/ --recursive
-          aws s3 sync ./quiz/build/ s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/ \
+          aws s3 rm s3://damonxuda-projects/quiz/ --recursive
+          aws s3 sync ./quiz/build/ s3://damonxuda-projects/quiz/ \
             --cache-control "no-cache, no-store, must-revalidate" \
             --exclude ".DS_Store"
           echo "✅ Quiz deployed"
+          echo "📁 Quiz: https://damonxuda.site/quiz/"
 
       # 7. 构建并部署 Videos 项目（修正为React项目）
       - name: Install Videos Dependencies
@@ -152,12 +154,13 @@ jobs:
       - name: Deploy Videos to S3
         if: steps.changes.outputs.videos_changed == 'true' || steps.changes.outputs.force_deploy == 'true' || true
         run: |
-          echo "☁️ Deploying Videos to damonxuda-videos bucket..."
-          aws s3 rm s3://damonxuda-videos/videos/ --recursive
-          aws s3 sync ./videos/build/ s3://damonxuda-videos/videos/ \
+          echo "☁️ Deploying Videos to damonxuda-projects bucket..."
+          aws s3 rm s3://damonxuda-projects/videos/ --recursive
+          aws s3 sync ./videos/build/ s3://damonxuda-projects/videos/ \
             --cache-control "no-cache, no-store, must-revalidate" \
             --exclude ".DS_Store"
-          echo "✅ Videos deployed to damonxuda-videos bucket"
+          echo "✅ Videos deployed to damonxuda-projects bucket"
+          echo "📁 Videos: https://damonxuda.site/videos/"
 
       # 8. 验证部署和Clerk认证
       - name: Verify Clerk Authentication Setup
@@ -165,17 +168,17 @@ jobs:
           echo "🔐 === Clerk认证系统验证 ==="
           echo ""
           echo "🔍 1. 检查 S3 上的 quiz 文件:"
-          aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/ --recursive --summarize || echo "Quiz files not found"
+          aws s3 ls s3://damonxuda-projects/quiz/ --recursive --summarize || echo "Quiz files not found"
           echo ""
           echo "🔍 2. 检查 Videos 文件:"
-          aws s3 ls s3://damonxuda-videos/videos/ --recursive || echo "Videos files not found"
+          aws s3 ls s3://damonxuda-projects/videos/ --recursive || echo "Videos files not found"
 
       # 9. 部署根目录文件
       - name: Deploy root files
         run: |
           echo "🚀 Deploying root directory files..."
           if [ -f "./index.html" ]; then
-            aws s3 cp ./index.html s3://${{ secrets.AWS_S3_BUCKET_NAME }}/index.html
+            aws s3 cp ./index.html s3://damonxuda-projects/index.html
             echo "✅ Root index.html deployed"
           else
             echo "ℹ️ No root index.html found"
@@ -187,13 +190,13 @@ jobs:
           echo "📁 验证所有项目部署..."
 
           echo "=== Schedule ==="
-          aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/schedule/ --recursive | head -3 || echo "❌ Schedule not found"
+          aws s3 ls s3://damonxuda-projects/schedule/ --recursive | head -3 || echo "❌ Schedule not found"
 
           echo "=== Quiz ==="
-          aws s3 ls s3://${{ secrets.AWS_S3_BUCKET_NAME }}/quiz/ --recursive | head -3 || echo "❌ Quiz not found"
+          aws s3 ls s3://damonxuda-projects/quiz/ --recursive | head -3 || echo "❌ Quiz not found"
 
           echo "=== Videos ==="
-          aws s3 ls s3://damonxuda-videos/videos/ --recursive | head -3 || echo "❌ Videos not found"
+          aws s3 ls s3://damonxuda-projects/videos/ --recursive | head -3 || echo "❌ Videos not found"
 
       # 11. 部署成功报告
       - name: Deploy Success Report
@@ -213,4 +216,4 @@ jobs:
           echo "   🧠 Quiz: https://damonxuda.site/quiz/"
           echo "   🎬 Videos: https://damonxuda.site/videos/"
           echo ""
-          echo "✅ 部署完成！"
+          echo "✅ 部署完成！所有项目现已部署到 damonxuda-projects bucket!"

@@ -26,6 +26,7 @@ jobs:
           cache-dependency-path: |
             quiz/package-lock.json
             videos/package-lock.json
+            admin/package-lock.json
 
       # 3. 配置 AWS CLI
       - name: Configure AWS CLI
@@ -35,14 +36,14 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      # 4. 检测项目变化（修正版）
+      # 4. 检测项目变化（修正版 + admin）
       - name: Detect changed projects
         id: changes
         run: |
           echo "🔍 检测项目变化..."
 
-          # 检测每个项目的变化
-          for project in schedule auth-clerk shared quiz videos; do
+          # 检测每个项目的变化（添加admin）
+          for project in schedule auth-clerk shared quiz videos admin; do
             if git diff --name-only HEAD~1 HEAD | grep -q "^${project}/"; then
               echo "${project//-/_}_changed=true" >> $GITHUB_OUTPUT
               echo "✅ ${project} project has changes"
@@ -52,11 +53,12 @@ jobs:
             fi
           done
 
-          # 依赖关系处理（修正变量名）
+          # 依赖关系处理（修正变量名 + admin）
           if [[ "$(cat $GITHUB_OUTPUT | grep -E 'auth_clerk_changed=true|shared_changed=true')" ]]; then
             echo "quiz_changed=true" >> $GITHUB_OUTPUT
             echo "videos_changed=true" >> $GITHUB_OUTPUT
-            echo "🔄 Dependencies changed, forcing Quiz and Videos rebuild"
+            echo "admin_changed=true" >> $GITHUB_OUTPUT
+            echo "🔄 Dependencies changed, forcing Quiz, Videos and Admin rebuild"
           fi
 
           # 检测强制部署
@@ -162,7 +164,43 @@ jobs:
           echo "✅ Videos deployed to damonxuda-projects bucket"
           echo "📁 Videos: https://damonxuda.site/videos/"
 
-      # 8. 验证部署和Clerk认证
+      # 8. 构建并部署 Admin 项目（新增）
+      - name: Install Admin Dependencies
+        if: steps.changes.outputs.admin_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        run: |
+          echo "📦 Installing Admin dependencies..."
+          if [ -d "./admin" ]; then
+            cd admin && npm ci
+            cd ../auth-clerk && npm ci
+            echo "✅ Admin dependencies installed"
+          else
+            echo "⚠️ Admin directory not found"
+          fi
+
+      - name: Build Admin Application
+        if: steps.changes.outputs.admin_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        working-directory: ./admin
+        run: |
+          echo "🔧 Setting environment variables..."
+          echo "REACT_APP_CLERK_PUBLISHABLE_KEY=${{ secrets.REACT_APP_CLERK_PUBLISHABLE_KEY }}" >> .env.production
+          echo "REACT_APP_ADMIN_EMAILS=${{ secrets.REACT_APP_ADMIN_EMAILS }}" >> .env.production
+          echo "GENERATE_SOURCEMAP=false" >> .env.production
+
+          echo "🏗️ Building Admin React application..."
+          npm run build
+
+      - name: Deploy Admin to S3
+        if: steps.changes.outputs.admin_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        run: |
+          echo "☁️ Deploying Admin to S3..."
+          aws s3 rm s3://damonxuda-projects/admin/ --recursive
+          aws s3 sync ./admin/build/ s3://damonxuda-projects/admin/ \
+            --cache-control "no-cache, no-store, must-revalidate" \
+            --exclude ".DS_Store"
+          echo "✅ Admin deployed"
+          echo "📁 Admin: https://damonxuda.site/admin/"
+
+      # 9. 验证部署和Clerk认证
       - name: Verify Clerk Authentication Setup
         run: |
           echo "🔐 === Clerk认证系统验证 ==="
@@ -172,8 +210,11 @@ jobs:
           echo ""
           echo "🔍 2. 检查 Videos 文件:"
           aws s3 ls s3://damonxuda-projects/videos/ --recursive || echo "Videos files not found"
+          echo ""
+          echo "🔍 3. 检查 Admin 文件:"
+          aws s3 ls s3://damonxuda-projects/admin/ --recursive || echo "Admin files not found"
 
-      # 9. 部署根目录文件
+      # 10. 部署根目录文件
       - name: Deploy root files
         run: |
           echo "🚀 Deploying root directory files..."
@@ -184,7 +225,7 @@ jobs:
             echo "ℹ️ No root index.html found"
           fi
 
-      # 10. 验证所有部署结果
+      # 11. 验证所有部署结果
       - name: Verify all deployments
         run: |
           echo "📁 验证所有项目部署..."
@@ -198,7 +239,10 @@ jobs:
           echo "=== Videos ==="
           aws s3 ls s3://damonxuda-projects/videos/ --recursive | head -3 || echo "❌ Videos not found"
 
-      # 11. 部署成功报告
+          echo "=== Admin ==="
+          aws s3 ls s3://damonxuda-projects/admin/ --recursive | head -3 || echo "❌ Admin not found"
+
+      # 12. 部署成功报告
       - name: Deploy Success Report
         run: |
           echo "🎉 多项目部署完成!"
@@ -209,11 +253,13 @@ jobs:
           echo "   Shared: ${{ steps.changes.outputs.shared_changed }}"
           echo "   Quiz: ${{ steps.changes.outputs.quiz_changed }}"
           echo "   Videos: ${{ steps.changes.outputs.videos_changed }}"
+          echo "   Admin: ${{ steps.changes.outputs.admin_changed }}"
           echo "   强制部署: ${{ steps.changes.outputs.force_deploy }}"
           echo ""
           echo "🌐 项目访问地址:"
           echo "   📚 Schedule: https://damonxuda.site/schedule/"
           echo "   🧠 Quiz: https://damonxuda.site/quiz/"
           echo "   🎬 Videos: https://damonxuda.site/videos/"
+          echo "   🛡️ Admin: https://damonxuda.site/admin/"
           echo ""
           echo "✅ 部署完成！所有项目现已部署到 damonxuda-projects bucket!"
