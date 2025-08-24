@@ -1,4 +1,4 @@
-// auth-clerk/src/components/ModuleAccessGuard.js
+// auth-clerk/src/components/ModuleAccessGuard.jsx
 import React from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { SignInButton } from '@clerk/clerk-react';
