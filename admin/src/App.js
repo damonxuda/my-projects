@@ -5,7 +5,7 @@ import { User, Users, Shield, Settings } from 'lucide-react';
 
 const AdminPermissionsApp = () => {
   const [activeTab, setActiveTab] = useState('users');
-  const { user, isSignedIn, isAdmin, loading: authLoading } = useAuth();
+  const { user, isAdmin, loading: authLoading } = useAuth();
 
   if (authLoading) {
     return (

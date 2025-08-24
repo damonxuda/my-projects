@@ -1,8 +1,8 @@
 // 认证相关从auth-clerk导入
-import { ClerkAuthProvider, useAuth, ModuleAccessGuard, UserProfile } from '../../auth-clerk/src';
+import { ClerkAuthProvider, useAuth, ModuleAccessGuard, UserManagement, UserProfile } from '../../auth-clerk/src';
 
 import React, { useState, useEffect } from 'react';
-import { Star, Edit2, Database, Github, User, Eye, EyeOff, Trash2 } from 'lucide-react';
+import { Star, Edit2, Database, Github, User, Users, Eye, EyeOff, Trash2 } from 'lucide-react';
 import QuestionInput from './components/QuestionInput/index.js';
 import QuestionPrintController from './components/QuestionPrintController';
 import db from './services/DatabaseService.js';
@@ -197,7 +197,7 @@ const QuizApp = () => {
         setLoading(false);
         
         // 普通用户自动切换到可访问的选项卡
-        if (!isAdmin && (activeTab === 'input' || activeTab === 'deploy')) {
+        if (!isAdmin && (activeTab === 'input' || activeTab === 'deploy' || activeTab === 'users')) {
           setActiveTab('browse');
         }
       }
@@ -404,7 +404,7 @@ const QuizApp = () => {
       <div className="max-w-6xl mx-auto p-6 bg-gray-50 min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">正在加载题库系统...</p>
+          <p className="mt-4 text-gray-600">正在加载...</p>
         </div>
       </div>
     );
@@ -413,11 +413,11 @@ const QuizApp = () => {
   return (
     <div className="max-w-6xl mx-auto p-6 bg-gray-50 min-h-screen">
       <div className="bg-white rounded-lg shadow-lg">
-        {/* 优化后的顶部用户信息栏 */}
+        {/* 顶部用户信息栏 */}
         <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 rounded-t-lg">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-4">
-              <h1 className="text-xl font-bold text-gray-900">题库系统</h1>
+              <h1 className="text-xl font-bold text-gray-900">小学奥数题库系统</h1>
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <User size={16} />
                 <span>{user?.emailAddresses?.[0]?.emailAddress || user?.firstName}</span>
@@ -426,13 +426,7 @@ const QuizApp = () => {
                 )}
               </div>
             </div>
-            {/* 右上角登出按钮 */}
             <UserProfile showWelcome={false} afterSignOutUrl="/" />
-          </div>
-          <div className="mt-2">
-            <p className="text-sm text-gray-600">
-              请先登录以访问题库系统
-            </p>
           </div>
         </div>
 
@@ -487,17 +481,32 @@ const QuizApp = () => {
                 🚀 系统状态
               </button>
             )}
+            
+            {/* 用户管理 - 只有管理员可见 */}
+            {isAdmin && (
+              <button
+                onClick={() => setActiveTab('users')}
+                className={`py-4 px-2 border-b-2 font-medium text-sm ${
+                  activeTab === 'users' 
+                    ? 'border-blue-500 text-blue-600' 
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <Users size={16} className="inline mr-1" />
+                用户管理
+              </button>
+            )}
           </nav>
         </div>
 
         <div className="p-6">
-          {/* 其余的内容继续... */}
           {activeTab === 'input' && (
             <div>
               <div className="mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">录入新题目</h2>
               </div>
 
+              {/* QuestionInput 组件 */}
               <QuestionInput 
                 questions={questions}
                 setQuestions={setQuestions}
@@ -505,6 +514,7 @@ const QuizApp = () => {
                 user={user}
               />
 
+              {/* 数据库统计 */}
               {(questions.length > 0 || papers.length > 0) && (
                 <div className="mt-6">
                   <div className="flex justify-between items-center mb-4">
@@ -523,6 +533,7 @@ const QuizApp = () => {
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* 按分类统计 */}
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <h4 className="font-medium mb-2">📈 按分类统计：</h4>
                       <div className="space-y-2">
@@ -538,6 +549,7 @@ const QuizApp = () => {
                       </div>
                     </div>
                     
+                    {/* 按老师统计 */}
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <h4 className="font-medium mb-2">👨‍🏫 按老师统计：</h4>
                       <div className="space-y-2">
@@ -674,6 +686,7 @@ const QuizApp = () => {
                           </div>
                         )}
                       </div>
+                      {/* 右上角：管理员编辑按钮 + 点击评分星星 */}
                       <div className="flex items-center gap-2">
                         {isAdmin && (
                           <>
@@ -692,6 +705,7 @@ const QuizApp = () => {
                                   const result = await db.deleteQuestion(q.id);
                                   if (!result.success) throw new Error(result.error);
                                   
+                                  // 重新加载题目列表
                                   const questionsResult = await db.getQuestions();
                                   if (questionsResult.success) {
                                     setQuestions(questionsResult.data || []);
@@ -729,6 +743,7 @@ const QuizApp = () => {
                       />
                     </div>
                     
+                    {/* 编辑表单 */}
                     {editingQuestion === q.id && isAdmin && (
                       <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
                         <h5 className="font-medium text-gray-900 mb-3">编辑题目</h5>
@@ -794,6 +809,7 @@ const QuizApp = () => {
                       </div>
                     )}
                     
+                    {/* 左下角：只保留错题标记按钮 */}
                     <div className="flex gap-2 pt-4 border-t border-gray-100">
                       <button
                         onClick={() => toggleWrongQuestion(q.id)}
@@ -822,6 +838,7 @@ const QuizApp = () => {
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-6">🎯 练习模式</h2>
               
+              {/* 练习条件筛选 */}
               <div className="bg-white p-6 rounded-lg border mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">📋 选择练习范围</h3>
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
@@ -891,6 +908,7 @@ const QuizApp = () => {
                 </div>
               </div>
 
+              {/* 🔴 新增：打印功能 */}
               {filteredQuestions.length > 0 && (
                 <QuestionPrintController 
                   questions={filteredQuestions}
@@ -903,26 +921,27 @@ const QuizApp = () => {
                 />
               )}
 
-              <div className="space-y-6">
-                {filteredQuestions.map((question, index) => (
-                  <PracticeQuestion
-                    key={question.id}
-                    question={question}
-                    index={index + 1}
-                    onRate={(score) => addAttempt(question.id, score)}
-                    onToggleWrong={() => toggleWrongQuestion(question.id)}
-                    getCurrentScore={getCurrentScore}
-                    isMarkedWrong={isMarkedWrong}
-                    isAdmin={isAdmin}
-                  />
-                ))}
-                
-                {filteredQuestions.length === 0 && (
-                  <div className="text-center py-12 text-gray-500">
-                    {questions.length === 0 ? '数据库中还没有题目，去添加第一套试卷吧！' : '没有符合条件的题目'}
-                  </div>
-                )}
-              </div>
+            {/* 实际的题目显示 */}
+            <div className="space-y-6">
+              {filteredQuestions.map((question, index) => (
+                <PracticeQuestion
+                  key={question.id}
+                  question={question}
+                  index={index + 1}
+                  onRate={(score) => addAttempt(question.id, score)}
+                  onToggleWrong={() => toggleWrongQuestion(question.id)}
+                  getCurrentScore={getCurrentScore}
+                  isMarkedWrong={isMarkedWrong}
+                  isAdmin={isAdmin}
+                />
+              ))}
+              
+              {filteredQuestions.length === 0 && (
+                <div className="text-center py-12 text-gray-500">
+                  {questions.length === 0 ? '数据库中还没有题目，去添加第一套试卷吧！' : '没有符合条件的题目'}
+                </div>
+              )}
+            </div>
             </div>
           )}
 
@@ -991,6 +1010,11 @@ const QuizApp = () => {
                 </p>
               </div>
             </div>
+          )}
+
+          {/* 用户管理 - 只有管理员能看到 */}
+          {activeTab === 'users' && isAdmin && (
+            <UserManagement />
           )}
         </div>
       </div>
