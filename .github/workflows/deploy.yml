@@ -129,7 +129,7 @@ jobs:
 
       # 7. 构建并部署 Videos 项目（修正为React项目）
       - name: Install Videos Dependencies
-        if: steps.changes.outputs.videos_changed == 'true' || steps.changes.outputs.force_deploy == 'true' || true
+        if: steps.changes.outputs.videos_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
         run: |
           echo "📦 Installing Videos dependencies..."
           if [ -d "./videos" ]; then
@@ -142,7 +142,7 @@ jobs:
           fi
 
       - name: Build Videos Application
-        if: steps.changes.outputs.videos_changed == 'true' || steps.changes.outputs.force_deploy == 'true' || true
+        if: steps.changes.outputs.videos_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
         working-directory: ./videos
         run: |
           echo "🔧 Setting environment variables..."
@@ -154,7 +154,7 @@ jobs:
           npm run build
 
       - name: Deploy Videos to S3
-        if: steps.changes.outputs.videos_changed == 'true' || steps.changes.outputs.force_deploy == 'true' || true
+        if: steps.changes.outputs.videos_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
         run: |
           echo "☁️ Deploying Videos to damonxuda-projects bucket..."
           aws s3 rm s3://damonxuda-projects/videos/ --recursive
@@ -164,9 +164,9 @@ jobs:
           echo "✅ Videos deployed to damonxuda-projects bucket"
           echo "📁 Videos: https://damonxuda.site/videos/"
 
-      # 8. 构建并部署 Admin 项目（新增）
+      # 8. 构建并部署 Admin 项目（新增 - 临时强制部署）
       - name: Install Admin Dependencies
-        if: steps.changes.outputs.admin_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        if: steps.changes.outputs.admin_changed == 'true' || steps.changes.outputs.force_deploy == 'true' || true
         run: |
           echo "📦 Installing Admin dependencies..."
           if [ -d "./admin" ]; then
@@ -178,7 +178,7 @@ jobs:
           fi
 
       - name: Build Admin Application
-        if: steps.changes.outputs.admin_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        if: steps.changes.outputs.admin_changed == 'true' || steps.changes.outputs.force_deploy == 'true' || true
         working-directory: ./admin
         run: |
           echo "🔧 Setting environment variables..."
@@ -190,7 +190,7 @@ jobs:
           npm run build
 
       - name: Deploy Admin to S3
-        if: steps.changes.outputs.admin_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        if: steps.changes.outputs.admin_changed == 'true' || steps.changes.outputs.force_deploy == 'true' || true
         run: |
           echo "☁️ Deploying Admin to S3..."
           aws s3 rm s3://damonxuda-projects/admin/ --recursive
