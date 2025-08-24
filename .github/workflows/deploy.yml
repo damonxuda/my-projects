@@ -164,9 +164,9 @@ jobs:
           echo "✅ Videos deployed to damonxuda-projects bucket"
           echo "📁 Videos: https://damonxuda.site/videos/"
 
-      # 8. 构建并部署 Admin 项目（新增 - 临时强制部署）
+      # 8. 构建并部署 Admin 项目
       - name: Install Admin Dependencies
-        if: steps.changes.outputs.admin_changed == 'true' || steps.changes.outputs.force_deploy == 'true' || true
+        if: steps.changes.outputs.admin_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
         run: |
           echo "📦 Installing Admin dependencies..."
           if [ -d "./admin" ]; then
@@ -178,7 +178,7 @@ jobs:
           fi
 
       - name: Build Admin Application
-        if: steps.changes.outputs.admin_changed == 'true' || steps.changes.outputs.force_deploy == 'true' || true
+        if: steps.changes.outputs.admin_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
         working-directory: ./admin
         env:
           CI: false
@@ -192,7 +192,7 @@ jobs:
           npm run build
 
       - name: Deploy Admin to S3
-        if: steps.changes.outputs.admin_changed == 'true' || steps.changes.outputs.force_deploy == 'true' || true
+        if: steps.changes.outputs.admin_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
         run: |
           echo "☁️ Deploying Admin to S3..."
           aws s3 rm s3://damonxuda-projects/admin/ --recursive
