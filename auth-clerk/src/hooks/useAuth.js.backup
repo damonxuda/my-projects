@@ -108,184 +108,42 @@ export const useAuth = () => {
   }, [isAdmin]);
 
   // ✅ 为用户分配模块权限（通过Lambda API）- 保持原有逻辑不变
-  const assignModuleAccess = async (userEmailOrId, moduleOrModules, isGranting = true) => {
+  const assignModuleAccess = async (userId, modules) => {
     if (!isAdmin()) {
       throw new Error('只有管理员可以分配权限');
     }
 
     try {
-      // 如果是单模块开关操作
-      if (typeof moduleOrModules === 'string' && typeof isGranting === 'boolean') {
-        console.log(`🔧 单模块操作开始:`);
-        console.log(`   - 用户: ${userEmailOrId}`);
-        console.log(`   - 模块: ${moduleOrModules}`);
-        console.log(`   - 操作: ${isGranting ? '授予' : '撤销'}`);
-        
-        // 1. 获取所有用户
-        console.log(`📡 正在获取所有用户...`);
-        const allUsers = await fetchAllUsers();
-        console.log(`📡 获取到 ${allUsers.length} 个用户`);
-        
-        // 2. 查找目标用户 - 增强查找逻辑
-        console.log(`🔍 查找目标用户: ${userEmailOrId}`);
-        const targetUser = allUsers.find(u => {
-          const userEmail = u.email || u.emailAddresses?.[0]?.emailAddress || 'no-email';
-          const match = u.email === userEmailOrId || 
-                      u.id === userEmailOrId ||
-                      userEmail === userEmailOrId;
-          
-          if (match) {
-            console.log(`✅ 找到匹配用户:`, {
-              id: u.id,
-              email: userEmail,
-              currentModules: u.modules
-            });
-          }
-          
-          return match;
-        });
-        
-        if (!targetUser) {
-          console.error(`❌ 用户查找失败!`);
-          console.log(`可用用户列表:`, allUsers.map(u => ({
-            id: u.id,
-            email: u.email || u.emailAddresses?.[0]?.emailAddress,
-            modules: u.modules
-          })));
-          throw new Error(`找不到用户: ${userEmailOrId}`);
-        }
-        
-        // 3. 获取当前模块权限
-        const currentModules = targetUser.modules || [];
-        console.log(`📋 用户当前模块:`, currentModules);
-        console.log(`📋 模块类型:`, typeof currentModules, Array.isArray(currentModules));
-        
-        // 4. 计算新的模块列表
-        let newModules;
-        if (isGranting) {
-          // 添加模块
-          if (currentModules.includes(moduleOrModules)) {
-            console.log(`⚠️  模块 ${moduleOrModules} 已存在，无需添加`);
-            newModules = [...currentModules];
-          } else {
-            newModules = [...currentModules, moduleOrModules];
-            console.log(`➕ 添加模块 ${moduleOrModules}`);
-          }
-        } else {
-          // 移除模块
-          newModules = currentModules.filter(m => m !== moduleOrModules);
-          console.log(`➖ 移除模块 ${moduleOrModules}`);
-        }
-        
-        console.log(`🔄 模块变更:`);
-        console.log(`   - 原模块: [${currentModules.join(', ')}]`);
-        console.log(`   - 新模块: [${newModules.join(', ')}]`);
-        
-        // 5. 检查是否真的有变更
-        const hasChanges = JSON.stringify(currentModules.sort()) !== JSON.stringify(newModules.sort());
-        console.log(`🔍 是否有变更: ${hasChanges}`);
-        
-        if (!hasChanges) {
-          console.log(`⚠️  无变更，跳过API调用`);
-          return { success: true, message: '无需更新' };
-        }
-        
-        // 6. 调用API更新
-        const requestBody = {
-          action: 'assign_modules',
-          userId: targetUser.id,
-          modules: newModules,
-          approvedBy: user.emailAddresses[0].emailAddress
-        };
-        
-        console.log(`📤 发送API请求:`, requestBody);
-        
-        const response = await fetch(LAMBDA_API_URL, {
-          method: 'POST',
-          mode: 'cors',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(requestBody)
-        });
-
-        console.log(`📡 API响应状态: ${response.status}`);
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`❌ API调用失败:`, errorText);
-          throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-        }
-
-        const result = await response.json();
-        console.log(`📥 API响应结果:`, result);
-        
-        if (!result.success) {
-          console.error(`❌ API返回失败:`, result);
-          throw new Error(result.error || '权限操作失败');
-        }
-
-        console.log(`✅ 权限操作成功完成`);
-        
-        // 7. 重新加载用户数据以验证更新
-        console.log(`🔄 重新加载用户数据进行验证...`);
-        await new Promise(resolve => setTimeout(resolve, 1000)); // 等待1秒
-        
-        try {
-          await fetchAllUsers(); // 触发重新加载
-          console.log(`✅ 用户数据已重新加载`);
-        } catch (reloadError) {
-          console.warn(`⚠️  重新加载用户数据失败:`, reloadError);
-        }
-
-        return { 
-          success: true, 
-          message: `模块 ${moduleOrModules} 已${isGranting ? '授予' : '撤销'}`,
-          details: {
-            userId: targetUser.id,
-            email: userEmailOrId,
-            oldModules: currentModules,
-            newModules: newModules
-          }
-        };
-        
-      } else {
-        // 原有的批量分配逻辑保持不变
-        const modules = Array.isArray(moduleOrModules) ? moduleOrModules : [moduleOrModules];
-        
-        const requestBody = {
-          action: 'assign_modules',
-          userId: userEmailOrId,
-          modules: modules,
-          approvedBy: user.emailAddresses[0].emailAddress
-        };
-        
-        const response = await fetch(LAMBDA_API_URL, {
-          method: 'POST',
-          mode: 'cors',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(requestBody)
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-        }
-
-        const result = await response.json();
-        
-        if (!result.success) {
-          throw new Error(result.error || '分配权限失败');
-        }
-
-        return { success: true };
-      }
+      const requestBody = {
+        action: 'assign_modules',
+        userId: userId,
+        modules: modules,
+        approvedBy: user.emailAddresses[0].emailAddress
+      };
       
+      const response = await fetch(LAMBDA_API_URL, {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || '分配权限失败');
+      }
+
+      return { success: true };
     } catch (error) {
-      console.error('❌ 权限操作失败:', error);
-      console.error('❌ 错误堆栈:', error.stack);
+      console.error('权限分配失败:', error);
       throw error;
     }
   };
