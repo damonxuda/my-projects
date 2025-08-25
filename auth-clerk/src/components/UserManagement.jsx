@@ -5,16 +5,12 @@ import { useAuth } from '../hooks/useAuth';
 const UserManagement = () => {
   const { 
     isAdmin, 
-    user: currentUser,
-    users,                    // ✅ 使用 useAuth 的用户数据
-    loading,                  // ✅ 使用 useAuth 的加载状态
-    fetchAllUsers,           // ✅ 使用 useAuth 的获取函数
-    assignModuleAccess,      // ✅ 使用 useAuth 的权限分配函数
-    revokeModuleAccess       // ✅ 使用 useAuth 的权限撤销函数
+    users,
+    loading,
+    fetchAllUsers,
+    assignModuleAccess,
+    revokeModuleAccess
   } = useAuth();
-  
-  console.log('🔍 UserManagement组件中的users:', users);
-  console.log('🔍 users.length:', users.length);
 
   const [processingUser, setProcessingUser] = useState(null);
   const [filter, setFilter] = useState('pending'); // pending, approved, all
@@ -22,7 +18,6 @@ const UserManagement = () => {
 
   useEffect(() => {
     if (isAdmin) {
-      console.log('👤 管理员登录，获取用户列表');
       fetchAllUsers();
     }
   }, [isAdmin]);
@@ -46,48 +41,24 @@ const UserManagement = () => {
     return 'pending';
   };
 
-  // 为用户分配模块权限 - 使用 useAuth 的 Lambda API (调试版本)
+  // 为用户分配模块权限
   const assignModulePermission = async (userId, modules) => {
     try {
-      console.log('🚀 [DEBUG] 开始分配权限:', { userId, modules });
-      console.log('🔍 [DEBUG] assignModuleAccess 函数类型:', typeof assignModuleAccess);
-      console.log('🔍 [DEBUG] assignModuleAccess 函数:', assignModuleAccess);
-      console.log('🔍 [DEBUG] useAuth 返回的所有属性:', { 
-        isAdmin, 
-        currentUser, 
-        users: users?.length, 
-        loading, 
-        fetchAllUsers: typeof fetchAllUsers,
-        assignModuleAccess: typeof assignModuleAccess,
-        revokeModuleAccess: typeof revokeModuleAccess
-      });
-      
       setProcessingUser(userId);
-      
-      console.log('📞 [DEBUG] 即将调用 assignModuleAccess...');
-      
-      // 检查函数是否存在
-      if (typeof assignModuleAccess !== 'function') {
-        throw new Error('assignModuleAccess 不是一个函数！类型: ' + typeof assignModuleAccess);
-      }
-      
       await assignModuleAccess(userId, modules);
-      
-      console.log('✅ [DEBUG] assignModuleAccess 调用完成');
       
       // 刷新用户列表
       await fetchAllUsers();
       alert('权限分配成功！');
     } catch (error) {
-      console.error('❌ [DEBUG] 权限分配失败:', error);
-      console.error('❌ [DEBUG] 错误堆栈:', error.stack);
+      console.error('权限分配失败:', error);
       alert('权限分配失败：' + error.message);
     } finally {
       setProcessingUser(null);
     }
   };
 
-  // 撤销用户权限 - 使用 useAuth 的 Lambda API
+  // 撤销用户权限
   const revokeAllPermissions = async (userId) => {
     if (!window.confirm('确定要撤销该用户的所有权限吗？')) {
       return;
@@ -95,23 +66,19 @@ const UserManagement = () => {
 
     try {
       setProcessingUser(userId);
-      
-      // 使用 useAuth 的 revokeModuleAccess 函数
       await revokeModuleAccess(userId);
-
       await fetchAllUsers();
       alert('权限已撤销！');
     } catch (error) {
-      console.error('Error revoking permissions:', error);
+      console.error('撤销权限失败:', error);
       alert('撤销权限失败：' + error.message);
     } finally {
       setProcessingUser(null);
     }
   };
 
-  // 处理快速批准（给予quiz权限）- 调试版本
+  // 处理快速批准（给予quiz权限）
   const handleQuickApprove = async (userId) => {
-    console.log('🎯 [DEBUG] 快速批准被点击:', userId);
     await assignModulePermission(userId, ['quiz']);
   };
 
@@ -281,7 +248,6 @@ const UserManagement = () => {
             {filteredUsers.map((user) => {
               const status = getUserStatus(user);
               const permissions = getUserPermissions(user);
-              // 注意：Lambda API 返回的用户数据结构可能不同
               const userEmail = user.email || user.emailAddresses?.[0]?.emailAddress || '无邮箱';
               
               return (
