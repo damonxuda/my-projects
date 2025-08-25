@@ -2,7 +2,9 @@
 module.exports = {
   content: [
     "./src/**/*.{js,jsx,ts,tsx}",
-    "./public/index.html"
+    "./public/index.html",
+    // ✨ 关键：添加auth-clerk模块路径，确保ModuleAccessGuard的样式被包含
+    "../auth-clerk/src/**/*.{js,jsx,ts,tsx}"
   ],
   theme: {
     extend: {
