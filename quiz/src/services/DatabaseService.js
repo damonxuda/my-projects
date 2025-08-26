@@ -244,7 +244,80 @@ class DatabaseService {
     }
   }
 
-  // 批量上传图片到Supabase Storage（新增）
+  // 删除单个图片（新增）
+  async deleteImage(storageName) {
+    try {
+      if (!this.supabase) {
+        throw new Error('数据库未初始化');
+      }
+
+      const { error } = await this.supabase.storage
+        .from('question-images')
+        .remove([storageName]);
+
+      if (error) throw error;
+
+      return { success: true };
+    } catch (error) {
+      console.error('删除图片失败:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 批量删除图片（新增）
+  async deleteImages(storageNames) {
+    try {
+      if (!this.supabase) {
+        throw new Error('数据库未初始化');
+      }
+
+      const { error } = await this.supabase.storage
+        .from('question-images')
+        .remove(storageNames);
+
+      if (error) throw error;
+
+      return { success: true };
+    } catch (error) {
+      console.error('批量删除图片失败:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 替换图片（新增）
+  async replaceImage(oldStorageName, newImageFile) {
+    try {
+      if (!this.supabase) {
+        throw new Error('数据库未初始化');
+      }
+
+      // 先删除旧图片
+      await this.deleteImage(oldStorageName);
+
+      // 上传新图片，使用相同的文件名
+      const { data, error } = await this.supabase.storage
+        .from('question-images')
+        .upload(oldStorageName, newImageFile);
+
+      if (error) throw error;
+
+      // 获取新的公共URL
+      const { data: urlData } = this.supabase.storage
+        .from('question-images')
+        .getPublicUrl(oldStorageName);
+
+      return { 
+        success: true, 
+        url: urlData.publicUrl,
+        storageName: oldStorageName
+      };
+    } catch (error) {
+      console.error('替换图片失败:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 批量上传图片到Supabase Storage（保持原有）
   async uploadImagesFromZip(zipFile, paperUUID = null) {
     try {
       if (!this.supabase) {
@@ -334,14 +407,14 @@ class DatabaseService {
     }
   }
 
-  // 检查是否为图片文件（新增）
+  // 检查是否为图片文件（保持原有）
   isImageFile(filename) {
     const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
     const ext = filename.toLowerCase().substring(filename.lastIndexOf('.'));
     return imageExtensions.includes(ext);
   }
 
-  // 批量添加试卷和题目（修改版，支持图片）
+  // 批量添加试卷和题目（保持原有）
   async addPaperWithQuestions(paperData, questionsData, imageMap = {}) {
     try {
       if (!this.supabase) {
@@ -411,7 +484,7 @@ class DatabaseService {
     }
   }
 
-  // 重命名临时图片文件（新增）
+  // 重命名临时图片文件（保持原有）
   async renameTemporaryImages(imageMap, paperUUID) {
     try {
       for (const [originalName, imageInfo] of Object.entries(imageMap)) {
@@ -442,32 +515,26 @@ class DatabaseService {
     }
   }
 
-  // 处理表格标签，将Markdown表格转换为HTML（保持原有）
+  // 处理表格标签
   processTableTags(content) {
-    // 查找【表格】标签
-    const tableTagRegex = /【表格】\s*\n((?:\|.*\|\s*\n)+)/g;
-    
+    const tableTagRegex = /\[TABLE\]\s*\n((?:\|.*\|\s*\n)+)/g;
     return content.replace(tableTagRegex, (match, tableContent) => {
       try {
-        // 解析Markdown表格
         const lines = tableContent.trim().split('\n');
         const htmlTable = this.markdownTableToHtml(lines);
         return htmlTable;
       } catch (error) {
         console.warn('表格解析失败，保持原格式:', error);
-        return match; // 如果解析失败，保持原格式
+        return match;
       }
     });
   }
 
-  // 处理图片标签（修改版，支持图片映射）
+  // 处理图片标签
   processImageTags(content, imageMap = {}) {
-    // 查找【图片】标签
-    const imageTagRegex = /【图片】\s*(.*?)\s*(?=\n|$)/g;
-    
+    const imageTagRegex = /\[IMG:(.*?)\]/g;
     return content.replace(imageTagRegex, (match, imageName) => {
       try {
-        // 从上传结果中查找对应的图片URL
         const imageInfo = imageMap[imageName.trim()];
         
         if (imageInfo) {
@@ -534,7 +601,7 @@ class DatabaseService {
     return html;
   }
 
-  // 解析单个题目内容（修改版，支持图片映射）
+  // 解析单个题目内容（保持原有）
   parseQuestionContent(content, questionNumber, imageMap = {}) {
     try {
       // 先处理图片标签
@@ -582,15 +649,14 @@ class DatabaseService {
     }
   }
 
-  // 解析Markdown格式的题目（修改版，支持图片映射）
+  // 解析Markdown格式的题目（修改版，支持新的英文标识符）
   parseMarkdownQuestions(markdownText, imageMap = {}) {
     try {
       // 清理文本，统一换行符
       const cleanText = markdownText.replace(/\r\n/g, '\n').trim();
       
-      // 使用更精确的正则表达式分割题目
-      // 匹配【例数字】或【习题数字】等格式
-      const questionRegex = /【(例|习题|题目)(\d+)】/g;
+      // 新的正则表达式：匹配 [EX数字] 或 [HW数字] 或 [EX数字-数字] 格式
+      const questionRegex = /\[(EX|HW)(\d+(?:-\d+)?)\]/g;
       const matches = [];
       let match;
       
@@ -599,12 +665,13 @@ class DatabaseService {
         matches.push({
           index: match.index,
           title: match[0],
-          number: match[2]
+          type: match[1], // EX 或 HW
+          number: match[2] // 数字部分
         });
       }
       
       if (matches.length === 0) {
-        throw new Error('未找到符合格式的题目标记（如【例1】）');
+        throw new Error('未找到符合格式的题目标记（如[EX1]、[HW1]、[EX1-1]等）');
       }
       
       const questions = [];
@@ -620,13 +687,15 @@ class DatabaseService {
         
         let questionContent = cleanText.substring(startIndex, endIndex).trim();
         
-        // 移除题目开头的标记（如【例1】）
-        questionContent = questionContent.replace(/^【(例|习题|题目)\d+】\s*/, '').trim();
+        // 移除题目开头的标记（如[EX1]、[HW2]等）
+        questionContent = questionContent.replace(/^\[(EX|HW)\d+(?:-\d+)?\]\s*/, '').trim();
         
         // 处理题目内容，支持表格和图片
         const parsedQuestion = this.parseQuestionContent(questionContent, currentMatch.number, imageMap);
         
         if (parsedQuestion) {
+          // 设置题目类型
+          parsedQuestion.question_type = currentMatch.type === 'EX' ? '例题' : '习题';
           questions.push(parsedQuestion);
         }
       }
