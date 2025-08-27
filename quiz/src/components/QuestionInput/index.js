@@ -1,361 +1,16 @@
+// QuestionInput/index.js - 重构后的题目录入主组件
 import React, { useState, useEffect } from "react";
-import {
-  Plus,
-  BookOpen,
-  Upload,
-  Trash2,
-  RefreshCw,
-  Eye,
-  X,
-} from "lucide-react";
+import { Plus, BookOpen, Upload } from "lucide-react";
+import ZipUploadComponent from "./ZipUploadComponent";
+import BatchImportForm from "./BatchImportForm";
 
 // 常量定义
-const MATH_CATEGORIES = [
-  "计算",
-  "计数",
-  "几何",
-  "数论",
-  "应用题",
-  "行程",
-  "组合",
-];
 const QUESTION_TYPES = ["例题", "习题"];
-
-// 图片管理组件（新增）
-const ImageManager = ({
-  imageMap,
-  onImageDelete,
-  onImageReplace,
-  onClearAll,
-}) => {
-  const [previewImage, setPreviewImage] = useState(null);
-
-  const handleReplaceImage = async (originalName, storageName) => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.onchange = async (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        await onImageReplace(originalName, storageName, file);
-      }
-    };
-    input.click();
-  };
-
-  const imageEntries = Object.entries(imageMap);
-
-  if (imageEntries.length === 0) {
-    return null;
-  }
-
-  return (
-    <div className="mt-4 p-3 bg-white rounded border">
-      <div className="flex items-center justify-between mb-3">
-        <h5 className="font-medium text-green-700">
-          已上传的图片 ({imageEntries.length}张)
-        </h5>
-        <button
-          onClick={onClearAll}
-          className="px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-sm rounded flex items-center gap-1"
-        >
-          <Trash2 size={14} />
-          清空全部
-        </button>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        {imageEntries.map(([originalName, imageInfo]) => (
-          <div key={originalName} className="relative group">
-            <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border">
-              <img
-                src={imageInfo.url}
-                alt={originalName}
-                className="w-full h-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                onClick={() =>
-                  setPreviewImage({ name: originalName, url: imageInfo.url })
-                }
-              />
-            </div>
-
-            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
-              <div className="flex gap-1">
-                <button
-                  onClick={() =>
-                    setPreviewImage({ name: originalName, url: imageInfo.url })
-                  }
-                  className="p-1 bg-blue-500 hover:bg-blue-600 text-white rounded text-xs"
-                  title="预览"
-                >
-                  <Eye size={12} />
-                </button>
-                <button
-                  onClick={() =>
-                    handleReplaceImage(originalName, imageInfo.storageName)
-                  }
-                  className="p-1 bg-yellow-500 hover:bg-yellow-600 text-white rounded text-xs"
-                  title="替换"
-                >
-                  <RefreshCw size={12} />
-                </button>
-                <button
-                  onClick={() => onImageDelete(originalName)}
-                  className="p-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs"
-                  title="删除"
-                >
-                  <Trash2 size={12} />
-                </button>
-              </div>
-            </div>
-
-            <p className="text-xs text-gray-600 mt-1 text-center truncate">
-              {originalName}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      {/* 图片预览模态框 */}
-      {previewImage && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50"
-          onClick={() => setPreviewImage(null)}
-        >
-          <div className="relative max-w-4xl max-h-full p-4">
-            <button
-              onClick={() => setPreviewImage(null)}
-              className="absolute top-2 right-2 p-2 bg-white rounded-full hover:bg-gray-100"
-            >
-              <X size={16} />
-            </button>
-            <img
-              src={previewImage.url}
-              alt={previewImage.name}
-              className="max-w-full max-h-full object-contain rounded"
-              onClick={(e) => e.stopPropagation()}
-            />
-            <p className="text-white text-center mt-2">{previewImage.name}</p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
-// Zip上传组件（修改版，集成图片管理）
-const ZipUploadComponent = ({ onImagesUploaded, imageMap, db }) => {
-  const [uploading, setUploading] = useState(false);
-  const [uploadResults, setUploadResults] = useState(null);
-
-  const handleZipUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    // 验证文件类型
-    if (!file.name.toLowerCase().endsWith(".zip")) {
-      alert("请选择zip格式的文件");
-      return;
-    }
-
-    // 验证文件大小（限制50MB）
-    if (file.size > 50 * 1024 * 1024) {
-      alert("zip文件不能超过50MB");
-      return;
-    }
-
-    setUploading(true);
-    setUploadResults(null);
-
-    try {
-      console.log("开始上传zip文件...");
-      const result = await db.uploadImagesFromZip(file);
-
-      if (result.success) {
-        setUploadResults(result);
-
-        // 创建图片映射表给父组件
-        const newImageMap = { ...imageMap };
-        result.uploads.forEach((upload) => {
-          newImageMap[upload.originalName] = {
-            url: upload.url,
-            storageName: upload.storageName,
-          };
-        });
-
-        onImagesUploaded(newImageMap);
-
-        alert(
-          `成功上传 ${result.uploadedCount} 张图片！${result.errors.length > 0 ? `${result.errors.length} 张图片上传失败。` : ""}`
-        );
-      } else {
-        alert("上传失败：" + result.error);
-      }
-    } catch (error) {
-      console.error("上传出错:", error);
-      alert("上传出错：" + error.message);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  // 删除单张图片
-  const handleDeleteImage = async (originalName) => {
-    if (!window.confirm(`确定要删除图片 ${originalName} 吗？`)) {
-      return;
-    }
-
-    const imageInfo = imageMap[originalName];
-    if (!imageInfo) return;
-
-    try {
-      const result = await db.deleteImage(imageInfo.storageName);
-      if (result.success) {
-        const newImageMap = { ...imageMap };
-        delete newImageMap[originalName];
-        onImagesUploaded(newImageMap);
-        alert("图片删除成功");
-      } else {
-        alert("删除失败：" + result.error);
-      }
-    } catch (error) {
-      console.error("删除图片失败:", error);
-      alert("删除失败：" + error.message);
-    }
-  };
-
-  // 替换图片
-  const handleReplaceImage = async (originalName, storageName, newFile) => {
-    try {
-      const result = await db.replaceImage(storageName, newFile);
-      if (result.success) {
-        const newImageMap = { ...imageMap };
-        newImageMap[originalName] = {
-          url: result.url,
-          storageName: result.storageName,
-        };
-        onImagesUploaded(newImageMap);
-        alert("图片替换成功");
-      } else {
-        alert("替换失败：" + result.error);
-      }
-    } catch (error) {
-      console.error("替换图片失败:", error);
-      alert("替换失败：" + error.message);
-    }
-  };
-
-  // 清空所有图片
-  const handleClearAll = async () => {
-    if (!window.confirm("确定要删除所有已上传的图片吗？此操作不可恢复。")) {
-      return;
-    }
-
-    const storageNames = Object.values(imageMap).map((img) => img.storageName);
-    if (storageNames.length === 0) return;
-
-    try {
-      const result = await db.deleteImages(storageNames);
-      if (result.success) {
-        onImagesUploaded({});
-        setUploadResults(null);
-        alert("所有图片已清空");
-      } else {
-        alert("清空失败：" + result.error);
-      }
-    } catch (error) {
-      console.error("清空图片失败:", error);
-      alert("清空失败：" + error.message);
-    }
-  };
-
-  return (
-    <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-      <h4 className="font-medium text-green-800 mb-3">批量上传几何图片</h4>
-
-      <div className="mb-4">
-        <input
-          type="file"
-          accept=".zip"
-          onChange={handleZipUpload}
-          disabled={uploading}
-          className="mb-2"
-        />
-        {uploading && (
-          <div className="flex items-center gap-2 text-blue-600 text-sm">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-            正在处理zip文件并上传图片...
-          </div>
-        )}
-        <p className="text-xs text-green-600">
-          选择包含所有几何图片的zip文件（01.png, 02.png, 03.png...）
-        </p>
-      </div>
-
-      {/* 上传结果显示 */}
-      {uploadResults && (
-        <div className="mt-4 p-3 bg-white rounded border">
-          <h5 className="font-medium text-green-700 mb-2">上传完成</h5>
-          <div className="text-sm text-gray-700 space-y-1">
-            <p>
-              成功上传:{" "}
-              <span className="font-medium text-green-600">
-                {uploadResults.uploadedCount}
-              </span>{" "}
-              张图片
-            </p>
-            {uploadResults.errors.length > 0 && (
-              <p>
-                失败:{" "}
-                <span className="font-medium text-red-600">
-                  {uploadResults.errors.length}
-                </span>{" "}
-                张图片
-              </p>
-            )}
-          </div>
-
-          {/* 显示错误信息 */}
-          {uploadResults.errors.length > 0 && (
-            <div className="mt-3">
-              <p className="text-sm font-medium text-red-700 mb-2">
-                上传失败的文件:
-              </p>
-              <div className="space-y-1">
-                {uploadResults.errors.map((error, index) => (
-                  <div key={index} className="text-xs text-red-600">
-                    {error.filename}: {error.error}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 图片管理器 */}
-      <ImageManager
-        imageMap={imageMap}
-        onImageDelete={handleDeleteImage}
-        onImageReplace={handleReplaceImage}
-        onClearAll={handleClearAll}
-      />
-    </div>
-  );
-};
 
 const QuestionInput = ({ questions, setQuestions, db, user }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showBatchImport, setShowBatchImport] = useState(false);
   const [papers, setPapers] = useState([]);
-
-  // 试卷表单状态
-  const [paperForm, setPaperForm] = useState({
-    title: "",
-    teacher: "",
-    semester: "",
-    course_name: "",
-    math_category: "",
-  });
 
   // 单题表单状态
   const [questionForm, setQuestionForm] = useState({
@@ -451,7 +106,7 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
     }
   };
 
-  // 试卷+题目批量添加（修改版，支持图片映射）
+  // 试卷+题目批量添加
   const handleBatchImport = async (e, imageMap = {}) => {
     e.preventDefault();
 
@@ -534,10 +189,23 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
     }
   };
 
-  // 图片上传完成回调（修改版）
+  // 图片上传完成回调
   const handleImagesUploaded = (uploadedImageMap) => {
     setImageMap(uploadedImageMap);
     console.log("图片映射已更新:", uploadedImageMap);
+  };
+
+  // 批量导入取消处理
+  const handleBatchImportCancel = () => {
+    setShowBatchImport(false);
+    setBatchForm({
+      teacher: "",
+      semester: "",
+      course_name: "",
+      math_category: "",
+      markdownText: "",
+    });
+    // 不清空图片映射，允许保留已上传的图片
   };
 
   // 权限检查
@@ -584,7 +252,7 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
         </button>
       </div>
 
-      {/* 批量导入表单（修改版，集成图片管理） */}
+      {/* 批量导入表单 */}
       {showBatchImport && canAddQuestions() && (
         <div className="mb-6 p-6 bg-gray-50 border border-gray-200 rounded-lg">
           <h3 className="text-lg font-semibold mb-4">批量导入试卷和题目</h3>
@@ -596,170 +264,18 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
             db={db}
           />
 
-          <form onSubmit={(e) => handleBatchImport(e, imageMap)}>
-            {/* 试卷信息 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  老师 *
-                </label>
-                <input
-                  type="text"
-                  value={batchForm.teacher}
-                  onChange={(e) =>
-                    setBatchForm({ ...batchForm, teacher: e.target.value })
-                  }
-                  placeholder="请输入老师姓名"
-                  className="w-full p-2 border border-gray-300 rounded-lg"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  学期 *
-                </label>
-                <input
-                  type="text"
-                  value={batchForm.semester}
-                  onChange={(e) =>
-                    setBatchForm({ ...batchForm, semester: e.target.value })
-                  }
-                  placeholder="请输入学期"
-                  className="w-full p-2 border border-gray-300 rounded-lg"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  课程名 *
-                </label>
-                <input
-                  type="text"
-                  value={batchForm.course_name}
-                  onChange={(e) =>
-                    setBatchForm({ ...batchForm, course_name: e.target.value })
-                  }
-                  placeholder="请输入课程名"
-                  className="w-full p-2 border border-gray-300 rounded-lg"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  数学分类 *
-                </label>
-                <select
-                  value={batchForm.math_category}
-                  onChange={(e) =>
-                    setBatchForm({
-                      ...batchForm,
-                      math_category: e.target.value,
-                    })
-                  }
-                  className="w-full p-2 border border-gray-300 rounded-lg"
-                  required
-                >
-                  <option value="">请选择分类</option>
-                  {MATH_CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* 题目内容 */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                题目内容（支持新旧格式的Markdown）*
-              </label>
-              <textarea
-                value={batchForm.markdownText}
-                onChange={(e) =>
-                  setBatchForm({ ...batchForm, markdownText: e.target.value })
-                }
-                placeholder={`请粘贴标准MD格式题目：
-
-              [EX1]
-              如图所示，正方形ABCD的边长为6cm...
-
-              [IMG:01.png]
-
-              求阴影部分的面积。
-
-              答案：18平方厘米
-
-              ---
-
-              [HW1]
-              观察下面的三角形...
-
-              [IMG:02.png]
-
-              答案：...
-
-              ---
-
-              [EX1-1]
-              计算下列表格中的数据...
-
-              [TABLE]
-              | 项目 | 数值 |
-              |------|------|
-              | A    | 10   |
-              | B    | 20   |
-
-              答案：...`}
-                className="w-full p-3 border border-gray-300 rounded-lg font-mono text-sm"
-                rows={15}
-                required
-              />
-              <div className="text-xs text-gray-500 mt-2 space-y-1">
-                <p>
-                  <strong>题号格式：</strong>[EX1] [HW1] [EX1-1]
-                  等，EX表示例题，HW表示习题
-                </p>
-                <p>
-                  <strong>图片标签：</strong>使用 [IMG:文件名] 格式，如
-                  [IMG:01.png]
-                </p>
-                <p>
-                  <strong>表格标签：</strong>使用 [TABLE] 格式
-                </p>
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
-              >
-                批量导入试卷
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowBatchImport(false);
-                  setBatchForm({
-                    teacher: "",
-                    semester: "",
-                    course_name: "",
-                    math_category: "",
-                    markdownText: "",
-                  });
-                  // 不清空图片映射，允许保留已上传的图片
-                }}
-                className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg"
-              >
-                取消
-              </button>
-            </div>
-          </form>
+          {/* 批量导入表单 */}
+          <BatchImportForm
+            batchForm={batchForm}
+            setBatchForm={setBatchForm}
+            imageMap={imageMap}
+            onSubmit={handleBatchImport}
+            onCancel={handleBatchImportCancel}
+          />
         </div>
       )}
 
-      {/* 单题添加表单（保持原有） */}
+      {/* 单题添加表单 */}
       {showAddForm && canAddQuestions() && (
         <div className="mb-6 p-6 bg-gray-50 border border-gray-200 rounded-lg">
           <h3 className="text-lg font-semibold mb-4">添加单道题目</h3>
@@ -880,7 +396,7 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
         </div>
       )}
 
-      {/* 试卷列表（保持原有） */}
+      {/* 试卷列表 */}
       {papers.length > 0 && (
         <div className="bg-white p-4 rounded-lg border">
           <h4 className="font-medium text-gray-800 mb-3">现有试卷列表</h4>
@@ -897,7 +413,7 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
         </div>
       )}
 
-      {/* 用户状态信息（保持原有） */}
+      {/* 用户状态信息 */}
       {user && (
         <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
           <p className="text-sm text-green-800">
