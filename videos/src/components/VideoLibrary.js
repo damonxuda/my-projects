@@ -22,7 +22,7 @@ const VideoLibrary = () => {
 
   const API_BASE_URL = process.env.REACT_APP_VIDEO_API_URL;
 
-  // 提取YouTube视频ID
+  // 提取YouTube视频ID（用于添加新视频）
   const extractVideoId = (url) => {
     const regex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/;
     const match = url.match(regex);
@@ -42,7 +42,7 @@ const VideoLibrary = () => {
   // 删除文件
   const handleDelete = async (item) => {
     try {
-      console.log("🗑️ 开始删除文件:", item.name);
+      console.log("开始删除文件:", item.name);
 
       const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/videos/delete`, {
@@ -62,12 +62,12 @@ const VideoLibrary = () => {
       }
 
       const result = await response.json();
-      console.log("✅ 文件删除成功:", result);
+      console.log("文件删除成功:", result);
 
       // 刷新当前文件夹
       await loadItems(currentPath);
     } catch (error) {
-      console.error("❌ 删除文件失败:", error);
+      console.error("删除文件失败:", error);
       throw error;
     }
   };
@@ -127,7 +127,7 @@ const VideoLibrary = () => {
       }
 
       const result = await response.json();
-      console.log("✅ YouTube视频添加成功:", result);
+      console.log("YouTube视频添加成功:", result);
 
       // 成功后重置表单并刷新列表
       setYoutubeUrl("");
@@ -159,12 +159,12 @@ const VideoLibrary = () => {
       console.log("VideoLibrary: 加载视频列表, path:", path);
 
       const data = await fetchVideoList(path);
-      console.log("🔍 原始文件数据:", data.length, "个文件");
+      console.log("原始文件数据:", data.length, "个文件");
 
       // 调试：输出所有文件名
       data.forEach((file, index) => {
         const filename = file.Key.split("/").pop();
-        console.log(`📄 文件${index + 1}:`, filename, "| 完整路径:", file.Key);
+        console.log(`文件${index + 1}:`, filename, "| 完整路径:", file.Key);
       });
 
       const processedItems = processFileList(data, path);
@@ -172,7 +172,7 @@ const VideoLibrary = () => {
 
       console.log("VideoLibrary: 处理后项目数:", processedItems.length);
       console.log(
-        "📊 处理结果:",
+        "处理结果:",
         processedItems.map((item) => ({ name: item.name, type: item.type }))
       );
     } catch (err) {
@@ -189,7 +189,7 @@ const VideoLibrary = () => {
     const videos = [];
     const youtubeVideos = [];
 
-    console.log("🔄 开始处理文件列表, currentPath:", currentPath);
+    console.log("开始处理文件列表, currentPath:", currentPath);
 
     files.forEach((file) => {
       const relativePath = file.Key.startsWith("videos/")
@@ -197,7 +197,7 @@ const VideoLibrary = () => {
         : file.Key;
 
       if (currentPath && !relativePath.startsWith(currentPath + "/")) {
-        console.log("⏭️ 跳过文件（路径不匹配）:", relativePath);
+        console.log("跳过文件（路径不匹配）:", relativePath);
         return;
       }
 
@@ -220,7 +220,7 @@ const VideoLibrary = () => {
             lastModified: file.LastModified,
             path: currentPath ? `${currentPath}/${filename}` : filename,
           });
-          console.log(`📺 添加YouTube视频: ${filename}`);
+          console.log(`添加YouTube视频: ${filename}`);
         } else if (isVideoFile(filename)) {
           videos.push({
             type: "video",
@@ -230,9 +230,9 @@ const VideoLibrary = () => {
             lastModified: file.LastModified,
             path: currentPath ? `${currentPath}/${filename}` : filename,
           });
-          console.log(`✅ 添加本地视频: ${filename}`);
+          console.log(`添加本地视频: ${filename}`);
         } else {
-          console.log(`❌ 跳过非视频文件: ${filename}`);
+          console.log(`跳过非视频文件: ${filename}`);
         }
       } else {
         const folderName = pathParts[0];
@@ -249,12 +249,12 @@ const VideoLibrary = () => {
           });
         }
         folders.get(folderName).count++;
-        console.log(`📁 处理文件夹: ${folderName}`);
+        console.log(`处理文件夹: ${folderName}`);
       }
     });
 
     console.log(
-      `📈 最终统计: ${folders.size} 个文件夹, ${videos.length} 个本地视频, ${youtubeVideos.length} 个YouTube视频`
+      `最终统计: ${folders.size} 个文件夹, ${videos.length} 个本地视频, ${youtubeVideos.length} 个YouTube视频`
     );
 
     return [
@@ -279,17 +279,17 @@ const VideoLibrary = () => {
     ];
     const lowerFilename = filename.toLowerCase();
 
-    console.log(`🔍 视频格式检查: "${filename}" -> "${lowerFilename}"`);
+    console.log(`视频格式检查: "${filename}" -> "${lowerFilename}"`);
 
     const result = videoExtensions.some((ext) => {
       const matches = lowerFilename.endsWith(ext);
       if (matches) {
-        console.log(`✅ 匹配格式: ${ext}`);
+        console.log(`匹配格式: ${ext}`);
       }
       return matches;
     });
 
-    console.log(`🎯 "${filename}" 检查结果: ${result}`);
+    console.log(`"${filename}" 检查结果: ${result}`);
     return result;
   };
 
@@ -301,10 +301,10 @@ const VideoLibrary = () => {
 
   // 视频播放处理（支持YouTube）
   const handleVideoPlay = (video) => {
-    console.log("🎬 点击视频:", video.name, "类型:", video.type);
+    console.log("点击视频:", video.name, "类型:", video.type);
 
     if (video.type === "youtube") {
-      // YouTube视频：需要先读取JSON文件获取URL，然后跳转
+      // YouTube视频：直接跳转到YouTube
       handleYouTubeVideoPlay(video);
     } else {
       // 本地视频：使用现有逻辑
@@ -315,15 +315,34 @@ const VideoLibrary = () => {
   // 处理YouTube视频播放
   const handleYouTubeVideoPlay = async (youtubeVideo) => {
     try {
-      // 这里需要从S3读取JSON文件内容
-      // 暂时使用简化版本：如果能从缩略图URL获取videoId更好
-      // 这里暂时用一个通用的处理方式
-      alert("YouTube视频播放功能开发中...\n将跳转到YouTube播放");
+      console.log("播放YouTube视频:", youtubeVideo.name);
 
-      // 实际实现中，这里应该：
-      // 1. 读取S3中的JSON文件
-      // 2. 解析获取YouTube URL
-      // 3. window.open(url, '_blank')
+      // 从文件名提取videoId
+      const filename = youtubeVideo.name;
+      let videoId = null;
+
+      // 新格式：Title_[videoId].youtube.json
+      const newFormatMatch = filename.match(/_\[([^\]]+)\]\.youtube\.json$/);
+      if (newFormatMatch) {
+        videoId = newFormatMatch[1];
+      } else {
+        // 老格式：YouTube视频_videoId.youtube.json
+        const oldFormatMatch = filename.match(
+          /YouTube视频_([^.]+)\.youtube\.json$/
+        );
+        if (oldFormatMatch) {
+          videoId = oldFormatMatch[1];
+        }
+      }
+
+      if (videoId) {
+        const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+        console.log("打开YouTube链接:", youtubeUrl);
+        window.open(youtubeUrl, "_blank");
+      } else {
+        console.error("无法从文件名提取videoId:", filename);
+        alert("无法获取YouTube视频ID，请重试");
+      }
     } catch (error) {
       console.error("播放YouTube视频失败:", error);
       alert("播放失败，请重试");
