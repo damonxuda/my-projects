@@ -96,7 +96,7 @@ export class MarkdownParser {
     return html;
   }
 
-  // 解析单个题目内容
+  // 解析单个题目内容（支持纯图片题目和答案）
   parseQuestionContent(content, questionNumber, imageMap = {}) {
     try {
       // 先处理图片标签
@@ -116,10 +116,6 @@ export class MarkdownParser {
       const questionText = content
         .substring(0, content.indexOf("答案："))
         .trim();
-      if (!questionText) {
-        console.warn(`题目${questionNumber}题目内容为空`);
-        return null;
-      }
 
       // 提取答案
       let answer = answerMatch[1].trim();
@@ -133,6 +129,20 @@ export class MarkdownParser {
         }
       }
 
+      // 检查处理后的内容是否为空（支持纯图片内容）
+      const hasQuestionContent = this.hasValidContent(questionText);
+      const hasAnswerContent = this.hasValidContent(answer);
+
+      if (!hasQuestionContent) {
+        console.warn(`题目${questionNumber}题目内容为空（无文字也无图片）`);
+        return null;
+      }
+
+      if (!hasAnswerContent) {
+        console.warn(`题目${questionNumber}答案内容为空（无文字也无图片）`);
+        return null;
+      }
+
       return {
         question_number: questionNumber,
         question_text: questionText,
@@ -143,6 +153,23 @@ export class MarkdownParser {
       console.error(`解析题目${questionNumber}失败:`, error);
       return null;
     }
+  }
+
+  // 检查内容是否有效（文字或图片）
+  hasValidContent(content) {
+    if (!content) return false;
+
+    // 移除HTML标签后检查是否有文字内容
+    const textContent = content.replace(/<[^>]*>/g, "").trim();
+
+    // 检查是否包含图片标签
+    const hasImages = /<img[^>]*src=/i.test(content);
+
+    // 检查是否包含表格
+    const hasTables = /<table[^>]*>/i.test(content);
+
+    // 只要有文字、图片或表格中的任意一种就算有效内容
+    return textContent.length > 0 || hasImages || hasTables;
   }
 
   // 解析Markdown格式的题目（修改版，支持新的英文标识符）
