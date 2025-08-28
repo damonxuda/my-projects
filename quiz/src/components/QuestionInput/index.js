@@ -1,8 +1,9 @@
-// QuestionInput/index.js - 重构后的题目录入主组件
+// QuestionInput/index.js - 重构后的题目录入主组件（支持LaTeX）
 import React, { useState, useEffect } from "react";
-import { Plus, BookOpen, Upload } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import ZipUploadComponent from "./ZipUploadComponent";
 import BatchImportForm from "./BatchImportForm";
+import { MarkdownParser } from "../../services/MarkdownParser"; // 导入新的解析器
 
 // 常量定义
 const QUESTION_TYPES = ["例题", "习题"];
@@ -106,7 +107,7 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
     }
   };
 
-  // 试卷+题目批量添加
+  // 试卷+题目批量添加（更新为异步LaTeX支持）
   const handleBatchImport = async (e, imageMap = {}) => {
     e.preventDefault();
 
@@ -130,17 +131,21 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
         batchForm.math_category
       );
 
-      // 解析Markdown格式的题目，传入图片映射
-      const parseResult = db.parseMarkdownQuestions(
+      // 关键修改：使用新的异步MarkdownParser
+      const parser = new MarkdownParser();
+      const parseResult = await parser.parseMarkdownQuestions(
         batchForm.markdownText,
         imageMap
       );
+
       if (!parseResult.success) throw new Error(parseResult.error);
 
       const questions = parseResult.data;
       if (questions.length === 0) {
         throw new Error("没有解析到有效的题目，请检查格式");
       }
+
+      console.log("解析到的题目（含LaTeX）:", questions);
 
       // 添加试卷和题目，传入图片映射
       const result = await db.addPaperWithQuestions(
@@ -182,7 +187,18 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
       const importedQuestions = result.data.questions || [];
       const questionCount = importedQuestions.length;
 
-      alert(`试卷"${title}"创建成功！成功导入 ${questionCount} 道题目！`);
+      // 检测是否有LaTeX内容
+      const hasLatexContent = questions.some(
+        (q) =>
+          parser.hasLatexContent(q.question_text) ||
+          parser.hasLatexContent(q.answer)
+      );
+
+      const message = hasLatexContent
+        ? `试卷"${title}"创建成功！成功导入 ${questionCount} 道题目（包含数学公式）！`
+        : `试卷"${title}"创建成功！成功导入 ${questionCount} 道题目！`;
+
+      alert(message);
     } catch (error) {
       console.error("批量导入失败:", error);
       alert("导入失败：" + error.message);
@@ -344,7 +360,10 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  题目内容 *
+                  题目内容 *{" "}
+                  <span className="text-blue-600 text-xs">
+                    （支持LaTeX数学公式）
+                  </span>
                 </label>
                 <textarea
                   value={questionForm.question_text}
@@ -354,7 +373,7 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
                       question_text: e.target.value,
                     })
                   }
-                  placeholder="请输入题目内容..."
+                  placeholder="请输入题目内容，支持LaTeX数学公式"
                   className="w-full p-3 border border-gray-300 rounded-lg"
                   rows={4}
                   required
@@ -362,14 +381,17 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  答案 *
+                  答案 *{" "}
+                  <span className="text-blue-600 text-xs">
+                    （支持LaTeX数学公式）
+                  </span>
                 </label>
                 <textarea
                   value={questionForm.answer}
                   onChange={(e) =>
                     setQuestionForm({ ...questionForm, answer: e.target.value })
                   }
-                  placeholder="请输入答案..."
+                  placeholder="请输入答案，支持LaTeX公式"
                   className="w-full p-3 border border-gray-300 rounded-lg"
                   rows={3}
                   required
@@ -421,7 +443,7 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
             {user.emailAddresses?.[0]?.emailAddress}
           </p>
           <p className="text-xs text-green-600 mt-1">
-            您可以添加试卷和题目到题库。
+            您可以添加试卷和题目到题库。现在支持LaTeX数学公式！
           </p>
         </div>
       )}
