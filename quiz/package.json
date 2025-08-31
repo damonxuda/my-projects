@@ -4,6 +4,10 @@
   "description": "智能题库管理系统 - 专为小学奥数学习设计",
   "private": true,
   "homepage": "https://damonxuda.site/quiz",
+  "sideEffects": [
+    "*.css",
+    "./src/services/MarkdownParser.js"
+  ],
   "dependencies": {
     "@supabase/supabase-js": "^2.53.0",
     "auth-clerk": "file:../auth-clerk",

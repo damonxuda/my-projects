@@ -1,97 +1,161 @@
-// MarkdownParser.js - Markdown内容解析服务类（增强LaTeX支持）
-export class MarkdownParser {
+// MarkdownParser.js - StrictMode兼容的LaTeX处理版本
+
+// 全局CDN脚本加载器单例
+class CDNScriptLoader {
   constructor() {
-    // 构造函数暂时为空，后续可添加配置
-    this.katexLoaded = false;
-    this.katexLoadPromise = null;
+    this.loadedScripts = new Map(); // 记录已加载的脚本URL
+    this.loadingPromises = new Map(); // 缓存正在加载的Promise
   }
 
-  // 动态加载KaTeX库（按需加载策略）
-  async loadKaTeX() {
-    if (this.katexLoaded) {
+  async loadScript(src, integrity = null, crossOrigin = "anonymous") {
+    // 如果脚本已经加载完成，直接返回成功
+    if (this.loadedScripts.has(src)) {
       return true;
     }
 
-    if (this.katexLoadPromise) {
-      return this.katexLoadPromise;
+    // 如果脚本正在加载中，返回已存在的Promise（防止重复加载）
+    if (this.loadingPromises.has(src)) {
+      return this.loadingPromises.get(src);
     }
 
-    this.katexLoadPromise = new Promise((resolve, reject) => {
-      // 检查是否已经加载
-      if (window.katex && window.renderMathInElement) {
-        this.katexLoaded = true;
+    // 创建新的加载Promise
+    const loadPromise = new Promise((resolve, reject) => {
+      // 检查脚本是否已存在于DOM中
+      const existingScript = document.querySelector(`script[src="${src}"]`);
+      if (existingScript) {
+        this.loadedScripts.set(src, true);
         resolve(true);
         return;
       }
 
-      // 强制加载KaTeX CSS（确保字体正确加载）
-      const cssLink = document.createElement("link");
-      cssLink.rel = "stylesheet";
-      cssLink.href =
-        "https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css"; // 更新到最新版本
-      cssLink.integrity =
-        "sha512-fHwaWebuwA7NSF5Qg/af4UeDx9XqUpYpOGgubo3yWu+b2IQR4UeQwbb42Ti7gVAjNtVoI/I9TEoYeu9omwcC6g==";
-      cssLink.crossOrigin = "anonymous";
-      document.head.appendChild(cssLink);
+      const script = document.createElement("script");
+      script.src = src;
+      if (integrity) script.integrity = integrity;
+      if (crossOrigin) script.crossOrigin = crossOrigin;
+      script.async = true;
 
-      // 等待CSS加载完成
-      cssLink.onload = () => {
-        // 加载KaTeX主JS文件
-        const script1 = document.createElement("script");
-        script1.src =
-          "https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js";
-        script1.integrity =
-          "sha512-LQNxIMR5rXv7o+b1l8+N1EZMfhG7iFZ9HhnbJkTp4zjNr5Wvst75AqUeFDxeRUa7l5vEDyUiAip//r+EFLLCyA==";
-        script1.crossOrigin = "anonymous";
-
-        script1.onload = () => {
-          // 加载auto-render扩展
-          const script2 = document.createElement("script");
-          script2.src =
-            "https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js";
-          script2.integrity =
-            "sha512-iWiuBS5nt6r60fCz26Nd0Zqe0nbk1ZTIQbl3Kv7kYsX+yKMUFHzjaH2+AnM6vp2Xs+gNmaBAVWJjSmuPw76Efg==";
-          script2.crossOrigin = "anonymous";
-
-          script2.onload = () => {
-            // 确保字体已加载完成再标记为成功
-            setTimeout(() => {
-              this.katexLoaded = true;
-              console.log("✅ KaTeX库加载成功（包含完整字体支持）");
-              resolve(true);
-            }, 100); // 给字体一点加载时间
-          };
-
-          script2.onerror = () => {
-            console.error("❌ KaTeX auto-render加载失败");
-            reject(new Error("KaTeX auto-render加载失败"));
-          };
-
-          document.head.appendChild(script2);
-        };
-
-        script1.onerror = () => {
-          console.error("❌ KaTeX主库加载失败");
-          reject(new Error("KaTeX主库加载失败"));
-        };
-
-        document.head.appendChild(script1);
+      script.onload = () => {
+        this.loadedScripts.set(src, true);
+        this.loadingPromises.delete(src);
+        console.log(`✅ 脚本加载成功: ${src}`);
+        resolve(true);
       };
 
-      cssLink.onerror = () => {
-        console.error("❌ KaTeX CSS加载失败");
-        reject(new Error("KaTeX CSS加载失败"));
+      script.onerror = () => {
+        this.loadingPromises.delete(src);
+        console.error(`❌ 脚本加载失败: ${src}`);
+        reject(new Error(`Failed to load script: ${src}`));
       };
+
+      document.head.appendChild(script);
     });
 
-    return this.katexLoadPromise;
+    // 缓存Promise以防止重复请求
+    this.loadingPromises.set(src, loadPromise);
+    return loadPromise;
+  }
+
+  async loadCSS(href, integrity = null, crossOrigin = "anonymous") {
+    // CSS加载逻辑类似
+    if (this.loadedScripts.has(href)) {
+      return true;
+    }
+
+    if (this.loadingPromises.has(href)) {
+      return this.loadingPromises.get(href);
+    }
+
+    const loadPromise = new Promise((resolve, reject) => {
+      // 检查CSS是否已存在
+      const existingLink = document.querySelector(`link[href="${href}"]`);
+      if (existingLink) {
+        this.loadedScripts.set(href, true);
+        resolve(true);
+        return;
+      }
+
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = href;
+      if (integrity) link.integrity = integrity;
+      if (crossOrigin) link.crossOrigin = crossOrigin;
+
+      link.onload = () => {
+        this.loadedScripts.set(href, true);
+        this.loadingPromises.delete(href);
+        console.log(`✅ CSS加载成功: ${href}`);
+        resolve(true);
+      };
+
+      link.onerror = () => {
+        this.loadingPromises.delete(href);
+        console.error(`❌ CSS加载失败: ${href}`);
+        reject(new Error(`Failed to load CSS: ${href}`));
+      };
+
+      document.head.appendChild(link);
+    });
+
+    this.loadingPromises.set(href, loadPromise);
+    return loadPromise;
+  }
+}
+
+// 全局单例实例
+const scriptLoader = new CDNScriptLoader();
+
+export class MarkdownParser {
+  constructor() {
+    // 移除实例级别的加载状态，改用全局单例管理
+  }
+
+  // 优化的KaTeX加载方法 - StrictMode兼容
+  async loadKaTeX() {
+    try {
+      // 首先检查KaTeX是否已经全局可用
+      if (window.katex && window.renderMathInElement) {
+        console.log("✅ KaTeX已存在，跳过加载");
+        return true;
+      }
+
+      console.log("🔄 开始加载KaTeX...");
+
+      // 使用单例加载器按顺序加载资源
+      await scriptLoader.loadCSS(
+        "https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css",
+        "sha512-fHwaWebuwA7NSF5Qg/af4UeDx9XqUpYpOGgubo3yWu+b2IQR4UeQwbb42Ti7gVAjNtVoI/I9TEoYeu9omwcC6g=="
+      );
+
+      await scriptLoader.loadScript(
+        "https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js",
+        "sha512-LQNxIMR5rXv7o+b1l8+N1EZMfhG7iFZ9HhnbJkTp4zjNr5Wvst75AqUeFDxeRUa7l5vEDyUiAip//r+EFLLCyA=="
+      );
+
+      await scriptLoader.loadScript(
+        "https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js",
+        "sha512-iWiuBS5nt6r60fCz26Nd0Zqe0nbk1ZTIQbl3Kv7kYsX+yKMUFHzjaH2+AnM6vp2Xs+gNmaBAVWJjSmuPw76Efg=="
+      );
+
+      // 等待一小段时间确保脚本完全初始化
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // 最终验证
+      if (window.katex && window.renderMathInElement) {
+        console.log("✅ KaTeX加载完成并验证成功");
+        return true;
+      } else {
+        throw new Error("KaTeX加载后验证失败");
+      }
+    } catch (error) {
+      console.error("❌ KaTeX加载失败:", error);
+      throw error;
+    }
   }
 
   // 检测内容是否包含LaTeX公式
   hasLatexContent(content) {
     if (!content) return false;
 
-    // 检测各种LaTeX语法
     const latexPatterns = [
       /\$\$[\s\S]*?\$\$/, // 块级公式 $$...$$
       /\$[^$\n]*\$/, // 行内公式 $...$
@@ -110,7 +174,7 @@ export class MarkdownParser {
         return content;
       }
 
-      // 确保KaTeX库已加载
+      // 确保KaTeX库已加载（单例保证不会重复加载）
       await this.loadKaTeX();
 
       // 创建临时元素来渲染LaTeX
@@ -121,7 +185,7 @@ export class MarkdownParser {
       if (window.renderMathInElement) {
         window.renderMathInElement(tempDiv, {
           delimiters: [
-            { left: "$", right: "$", display: true },
+            { left: "$$", right: "$$", display: true },
             { left: "$", right: "$", display: false },
             { left: "\\[", right: "\\]", display: true },
             { left: "\\(", right: "\\)", display: false },
@@ -130,12 +194,11 @@ export class MarkdownParser {
           errorColor: "#cc0000",
           strict: false,
           output: "html",
-          trust: true, // 允许更多符号
+          trust: true,
           macros: {
-            // 定义一些常用的宏，包括平行符号的备选方案
             "\\triangle": "\\bigtriangleup",
             "\\therefore": "\\therefore",
-            "\\parallel": "\\|\\|", // 使用双竖线作为备选
+            "\\parallel": "\\|\\|",
             "\\perp": "\\perp",
           },
         });
@@ -148,7 +211,7 @@ export class MarkdownParser {
     }
   }
 
-  // 处理表格标签
+  // 处理表格标签（保持原有逻辑）
   processTableTags(content) {
     const tableTagRegex = /\[TABLE\]\s*\n((?:\|.*\|\s*\n)+)/g;
     return content.replace(tableTagRegex, (match, tableContent) => {
@@ -163,7 +226,7 @@ export class MarkdownParser {
     });
   }
 
-  // 处理图片标签
+  // 处理图片标签（保持原有逻辑）
   processImageTags(content, imageMap = {}) {
     const imageTagRegex = /\[IMG:(.*?)\]/g;
     return content.replace(imageTagRegex, (match, imageName) => {
@@ -183,28 +246,24 @@ export class MarkdownParser {
     });
   }
 
-  // 将Markdown表格转换为HTML表格
+  // 将Markdown表格转换为HTML表格（保持原有逻辑）
   markdownTableToHtml(lines) {
     if (lines.length < 2) {
       throw new Error("表格格式不正确");
     }
 
-    // 解析表头
     const headerLine = lines[0].trim();
     const separatorLine = lines[1].trim();
 
-    // 检查分隔符行
     if (!separatorLine.includes("---")) {
       throw new Error("缺少表格分隔符");
     }
 
-    // 提取表头
     const headers = headerLine
       .split("|")
       .map((cell) => cell.trim())
       .filter((cell) => cell !== "");
 
-    // 提取数据行
     const dataRows = lines
       .slice(2)
       .map((line) => {
@@ -215,18 +274,15 @@ export class MarkdownParser {
       })
       .filter((row) => row.length > 0);
 
-    // 生成HTML表格
     let html =
       '\n<table style="border-collapse: collapse; border: 1px solid #ddd; margin: 10px 0;">\n';
 
-    // 表头
     html += '  <thead>\n    <tr style="background-color: #f5f5f5;">\n';
     headers.forEach((header) => {
       html += `      <th style="border: 1px solid #ddd; padding: 8px; text-align: left;">${header}</th>\n`;
     });
     html += "    </tr>\n  </thead>\n";
 
-    // 表体
     html += "  <tbody>\n";
     dataRows.forEach((row) => {
       html += "    <tr>\n";
@@ -240,30 +296,21 @@ export class MarkdownParser {
     return html;
   }
 
-  // 解析单个题目内容（支持纯图片题目和答案 + LaTeX）
+  // 解析单个题目内容（保持原有逻辑）
   async parseQuestionContent(content, questionNumber, imageMap = {}) {
     try {
-      // 处理顺序：图片 → 表格 → LaTeX
-      // 先处理图片标签
       content = this.processImageTags(content, imageMap);
-
-      // 再处理表格标签
       content = this.processTableTags(content);
 
-      // 分离答案部分
       const answerMatch = content.match(/答案：([\s\S]*?)(?=解题过程：|$)/);
       if (!answerMatch) {
         console.warn(`题目${questionNumber}未找到答案部分`);
         return null;
       }
 
-      // 提取题目文本（答案之前的部分）
       let questionText = content.substring(0, content.indexOf("答案：")).trim();
-
-      // 提取答案
       let answer = answerMatch[1].trim();
 
-      // 如果有解题过程，也包含在答案中
       const processMatch = content.match(/解题过程：([\s\S]*?)(?=---|\n【|$)/);
       if (processMatch) {
         const process = processMatch[1].trim();
@@ -272,11 +319,9 @@ export class MarkdownParser {
         }
       }
 
-      // 最后处理LaTeX（对题目和答案分别处理）
       questionText = await this.processLatexTags(questionText);
       answer = await this.processLatexTags(answer);
 
-      // 检查处理后的内容是否为空（支持纯图片内容）
       const hasQuestionContent = this.hasValidContent(questionText);
       const hasAnswerContent = this.hasValidContent(answer);
 
@@ -294,7 +339,7 @@ export class MarkdownParser {
         question_number: questionNumber,
         question_text: questionText,
         answer: answer,
-        question_type: "例题", // 默认类型，实际不再使用显示
+        question_type: "例题",
       };
     } catch (error) {
       console.error(`解析题目${questionNumber}失败:`, error);
@@ -302,46 +347,34 @@ export class MarkdownParser {
     }
   }
 
-  // 检查内容是否有效（文字、图片或LaTeX公式）
+  // 检查内容是否有效（保持原有逻辑）
   hasValidContent(content) {
     if (!content) return false;
 
-    // 移除HTML标签后检查是否有文字内容
     const textContent = content.replace(/<[^>]*>/g, "").trim();
-
-    // 检查是否包含图片标签
     const hasImages = /<img[^>]*src=/i.test(content);
-
-    // 检查是否包含表格
     const hasTables = /<table[^>]*>/i.test(content);
-
-    // 检查是否包含LaTeX公式（渲染后的KaTeX元素）
     const hasLatex =
       /<span[^>]*class[^>]*katex[^>]*>/i.test(content) ||
       this.hasLatexContent(content);
 
-    // 只要有文字、图片、表格或LaTeX中的任意一种就算有效内容
     return textContent.length > 0 || hasImages || hasTables || hasLatex;
   }
 
-  // 解析Markdown格式的题目（修改版，支持新的英文标识符 + LaTeX）
+  // 解析Markdown格式的题目（保持原有逻辑）
   async parseMarkdownQuestions(markdownText, imageMap = {}) {
     try {
-      // 清理文本，统一换行符
       const cleanText = markdownText.replace(/\r\n/g, "\n").trim();
-
-      // 新的正则表达式：匹配 [EX数字] 或 [HW数字] 或 [EX数字-数字] 格式
       const questionRegex = /\[(EX|HW)(\d+(?:-\d+)?)\]/g;
       const matches = [];
       let match;
 
-      // 找到所有题目标记的位置
       while ((match = questionRegex.exec(cleanText)) !== null) {
         matches.push({
           index: match.index,
           title: match[0],
-          type: match[1], // EX 或 HW
-          number: match[2], // 数字部分
+          type: match[1],
+          number: match[2],
         });
       }
 
@@ -353,23 +386,18 @@ export class MarkdownParser {
 
       const questions = [];
 
-      // 逐个提取题目内容
       for (let i = 0; i < matches.length; i++) {
         const currentMatch = matches[i];
         const nextMatch = matches[i + 1];
 
-        // 确定当前题目的内容范围
         const startIndex = currentMatch.index;
         const endIndex = nextMatch ? nextMatch.index : cleanText.length;
 
         let questionContent = cleanText.substring(startIndex, endIndex).trim();
-
-        // 移除题目开头的标记（如[EX1]、[HW2]等）
         questionContent = questionContent
           .replace(/^\[(EX|HW)\d+(?:-\d+)?\]\s*/, "")
           .trim();
 
-        // 处理题目内容，支持表格、图片和LaTeX
         const parsedQuestion = await this.parseQuestionContent(
           questionContent,
           currentMatch.number,
@@ -377,7 +405,6 @@ export class MarkdownParser {
         );
 
         if (parsedQuestion) {
-          // 设置题目类型
           parsedQuestion.question_type =
             currentMatch.type === "EX" ? "例题" : "习题";
           questions.push(parsedQuestion);
@@ -406,7 +433,6 @@ export class MarkdownParser {
   // 静态方法：为已渲染的DOM元素处理LaTeX
   static async renderLatexInElement(element) {
     try {
-      // 动态加载KaTeX（如果尚未加载）
       const parser = new MarkdownParser();
       await parser.loadKaTeX();
 
