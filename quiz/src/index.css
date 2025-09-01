@@ -16,3 +16,8 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+/* KaTeX数学公式整体放大 - 提高小学生阅读体验 */
+.katex {
+  font-size: 1.15em !important;
+}
