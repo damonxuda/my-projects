@@ -197,7 +197,7 @@ export class MarkdownParser {
           trust: true,
           macros: {
             "\\triangle": "\\bigtriangleup",
-            "\\therefore": "\\therefore",
+            "\\therefore": "\\mathord{\\therefore}\\,",
             "\\parallel": "\\|\\|",
             "\\perp": "\\perp",
           },
