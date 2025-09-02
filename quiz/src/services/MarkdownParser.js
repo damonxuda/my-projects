@@ -229,13 +229,24 @@ export class MarkdownParser {
 
   // 处理图片标签（保持原有逻辑）
   processImageTags(content, imageMap = {}) {
-    const imageTagRegex = /\[IMG:(.*?)\]/g;
-    return content.replace(imageTagRegex, (match, imageName) => {
+    // 扩展的正则表达式，支持可选的尺寸参数
+    const imageTagRegex = /\[IMG:(.*?)(?:\?size=(large|small))?\]/g;
+
+    return content.replace(imageTagRegex, (match, imageName, sizeParam) => {
       try {
         const imageInfo = imageMap[imageName.trim()];
 
         if (imageInfo) {
-          return `\n<img src="${imageInfo.url}" alt="${imageName}" style="max-width: 300px; height: auto; margin: 15px 0; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />\n`;
+          // 根据尺寸参数确定样式
+          let maxWidth = "300px"; // 默认尺寸（题目中的图形）
+
+          if (sizeParam === "large") {
+            maxWidth = "95%"; // 大尺寸，适合答案图片，占满题目区域宽度
+          } else if (sizeParam === "small") {
+            maxWidth = "200px"; // 小尺寸，如果需要的话
+          }
+
+          return `\n<img src="${imageInfo.url}" alt="${imageName}" style="max-width: ${maxWidth} !important; width: auto !important; height: auto; margin: 15px 0; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />\n`;
         } else {
           console.warn(`未找到图片: ${imageName}`);
           return `\n<p style="color: red; font-style: italic; padding: 10px; background: #fee; border: 1px solid #fcc; border-radius: 4px;">⚠️ 图片未找到: ${imageName}</p>\n`;
