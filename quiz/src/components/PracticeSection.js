@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Star, Edit2, Eye, EyeOff } from "lucide-react";
+import { MarkdownParser } from "../services/MarkdownParser";
 import QuestionPrintController from "./QuestionPrintController";
 
 // 安全的HTML渲染函数
@@ -164,7 +165,29 @@ const PracticeSection = ({
   // 添加打印对话框状态
   const [showPrintDialog, setShowPrintDialog] = useState(false);
 
-  // 筛选题目
+  useEffect(() => {
+    const loadKaTexForDisplay = async () => {
+      try {
+        const parser = new MarkdownParser();
+        await parser.loadKaTeX();
+
+        if (window.renderMathInElement) {
+          window.renderMathInElement(document.body, {
+            delimiters: [
+              { left: "$$", right: "$$", display: true },
+              { left: "$", right: "$", display: false },
+            ],
+          });
+        }
+      } catch (error) {
+        console.warn("LaTeX显示初始化失败:", error);
+      }
+    };
+
+    loadKaTexForDisplay();
+  }, [questions]);
+
+  // 筛选题目 - 修复：保持字段名一致性，filters.paperId 对比 q.paper_id
   const filteredQuestions = questions.filter((q) => {
     const paper = q.papers;
     if (!paper) return false;
@@ -279,7 +302,7 @@ const PracticeSection = ({
                 teacher: "",
                 semester: "",
                 category: "",
-                paperId: "",
+                paperId: "", // 保持 paperId 命名一致性
                 masteryLevel: "",
                 courseName: "",
               })
