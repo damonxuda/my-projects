@@ -12,6 +12,7 @@ const MATH_CATEGORIES = [
   "应用题",
   "行程",
   "组合",
+  "综合",
 ];
 
 const BatchImportForm = ({

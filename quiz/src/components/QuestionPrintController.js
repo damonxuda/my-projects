@@ -8,6 +8,7 @@ const QuestionPrintController = ({
 }) => {
   const [printMode, setPrintMode] = useState("questions_only"); // 'questions_only' 或 'with_answers'
   const [fontSize, setFontSize] = useState("五号"); // '五号', '小四', '四号'
+  const [sortOrder, setSortOrder] = useState("random"); // 'random' 或 'sequential'
   const [selectedQuestions, setSelectedQuestions] = useState(
     new Set(questions.map((q) => q.id))
   ); // 默认全选
@@ -22,7 +23,19 @@ const QuestionPrintController = ({
 
   // 获取选中的题目
   const getSelectedQuestions = () => {
-    return questions.filter((q) => selectedQuestions.has(q.id));
+    const filtered = questions.filter((q) => selectedQuestions.has(q.id));
+    
+    if (sortOrder === "sequential") {
+      // 顺序排列：按题目编号排序
+      return filtered.sort((a, b) => {
+        const aNum = parseInt(a.question_number) || 0;
+        const bNum = parseInt(b.question_number) || 0;
+        return aNum - bNum;
+      });
+    } else {
+      // 乱序排列：保持原始顺序
+      return filtered;
+    }
   };
 
   // 全选
@@ -286,6 +299,18 @@ const QuestionPrintController = ({
                 <option value="五号">五号 (10.5pt)</option>
                 <option value="小四">小四 (12pt)</option>
                 <option value="四号">四号 (14pt)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">题目顺序</label>
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+                className="w-full border rounded px-2 py-1"
+              >
+                <option value="random">乱序显示</option>
+                <option value="sequential">顺序显示</option>
               </select>
             </div>
 

@@ -1,26 +1,24 @@
-// QuestionInput/index.js - 重构后的题目录入主组件（支持LaTeX）
+// QuestionInput/index.js - 重构后的题目录入主组件（只负责批量导入）
 import React, { useState, useEffect } from "react";
-import { Plus, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
 import ZipUploadComponent from "./ZipUploadComponent";
 import BatchImportForm from "./BatchImportForm";
-import { MarkdownParser } from "../../services/MarkdownParser"; // 导入新的解析器
+import ManualForm from "./ManualForm";
+import { MarkdownParser } from "../../services/MarkdownParser";
 
-// 常量定义
-const QUESTION_TYPES = ["例题", "习题"];
-
-const QuestionInput = ({ questions, setQuestions, db, user }) => {
-  const [showAddForm, setShowAddForm] = useState(false);
+const QuestionInput = ({
+  questions,
+  setQuestions,
+  db,
+  user,
+  handleManualQuestionSubmit,
+  papers, // 从 props 接收
+  getTeachers, // 从 props 接收
+  getSemesters, // 从 props 接收
+}) => {
   const [showBatchImport, setShowBatchImport] = useState(false);
-  const [papers, setPapers] = useState([]);
-
-  // 单题表单状态
-  const [questionForm, setQuestionForm] = useState({
-    paperId: "",
-    question_type: "例题",
-    question_number: "",
-    question_text: "",
-    answer: "",
-  });
+  const [showManualForm, setShowManualForm] = useState(false);
+  // 删除本地的 papers 状态，使用传入的 props
 
   // 批量导入状态
   const [batchForm, setBatchForm] = useState({
@@ -33,6 +31,19 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
 
   // 图片映射状态
   const [imageMap, setImageMap] = useState({});
+
+  // 分类和题目类型
+  const mathCategories = [
+    "计算",
+    "计数",
+    "几何",
+    "数论",
+    "应用题",
+    "行程",
+    "组合",
+    "综合",
+  ];
+  const questionTypes = ["例题", "习题"];
 
   // 自动生成试卷标题
   const generatePaperTitle = (
@@ -48,66 +59,12 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
     return parts.join("");
   };
 
-  // 加载试卷列表
-  useEffect(() => {
-    const loadPapers = async () => {
-      try {
-        const result = await db.getPapers();
-        if (result.success) {
-          setPapers(result.data || []);
-        }
-      } catch (error) {
-        console.error("加载试卷列表失败:", error);
-      }
-    };
+  // 删除本地的试卷加载逻辑，使用传入的 papers props
+  // useEffect(() => {
+  //   const loadPapers = async () => { ... }
+  // }, [db, user]);
 
-    if (user) {
-      loadPapers();
-    }
-  }, [db, user]);
-
-  // 单题添加
-  const handleSingleQuestionSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!questionForm.paperId) {
-      alert("请选择试卷");
-      return;
-    }
-
-    try {
-      const result = await db.addQuestion({
-        paperId: questionForm.paperId,
-        question_type: questionForm.question_type,
-        question_number: questionForm.question_number,
-        question_text: questionForm.question_text,
-        answer: questionForm.answer,
-      });
-
-      if (!result.success) throw new Error(result.error);
-
-      // 重新加载题目列表
-      const questionsResult = await db.getQuestions();
-      if (questionsResult.success) {
-        setQuestions(questionsResult.data || []);
-      }
-
-      setQuestionForm({
-        paperId: "",
-        question_type: "例题",
-        question_number: "",
-        question_text: "",
-        answer: "",
-      });
-      setShowAddForm(false);
-      alert("题目添加成功！");
-    } catch (error) {
-      console.error("添加失败:", error);
-      alert("添加失败：" + error.message);
-    }
-  };
-
-  // 试卷+题目批量添加（更新为异步LaTeX支持）
+  // 试卷+题目批量添加
   const handleBatchImport = async (e, imageMap = {}) => {
     e.preventDefault();
 
@@ -131,7 +88,7 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
         batchForm.math_category
       );
 
-      // 关键修改：使用新的异步MarkdownParser
+      // 使用异步MarkdownParser
       const parser = new MarkdownParser();
       const parseResult = await parser.parseMarkdownQuestions(
         batchForm.markdownText,
@@ -162,12 +119,7 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
 
       if (!result.success) throw new Error(result.error);
 
-      // 重新加载试卷列表
-      const papersResult = await db.getPapers();
-      if (papersResult.success) {
-        setPapers(papersResult.data || []);
-      }
-
+      // 重新加载数据由父组件处理
       const questionsResult = await db.getQuestions();
       if (questionsResult.success) {
         setQuestions(questionsResult.data || []);
@@ -180,10 +132,10 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
         math_category: "",
         markdownText: "",
       });
-      setImageMap({}); // 清空图片映射
+      setImageMap({});
       setShowBatchImport(false);
 
-      // 修复：正确获取导入的题目数量
+      // 获取导入的题目数量
       const importedQuestions = result.data.questions || [];
       const questionCount = importedQuestions.length;
 
@@ -221,7 +173,11 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
       math_category: "",
       markdownText: "",
     });
-    // 不清空图片映射，允许保留已上传的图片
+  };
+
+  // 单题输入取消处理
+  const handleManualFormCancel = () => {
+    setShowManualForm(false);
   };
 
   // 权限检查
@@ -255,7 +211,7 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
           批量导入试卷
         </button>
         <button
-          onClick={() => setShowAddForm(!showAddForm)}
+          onClick={() => setShowManualForm(!showManualForm)}
           disabled={!canAddQuestions()}
           className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
             canAddQuestions()
@@ -263,7 +219,6 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
               : "bg-gray-300 text-gray-500 cursor-not-allowed"
           }`}
         >
-          <Plus size={20} />
           添加单题
         </button>
       </div>
@@ -292,130 +247,16 @@ const QuestionInput = ({ questions, setQuestions, db, user }) => {
       )}
 
       {/* 单题添加表单 */}
-      {showAddForm && canAddQuestions() && (
-        <div className="mb-6 p-6 bg-gray-50 border border-gray-200 rounded-lg">
-          <h3 className="text-lg font-semibold mb-4">添加单道题目</h3>
-          <form onSubmit={handleSingleQuestionSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  选择试卷 *
-                </label>
-                <select
-                  value={questionForm.paperId}
-                  onChange={(e) =>
-                    setQuestionForm({
-                      ...questionForm,
-                      paperId: e.target.value,
-                    })
-                  }
-                  className="w-full p-2 border border-gray-300 rounded-lg"
-                  required
-                >
-                  <option value="">请选择试卷</option>
-                  {papers.map((paper) => (
-                    <option key={paper.id} value={paper.id}>
-                      {paper.title} - {paper.teacher} ({paper.math_category})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  题目类型 *
-                </label>
-                <select
-                  value={questionForm.question_type}
-                  onChange={(e) =>
-                    setQuestionForm({
-                      ...questionForm,
-                      question_type: e.target.value,
-                    })
-                  }
-                  className="w-full p-2 border border-gray-300 rounded-lg"
-                >
-                  {QUESTION_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  题号
-                </label>
-                <input
-                  type="text"
-                  value={questionForm.question_number}
-                  onChange={(e) =>
-                    setQuestionForm({
-                      ...questionForm,
-                      question_number: e.target.value,
-                    })
-                  }
-                  placeholder="例：例1、第1题"
-                  className="w-full p-2 border border-gray-300 rounded-lg"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  题目内容 *{" "}
-                  <span className="text-blue-600 text-xs">
-                    （支持LaTeX数学公式）
-                  </span>
-                </label>
-                <textarea
-                  value={questionForm.question_text}
-                  onChange={(e) =>
-                    setQuestionForm({
-                      ...questionForm,
-                      question_text: e.target.value,
-                    })
-                  }
-                  placeholder="请输入题目内容，支持LaTeX数学公式"
-                  className="w-full p-3 border border-gray-300 rounded-lg"
-                  rows={4}
-                  required
-                />
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  答案 *{" "}
-                  <span className="text-blue-600 text-xs">
-                    （支持LaTeX数学公式）
-                  </span>
-                </label>
-                <textarea
-                  value={questionForm.answer}
-                  onChange={(e) =>
-                    setQuestionForm({ ...questionForm, answer: e.target.value })
-                  }
-                  placeholder="请输入答案，支持LaTeX公式"
-                  className="w-full p-3 border border-gray-300 rounded-lg"
-                  rows={3}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg"
-              >
-                添加题目
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowAddForm(false)}
-                className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg"
-              >
-                取消
-              </button>
-            </div>
-          </form>
-        </div>
+      {showManualForm && canAddQuestions() && (
+        <ManualForm
+          onSubmit={handleManualQuestionSubmit}
+          onCancel={handleManualFormCancel}
+          categories={mathCategories}
+          questionTypes={questionTypes}
+          papers={papers} // 现在可以传递了
+          getTeachers={getTeachers} // 现在可以传递了
+          getSemesters={getSemesters} // 现在可以传递了
+        />
       )}
 
       {/* 试卷列表 */}

@@ -238,6 +238,70 @@ class DatabaseService {
     }
   }
 
+  // 查找是否存在相同标签的试卷
+  async findExistingPaper(teacher, semester, courseName, mathCategory, excludeId = null) {
+    try {
+      if (!this.supabase) {
+        throw new Error("数据库未初始化");
+      }
+
+      let query = this.supabase
+        .from("papers")
+        .select("id, title, teacher, semester, course_name, math_category")
+        .eq("teacher", teacher)
+        .eq("semester", semester)
+        .eq("course_name", courseName)
+        .eq("math_category", mathCategory);
+
+      // 如果提供了excludeId，排除该试卷
+      if (excludeId) {
+        query = query.neq("id", excludeId);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      console.log(`查找已存在试卷 (${teacher}, ${semester}, ${courseName}, ${mathCategory}):`, data);
+      
+      return { success: true, data: data || [] };
+    } catch (error) {
+      console.error("查找试卷失败:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  // 更新试卷
+  async updatePaper(id, updates) {
+    try {
+      console.log('updatePaper 调用参数:', { id, updates });
+      
+      if (!this.supabase) {
+        throw new Error("数据库未初始化");
+      }
+
+      const { data, error } = await this.supabase
+        .from("papers")
+        .update(updates)
+        .eq("id", id)
+        .select()
+        .single();
+
+      console.log('Supabase 更新响应:', { data, error });
+
+      if (error) {
+        console.error('Supabase 错误详情:', error);
+        throw error;
+      }
+
+      console.log('试卷更新成功，返回数据:', data);
+      return { success: true, data };
+    } catch (error) {
+      console.error("更新试卷失败:", error);
+      return { success: false, error: error.message };
+    }
+  }
+
   // 删除题目
   async deleteQuestion(id) {
     try {

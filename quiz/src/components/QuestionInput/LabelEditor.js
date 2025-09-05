@@ -38,7 +38,7 @@ const parseLabels = (input) => {
   
   // 解析课程名称
   const titleMatch = input.match(/第\d+讲(.+?)(?:$|[，,])/) || 
-                    input.match(/(计数|计算|几何|数论|应用题|行程|组合)[^，,]*/) ||
+                    input.match(/(计数|计算|几何|数论|应用题|行程|组合|综合)[^，,]*/) ||
                     input.match(/([一二三四五六七八九十]+)$/);
   if (titleMatch) {
     const title = titleMatch[1].trim();

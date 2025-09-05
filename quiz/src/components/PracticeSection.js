@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Star, Edit2, Eye, EyeOff } from "lucide-react";
+import { Star, Eye, EyeOff } from "lucide-react";
 import { MarkdownParser } from "../services/MarkdownParser";
 import QuestionPrintController from "./QuestionPrintController";
 
@@ -90,14 +90,6 @@ const PracticeQuestion = ({
         </div>
         {/* 右上角：点击评分星星 + 显示当前评分 */}
         <div className="flex items-center gap-2">
-          {isAdmin && (
-            <button
-              className="text-gray-500 hover:text-blue-500 p-1"
-              title="管理员编辑"
-            >
-              <Edit2 size={16} />
-            </button>
-          )}
           {renderClickableStars(getCurrentScore(question.id))}
         </div>
       </div>

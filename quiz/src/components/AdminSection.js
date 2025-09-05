@@ -1,37 +1,37 @@
-import React from 'react';
-import { Database, Github } from 'lucide-react';
-import QuestionInput from './QuestionInput/index.js';
+import React from "react";
+import { Database, Github } from "lucide-react";
+import QuestionInput from "./QuestionInput/index.js";
 
-const AdminSection = ({ 
-  activeTab, 
-  questions, 
-  setQuestions, 
-  papers, 
-  attempts, 
-  mathCategories, 
-  getTeachers, 
-  user, 
-  db 
+const AdminSection = ({
+  activeTab,
+  questions,
+  setQuestions,
+  papers,
+  attempts,
+  mathCategories,
+  getTeachers,
+  getSemesters,
+  user,
+  db,
+  handleManualQuestionSubmit,
 }) => {
-
   // 部署检查面板
   const renderDeploymentPanel = () => (
     <div className="bg-green-50 p-6 rounded-lg mb-6">
       <h3 className="text-lg font-semibold text-green-800 mb-4 flex items-center gap-2">
-        <Github size={20} />
-        ✅ 系统已完成数据库升级
+        <Github size={20} />✅ 系统已完成数据库升级
       </h3>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div className="bg-white p-4 rounded border">
           <h4 className="font-medium text-gray-800 mb-3">📋 新数据库结构</h4>
           <div className="space-y-2 text-sm">
             {Object.entries({
-              'papers表（试卷）': papers.length,
-              'questions表（题目）': questions.length,
-              'attempts表（练习记录）': attempts.length,
-              'Clerk认证系统': '正常',
-              'API接口统一': '完成'
+              "papers表（试卷）": papers.length,
+              "questions表（题目）": questions.length,
+              "attempts表（练习记录）": attempts.length,
+              Clerk认证系统: "正常",
+              API接口统一: "完成",
             }).map(([item, status]) => (
               <div key={item} className="flex items-center justify-between">
                 <span className="text-gray-700">{item}</span>
@@ -40,7 +40,7 @@ const AdminSection = ({
             ))}
           </div>
         </div>
-        
+
         <div className="bg-white p-4 rounded border">
           <h4 className="font-medium text-gray-800 mb-3">🔗 数据库连接状态</h4>
           <div className="text-sm">
@@ -57,11 +57,13 @@ const AdminSection = ({
           </div>
         </div>
       </div>
-      
+
       <div className="bg-white p-4 rounded border">
         <h4 className="font-medium text-gray-800 mb-3">🎯 升级完成</h4>
         <div className="text-sm text-gray-700 space-y-2">
-          <p><strong>✅ 已完成:</strong></p>
+          <p>
+            <strong>✅ 已完成:</strong>
+          </p>
           <ul className="ml-4 space-y-1">
             <li>• 数据库表结构重建：试卷+题目两层架构</li>
             <li>• 支持批量导入Markdown格式试卷</li>
@@ -74,18 +76,22 @@ const AdminSection = ({
     </div>
   );
 
-  if (activeTab === 'input') {
+  if (activeTab === "input") {
     return (
       <div>
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-gray-900">录入新题目</h2>
         </div>
 
-        <QuestionInput 
+        <QuestionInput
           questions={questions}
           setQuestions={setQuestions}
           db={db}
           user={user}
+          handleManualQuestionSubmit={handleManualQuestionSubmit}
+          papers={papers}
+          getTeachers={getTeachers}
+          getSemesters={getSemesters}
         />
 
         {(questions.length > 0 || papers.length > 0) && (
@@ -104,15 +110,20 @@ const AdminSection = ({
                 </span>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="font-medium mb-2">📈 按分类统计：</h4>
                 <div className="space-y-2">
-                  {mathCategories.map(category => {
-                    const count = papers.filter(p => p.math_category === category).length;
+                  {mathCategories.map((category) => {
+                    const count = papers.filter(
+                      (p) => p.math_category === category
+                    ).length;
                     return count > 0 ? (
-                      <div key={category} className="flex justify-between text-sm">
+                      <div
+                        key={category}
+                        className="flex justify-between text-sm"
+                      >
                         <span>{category}:</span>
                         <span className="text-blue-600">{count}套试卷</span>
                       </div>
@@ -120,18 +131,24 @@ const AdminSection = ({
                   })}
                 </div>
               </div>
-              
+
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h4 className="font-medium mb-2">👨‍🏫 按老师统计：</h4>
                 <div className="space-y-2">
-                  {getTeachers().map(teacher => {
-                    const paperCount = papers.filter(p => p.teacher === teacher).length;
-                    const questionCount = questions.filter(q => q.papers?.teacher === teacher).length;
+                  {getTeachers().map((teacher) => {
+                    const paperCount = papers.filter(
+                      (p) => p.teacher === teacher
+                    ).length;
+                    const questionCount = questions.filter(
+                      (q) => q.papers?.teacher === teacher
+                    ).length;
                     return (
                       <div key={teacher} className="text-sm">
                         <div className="flex justify-between">
                           <span>{teacher}:</span>
-                          <span className="text-blue-600">{paperCount}套试卷 / {questionCount}道题</span>
+                          <span className="text-blue-600">
+                            {paperCount}套试卷 / {questionCount}道题
+                          </span>
                         </div>
                       </div>
                     );
@@ -139,9 +156,11 @@ const AdminSection = ({
                 </div>
               </div>
             </div>
-            
+
             <div className="bg-green-50 border border-green-200 p-4 rounded-lg mt-4">
-              <h4 className="font-medium text-green-800 mb-2">✅ 数据库连接状态</h4>
+              <h4 className="font-medium text-green-800 mb-2">
+                ✅ 数据库连接状态
+              </h4>
               <div className="text-sm text-green-700">
                 <p>• 已连接到{db.getConnectionStatus().mode}数据库</p>
                 <p>• 状态: {db.getConnectionStatus().status}</p>
@@ -154,14 +173,16 @@ const AdminSection = ({
     );
   }
 
-  if (activeTab === 'deploy') {
+  if (activeTab === "deploy") {
     return (
       <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-6">🚀 系统状态</h2>
         {renderDeploymentPanel()}
-        
+
         <div className="bg-white p-6 rounded-lg border mb-6">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">📋 新数据库表结构</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            📋 新数据库表结构
+          </h3>
           <div className="bg-gray-100 p-4 rounded font-mono text-sm overflow-x-auto">
             <div className="mb-4">
               <p className="font-bold text-blue-600">-- papers表 (试卷表)</p>
@@ -172,36 +193,57 @@ const AdminSection = ({
               <p>&nbsp;&nbsp;semester TEXT NOT NULL,</p>
               <p>&nbsp;&nbsp;course_name TEXT NOT NULL,</p>
               <p>&nbsp;&nbsp;math_category TEXT NOT NULL,</p>
-              <p>&nbsp;&nbsp;created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()</p>
+              <p>
+                &nbsp;&nbsp;created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+              </p>
               <p>);</p>
             </div>
             <div className="mb-4">
-              <p className="font-bold text-green-600">-- questions表 (题目表)</p>
+              <p className="font-bold text-green-600">
+                -- questions表 (题目表)
+              </p>
               <p>CREATE TABLE questions (</p>
               <p>&nbsp;&nbsp;id UUID PRIMARY KEY DEFAULT gen_random_uuid(),</p>
-              <p>&nbsp;&nbsp;paper_id UUID REFERENCES papers(id) ON DELETE CASCADE,</p>
+              <p>
+                &nbsp;&nbsp;paper_id UUID REFERENCES papers(id) ON DELETE
+                CASCADE,
+              </p>
               <p>&nbsp;&nbsp;question_type TEXT NOT NULL,</p>
               <p>&nbsp;&nbsp;question_number TEXT,</p>
               <p>&nbsp;&nbsp;question_text TEXT NOT NULL,</p>
               <p>&nbsp;&nbsp;answer TEXT NOT NULL,</p>
-              <p>&nbsp;&nbsp;created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()</p>
+              <p>
+                &nbsp;&nbsp;created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+              </p>
               <p>);</p>
             </div>
             <div className="mb-4">
-              <p className="font-bold text-purple-600">-- attempts表 (练习记录表)</p>
+              <p className="font-bold text-purple-600">
+                -- attempts表 (练习记录表)
+              </p>
               <p>CREATE TABLE attempts (</p>
               <p>&nbsp;&nbsp;id BIGSERIAL PRIMARY KEY,</p>
-              <p>&nbsp;&nbsp;question_id UUID REFERENCES questions(id) ON DELETE CASCADE,</p>
+              <p>
+                &nbsp;&nbsp;question_id UUID REFERENCES questions(id) ON DELETE
+                CASCADE,
+              </p>
               <p>&nbsp;&nbsp;user_id TEXT,</p>
-              <p>&nbsp;&nbsp;mastery_score INTEGER CHECK (mastery_score &gt;= 1 AND mastery_score &lt;= 5),</p>
+              <p>
+                &nbsp;&nbsp;mastery_score INTEGER CHECK (mastery_score &gt;= 1
+                AND mastery_score &lt;= 5),
+              </p>
               <p>&nbsp;&nbsp;is_marked_wrong BOOLEAN DEFAULT FALSE,</p>
-              <p>&nbsp;&nbsp;created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()</p>
+              <p>
+                &nbsp;&nbsp;created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+              </p>
               <p>);</p>
             </div>
           </div>
-          
+
           <div className="mt-4 p-4 bg-green-50 rounded-lg">
-            <h4 className="font-medium text-green-800 mb-2">✅ 数据库升级完成</h4>
+            <h4 className="font-medium text-green-800 mb-2">
+              ✅ 数据库升级完成
+            </h4>
             <ul className="text-sm text-green-700 space-y-1">
               <li>• 试卷+题目两层架构，支持按试卷组织题目</li>
               <li>• 支持Markdown格式批量导入功能</li>
@@ -211,7 +253,7 @@ const AdminSection = ({
             </ul>
           </div>
         </div>
-        
+
         <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
           <h4 className="font-medium text-blue-800 mb-2">🎯 当前状态</h4>
           <p className="text-blue-700 text-sm">
