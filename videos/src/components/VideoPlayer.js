@@ -28,7 +28,6 @@ const VideoPlayer = ({ video, apiUrl, onClose }) => {
         
         console.log('📨 响应状态码:', response.status);
         console.log('📨 响应状态文本:', response.statusText);
-        console.log('📨 响应头:', Object.fromEntries(response.headers.entries()));
         
         if (!response.ok) {
           const errorText = await response.text();
@@ -37,31 +36,21 @@ const VideoPlayer = ({ video, apiUrl, onClose }) => {
         }
 
         const responseText = await response.text();
-        console.log('📄 原始响应文本:', responseText);
         
         let data;
         try {
           data = JSON.parse(responseText);
-          console.log('📦 解析后的JSON数据:', data);
         } catch (parseError) {
-          console.error('❌ JSON解析失败:', parseError);
-          console.log('📄 无法解析的响应:', responseText);
           throw new Error('服务器返回的数据格式错误');
         }
         
-        console.log('🎯 data.url:', data.url);
-        console.log('🎯 预签名URL长度:', data.url ? data.url.length : '未找到url字段');
-        
         if (data.url) {
-          console.log('✅ 设置videoUrl:', data.url);
           setVideoUrl(data.url);
         } else {
-          console.error('❌ 响应中没有url字段');
           throw new Error('服务器返回的数据中没有视频URL');
         }
         
       } catch (err) {
-        console.error('❌ 完整错误信息:', err);
         setError(`加载视频失败: ${err.message}`);
       } finally {
         setLoading(false);

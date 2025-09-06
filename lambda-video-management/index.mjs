@@ -8,22 +8,18 @@ import {
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
+
 const s3Client = new S3Client({ region: "ap-northeast-1" });
 const VIDEO_BUCKET = process.env.VIDEO_BUCKET_NAME;
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 
-export const handler = async (event) => {
-  // 简化CORS处理 - 不设置CORS headers，让Function URL处理
-  const corsHeaders = {};
+// Token缓存 - 避免Clerk API速率限制
+const tokenCache = new Map();
+const TOKEN_CACHE_TTL = 5 * 60 * 1000; // 5分钟缓存
 
-  // 处理OPTIONS预检请求
-  if (event.requestContext.http.method === "OPTIONS") {
-    return {
-      statusCode: 200,
-      headers: corsHeaders,
-      body: "",
-    };
-  }
+export const handler = async (event) => {
+  // CORS处理完全交给Function URL配置
+  const corsHeaders = {};
 
   try {
     console.log("=== Lambda函数开始执行 ===");
@@ -85,7 +81,18 @@ export const handler = async (event) => {
     if (method === "GET" && path === "/videos/list") {
       return await listVideos(corsHeaders);
     } else if (method === "GET" && path.startsWith("/videos/url/")) {
-      const videoKey = decodeURIComponent(path.replace("/videos/url/", ""));
+      console.log("URL解析调试:");
+      console.log("- event.requestContext.http.path:", event.requestContext.http.path);
+      console.log("- event.rawPath:", event.rawPath);
+      
+      // 使用rawPath来获取原始的URL编码路径
+      const rawPath = event.rawPath || event.requestContext.http.path;
+      const rawVideoKey = rawPath.replace("/videos/url/", "");
+      const videoKey = decodeURIComponent(rawVideoKey);
+      
+      console.log("- 使用的rawPath:", rawPath);
+      console.log("- 提取的rawVideoKey:", rawVideoKey);  
+      console.log("- 解码后的videoKey:", videoKey);
       return await getVideoUrl(videoKey, corsHeaders);
     } else if (method === "POST" && path === "/upload-youtube") {
       return await uploadYouTubeJson(event, user, corsHeaders);
@@ -115,6 +122,14 @@ export const handler = async (event) => {
 async function verifyTokenAndCheckAccess(token) {
   try {
     console.log("--- 开始验证Token ---");
+    
+    // 检查缓存
+    const cacheKey = token.substring(0, 20) + "..."; // 使用token前20字符作为缓存key的一部分
+    const cached = tokenCache.get(token);
+    if (cached && (Date.now() - cached.timestamp) < TOKEN_CACHE_TTL) {
+      console.log("使用缓存的token验证结果");
+      return cached.user;
+    }
 
     console.log("步骤1: 验证token...");
     const sessionToken = await Promise.race([
@@ -152,6 +167,15 @@ async function verifyTokenAndCheckAccess(token) {
       authorizedModules.includes("videos") && status === "approved";
 
     console.log("最终权限结果:", hasAccess ? "有权限" : "无权限");
+
+    // 如果验证成功，缓存结果
+    if (hasAccess) {
+      tokenCache.set(token, {
+        user: user,
+        timestamp: Date.now()
+      });
+      console.log("Token验证结果已缓存");
+    }
 
     return hasAccess ? user : null;
   } catch (error) {
@@ -619,3 +643,4 @@ async function deleteVideo(event, user, corsHeaders) {
     };
   }
 }
+
