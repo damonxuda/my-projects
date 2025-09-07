@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { ArrowLeft, Youtube, Plus, X, Upload } from "lucide-react";
 import { useAuth } from "../../../auth-clerk/src";
 import VideoPlayer from "./VideoPlayer";
@@ -20,7 +20,7 @@ const VideoLibrary = () => {
   const { user, isSignedIn, isAdmin, fetchVideoList, getVideoUrl, getToken } =
     useAuth();
 
-  const API_BASE_URL = process.env.REACT_APP_VIDEO_API_URL;
+  const API_BASE_URL = process.env.REACT_APP_VIDEO_API_URL || process.env.VIDEO_API_URL;
 
   // 提取YouTube视频ID（用于添加新视频）
   const extractVideoId = (url) => {
@@ -42,7 +42,6 @@ const VideoLibrary = () => {
   // 删除文件
   const handleDelete = async (item) => {
     try {
-      console.log("开始删除文件:", item.name);
 
       const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/videos/delete`, {
@@ -61,8 +60,7 @@ const VideoLibrary = () => {
         throw new Error(errorData.details || `删除失败: ${response.status}`);
       }
 
-      const result = await response.json();
-      console.log("文件删除成功:", result);
+      await response.json();
 
       // 刷新当前文件夹
       await loadItems(currentPath);
@@ -126,8 +124,7 @@ const VideoLibrary = () => {
         throw new Error(`上传失败: ${response.status}`);
       }
 
-      const result = await response.json();
-      console.log("YouTube视频添加成功:", result);
+      await response.json();
 
       // 成功后重置表单并刷新列表
       setYoutubeUrl("");
@@ -146,8 +143,180 @@ const VideoLibrary = () => {
     }
   };
 
+  // 处理文件列表，创建文件夹结构（支持YouTube JSON文件）
+  const processFileList = useCallback((files, currentPath) => {
+    const folders = new Map();
+    const videos = [];
+    const youtubeVideos = [];
+
+    console.log("=== processFileList START ===");
+    console.log("currentPath:", currentPath);
+    console.log("files count:", files.length);
+
+    files.forEach((file) => {
+      // Skip the root "videos/" entry
+      if (file.Key === "videos/") return;
+
+      // Remove "videos/" prefix for processing
+      const relativePath = file.Key.replace("videos/", "");
+      // console.log("处理文件:", file.Key, "=> relativePath:", relativePath);
+
+      // YouTube JSON files - need to respect folder structure
+      if (relativePath.endsWith(".youtube.json")) {
+        console.log("YouTube file found:", relativePath);
+        const pathParts = relativePath.split("/");
+        console.log("pathParts:", pathParts);
+        console.log("currentPath:", currentPath);
+        
+        if (currentPath === "" && pathParts.length > 1) {
+          // At root level but YouTube file is in a subfolder - should be handled as folder structure
+          console.log("Case 1: Root level, file in subfolder");
+          const folderName = pathParts[0];
+          if (!folders.has(folderName)) {
+            folders.set(folderName, {
+              key: `videos/${folderName}/`,
+              name: folderName,
+              type: "folder",
+              path: folderName,
+              count: 0,
+            });
+          }
+          folders.get(folderName).count++;
+        } else if (currentPath !== "" && relativePath.startsWith(currentPath + "/")) {
+          // YouTube file is in current directory
+          console.log("Case 2: YouTube文件在当前目录");
+          console.log("  currentPath:", currentPath);
+          console.log("  relativePath:", relativePath);
+          const fileName = relativePath.split("/").pop();
+          const youtubeItem = {
+            key: file.Key,
+            name: fileName,
+            type: "youtube",
+            size: file.Size,
+            lastModified: file.LastModified,
+            path: currentPath,
+          };
+          youtubeVideos.push(youtubeItem);
+          console.log("  添加YouTube视频:", fileName);
+        } else if (currentPath === "" && pathParts.length === 1) {
+          // YouTube file is at root level
+          console.log("Case 3: File at root level");
+          const youtubeItem = {
+            key: file.Key,
+            name: relativePath,
+            type: "youtube",
+            size: file.Size,
+            lastModified: file.LastModified,
+            path: currentPath,
+          };
+          youtubeVideos.push(youtubeItem);
+          console.log("Added root YouTube video:", relativePath);
+        } else {
+          console.log("Case 4: No match - file ignored");
+        }
+        return;
+      }
+
+      // Regular files
+      if (!relativePath.includes("/") && currentPath === "") {
+        // Root level files - 在根目录显示测试文件
+        console.log("处理根目录文件:", relativePath);
+        const isVideo = /\.(mp4|avi|mov|wmv|mkv)$/i.test(relativePath);
+        if (isVideo) {
+          videos.push({
+            key: file.Key,
+            name: relativePath,
+            type: "video",
+            size: file.Size,
+            lastModified: file.LastModified,
+            path: currentPath,
+          });
+        }
+      } else {
+        // Files in subdirectories
+        const pathParts = relativePath.split("/");
+
+        if (currentPath === "") {
+          // Show folders at root level
+          const folderName = pathParts[0];
+          if (!folders.has(folderName)) {
+            folders.set(folderName, {
+              key: `videos/${folderName}/`,
+              name: folderName,
+              type: "folder",
+              path: folderName,
+              count: 0,
+            });
+          }
+          folders.get(folderName).count++;
+        } else {
+          // Show files in current directory - 检查文件是否在当前路径下
+          console.log("检查当前目录文件:", currentPath, "vs", relativePath);
+          
+          if (currentPath !== "" && relativePath.startsWith(currentPath + "/")) {
+            // 文件在当前目录下
+            const pathAfterCurrent = relativePath.substring(currentPath.length + 1);
+            const remainingParts = pathAfterCurrent.split("/");
+            console.log("  pathAfterCurrent:", pathAfterCurrent);
+            console.log("  remainingParts:", remainingParts);
+            
+            // 只处理直接在当前目录下的文件（不是子目录中的文件）
+            if (remainingParts.length === 1) {
+              const fileName = remainingParts[0];
+              const isVideo = /\.(mp4|avi|mov|wmv|mkv)$/i.test(fileName);
+              console.log("  fileName:", fileName, "isVideo:", isVideo);
+              if (isVideo) {
+                videos.push({
+                  key: file.Key,
+                  name: fileName,
+                  type: "video",
+                  size: file.Size,
+                  lastModified: file.LastModified,
+                  path: currentPath,
+                });
+                console.log("  添加视频文件:", fileName);
+              }
+            } else {
+              console.log("  跳过子目录文件:", pathAfterCurrent);
+            }
+          } else if (currentPath === "") {
+            // 根目录 - 只处理直接在根目录的文件，不处理子目录中的文件
+            if (pathParts.length === 1) {
+              const fileName = pathParts[0];
+              const isVideo = /\.(mp4|avi|mov|wmv|mkv)$/i.test(fileName);
+              console.log("  根目录文件:", fileName, "isVideo:", isVideo);
+              if (isVideo) {
+                videos.push({
+                  key: file.Key,
+                  name: fileName,
+                  type: "video",
+                  size: file.Size,
+                  lastModified: file.LastModified,
+                  path: currentPath,
+                });
+                console.log("  添加根目录视频:", fileName);
+              }
+            }
+          }
+        }
+      }
+    });
+
+    console.log("=== processFileList RESULT ===");
+    console.log("folders:", Array.from(folders.values()));
+    console.log("videos:", videos);
+    console.log("youtubeVideos:", youtubeVideos);
+    console.log("=== processFileList END ===");
+
+    return [
+      ...Array.from(folders.values()),
+      ...videos.sort((a, b) => a.name.localeCompare(b.name)),
+      ...youtubeVideos.sort((a, b) => a.name.localeCompare(b.name)),
+    ];
+  }, []);
+
   // 加载视频列表
-  const loadItems = async (path = "") => {
+  const loadItems = useCallback(async (path = "") => {
     setLoading(true);
     setError("");
 
@@ -156,142 +325,19 @@ const VideoLibrary = () => {
         throw new Error("用户未登录");
       }
 
-      console.log("VideoLibrary: 加载视频列表, path:", path);
+      console.log("🔍 VideoLibrary - 开始加载视频列表, path:", path);
 
       const data = await fetchVideoList(path);
-      console.log("原始文件数据:", data.length, "个文件");
-
-      // 调试：输出所有文件名
-      data.forEach((file, index) => {
-        const filename = file.Key.split("/").pop();
-        console.log(`文件${index + 1}:`, filename, "| 完整路径:", file.Key);
-      });
-
       const processedItems = processFileList(data, path);
       setItems(processedItems);
-
-      console.log("VideoLibrary: 处理后项目数:", processedItems.length);
-      console.log(
-        "处理结果:",
-        processedItems.map((item) => ({ name: item.name, type: item.type }))
-      );
     } catch (err) {
       console.error("VideoLibrary: 加载失败:", err);
       setError(err.message || "加载失败，请刷新重试");
     } finally {
       setLoading(false);
     }
-  };
+  }, [isSignedIn, user, fetchVideoList, processFileList]);
 
-  // 处理文件列表，创建文件夹结构（支持YouTube JSON文件）
-  const processFileList = (files, currentPath) => {
-    const folders = new Map();
-    const videos = [];
-    const youtubeVideos = [];
-
-    console.log("开始处理文件列表, currentPath:", currentPath);
-
-    files.forEach((file) => {
-      const relativePath = file.Key.startsWith("videos/")
-        ? file.Key.substring(7)
-        : file.Key;
-
-      if (currentPath && !relativePath.startsWith(currentPath + "/")) {
-        console.log("跳过文件（路径不匹配）:", relativePath);
-        return;
-      }
-
-      const pathAfterCurrent = currentPath
-        ? relativePath.substring(currentPath.length + 1)
-        : relativePath;
-
-      const pathParts = pathAfterCurrent.split("/");
-
-      if (pathParts.length === 1) {
-        const filename = pathParts[0];
-
-        // 检查是否是YouTube JSON文件
-        if (filename.endsWith(".youtube.json")) {
-          youtubeVideos.push({
-            type: "youtube",
-            name: filename,
-            key: file.Key,
-            size: file.Size,
-            lastModified: file.LastModified,
-            path: currentPath ? `${currentPath}/${filename}` : filename,
-          });
-          console.log(`添加YouTube视频: ${filename}`);
-        } else if (isVideoFile(filename)) {
-          videos.push({
-            type: "video",
-            name: filename,
-            key: file.Key,
-            size: file.Size,
-            lastModified: file.LastModified,
-            path: currentPath ? `${currentPath}/${filename}` : filename,
-          });
-          console.log(`添加本地视频: ${filename}`);
-        } else {
-          console.log(`跳过非视频文件: ${filename}`);
-        }
-      } else {
-        const folderName = pathParts[0];
-        const folderPath = currentPath
-          ? `${currentPath}/${folderName}`
-          : folderName;
-
-        if (!folders.has(folderName)) {
-          folders.set(folderName, {
-            type: "folder",
-            name: folderName,
-            path: folderPath,
-            count: 0,
-          });
-        }
-        folders.get(folderName).count++;
-        console.log(`处理文件夹: ${folderName}`);
-      }
-    });
-
-    console.log(
-      `最终统计: ${folders.size} 个文件夹, ${videos.length} 个本地视频, ${youtubeVideos.length} 个YouTube视频`
-    );
-
-    return [
-      ...Array.from(folders.values()).sort((a, b) =>
-        a.name.localeCompare(b.name)
-      ),
-      ...videos.sort((a, b) => a.name.localeCompare(b.name)),
-      ...youtubeVideos.sort((a, b) => a.name.localeCompare(b.name)),
-    ];
-  };
-
-  // 检查是否为视频文件 - 加强调试
-  const isVideoFile = (filename) => {
-    const videoExtensions = [
-      ".mp4",
-      ".avi",
-      ".mov",
-      ".wmv",
-      ".flv",
-      ".webm",
-      ".mkv",
-    ];
-    const lowerFilename = filename.toLowerCase();
-
-    console.log(`视频格式检查: "${filename}" -> "${lowerFilename}"`);
-
-    const result = videoExtensions.some((ext) => {
-      const matches = lowerFilename.endsWith(ext);
-      if (matches) {
-        console.log(`匹配格式: ${ext}`);
-      }
-      return matches;
-    });
-
-    console.log(`"${filename}" 检查结果: ${result}`);
-    return result;
-  };
 
   // 导航到指定路径
   const navigateToPath = (path) => {
@@ -301,7 +347,6 @@ const VideoLibrary = () => {
 
   // 视频播放处理（支持YouTube）
   const handleVideoPlay = (video) => {
-    console.log("点击视频:", video.name, "类型:", video.type);
 
     if (video.type === "youtube") {
       // YouTube视频：直接跳转到YouTube
@@ -315,7 +360,6 @@ const VideoLibrary = () => {
   // 处理YouTube视频播放
   const handleYouTubeVideoPlay = async (youtubeVideo) => {
     try {
-      console.log("播放YouTube视频:", youtubeVideo.name);
 
       // 从文件名提取videoId
       const filename = youtubeVideo.name;
@@ -337,10 +381,8 @@ const VideoLibrary = () => {
 
       if (videoId) {
         const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
-        console.log("打开YouTube链接:", youtubeUrl);
         window.open(youtubeUrl, "_blank");
       } else {
-        console.error("无法从文件名提取videoId:", filename);
         alert("无法获取YouTube视频ID，请重试");
       }
     } catch (error) {
@@ -354,6 +396,7 @@ const VideoLibrary = () => {
     if (isSignedIn && user) {
       loadItems();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSignedIn, user]);
 
   return (
@@ -551,6 +594,7 @@ const VideoLibrary = () => {
                   onVideoPlay={handleVideoPlay}
                   getVideoUrl={getVideoUrl}
                   apiUrl={API_BASE_URL}
+                  getToken={getToken}
                   onDelete={handleDelete}
                 />
               ))}

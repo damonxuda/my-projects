@@ -15,6 +15,7 @@ const FileCard = ({
   onVideoPlay,
   getVideoUrl,
   apiUrl,
+  getToken,
   onDelete,
 }) => {
   const [videoUrl, setVideoUrl] = useState(null);
@@ -76,15 +77,13 @@ const FileCard = ({
     [extractVideoId]
   );
 
-  // 获取视频URL用于缩略图
+  // 获取视频URL用于播放
   useEffect(() => {
     if (isVideo && getVideoUrl && !videoUrl) {
       const loadVideoUrl = async () => {
         try {
-          console.log("🎬 获取视频URL用于缩略图:", item.name);
           const url = await getVideoUrl(item.key);
           setVideoUrl(url);
-          console.log("✅ 视频URL获取成功");
         } catch (error) {
           console.error("❌ 获取视频URL失败:", item.name, error);
         }
@@ -92,6 +91,8 @@ const FileCard = ({
       loadVideoUrl();
     }
   }, [isVideo, item.key, getVideoUrl, videoUrl, item.name]);
+
+
 
   // 处理YouTube数据 - 使用简化逻辑从文件名提取信息
   useEffect(() => {
@@ -112,11 +113,6 @@ const FileCard = ({
       };
 
       setYoutubeData(youtubeInfo);
-      console.log("YouTube数据设置完成:", {
-        videoId: videoId,
-        displayName: displayTitle,
-        thumbnailUrl: youtubeInfo.thumbnailUrl,
-      });
     }
   }, [isYouTube, item.name, extractVideoId, getDisplayTitle]);
 
@@ -205,15 +201,8 @@ const FileCard = ({
                     alt={youtubeData.displayName}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      console.log("❌ 缩略图加载失败，切换到fallback");
                       e.target.style.display = "none";
                       e.target.nextElementSibling.style.display = "flex";
-                    }}
-                    onLoad={() => {
-                      console.log(
-                        "✅ YouTube缩略图加载成功:",
-                        youtubeData.displayName
-                      );
                     }}
                   />
                   <div
@@ -243,14 +232,14 @@ const FileCard = ({
               </div>
             </div>
           ) : isVideo ? (
-            videoUrl ? (
-              <VideoThumbnail videoUrl={videoUrl} alt={item.name} />
-            ) : (
-              // 加载中的占位符
-              <div className="w-full h-32 bg-gradient-to-br from-gray-300 to-gray-400 rounded-lg flex items-center justify-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-              </div>
-            )
+            <VideoThumbnail 
+              videoUrl={videoUrl} 
+              alt={item.name}
+              fileSize={item.size}
+              fileName={item.key}  // 使用完整的S3键值而不是只是文件名
+              apiUrl={apiUrl}
+              getToken={getToken}
+            />
           ) : (
             <div className="w-full h-32 bg-gradient-to-br from-gray-400 to-gray-600 rounded-lg flex items-center justify-center">
               <span className="text-white text-2xl">📄</span>

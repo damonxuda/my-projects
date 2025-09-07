@@ -346,6 +346,11 @@ export const useAuth = () => {
       // 获取Clerk token
       const token = await getToken();
       console.log('🔑 获取到token:', token ? '有效' : '无效');
+      if (token) {
+        console.log('🔑 Token前20字符:', token.substring(0, 20) + '...');
+      } else {
+        console.error('❌ Token为空或null');
+      }
       
       const response = await fetch(
         `${VIDEO_API_URL}/videos/list?path=${encodeURIComponent(path)}`,

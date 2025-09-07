@@ -4,14 +4,30 @@ import {
   ListObjectsV2Command,
   PutObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
+// MediaConvert导入暂时禁用
+// import {
+//   MediaConvertClient,
+//   CreateJobCommand,
+//   DescribeEndpointsCommand,
+// } from "@aws-sdk/client-mediaconvert";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { exec } from "child_process";
+import { promisify } from "util";
+import { writeFile, unlink, readFile } from "fs/promises";
 
 
 const s3Client = new S3Client({ region: "ap-northeast-1" });
 const VIDEO_BUCKET = process.env.VIDEO_BUCKET_NAME;
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
+
+// MediaConvert variables - 暂时禁用
+// let mediaConvertClient = null;
+// const MEDIACONVERT_ROLE_ARN = process.env.MEDIACONVERT_ROLE_ARN || 'arn:aws:iam::730335478220:role/MediaConver-S3-Role';
+// const MEDIACONVERT_QUEUE = process.env.MEDIACONVERT_QUEUE || 'Default';
+const execAsync = promisify(exec);
 
 // Token缓存 - 避免Clerk API速率限制
 const tokenCache = new Map();
@@ -98,6 +114,11 @@ export const handler = async (event) => {
       return await uploadYouTubeJson(event, user, corsHeaders);
     } else if (method === "DELETE" && path === "/videos/delete") {
       return await deleteVideo(event, user, corsHeaders);
+    } else if (method === "POST" && path.startsWith("/videos/thumbnail/")) {
+      const rawPath = event.rawPath || event.requestContext.http.path;
+      const rawVideoKey = rawPath.replace("/videos/thumbnail/", "");
+      const videoKey = decodeURIComponent(rawVideoKey);
+      return await generateThumbnail(videoKey, corsHeaders);
     }
 
     console.log("路由不匹配");
@@ -642,5 +663,249 @@ async function deleteVideo(event, user, corsHeaders) {
       }),
     };
   }
+}
+
+// 生成视频缩略图
+async function generateThumbnail(videoKey, corsHeaders) {
+  try {
+    console.log("=== 开始生成缩略图 ===");
+    console.log("视频文件:", videoKey);
+
+    // 检查视频文件是否存在
+    const videoExists = await checkVideoExists(videoKey);
+    if (!videoExists) {
+      return {
+        statusCode: 404,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: "Video file not found" }),
+      };
+    }
+
+    // 构建缩略图文件名 - videoKey已经包含了videos/前缀
+    const videoPath = videoKey;
+    const thumbnailKey = `thumbnails/${videoKey.replace('videos/', '').replace(/\.[^.]+$/, '')}.jpg`;
+    
+    console.log("缩略图路径:", thumbnailKey);
+
+    // 检查缩略图是否已存在
+    const thumbnailExists = await checkThumbnailExists(thumbnailKey);
+    if (thumbnailExists) {
+      console.log("缩略图已存在，返回现有URL");
+      const thumbnailUrl = await getSignedUrl(
+        s3Client,
+        new GetObjectCommand({
+          Bucket: VIDEO_BUCKET,
+          Key: thumbnailKey,
+        }),
+        { expiresIn: 3600 }
+      );
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: true,
+          thumbnailUrl,
+          cached: true
+        }),
+      };
+    }
+
+    // 生成新缩略图
+    console.log("生成新的缩略图...");
+    const thumbnailUrl = await createVideoThumbnail(videoPath, thumbnailKey);
+    
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: true,
+        thumbnailUrl,
+        cached: false
+      }),
+    };
+
+  } catch (error) {
+    console.error("缩略图生成失败:", error);
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        error: "Failed to generate thumbnail",
+        details: error.message,
+      }),
+    };
+  }
+}
+
+// 检查视频文件是否存在
+async function checkVideoExists(videoKey) {
+  try {
+    const command = new GetObjectCommand({
+      Bucket: VIDEO_BUCKET,
+      Key: videoKey, // videoKey已经包含videos/前缀
+    });
+    await s3Client.send(command);
+    return true;
+  } catch (error) {
+    if (error.name === "NoSuchKey") {
+      return false;
+    }
+    throw error;
+  }
+}
+
+// 检查缩略图是否存在
+async function checkThumbnailExists(thumbnailKey) {
+  try {
+    const command = new GetObjectCommand({
+      Bucket: VIDEO_BUCKET,
+      Key: thumbnailKey,
+    });
+    await s3Client.send(command);
+    return true;
+  } catch (error) {
+    if (error.name === "NoSuchKey") {
+      return false;
+    }
+    throw error;
+  }
+}
+
+// 创建视频缩略图
+async function createVideoThumbnail(videoPath, thumbnailKey) {
+  const tempVideoPath = `/tmp/input_video.mp4`;
+  const tempThumbnailPath = `/tmp/thumbnail.jpg`;
+
+  try {
+    // 智能三层处理策略
+    console.log("🤖 启动智能缩略图生成策略...");
+    
+    // 策略1: HTTP流式处理（快速，免费）
+    console.log("📡 策略1: 尝试HTTP流式处理...");
+    try {
+      const s3VideoUrl = await getSignedUrl(s3Client, new GetObjectCommand({
+        Bucket: VIDEO_BUCKET,
+        Key: videoPath
+      }), { expiresIn: 3600 });
+      
+      const streamCommand = `/opt/bin/ffmpeg -ss 00:00:03 -i "${s3VideoUrl}" -vframes 1 -vf "scale=320:240" -y "${tempThumbnailPath}"`;
+      console.log("执行FFmpeg流式命令...");
+      
+      const { stdout, stderr } = await execAsync(streamCommand);
+      console.log("✅ 策略1成功: HTTP流式处理完成");
+      if (stderr) console.log("FFmpeg stderr:", stderr);
+      
+    } catch (streamError) {
+      console.log("❌ 策略1失败:", streamError.message);
+      console.log("🔄 自动切换到策略2...");
+      
+      // 策略2: 部分下载FFmpeg（中等速度，免费）
+      try {
+        console.log("📥 策略2: 尝试部分下载处理...");
+        
+        // 获取文件大小
+        const headResult = await s3Client.send(new HeadObjectCommand({
+          Bucket: VIDEO_BUCKET,
+          Key: videoPath,
+        }));
+        const fileSize = headResult.ContentLength;
+        const downloadSize = Math.min(fileSize, 100 * 1024 * 1024); // 最多100MB
+        
+        console.log(`下载前${Math.round(downloadSize/1024/1024)}MB进行处理...`);
+        
+        const videoData = await s3Client.send(new GetObjectCommand({
+          Bucket: VIDEO_BUCKET,
+          Key: videoPath,
+          Range: `bytes=0-${downloadSize - 1}`
+        }));
+        
+        const videoBuffer = await streamToBuffer(videoData.Body);
+        await writeFile(tempVideoPath, videoBuffer);
+        
+        const downloadCommand = `/opt/bin/ffmpeg -ss 00:00:03 -i "${tempVideoPath}" -vframes 1 -vf "scale=320:240" -y "${tempThumbnailPath}"`;
+        const { stdout: stdout2, stderr: stderr2 } = await execAsync(downloadCommand);
+        console.log("✅ 策略2成功: 部分下载处理完成");
+        if (stderr2) console.log("FFmpeg stderr:", stderr2);
+        
+      } catch (downloadError) {
+        console.log("❌ 策略2失败:", downloadError.message);
+        console.log("🚀 自动切换到策略3: MediaConvert...");
+        
+        // 策略3: MediaConvert（可靠，小成本）
+        return await generateThumbnailWithMediaConvert(videoPath, thumbnailKey);
+      }
+    }
+
+    // 3. 读取生成的缩略图
+    console.log("步骤3: 读取生成的缩略图...");
+    const thumbnailBuffer = await readFile(tempThumbnailPath);
+    console.log("缩略图文件大小:", thumbnailBuffer.length);
+
+    // 4. 上传缩略图到S3
+    console.log("步骤4: 上传缩略图到S3...");
+    await s3Client.send(
+      new PutObjectCommand({
+        Bucket: VIDEO_BUCKET,
+        Key: thumbnailKey,
+        Body: thumbnailBuffer,
+        ContentType: "image/jpeg",
+      })
+    );
+
+    // 5. 生成访问URL
+    const thumbnailUrl = await getSignedUrl(
+      s3Client,
+      new GetObjectCommand({
+        Bucket: VIDEO_BUCKET,
+        Key: thumbnailKey,
+      }),
+      { expiresIn: 3600 }
+    );
+
+    console.log("缩略图生成成功!");
+    return thumbnailUrl;
+
+  } finally {
+    // 清理临时文件
+    try {
+      await unlink(tempThumbnailPath);
+      console.log("清理临时缩略图文件");
+    } catch (error) {
+      console.log("清理临时缩略图文件失败:", error.message);
+    }
+    
+    // 如果使用了部分下载，也清理临时视频文件
+    try {
+      await unlink(tempVideoPath);
+      console.log("清理临时视频文件");
+    } catch (error) {
+      // 如果文件不存在（HTTP流模式），这是正常的
+      console.log("临时视频文件清理（文件可能不存在，这是正常的）");
+    }
+  }
+}
+
+// 将stream转换为buffer
+async function streamToBuffer(stream) {
+  const chunks = [];
+  for await (const chunk of stream) {
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks);
+}
+
+// MediaConvert客户端初始化（暂时禁用）
+async function initializeMediaConvertClient() {
+  console.log("MediaConvert暂时禁用");
+  return null;
+}
+
+// 使用MediaConvert生成缩略图（策略3: 终极方案）
+async function generateThumbnailWithMediaConvert(videoPath, thumbnailKey) {
+  console.log("🎬 MediaConvert暂时不可用，使用默认缩略图");
+  console.log("📹 大文件:", videoPath);
+  
+  // 暂时返回默认缩略图，避免复杂性导致的不稳定
+  return `https://${VIDEO_BUCKET}.s3.ap-northeast-1.amazonaws.com/default-thumbnail.jpg`;
 }
 

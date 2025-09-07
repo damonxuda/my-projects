@@ -1,0 +1,12 @@
+{
+  "requestContext": {
+    "http": {
+      "method": "POST",
+      "path": "/videos/thumbnail/TEST20250817.mp4"
+    }
+  },
+  "rawPath": "/videos/thumbnail/TEST20250817.mp4",
+  "headers": {
+    "authorization": "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6Imluc18ybjU4YVBKMVBiaFdQd0taYldEMUhSMGl6bUYiLCJ0eXAiOiJKV1QifQ.eyJhenAiOiJodHRwczovL3dvcm1ob2xlLWtyZWUxNy5jbGVyay5hY2NvdW50cy5kZXYiLCJleHAiOjE3MjU2ODY5NjQsImlhdCI6MTcyNTY4Njk2NCwiaXNzIjoiaHR0cHM6Ly93b3JtaG9sZS1rcmVlMTcuY2xlcmsuYWNjb3VudHMuZGV2IiwianRpIjoiODlhNjkzZTgxMjc0ZjY3MWY5ZWQiLCJuYmYiOjE3MjU2ODY5NTksInN1YiI6InVzZXJfMm5HM0Q0VjZ4cVUzR2ZNZmZsUnFkRVhGcEVaIn0.BZOAj7gWd4qSxhpEqxgQLRFKT2uf6xDUmLXlqJF7MHhUr6u8PIYdKQfE2J_YQkwIJ8-aMGKfGmfm7VhcBEviFjqxKGqxpDHZs6HRzJqWCdoXdgDZ9b8R0fFjnE5GQq5aH3U-v0xSPWQxhNvGnVgJr72P8W6zEBZOC9nOFCHkkdP_eBuT3_PcGKxeXY9JBJDqZcH5Vn9uE2I8vB8tnFrF7Wuj4Ys7NUgO7Q-2H_b8hNBxQ-KkY3K3xIBZd_9JaWO4e-M8ykW5PXnXKnrFBkKrL6j8GqKtfP9dAvvkT5BmAw0JMnH7G8fvRSrKJJoLj_QrGvFf3HGhEJyatvg"
+  }
+}
