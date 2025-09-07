@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 const LAMBDA_API_URL = 'https://ykyc7xcyfmacka6oqeqgfhrtt40xvynm.lambda-url.ap-northeast-1.on.aws/';
 
 // ✅ 新增：视频API URL
-const VIDEO_API_URL = 'https://len2k4bksqc6jqwapucgpczecu0jugyb.lambda-url.ap-northeast-1.on.aws';
+const VIDEO_API_URL = 'https://phbhgxbk36dwtku4hq5na7csxa0slnay.lambda-url.ap-northeast-1.on.aws';
 
 export const useAuth = () => {
   const { user, isLoaded: userLoaded } = useUser();
