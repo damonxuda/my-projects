@@ -147,7 +147,8 @@ jobs:
         run: |
           echo "🔧 Setting environment variables..."
           echo "REACT_APP_CLERK_PUBLISHABLE_KEY=${{ secrets.REACT_APP_CLERK_PUBLISHABLE_KEY }}" >> .env.production
-          echo "REACT_APP_VIDEO_API_URL=${{ secrets.VIDEO_API_URL }}" >> .env.production
+          echo "REACT_APP_VIDEO_API_URL=${{ secrets.REACT_APP_VIDEO_API_URL }}" >> .env.production
+          echo "REACT_APP_USER_MANAGEMENT_API_URL=${{ secrets.REACT_APP_USER_MANAGEMENT_API_URL }}" >> .env.production
           echo "GENERATE_SOURCEMAP=false" >> .env.production
 
           echo "🏗️ Building Videos React application..."
