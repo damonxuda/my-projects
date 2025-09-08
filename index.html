@@ -71,6 +71,25 @@
         font-size: 0.9rem;
         opacity: 0.8;
         line-height: 1.4;
+        margin-bottom: 0.5rem;
+      }
+      .access-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-weight: 500;
+        margin-top: 0.5rem;
+        display: inline-block;
+      }
+      .access-badge.public {
+        background: rgba(34, 197, 94, 0.2);
+        color: #dcfce7;
+        border: 1px solid rgba(34, 197, 94, 0.3);
+      }
+      .access-badge.private {
+        background: rgba(234, 179, 8, 0.2);
+        color: #fef3c7;
+        border: 1px solid rgba(234, 179, 8, 0.3);
       }
       .footer {
         margin-top: 2rem;
@@ -96,24 +115,28 @@
       <p class="subtitle">选择要使用的功能模块</p>
       
       <div class="nav-buttons">
-        <a href="/schedule/" class="nav-button">
+        <a href="/schedule/" class="nav-button public">
           <div class="button-title">📅 课程安排</div>
           <div class="button-description">为小朋友安排学习时间</div>
+          <div class="access-badge public">🌍 公开访问</div>
         </a>
         
-        <a href="/quiz/build/" class="nav-button">
+        <a href="/quiz/" class="nav-button private">
           <div class="button-title">📝 题库系统</div>
           <div class="button-description">小朋友专用题库管理</div>
+          <div class="access-badge private">🔐 需要登录</div>
         </a>
         
-        <a href="/games/" class="nav-button">
+        <a href="/games/" class="nav-button public">
           <div class="button-title">🎮 休闲时刻</div>
           <div class="button-description">小游戏和娱乐功能</div>
+          <div class="access-badge public">🌍 公开访问</div>
         </a>
         
-        <a href="/admin/build/" class="nav-button">
+        <a href="/admin/" class="nav-button private">
           <div class="button-title">⚙️ 系统管理</div>
           <div class="button-description">用户权限管理后台</div>
+          <div class="access-badge private">🔐 需要登录</div>
         </a>
       </div>
       

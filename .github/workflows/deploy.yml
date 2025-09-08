@@ -216,7 +216,7 @@ jobs:
           echo "🔍 3. 检查 Admin 文件:"
           aws s3 ls s3://damonxuda-projects/admin/ --recursive || echo "Admin files not found"
 
-      # 10. 部署根目录文件
+      # 10. 部署根目录文件和games目录
       - name: Deploy root files
         run: |
           echo "🚀 Deploying root directory files..."
@@ -225,6 +225,16 @@ jobs:
             echo "✅ Root index.html deployed"
           else
             echo "ℹ️ No root index.html found"
+          fi
+          
+          if [ -d "./games" ]; then
+            echo "🎮 Deploying games directory..."
+            aws s3 sync ./games/ s3://damonxuda-projects/games/ \
+              --delete \
+              --exclude ".DS_Store"
+            echo "✅ Games directory deployed"
+          else
+            echo "ℹ️ No games directory found"
           fi
 
       # 11. 验证所有部署结果
