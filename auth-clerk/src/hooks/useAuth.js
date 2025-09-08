@@ -2,11 +2,11 @@
 import { useUser, useAuth as useClerkAuth, useClerk } from '@clerk/clerk-react';
 import { useState, useEffect, useCallback } from 'react';
 
-// ✅ Function URL常量
-const LAMBDA_API_URL = 'https://ykyc7xcyfmacka6oqeqgfhrtt40xvynm.lambda-url.ap-northeast-1.on.aws/';
+// ✅ 用户管理API URL（权限管理Lambda）
+const LAMBDA_API_URL = process.env.REACT_APP_USER_MANAGEMENT_API_URL;
 
-// ✅ 新增：视频API URL
-const VIDEO_API_URL = 'https://phbhgxbk36dwtku4hq5na7csxa0slnay.lambda-url.ap-northeast-1.on.aws';
+// ✅ 视频API URL
+const VIDEO_API_URL = process.env.REACT_APP_VIDEO_API_URL;
 
 export const useAuth = () => {
   const { user, isLoaded: userLoaded } = useUser();
@@ -16,6 +16,10 @@ export const useAuth = () => {
   // 用户管理相关状态
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
+  
+  // ✅ Token缓存机制 - 避免频繁调用getToken造成403错误
+  const [cachedToken, setCachedToken] = useState(null);
+  const [tokenExpiry, setTokenExpiry] = useState(null);
 
   // 管理员邮箱列表 - 可以通过环境变量配置
   const getAdminEmails = () => {
@@ -80,6 +84,34 @@ export const useAuth = () => {
       approvedAt: user.publicMetadata?.approved_at || null,
       lastUpdated: user.publicMetadata?.updated_at || null
     };
+  };
+
+  // ✅ 获取缓存的Token - 避免频繁调用导致403错误
+  const getCachedToken = async () => {
+    const now = Date.now();
+    
+    // 如果token还在有效期内，直接返回缓存的token
+    if (cachedToken && tokenExpiry && now < tokenExpiry) {
+      return cachedToken;
+    }
+    
+    try {
+      // 获取新的token
+      const freshToken = await getToken();
+      if (freshToken) {
+        setCachedToken(freshToken);
+        // 设置过期时间为50分钟后（Clerk token通常1小时过期，提前10分钟刷新）
+        setTokenExpiry(now + 50 * 60 * 1000);
+        return freshToken;
+      }
+      throw new Error('无法获取token');
+    } catch (error) {
+      // 如果获取失败但有缓存token，尝试使用缓存token
+      if (cachedToken) {
+        return cachedToken;
+      }
+      throw error;
+    }
   };
 
   // 获取所有用户（管理员功能）- 保持原有逻辑不变
@@ -341,15 +373,9 @@ export const useAuth = () => {
   // 获取视频列表（带token认证）
   const fetchVideoList = async (path = '') => {
     try {
-      console.log('🎬 开始获取视频列表, path:', path);
-      
-      // 获取Clerk token
-      const token = await getToken();
-      console.log('🔑 获取到token:', token ? '有效' : '无效');
-      if (token) {
-        console.log('🔑 Token前20字符:', token.substring(0, 20) + '...');
-      } else {
-        console.error('❌ Token为空或null');
+      const token = await getCachedToken();
+      if (!token) {
+        throw new Error('无法获取认证token');
       }
       
       const response = await fetch(
@@ -362,19 +388,15 @@ export const useAuth = () => {
         }
       );
       
-      console.log('📡 API响应状态:', response.status);
-      
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
       
       const data = await response.json();
-      console.log('✅ 获取视频列表成功:', data.length, '个文件');
       return data;
       
     } catch (error) {
-      console.error('❌ 获取视频列表失败:', error);
       throw error;
     }
   };
@@ -382,10 +404,7 @@ export const useAuth = () => {
   // 获取视频播放URL（带token认证）
   const getVideoUrl = async (videoKey) => {
     try {
-      console.log('🎬 获取视频播放URL, key:', videoKey);
-      
-      // 获取Clerk token
-      const token = await getToken();
+      const token = await getCachedToken();
       
       const response = await fetch(
         `${VIDEO_API_URL}/videos/url/${encodeURIComponent(videoKey)}`,
@@ -403,11 +422,9 @@ export const useAuth = () => {
       }
       
       const data = await response.json();
-      console.log('✅ 获取视频URL成功');
       return data;
       
     } catch (error) {
-      console.error('❌ 获取视频URL失败:', error);
       throw error;
     }
   };
@@ -418,6 +435,12 @@ export const useAuth = () => {
       fetchAllUsers();
     }
   }, [userLoaded, isSignedIn, user]);
+
+  // ✅ 用户变更时清空缓存的token
+  useEffect(() => {
+    setCachedToken(null);
+    setTokenExpiry(null);
+  }, [user?.id, isSignedIn]);
 
   return {
     // 原有功能 - 完全不变
@@ -444,6 +467,7 @@ export const useAuth = () => {
     // ✅ 新增：视频相关方法
     fetchVideoList,
     getVideoUrl,
-    getToken
+    getToken,
+    getCachedToken
   };
 };

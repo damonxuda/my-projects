@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Film, Play, HardDrive, Loader } from 'lucide-react';
 
 const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getToken }) => {
@@ -35,7 +35,7 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getToken })
   };
 
   // 获取缩略图
-  const fetchThumbnail = async () => {
+  const fetchThumbnail = useCallback(async () => {
     if (!fileName || !apiUrl || !getToken) {
       return;
     }
@@ -44,7 +44,6 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getToken })
     setError(false);
 
     try {
-      console.log('🖼️ 开始获取缩略图:', fileName);
       const token = await getToken();
       
       const response = await fetch(`${apiUrl}/videos/thumbnail/${encodeURIComponent(fileName)}`, {
@@ -60,26 +59,23 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getToken })
       }
 
       const data = await response.json();
-      console.log('📸 缩略图API响应:', data);
 
       if (data.success && data.thumbnailUrl) {
         setThumbnailUrl(data.thumbnailUrl);
-        console.log('✅ 缩略图获取成功:', data.cached ? '(缓存)' : '(新生成)');
       } else {
         throw new Error('Invalid response from thumbnail API');
       }
     } catch (err) {
-      console.error('❌ 缩略图获取失败:', err);
       setError(true);
     } finally {
       setLoading(false);
     }
-  };
+  }, [fileName, apiUrl, getToken]);
 
   // 组件挂载时获取缩略图
   useEffect(() => {
     fetchThumbnail();
-  }, [fileName, apiUrl]);
+  }, [fileName, apiUrl, fetchThumbnail]);
 
   return (
     <div className="relative w-full h-32 rounded-lg group cursor-pointer overflow-hidden">

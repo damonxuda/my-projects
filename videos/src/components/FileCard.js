@@ -236,7 +236,7 @@ const FileCard = ({
               videoUrl={videoUrl} 
               alt={item.name}
               fileSize={item.size}
-              fileName={item.key}  // 使用完整的S3键值而不是只是文件名
+              fileName={item.key}  // 使用完整的S3路径
               apiUrl={apiUrl}
               getToken={getToken}
             />

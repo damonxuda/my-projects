@@ -17,10 +17,10 @@ const VideoLibrary = () => {
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [isProcessingYouTube, setIsProcessingYouTube] = useState(false);
 
-  const { user, isSignedIn, isAdmin, fetchVideoList, getVideoUrl, getToken } =
+  const { user, isSignedIn, isAdmin, fetchVideoList, getVideoUrl, getCachedToken } =
     useAuth();
 
-  const API_BASE_URL = process.env.REACT_APP_VIDEO_API_URL || process.env.VIDEO_API_URL;
+  const API_BASE_URL = process.env.REACT_APP_VIDEO_API_URL;
 
   // 提取YouTube视频ID（用于添加新视频）
   const extractVideoId = (url) => {
@@ -43,7 +43,7 @@ const VideoLibrary = () => {
   const handleDelete = async (item) => {
     try {
 
-      const token = await getToken();
+      const token = await getCachedToken();
       const response = await fetch(`${API_BASE_URL}/videos/delete`, {
         method: "DELETE",
         headers: {
@@ -106,7 +106,7 @@ const VideoLibrary = () => {
       const fileName = `${videoInfo.title}.youtube.json`;
 
       // 上传到S3
-      const token = await getToken();
+      const token = await getCachedToken();
       const response = await fetch(`${API_BASE_URL}/upload-youtube`, {
         method: "POST",
         headers: {
@@ -149,9 +149,6 @@ const VideoLibrary = () => {
     const videos = [];
     const youtubeVideos = [];
 
-    console.log("=== processFileList START ===");
-    console.log("currentPath:", currentPath);
-    console.log("files count:", files.length);
 
     files.forEach((file) => {
       // Skip the root "videos/" entry
@@ -159,18 +156,13 @@ const VideoLibrary = () => {
 
       // Remove "videos/" prefix for processing
       const relativePath = file.Key.replace("videos/", "");
-      // console.log("处理文件:", file.Key, "=> relativePath:", relativePath);
 
       // YouTube JSON files - need to respect folder structure
       if (relativePath.endsWith(".youtube.json")) {
-        console.log("YouTube file found:", relativePath);
         const pathParts = relativePath.split("/");
-        console.log("pathParts:", pathParts);
-        console.log("currentPath:", currentPath);
         
         if (currentPath === "" && pathParts.length > 1) {
           // At root level but YouTube file is in a subfolder - should be handled as folder structure
-          console.log("Case 1: Root level, file in subfolder");
           const folderName = pathParts[0];
           if (!folders.has(folderName)) {
             folders.set(folderName, {
@@ -184,9 +176,6 @@ const VideoLibrary = () => {
           folders.get(folderName).count++;
         } else if (currentPath !== "" && relativePath.startsWith(currentPath + "/")) {
           // YouTube file is in current directory
-          console.log("Case 2: YouTube文件在当前目录");
-          console.log("  currentPath:", currentPath);
-          console.log("  relativePath:", relativePath);
           const fileName = relativePath.split("/").pop();
           const youtubeItem = {
             key: file.Key,
@@ -197,10 +186,8 @@ const VideoLibrary = () => {
             path: currentPath,
           };
           youtubeVideos.push(youtubeItem);
-          console.log("  添加YouTube视频:", fileName);
         } else if (currentPath === "" && pathParts.length === 1) {
           // YouTube file is at root level
-          console.log("Case 3: File at root level");
           const youtubeItem = {
             key: file.Key,
             name: relativePath,
@@ -210,9 +197,7 @@ const VideoLibrary = () => {
             path: currentPath,
           };
           youtubeVideos.push(youtubeItem);
-          console.log("Added root YouTube video:", relativePath);
         } else {
-          console.log("Case 4: No match - file ignored");
         }
         return;
       }
@@ -220,7 +205,6 @@ const VideoLibrary = () => {
       // Regular files
       if (!relativePath.includes("/") && currentPath === "") {
         // Root level files - 在根目录显示测试文件
-        console.log("处理根目录文件:", relativePath);
         const isVideo = /\.(mp4|avi|mov|wmv|mkv)$/i.test(relativePath);
         if (isVideo) {
           videos.push({
@@ -251,20 +235,16 @@ const VideoLibrary = () => {
           folders.get(folderName).count++;
         } else {
           // Show files in current directory - 检查文件是否在当前路径下
-          console.log("检查当前目录文件:", currentPath, "vs", relativePath);
           
           if (currentPath !== "" && relativePath.startsWith(currentPath + "/")) {
             // 文件在当前目录下
             const pathAfterCurrent = relativePath.substring(currentPath.length + 1);
             const remainingParts = pathAfterCurrent.split("/");
-            console.log("  pathAfterCurrent:", pathAfterCurrent);
-            console.log("  remainingParts:", remainingParts);
             
             // 只处理直接在当前目录下的文件（不是子目录中的文件）
             if (remainingParts.length === 1) {
               const fileName = remainingParts[0];
               const isVideo = /\.(mp4|avi|mov|wmv|mkv)$/i.test(fileName);
-              console.log("  fileName:", fileName, "isVideo:", isVideo);
               if (isVideo) {
                 videos.push({
                   key: file.Key,
@@ -274,17 +254,14 @@ const VideoLibrary = () => {
                   lastModified: file.LastModified,
                   path: currentPath,
                 });
-                console.log("  添加视频文件:", fileName);
               }
             } else {
-              console.log("  跳过子目录文件:", pathAfterCurrent);
             }
           } else if (currentPath === "") {
             // 根目录 - 只处理直接在根目录的文件，不处理子目录中的文件
             if (pathParts.length === 1) {
               const fileName = pathParts[0];
               const isVideo = /\.(mp4|avi|mov|wmv|mkv)$/i.test(fileName);
-              console.log("  根目录文件:", fileName, "isVideo:", isVideo);
               if (isVideo) {
                 videos.push({
                   key: file.Key,
@@ -294,7 +271,6 @@ const VideoLibrary = () => {
                   lastModified: file.LastModified,
                   path: currentPath,
                 });
-                console.log("  添加根目录视频:", fileName);
               }
             }
           }
@@ -302,11 +278,6 @@ const VideoLibrary = () => {
       }
     });
 
-    console.log("=== processFileList RESULT ===");
-    console.log("folders:", Array.from(folders.values()));
-    console.log("videos:", videos);
-    console.log("youtubeVideos:", youtubeVideos);
-    console.log("=== processFileList END ===");
 
     return [
       ...Array.from(folders.values()),
@@ -325,7 +296,6 @@ const VideoLibrary = () => {
         throw new Error("用户未登录");
       }
 
-      console.log("🔍 VideoLibrary - 开始加载视频列表, path:", path);
 
       const data = await fetchVideoList(path);
       const processedItems = processFileList(data, path);
@@ -594,7 +564,7 @@ const VideoLibrary = () => {
                   onVideoPlay={handleVideoPlay}
                   getVideoUrl={getVideoUrl}
                   apiUrl={API_BASE_URL}
-                  getToken={getToken}
+                  getToken={getCachedToken}
                   onDelete={handleDelete}
                 />
               ))}
