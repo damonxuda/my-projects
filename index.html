@@ -3,61 +3,123 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="refresh" content="0; url=/schedule/" />
-    <link rel="canonical" href="/schedule/" />
-    <title>跳转中...</title>
+    <title>子杰之家</title>
     <style>
       body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         display: flex;
         justify-content: center;
         align-items: center;
-        height: 100vh;
+        min-height: 100vh;
         margin: 0;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
+        padding: 20px;
+        box-sizing: border-box;
       }
       .container {
         text-align: center;
-        padding: 2rem;
+        padding: 3rem;
+        max-width: 600px;
+        width: 100%;
       }
-      .spinner {
-        border: 3px solid rgba(255, 255, 255, 0.3);
-        border-radius: 50%;
-        border-top: 3px solid white;
-        width: 40px;
-        height: 40px;
-        animation: spin 1s linear infinite;
-        margin: 0 auto 1rem;
+      .title {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        font-weight: 300;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
       }
-      @keyframes spin {
-        0% {
-          transform: rotate(0deg);
-        }
-        100% {
-          transform: rotate(360deg);
-        }
+      .subtitle {
+        font-size: 1.1rem;
+        margin-bottom: 3rem;
+        opacity: 0.9;
       }
-      a {
+      .nav-buttons {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+      }
+      .nav-button {
+        background: rgba(255, 255, 255, 0.15);
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-decoration: none;
         color: white;
-        text-decoration: underline;
+        font-size: 1.1rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+        display: block;
+      }
+      .nav-button:hover {
+        background: rgba(255, 255, 255, 0.25);
+        border-color: rgba(255, 255, 255, 0.4);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      }
+      .nav-button:active {
+        transform: translateY(0);
+      }
+      .button-title {
+        font-size: 1.2rem;
+        margin-bottom: 0.5rem;
+        display: block;
+      }
+      .button-description {
+        font-size: 0.9rem;
+        opacity: 0.8;
+        line-height: 1.4;
+      }
+      .footer {
+        margin-top: 2rem;
+        font-size: 0.9rem;
+        opacity: 0.7;
+      }
+      @media (max-width: 768px) {
+        .title {
+          font-size: 2rem;
+        }
+        .container {
+          padding: 2rem 1rem;
+        }
+        .nav-buttons {
+          grid-template-columns: 1fr;
+        }
       }
     </style>
   </head>
   <body>
     <div class="container">
-      <div class="spinner"></div>
-      <p>正在跳转到课程安排系统...</p>
-      <p>
-        <small>如果没有自动跳转，请点击 <a href="/schedule/">这里</a></small>
-      </p>
+      <h1 class="title">子杰之家</h1>
+      <p class="subtitle">选择要使用的功能模块</p>
+      
+      <div class="nav-buttons">
+        <a href="/schedule/" class="nav-button">
+          <div class="button-title">📅 课程安排</div>
+          <div class="button-description">为小朋友安排学习时间</div>
+        </a>
+        
+        <a href="/quiz/build/" class="nav-button">
+          <div class="button-title">📝 题库系统</div>
+          <div class="button-description">小朋友专用题库管理</div>
+        </a>
+        
+        <a href="/games/" class="nav-button">
+          <div class="button-title">🎮 休闲时刻</div>
+          <div class="button-description">小游戏和娱乐功能</div>
+        </a>
+        
+        <a href="/admin/build/" class="nav-button">
+          <div class="button-title">⚙️ 系统管理</div>
+          <div class="button-description">用户权限管理后台</div>
+        </a>
+      </div>
+      
+      <div class="footer">
+        <p>点击上方按钮进入相应模块</p>
+      </div>
     </div>
-
-    <script>
-      // 确保跳转执行
-      setTimeout(function () {
-        window.location.href = "/schedule/";
-      }, 100);
-    </script>
   </body>
 </html>
