@@ -61,6 +61,15 @@ jobs:
             echo "🔄 Dependencies changed, forcing Quiz, Videos and Admin rebuild"
           fi
 
+          # 检测根目录文件变化
+          if git diff --name-only HEAD~1 HEAD | grep -E '^(index\.html|games/)'; then
+            echo "root_files_changed=true" >> $GITHUB_OUTPUT
+            echo "✅ Root files or games directory has changes"
+          else
+            echo "root_files_changed=false" >> $GITHUB_OUTPUT
+            echo "➖ Root files have no changes"
+          fi
+
           # 检测强制部署
           if [[ "${{ github.event.forced }}" == "true" ]] || [[ $(git rev-list --count HEAD) -le 1 ]] || [[ ! $(git diff --name-only HEAD~1 HEAD) ]]; then
             echo "force_deploy=true" >> $GITHUB_OUTPUT
@@ -218,6 +227,7 @@ jobs:
 
       # 10. 部署根目录文件和games目录
       - name: Deploy root files
+        if: steps.changes.outputs.root_files_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
         run: |
           echo "🚀 Deploying root directory files..."
           if [ -f "./index.html" ]; then
