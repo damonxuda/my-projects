@@ -34,8 +34,17 @@ const AdminPermissionsApp = () => {
                 )}
               </div>
             </div>
-            {/* 右上角用户菜单 - 直接使用现有的UserProfile组件 */}
-            <UserProfile showWelcome={false} afterSignOutUrl="/" />
+            <div className="flex items-center space-x-3">
+              {/* 回首页按钮 */}
+              <a 
+                href="/" 
+                className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700 transition-colors"
+              >
+                🏠 首页
+              </a>
+              {/* 右上角用户菜单 - 直接使用现有的UserProfile组件 */}
+              <UserProfile showWelcome={false} afterSignOutUrl="/" />
+            </div>
           </div>
         </div>
 
