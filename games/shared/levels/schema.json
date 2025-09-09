@@ -1,0 +1,177 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "游戏关卡数据格式规范",
+  "type": "object",
+  "definitions": {
+    "sudoku_level": {
+      "type": "object",
+      "title": "数独关卡数据格式",
+      "properties": {
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50,
+          "description": "关卡编号，范围1-50"
+        },
+        "difficulty": {
+          "type": "string",
+          "enum": ["easy", "medium", "hard", "expert", "master"],
+          "description": "难度级别"
+        },
+        "puzzle": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9
+            },
+            "minItems": 9,
+            "maxItems": 9
+          },
+          "minItems": 9,
+          "maxItems": 9,
+          "description": "9x9数独题目数组，0表示空格，1-9表示已知数字"
+        },
+        "solution": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9
+            },
+            "minItems": 9,
+            "maxItems": 9
+          },
+          "minItems": 9,
+          "maxItems": 9,
+          "description": "9x9数独完整解答数组"
+        },
+        "holes": {
+          "type": "integer",
+          "minimum": 20,
+          "maximum": 70,
+          "description": "题目中空格的数量"
+        },
+        "estimated_time": {
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 3600,
+          "description": "预计完成时间，单位：秒"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "关卡创建时间"
+        }
+      },
+      "required": ["level", "difficulty", "puzzle", "solution", "holes"],
+      "additionalProperties": false
+    },
+    "nonogram_level": {
+      "type": "object",
+      "title": "数织关卡数据格式",
+      "properties": {
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50,
+          "description": "关卡编号，范围1-50"
+        },
+        "difficulty": {
+          "type": "string",
+          "enum": ["easy", "medium", "hard", "expert", "master"],
+          "description": "难度级别"
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 25,
+          "description": "网格大小，如5表示5x5网格"
+        },
+        "solution": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1
+            }
+          },
+          "description": "NxN解答数组，1表示填充，0表示空白"
+        },
+        "row_clues": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "description": "行线索数组，每行包含该行的连续填充块大小"
+        },
+        "col_clues": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "description": "列线索数组，每列包含该列的连续填充块大小"
+        },
+        "estimated_time": {
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 1800,
+          "description": "预计完成时间，单位：秒"
+        },
+        "theme": {
+          "type": "string",
+          "description": "图案主题，如：animals, objects, symbols等"
+        },
+        "title": {
+          "type": "string",
+          "description": "图案名称，如：小猫、爱心等"
+        },
+        "source": {
+          "type": "string",
+          "description": "关卡来源，如：nintendo_picross, community, original等"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "关卡创建时间"
+        }
+      },
+      "required": ["level", "difficulty", "size", "solution", "row_clues", "col_clues"],
+      "additionalProperties": false
+    }
+  },
+  "oneOf": [
+    {
+      "title": "数独关卡集合",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/sudoku_level"
+      },
+      "minItems": 1,
+      "maxItems": 50
+    },
+    {
+      "title": "数织关卡集合", 
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/nonogram_level"
+      },
+      "minItems": 1,
+      "maxItems": 50
+    }
+  ]
+}

@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0"
+    />
+    <title>数独关卡选择 - 子杰之家</title>
+    
+    <!-- PWA 支持 -->
+    <meta name="theme-color" content="#667eea" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="数独关卡" />
+    
+    <style>
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+      
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 1rem;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      
+      /* 顶部导航 */
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding: 0.5rem;
+      }
+      
+      .header .back-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        border-radius: 8px;
+        color: white;
+        font-size: 1rem;
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        transition: all 0.3s ease;
+      }
+      
+      .header .back-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+      
+      .header .title {
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+      }
+      
+      .header .stats {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        text-align: center;
+        font-size: 0.9rem;
+      }
+      
+      /* 难度选择标签页 */
+      .difficulty-tabs {
+        display: flex;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 0.3rem;
+        margin-bottom: 1.5rem;
+        backdrop-filter: blur(10px);
+      }
+      
+      .difficulty-tab {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: white;
+        padding: 0.8rem 0.5rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.9rem;
+        opacity: 0.7;
+      }
+      
+      .difficulty-tab.active {
+        background: rgba(255, 255, 255, 0.25);
+        opacity: 1;
+        font-weight: 600;
+      }
+      
+      .difficulty-tab:hover {
+        opacity: 1;
+      }
+      
+      /* 关卡网格 */
+      .levels-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+        gap: 0.8rem;
+        margin-bottom: 2rem;
+        flex: 1;
+      }
+      
+      .level-card {
+        aspect-ratio: 1;
+        background: rgba(255, 255, 255, 0.15);
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        text-decoration: none;
+        color: white;
+      }
+      
+      .level-card:hover,
+      .level-card:active {
+        transform: translateY(-2px);
+        background: rgba(255, 255, 255, 0.25);
+        border-color: rgba(255, 255, 255, 0.4);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      }
+      
+      /* 关卡状态 */
+      .level-card.locked {
+        opacity: 0.4;
+        cursor: not-allowed;
+        pointer-events: none;
+      }
+      
+      .level-card.completed {
+        background: rgba(76, 175, 80, 0.6);
+        border-color: rgba(76, 175, 80, 0.8);
+      }
+      
+      .level-card.current {
+        background: rgba(255, 193, 7, 0.6);
+        border-color: rgba(255, 193, 7, 0.8);
+        animation: pulse 2s ease-in-out infinite;
+      }
+      
+      @keyframes pulse {
+        0%, 100% {
+          transform: scale(1);
+        }
+        50% {
+          transform: scale(1.05);
+        }
+      }
+      
+      /* 关卡内容 */
+      .level-number {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 0.2rem;
+      }
+      
+      .level-stars {
+        display: flex;
+        gap: 2px;
+        font-size: 0.8rem;
+      }
+      
+      .level-time {
+        position: absolute;
+        bottom: 0.2rem;
+        font-size: 0.7rem;
+        opacity: 0.8;
+      }
+      
+      /* 锁定图标 */
+      .level-card.locked::before {
+        content: "🔒";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 1.5rem;
+      }
+      
+      /* 进度统计 */
+      .progress-section {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        backdrop-filter: blur(10px);
+      }
+      
+      .progress-title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        text-align: center;
+      }
+      
+      .progress-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+        text-align: center;
+      }
+      
+      .stat-item {
+        padding: 0.5rem;
+      }
+      
+      .stat-value {
+        display: block;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #4caf50;
+      }
+      
+      .stat-label {
+        font-size: 0.8rem;
+        opacity: 0.8;
+      }
+      
+      /* 响应式设计 */
+      @media (max-width: 768px) {
+        .container {
+          padding: 0.5rem;
+        }
+        
+        .header .title {
+          font-size: 1.4rem;
+        }
+        
+        .levels-grid {
+          grid-template-columns: repeat(auto-fill, minmax(55px, 1fr));
+          gap: 0.6rem;
+        }
+        
+        .level-number {
+          font-size: 1rem;
+        }
+        
+        .difficulty-tab {
+          padding: 0.6rem 0.3rem;
+          font-size: 0.8rem;
+        }
+      }
+      
+      @media (max-width: 480px) {
+        .levels-grid {
+          grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+        }
+        
+        .progress-stats {
+          grid-template-columns: 1fr;
+          gap: 0.5rem;
+        }
+      }
+      
+      /* 加载状态 */
+      .loading {
+        display: none;
+        text-align: center;
+        padding: 2rem;
+      }
+      
+      .loading.show {
+        display: block;
+      }
+      
+      .spinner {
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top: 4px solid #fff;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 1rem;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- 顶部导航 -->
+      <div class="header">
+        <a href="../" class="back-btn">← 返回游戏</a>
+        <h1 class="title">选择关卡</h1>
+        <div class="stats" id="overall-stats">
+          <div>0/250</div>
+        </div>
+      </div>
+      
+      <!-- 进度统计 -->
+      <div class="progress-section">
+        <div class="progress-title">当前难度进度</div>
+        <div class="progress-stats">
+          <div class="stat-item">
+            <span class="stat-value" id="completed-count">0</span>
+            <span class="stat-label">已完成</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value" id="total-stars">0</span>
+            <span class="stat-label">总星数</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-value" id="best-time">--:--</span>
+            <span class="stat-label">最佳时间</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 难度选择 -->
+      <div class="difficulty-tabs">
+        <button class="difficulty-tab active" data-difficulty="easy">简单</button>
+        <button class="difficulty-tab" data-difficulty="medium">中等</button>
+        <button class="difficulty-tab" data-difficulty="hard">困难</button>
+        <button class="difficulty-tab" data-difficulty="expert">专家</button>
+        <button class="difficulty-tab" data-difficulty="master">大师</button>
+      </div>
+      
+      <!-- 关卡网格 -->
+      <div class="levels-grid" id="levels-grid">
+        <!-- 关卡将由JavaScript动态生成 -->
+      </div>
+      
+      <!-- 加载状态 -->
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div>加载关卡中...</div>
+      </div>
+    </div>
+    
+    <!-- 引入脚本 -->
+    <script src="../shared/js/gameUtils.js"></script>
+    <script src="../shared/js/storage.js"></script>
+    <script src="levels.js"></script>
+  </body>
+</html>
