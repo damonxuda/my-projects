@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数织教程 - 学会玩数织</title>
+    <link rel="stylesheet" href="../shared/styles.css">
+    <style>
+        .tutorial-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        
+        .tutorial-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .tutorial-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 40px);
+            grid-template-rows: repeat(6, 40px);
+            gap: 2px;
+            margin: 1rem auto;
+            width: fit-content;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        
+        .tutorial-cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #ccc;
+            font-weight: bold;
+        }
+        
+        .clue-cell {
+            background-color: #f0f0f0;
+            color: #666;
+        }
+        
+        .empty-cell {
+            background-color: white;
+        }
+        
+        .filled-cell {
+            background-color: #333;
+            color: white;
+        }
+        
+        .marked-cell {
+            background-color: white;
+            color: #ff6b6b;
+            font-size: 18px;
+        }
+        
+        .step {
+            margin: 2rem 0;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            border-radius: 4px;
+        }
+        
+        .step h3 {
+            color: #007bff;
+            margin-top: 0;
+        }
+        
+        .example {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            margin: 1rem 0;
+            flex-wrap: wrap;
+        }
+        
+        .example-text {
+            flex: 1;
+            min-width: 250px;
+        }
+        
+        .highlight {
+            background: linear-gradient(120deg, #a2facf 0%, #64b3f4 100%);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        .navigation {
+            text-align: center;
+            margin: 2rem 0;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            margin: 0 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            color: #333;
+        }
+        
+        .btn-secondary:hover {
+            color: #333;
+        }
+        
+        @media (max-width: 768px) {
+            .tutorial-grid {
+                grid-template-columns: repeat(6, 35px);
+                grid-template-rows: repeat(6, 35px);
+            }
+            
+            .example {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .tutorial-container {
+                padding: 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <header class="game-header">
+            <div class="header-left">
+                <a href="./levels.html" class="back-btn">← 返回</a>
+            </div>
+            <h1>📚 数织教程</h1>
+            <div class="header-right"></div>
+        </header>
+
+        <div class="tutorial-container">
+            <!-- 游戏介绍 -->
+            <div class="tutorial-section">
+                <h2>🎯 什么是数织？</h2>
+                <p>数织（Nonogram）是一种逻辑推理益智游戏，也叫做：</p>
+                <ul>
+                    <li><strong>数字绘画</strong> - Paint by Numbers</li>
+                    <li><strong>方格绘画</strong> - Griddlers</li>
+                    <li><strong>像素拼图</strong> - Picross</li>
+                </ul>
+                <p>通过行列数字线索，填充网格来揭示隐藏的图案！</p>
+            </div>
+
+            <!-- 基本规则 -->
+            <div class="tutorial-section">
+                <h2>📏 基本规则</h2>
+                <div class="step">
+                    <h3>规则1：理解数字线索</h3>
+                    <div class="example">
+                        <div class="tutorial-grid">
+                            <div class="tutorial-cell clue-cell"></div>
+                            <div class="tutorial-cell clue-cell">3</div>
+                            <div class="tutorial-cell clue-cell">1</div>
+                            <div class="tutorial-cell clue-cell">1</div>
+                            <div class="tutorial-cell clue-cell">3</div>
+                            <div class="tutorial-cell clue-cell">1</div>
+                            
+                            <div class="tutorial-cell clue-cell">2</div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            
+                            <div class="tutorial-cell clue-cell">1,1</div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            
+                            <div class="tutorial-cell clue-cell">3</div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            
+                            <div class="tutorial-cell clue-cell">2</div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            
+                            <div class="tutorial-cell clue-cell">1</div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                        </div>
+                        <div class="example-text">
+                            <p><strong>行线索</strong>（左侧数字）：</p>
+                            <ul>
+                                <li><span class="highlight">2</span> = 连续填充2个格子</li>
+                                <li><span class="highlight">1,1</span> = 两个单独的格子，中间至少空1格</li>
+                                <li><span class="highlight">3</span> = 连续填充3个格子</li>
+                            </ul>
+                            <p><strong>列线索</strong>（上方数字）规则相同</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 解题示例 -->
+            <div class="tutorial-section">
+                <h2>🧩 解题步骤演示</h2>
+                
+                <div class="step">
+                    <h3>步骤1：先找确定的行</h3>
+                    <div class="example">
+                        <div class="tutorial-grid">
+                            <div class="tutorial-cell clue-cell"></div>
+                            <div class="tutorial-cell clue-cell">1</div>
+                            <div class="tutorial-cell clue-cell">3</div>
+                            <div class="tutorial-cell clue-cell">3</div>
+                            <div class="tutorial-cell clue-cell">3</div>
+                            <div class="tutorial-cell clue-cell">1</div>
+                            
+                            <div class="tutorial-cell clue-cell">5</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            
+                            <div class="tutorial-cell clue-cell">1</div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            
+                            <div class="tutorial-cell clue-cell">3</div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            
+                            <div class="tutorial-cell clue-cell">1</div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            <div class="tutorial-cell empty-cell"></div>
+                            
+                            <div class="tutorial-cell clue-cell">0</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                        </div>
+                        <div class="example-text">
+                            <p><strong>寻找最容易的行：</strong></p>
+                            <ul>
+                                <li>线索 <span class="highlight">5</span>：5个格子都要填，所以整行填黑</li>
+                                <li>线索 <span class="highlight">0</span>：所有格子都是空的，标记×</li>
+                            </ul>
+                            <p>💡 <strong>技巧</strong>：先处理数字最大或为0的行列</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3>步骤2：利用交叉信息</h3>
+                    <div class="example">
+                        <div class="tutorial-grid">
+                            <div class="tutorial-cell clue-cell"></div>
+                            <div class="tutorial-cell clue-cell">1</div>
+                            <div class="tutorial-cell clue-cell">3</div>
+                            <div class="tutorial-cell clue-cell">3</div>
+                            <div class="tutorial-cell clue-cell">3</div>
+                            <div class="tutorial-cell clue-cell">1</div>
+                            
+                            <div class="tutorial-cell clue-cell">5</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            
+                            <div class="tutorial-cell clue-cell">1</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            
+                            <div class="tutorial-cell clue-cell">3</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            
+                            <div class="tutorial-cell clue-cell">1</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            
+                            <div class="tutorial-cell clue-cell">0</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                        </div>
+                        <div class="example-text">
+                            <p><strong>利用列线索完善：</strong></p>
+                            <ul>
+                                <li>第2列线索是 <span class="highlight">3</span>，已经有1个■，还需要2个连续的</li>
+                                <li>第3列线索是 <span class="highlight">3</span>，同理</li>
+                                <li>第4列线索是 <span class="highlight">1</span>，只有中间那个■</li>
+                            </ul>
+                            <p>💡 <strong>技巧</strong>：行列信息相互验证</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <h3>步骤3：完成拼图</h3>
+                    <div class="example">
+                        <div class="tutorial-grid">
+                            <div class="tutorial-cell clue-cell"></div>
+                            <div class="tutorial-cell clue-cell">1</div>
+                            <div class="tutorial-cell clue-cell">3</div>
+                            <div class="tutorial-cell clue-cell">3</div>
+                            <div class="tutorial-cell clue-cell">3</div>
+                            <div class="tutorial-cell clue-cell">1</div>
+                            
+                            <div class="tutorial-cell clue-cell">5</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            
+                            <div class="tutorial-cell clue-cell">1</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            
+                            <div class="tutorial-cell clue-cell">3</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            
+                            <div class="tutorial-cell clue-cell">1</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            <div class="tutorial-cell filled-cell">■</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            
+                            <div class="tutorial-cell clue-cell">0</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                            <div class="tutorial-cell marked-cell">×</div>
+                        </div>
+                        <div class="example-text">
+                            <p><strong>🎉 完成！揭示图案：</strong></p>
+                            <p>这个图案看起来像一个 <strong>T形</strong>！</p>
+                            <p>通过逻辑推理，我们成功解出了数织谜题。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 解题技巧 -->
+            <div class="tutorial-section">
+                <h2>💡 实用技巧</h2>
+                
+                <div class="step">
+                    <h3>技巧1：重叠法（Overlap）</h3>
+                    <p>当一个线索数字很大时，无论怎么摆放，总有部分格子必须填充。</p>
+                    <p><strong>例子</strong>：5格的行中，线索是 <span class="highlight">4</span></p>
+                    <p>无论4个连续格子放在哪里，中间3个格子肯定要填充！</p>
+                </div>
+                
+                <div class="step">
+                    <h3>技巧2：边界推理</h3>
+                    <p>利用网格边界限制，确定线索块的可能位置。</p>
+                </div>
+                
+                <div class="step">
+                    <h3>技巧3：排除法</h3>
+                    <p>如果某个格子填充后会导致线索无法满足，那这个格子必须是空的。</p>
+                </div>
+                
+                <div class="step">
+                    <h3>⚠️ 重要提醒</h3>
+                    <ul>
+                        <li><strong>不要猜测</strong> - 数织是纯逻辑游戏</li>
+                        <li><strong>仔细验证</strong> - 每一步都要有逻辑依据</li>
+                        <li><strong>利用标记</strong> - 用×标记确定为空的格子</li>
+                        <li><strong>交叉检查</strong> - 行列信息互相验证</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 操作说明 -->
+            <div class="tutorial-section">
+                <h2>🕹️ 游戏操作</h2>
+                <div class="step">
+                    <h3>基本操作：</h3>
+                    <ul>
+                        <li><strong>点击填充</strong>：点击格子填充为黑色 ■</li>
+                        <li><strong>点击标记</strong>：切换到标记模式，点击格子标记为 × </li>
+                        <li><strong>提示功能</strong>：卡住时可以使用提示</li>
+                        <li><strong>检查功能</strong>：检查当前进度是否有错误</li>
+                    </ul>
+                </div>
+                
+                <div class="step">
+                    <h3>手机操作：</h3>
+                    <ul>
+                        <li><strong>单击</strong>：填充/标记格子</li>
+                        <li><strong>切换模式</strong>：使用底部的"填充"/"标记"按钮</li>
+                        <li><strong>缩放</strong>：双指缩放查看大尺寸谜题</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 难度说明 -->
+            <div class="tutorial-section">
+                <h2>📊 难度等级</h2>
+                <div class="step">
+                    <ul>
+                        <li><strong>🟢 简单 (5×5)</strong>：经典图案，适合新手学习</li>
+                        <li><strong>🟡 中等 (10×10)</strong>：需要一些策略思考</li>
+                        <li><strong>🟠 困难 (15×15)</strong>：需要多种技巧组合</li>
+                        <li><strong>🔴 专家 (20×20)</strong>：复杂的逻辑推理</li>
+                        <li><strong>🟣 大师 (25×25)</strong>：最具挑战性</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- 导航按钮 -->
+            <div class="navigation">
+                <a href="./index.html?difficulty=easy&level=1" class="btn">🎯 开始第一关</a>
+                <a href="./levels.html" class="btn btn-secondary">📋 选择关卡</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

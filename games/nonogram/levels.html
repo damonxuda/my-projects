@@ -381,8 +381,11 @@
       <div class="header">
         <a href="../" class="back-btn">← 返回游戏</a>
         <h1 class="title">🎨 数织关卡</h1>
-        <div class="stats" id="overall-stats">
-          <div>0/250</div>
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <a href="./tutorial.html" class="back-btn" style="padding: 0.5rem 0.8rem; font-size: 0.9rem;">📚 教程</a>
+          <div class="stats" id="overall-stats">
+            <div>0/250</div>
+          </div>
         </div>
       </div>
       
@@ -405,6 +408,27 @@
             <span class="stat-value" id="best-time">--:--</span>
             <span class="stat-label">最佳时间</span>
           </div>
+        </div>
+      </div>
+      
+      <!-- 新手引导 -->
+      <div id="newbie-guide" class="progress-section" style="background: rgba(255, 182, 193, 0.2); border-left: 4px solid #ff6b9d; display: none;">
+        <div style="text-align: center; margin-bottom: 0.8rem;">
+          <div style="font-size: 2rem; margin-bottom: 0.5rem;">🎯</div>
+          <h3 style="margin: 0; color: #ff6b9d;">第一次玩数织？</h3>
+        </div>
+        <p style="margin: 0.5rem 0; opacity: 0.9; text-align: center;">
+          数织是一种逻辑推理游戏，通过行列数字线索填充网格来揭示隐藏图案
+        </p>
+        <div style="text-align: center; margin-top: 1rem;">
+          <a href="./tutorial.html" style="display: inline-block; background: #ff6b9d; color: white; padding: 0.8rem 1.5rem; border-radius: 25px; text-decoration: none; font-weight: bold; transition: transform 0.2s;">
+            📚 查看教程学习玩法
+          </a>
+        </div>
+        <div style="text-align: center; margin-top: 0.8rem;">
+          <button id="dismiss-guide" style="background: none; border: none; color: white; opacity: 0.7; cursor: pointer; text-decoration: underline;">
+            我已经会玩了，不再显示
+          </button>
         </div>
       </div>
       

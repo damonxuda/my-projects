@@ -140,6 +140,9 @@ class NonogramLevels {
       this.renderLevels();
       this.updateStats();
       
+      // 检查是否显示新手引导
+      this.checkAndShowNewbieGuide();
+      
     } catch (error) {
       console.error('NonogramLevels initialization failed:', error);
       this.showError('加载关卡失败，请刷新重试');
@@ -446,6 +449,34 @@ class NonogramLevels {
           <div>${message}</div>
         </div>
       `;
+    }
+  }
+
+  // 检查并显示新手引导
+  checkAndShowNewbieGuide() {
+    // 检查用户是否是新手（没有完成任何关卡）
+    const hasAnyProgress = Object.keys(this.difficulties).some(difficulty => {
+      const progress = this.progress[difficulty] || { completed_levels: [] };
+      return progress.completed_levels.length > 0;
+    });
+
+    // 检查是否已经关闭过新手引导
+    const hasSeenGuide = localStorage.getItem('nonogram_seen_guide') === 'true';
+
+    if (!hasAnyProgress && !hasSeenGuide) {
+      const guideElement = document.getElementById('newbie-guide');
+      if (guideElement) {
+        guideElement.style.display = 'block';
+        
+        // 设置关闭按钮事件
+        const dismissBtn = document.getElementById('dismiss-guide');
+        if (dismissBtn) {
+          dismissBtn.addEventListener('click', () => {
+            localStorage.setItem('nonogram_seen_guide', 'true');
+            guideElement.style.display = 'none';
+          });
+        }
+      }
     }
   }
 }
