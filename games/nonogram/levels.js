@@ -50,7 +50,10 @@ class AuthenticatedNonogramStorage extends AuthenticatedGameStorage {
     }
 
     // 更新当前关卡（解锁下一关）
-    const nextLevel = Math.max(...progress[difficulty].completed_levels) + 1;
+    const maxCompleted = progress[difficulty].completed_levels.length > 0 
+      ? Math.max(...progress[difficulty].completed_levels) 
+      : 0;
+    const nextLevel = maxCompleted + 1;
     if (nextLevel <= 50) {
       progress[difficulty].current_level = Math.max(
         progress[difficulty].current_level,
@@ -216,6 +219,14 @@ class NonogramLevels {
         this.switchDifficulty(difficulty);
       });
     });
+
+    // 重置进度按钮
+    const resetBtn = document.getElementById('reset-progress');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        this.showResetConfirmation();
+      });
+    }
 
     // 监听认证状态变化
     if (window.gameAuth) {
@@ -477,6 +488,38 @@ class NonogramLevels {
           });
         }
       }
+    }
+  }
+
+  // 显示重置确认对话框
+  showResetConfirmation() {
+    if (confirm('确定要重置所有游戏进度吗？\n\n这将清除所有难度的关卡记录、星级和时间记录。此操作不可恢复。')) {
+      this.resetAllProgress();
+    }
+  }
+
+  // 重置所有进度
+  async resetAllProgress() {
+    try {
+      // 重置本地存储
+      localStorage.removeItem('nonogram_seen_guide');
+      
+      // 重置进度数据
+      const defaultProgress = this.getDefaultProgress();
+      await this.storage.saveProgress(defaultProgress);
+      this.progress = defaultProgress;
+      
+      // 重新渲染界面
+      this.renderLevels();
+      this.updateStats();
+      
+      // 显示新手引导
+      this.checkAndShowNewbieGuide();
+      
+      alert('所有进度已重置！');
+    } catch (error) {
+      console.error('重置进度失败:', error);
+      alert('重置进度失败，请稍后重试');
     }
   }
 }

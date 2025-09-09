@@ -50,7 +50,10 @@ class AuthenticatedNonogramStorage extends AuthenticatedGameStorage {
     }
 
     // 更新当前关卡（解锁下一关）
-    const nextLevel = Math.max(...progress[difficulty].completed_levels) + 1;
+    const maxCompleted = progress[difficulty].completed_levels.length > 0 
+      ? Math.max(...progress[difficulty].completed_levels) 
+      : 0;
+    const nextLevel = maxCompleted + 1;
     if (nextLevel <= 50) {
       progress[difficulty].current_level = Math.max(
         progress[difficulty].current_level,
