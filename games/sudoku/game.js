@@ -1,8 +1,10 @@
-// 数独游戏主逻辑
+// 数独游戏主逻辑 - 集成认证系统
 class SudokuGame {
   constructor() {
     this.engine = new SudokuEngine();
-    this.storage = new SudokuStorage();
+    this.storage = new SudokuStorage(); // 保留作为备用
+    this.authStorage = new AuthenticatedSudokuStorage();
+    this.gameAuth = window.gameAuth; // 全局认证实例
     this.gameState = {
       puzzle: [],
       solution: [],
@@ -20,6 +22,8 @@ class SudokuGame {
     this.timer = null;
     this.elements = {};
     this.levels = {};
+    this.isAuthReady = false;
+    this.authInitPromise = null;
     
     this.init();
   }
@@ -28,9 +32,76 @@ class SudokuGame {
   async init() {
     this.initElements();
     this.initEventListeners();
+    
+    // 初始化认证系统
+    await this.initAuth();
+    
     await this.checkURLParams();
     this.loadGame();
     this.createBoard();
+  }
+
+  // 初始化认证系统
+  async initAuth() {
+    try {
+      // 等待认证系统初始化
+      if (this.gameAuth && !this.gameAuth.isInitialized) {
+        console.log('🔐 Waiting for auth system initialization...');
+        
+        // 等待最多5秒钟认证系统初始化
+        let attempts = 0;
+        while (!this.gameAuth.isInitialized && attempts < 50) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
+        }
+      }
+      
+      // 如果认证系统可用，初始化认证存储
+      if (this.gameAuth && this.gameAuth.isInitialized) {
+        const supabaseClient = this.gameAuth.getSupabaseClient();
+        if (supabaseClient) {
+          await this.authStorage.initialize(this.gameAuth, supabaseClient);
+          this.isAuthReady = true;
+          console.log('✅ Authenticated storage initialized');
+        }
+      }
+      
+      // 监听认证状态变化
+      if (this.gameAuth) {
+        this.gameAuth.onAuthChange((isSignedIn) => {
+          console.log(`🔐 Auth status changed: ${isSignedIn}`);
+          this.handleAuthChange(isSignedIn);
+        });
+      }
+      
+    } catch (error) {
+      console.warn('Auth initialization failed, using local storage:', error);
+      this.isAuthReady = false;
+    }
+  }
+
+  // 处理认证状态变化
+  async handleAuthChange(isSignedIn) {
+    if (isSignedIn && !this.isAuthReady) {
+      // 用户登录，重新初始化认证存储
+      try {
+        const supabaseClient = this.gameAuth.getSupabaseClient();
+        if (supabaseClient) {
+          await this.authStorage.initialize(this.gameAuth, supabaseClient);
+          this.isAuthReady = true;
+          
+          // 同步本地数据到云端
+          console.log('🔄 Syncing local data to cloud...');
+          await this.authStorage.syncFromCloud();
+        }
+      } catch (error) {
+        console.error('Failed to initialize auth storage after login:', error);
+      }
+    } else if (!isSignedIn) {
+      // 用户登出，切换回本地存储
+      this.isAuthReady = false;
+      console.log('🔐 User signed out, using local storage');
+    }
   }
 
   // 检查URL参数（关卡模式）
@@ -304,7 +375,7 @@ class SudokuGame {
   }
 
   // 输入数字
-  inputNumber(num) {
+  async inputNumber(num) {
     if (this.gameState.selectedCell === null) return;
     if (this.gameState.isComplete) return;
     
@@ -317,7 +388,11 @@ class SudokuGame {
     this.gameState.board[row][col] = num;
     this.updateConflicts();
     this.updateBoard();
-    this.checkCompletion();
+    
+    // 保存游戏状态
+    this.saveGame();
+    
+    await this.checkCompletion();
     
     // 触觉反馈
     if (GameUtils.isTouchDevice()) {
@@ -339,6 +414,9 @@ class SudokuGame {
     this.gameState.board[row][col] = 0;
     this.updateConflicts();
     this.updateBoard();
+    
+    // 保存游戏状态
+    this.saveGame();
   }
 
   // 更新冲突检测
@@ -455,7 +533,7 @@ class SudokuGame {
   }
 
   // 检查游戏完成
-  checkCompletion() {
+  async checkCompletion() {
     if (this.engine.isComplete(this.gameState.board, this.gameState.solution)) {
       this.gameState.isComplete = true;
       this.stopTimer();
@@ -463,13 +541,13 @@ class SudokuGame {
       // 关卡模式：记录进度和星级
       if (this.gameState.isLevelMode) {
         const stars = this.calculateStars();
-        this.recordLevelCompletion(stars);
+        await this.recordLevelCompletion(stars);
         this.showLevelCompleteDialog(stars);
       } else {
         this.showCompleteDialog();
       }
       
-      this.saveStats();
+      await this.saveStats();
       
       // 庆祝触觉反馈
       if (GameUtils.isTouchDevice()) {
@@ -492,14 +570,44 @@ class SudokuGame {
     return 1; // 超时完成
   }
 
-  // 记录关卡完成
-  recordLevelCompletion(stars) {
-    if (window.SudokuLevelsManager) {
-      window.SudokuLevelsManager.recordCompletion(
-        this.gameState.difficulty,
-        this.gameState.currentLevel,
-        this.gameState.elapsedTime
-      );
+  // 记录关卡完成（使用认证存储系统）
+  async recordLevelCompletion(stars) {
+    if (!this.gameState.isLevelMode) return;
+    
+    try {
+      const timeInSeconds = Math.floor(this.gameState.elapsedTime / 1000);
+      
+      if (this.isAuthReady) {
+        // 使用认证存储系统
+        await this.authStorage.updateLevelRecord(
+          this.gameState.difficulty,
+          this.gameState.currentLevel,
+          timeInSeconds,
+          stars
+        );
+        console.log('✅ Level progress saved to cloud');
+      } else {
+        // 回退到本地存储（使用SudokuLevelsManager如果可用）
+        if (window.SudokuLevelsManager) {
+          window.SudokuLevelsManager.recordCompletion(
+            this.gameState.difficulty,
+            this.gameState.currentLevel,
+            this.gameState.elapsedTime
+          );
+        }
+        console.log('✅ Level progress saved locally');
+      }
+    } catch (error) {
+      console.error('Failed to record level completion:', error);
+      
+      // 回退到本地存储
+      if (window.SudokuLevelsManager) {
+        window.SudokuLevelsManager.recordCompletion(
+          this.gameState.difficulty,
+          this.gameState.currentLevel,
+          this.gameState.elapsedTime
+        );
+      }
     }
   }
 
@@ -614,48 +722,114 @@ class SudokuGame {
     }
   }
 
-  // 保存游戏
-  saveGame() {
-    this.storage.saveProgress(this.gameState);
-  }
-
-  // 加载游戏
-  loadGame() {
-    const saved = this.storage.loadProgress();
-    if (saved && saved.puzzle && !saved.isComplete) {
-      this.gameState = {
-        ...saved,
-        fixedCells: new Set(Array.from(saved.fixedCells || [])),
-        conflicts: new Set(Array.from(saved.conflicts || [])),
-        startTime: saved.startTime ? Date.now() - saved.elapsedTime : null
-      };
-      
-      // 设置难度选择器
-      this.elements.difficulty.value = this.gameState.difficulty;
-      
-      this.updateBoard();
-      this.startTimer();
-    } else {
-      // 开始新游戏
-      setTimeout(() => this.startNewGame(), 100);
+  // 保存游戏（使用认证存储系统）
+  async saveGame() {
+    try {
+      if (this.isAuthReady) {
+        await this.authStorage.saveProgress(this.gameState);
+      } else {
+        // 回退到本地存储
+        this.storage.saveProgress(this.gameState);
+      }
+    } catch (error) {
+      console.error('Save game failed:', error);
+      // 回退到本地存储
+      this.storage.saveProgress(this.gameState);
     }
   }
 
-  // 保存统计数据
-  saveStats() {
-    const stats = this.storage.loadStats();
-    stats.gamesPlayed++;
-    stats.gamesWon++;
-    stats.totalPlayTime += this.gameState.elapsedTime;
-    
-    const difficulty = this.gameState.difficulty;
-    const currentTime = this.gameState.elapsedTime;
-    
-    if (!stats.bestTimes[difficulty] || currentTime < stats.bestTimes[difficulty]) {
-      stats.bestTimes[difficulty] = currentTime;
+  // 加载游戏（使用认证存储系统）
+  async loadGame() {
+    try {
+      let saved = null;
+      
+      if (this.isAuthReady) {
+        saved = await this.authStorage.loadProgress();
+      } else {
+        saved = this.storage.loadProgress();
+      }
+      
+      if (saved && saved.puzzle && !saved.isComplete) {
+        this.gameState = {
+          ...saved,
+          fixedCells: new Set(Array.from(saved.fixedCells || [])),
+          conflicts: new Set(Array.from(saved.conflicts || [])),
+          startTime: saved.startTime ? Date.now() - saved.elapsedTime : null
+        };
+        
+        // 设置难度选择器
+        this.elements.difficulty.value = this.gameState.difficulty;
+        
+        this.updateBoard();
+        this.startTimer();
+      } else {
+        // 开始新游戏
+        setTimeout(() => this.startNewGame(), 100);
+      }
+    } catch (error) {
+      console.error('Load game failed:', error);
+      // 回退到本地存储
+      const saved = this.storage.loadProgress();
+      if (saved && saved.puzzle && !saved.isComplete) {
+        this.gameState = {
+          ...saved,
+          fixedCells: new Set(Array.from(saved.fixedCells || [])),
+          conflicts: new Set(Array.from(saved.conflicts || [])),
+          startTime: saved.startTime ? Date.now() - saved.elapsedTime : null
+        };
+        this.elements.difficulty.value = this.gameState.difficulty;
+        this.updateBoard();
+        this.startTimer();
+      } else {
+        setTimeout(() => this.startNewGame(), 100);
+      }
     }
-    
-    this.storage.saveStats(stats);
+  }
+
+  // 保存统计数据（使用认证存储系统）
+  async saveStats() {
+    try {
+      let stats;
+      
+      if (this.isAuthReady) {
+        stats = await this.authStorage.loadStats();
+      } else {
+        stats = this.storage.loadStats();
+      }
+      
+      stats.gamesPlayed++;
+      stats.gamesWon++;
+      stats.totalPlayTime += this.gameState.elapsedTime;
+      
+      const difficulty = this.gameState.difficulty;
+      const currentTime = this.gameState.elapsedTime;
+      
+      if (!stats.bestTimes[difficulty] || currentTime < stats.bestTimes[difficulty]) {
+        stats.bestTimes[difficulty] = currentTime;
+      }
+      
+      if (this.isAuthReady) {
+        await this.authStorage.saveStats(stats);
+      } else {
+        this.storage.saveStats(stats);
+      }
+    } catch (error) {
+      console.error('Save stats failed:', error);
+      // 回退到本地存储
+      const stats = this.storage.loadStats();
+      stats.gamesPlayed++;
+      stats.gamesWon++;
+      stats.totalPlayTime += this.gameState.elapsedTime;
+      
+      const difficulty = this.gameState.difficulty;
+      const currentTime = this.gameState.elapsedTime;
+      
+      if (!stats.bestTimes[difficulty] || currentTime < stats.bestTimes[difficulty]) {
+        stats.bestTimes[difficulty] = currentTime;
+      }
+      
+      this.storage.saveStats(stats);
+    }
   }
 
   // 显示加载动画
