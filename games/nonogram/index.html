@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0"
+    />
+    <title>数织游戏 - 子杰之家</title>
+    
+    <!-- PWA 支持 -->
+    <meta name="theme-color" content="#667eea" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="数织" />
+    
+    <style>
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        min-height: 100vh;
+        overflow-x: hidden;
+        position: relative;
+      }
+      
+      .game-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 0.5rem;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      
+      /* 顶部工具栏 */
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+        padding: 0.5rem;
+      }
+      
+      .header .back-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        border-radius: 8px;
+        color: white;
+        font-size: 1.1rem;
+        padding: 0.4rem 0.8rem;
+        cursor: pointer;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        transition: all 0.3s ease;
+      }
+      
+      .header .back-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+      
+      .header .title {
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin: 0;
+        text-align: center;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+      }
+      
+      .header .timer {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 0.4rem 0.8rem;
+        border-radius: 8px;
+        font-weight: 500;
+        min-width: 70px;
+        text-align: center;
+        font-size: 0.9rem;
+      }
+      
+      /* 控制面板 */
+      .controls {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 0.8rem;
+        margin-bottom: 0.8rem;
+        backdrop-filter: blur(10px);
+      }
+      
+      .level-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+      }
+      
+      .level-badge {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 0.3rem 0.8rem;
+        border-radius: 6px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+      }
+      
+      .progress-indicator {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 0.3rem 0.8rem;
+        border-radius: 6px;
+        font-size: 0.85rem;
+      }
+      
+      .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      
+      .btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 6px;
+        color: white;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        white-space: nowrap;
+      }
+      
+      .btn:hover,
+      .btn:active {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-1px);
+      }
+      
+      .btn.primary {
+        background: rgba(255, 107, 157, 0.8);
+        border-color: rgba(255, 107, 157, 1);
+      }
+      
+      .btn.primary:hover {
+        background: rgba(255, 107, 157, 1);
+      }
+      
+      /* 游戏板容器 */
+      .board-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 0.8rem;
+        min-height: 0;
+      }
+      
+      /* 数织游戏板 */
+      .nonogram-board {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 8px;
+        display: grid;
+        gap: 1px;
+        margin-bottom: 0.8rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        max-width: 100%;
+        max-height: 70vh;
+        overflow: hidden;
+        position: relative;
+      }
+      
+      /* 线索显示 */
+      .clue-row, .clue-col {
+        background: rgba(240, 240, 240, 0.95);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.7rem;
+        font-weight: 600;
+        color: #333;
+        text-align: center;
+        line-height: 1;
+        padding: 1px;
+      }
+      
+      .clue-row {
+        justify-content: flex-end;
+        padding-right: 3px;
+      }
+      
+      .clue-col {
+        flex-direction: column;
+        justify-content: flex-end;
+        padding-bottom: 3px;
+      }
+      
+      .clue-number {
+        margin: 0 1px;
+        display: block;
+      }
+      
+      /* 游戏格子 */
+      .nonogram-cell {
+        background: white;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        position: relative;
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .nonogram-cell.filled {
+        background: #333;
+      }
+      
+      .nonogram-cell.marked {
+        background: white;
+        position: relative;
+      }
+      
+      .nonogram-cell.marked::before {
+        content: "×";
+        color: #ff6b6b;
+        font-size: 0.8em;
+        font-weight: bold;
+      }
+      
+      .nonogram-cell.error {
+        background: #ff6b6b !important;
+        animation: shake 0.3s ease-in-out;
+      }
+      
+      .nonogram-cell.hint {
+        background: rgba(255, 107, 157, 0.3);
+        border-color: #ff6b9d;
+      }
+      
+      .nonogram-cell:hover {
+        background: rgba(255, 107, 157, 0.1);
+      }
+      
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-2px); }
+        75% { transform: translateX(2px); }
+      }
+      
+      /* 粗边框分组 */
+      .nonogram-cell.border-right {
+        border-right: 2px solid rgba(0, 0, 0, 0.4);
+      }
+      
+      .nonogram-cell.border-bottom {
+        border-bottom: 2px solid rgba(0, 0, 0, 0.4);
+      }
+      
+      /* 操作按钮 */
+      .game-controls {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-bottom: 0.5rem;
+      }
+      
+      .control-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+        color: white;
+        font-size: 1rem;
+        font-weight: 600;
+        padding: 0.6rem 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.3rem;
+      }
+      
+      .control-btn:hover,
+      .control-btn:active {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-1px);
+      }
+      
+      .control-btn.active {
+        background: rgba(255, 107, 157, 0.8);
+        border-color: rgba(255, 107, 157, 1);
+      }
+      
+      .control-btn.active:hover {
+        background: rgba(255, 107, 157, 1);
+      }
+      
+      /* 游戏完成对话框 */
+      .game-complete {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.8);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+      
+      .complete-dialog {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        text-align: center;
+        color: #333;
+        max-width: 320px;
+        width: 90%;
+      }
+      
+      .complete-dialog h2 {
+        margin: 0 0 1rem 0;
+        color: #ff6b9d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+      }
+      
+      .complete-dialog .time {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #667eea;
+        margin-bottom: 1rem;
+      }
+      
+      .complete-dialog .puzzle-preview {
+        margin: 1rem 0;
+        display: flex;
+        justify-content: center;
+      }
+      
+      .complete-dialog .actions {
+        display: flex;
+        gap: 0.8rem;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      
+      .complete-dialog .btn {
+        color: #333;
+        border-color: #ddd;
+      }
+      
+      /* 响应式设计 */
+      @media (max-width: 480px) {
+        .game-container {
+          padding: 0.3rem;
+        }
+        
+        .header .title {
+          font-size: 1.1rem;
+        }
+        
+        .controls {
+          padding: 0.6rem;
+        }
+        
+        .action-buttons {
+          gap: 0.3rem;
+        }
+        
+        .btn {
+          padding: 0.3rem 0.6rem;
+          font-size: 0.8rem;
+        }
+        
+        .control-btn {
+          font-size: 0.9rem;
+          padding: 0.5rem 0.8rem;
+        }
+      }
+      
+      @media (max-width: 360px) {
+        .header {
+          padding: 0.3rem;
+        }
+        
+        .clue-row, .clue-col {
+          font-size: 0.6rem;
+        }
+      }
+      
+      /* 加载动画 */
+      .loading {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 999;
+        text-align: center;
+      }
+      
+      .loading.show {
+        display: block;
+      }
+      
+      .spinner {
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        border-top: 4px solid #fff;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 1rem;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      /* 提示系统 */
+      .hint-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 107, 157, 0.1);
+        display: none;
+        pointer-events: none;
+      }
+      
+      .hint-overlay.show {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="game-container">
+      <!-- 顶部工具栏 -->
+      <div class="header">
+        <a href="./levels.html" class="back-btn">← 关卡</a>
+        <h1 class="title">
+          <span>🎨</span>
+          <span>数织</span>
+        </h1>
+        <div class="timer" id="timer">00:00</div>
+      </div>
+      
+      <!-- 控制面板 -->
+      <div class="controls">
+        <div class="level-info">
+          <div class="level-badge" id="level-badge">
+            <span id="current-difficulty">简单</span>
+            <span>-</span>
+            <span>第<span id="current-level">1</span>关</span>
+          </div>
+          <div class="progress-indicator" id="progress-indicator">
+            0% 完成
+          </div>
+        </div>
+        
+        <div class="action-buttons">
+          <button class="btn" id="hint-btn">💡 提示</button>
+          <button class="btn" id="check-btn">✓ 检查</button>
+          <button class="btn" id="restart-btn">🔄 重开</button>
+          <button class="btn primary" id="levels-btn">📋 选择关卡</button>
+        </div>
+      </div>
+      
+      <!-- 游戏板容器 -->
+      <div class="board-container">
+        <div class="nonogram-board" id="nonogram-board">
+          <!-- 游戏板将由JavaScript动态生成 -->
+        </div>
+        
+        <!-- 操作控制 -->
+        <div class="game-controls">
+          <button class="control-btn active" id="fill-mode" data-mode="fill">
+            <span>⬛</span>
+            <span>填充</span>
+          </button>
+          <button class="control-btn" id="mark-mode" data-mode="mark">
+            <span>✖️</span>
+            <span>标记</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 加载动画 -->
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <div>加载数织谜题中...</div>
+    </div>
+    
+    <!-- 游戏完成对话框 -->
+    <div class="game-complete" id="game-complete">
+      <div class="complete-dialog">
+        <h2>
+          <span>🎉</span>
+          <span>像素画完成！</span>
+        </h2>
+        <div class="time" id="complete-time">--:--</div>
+        <div class="puzzle-preview" id="puzzle-preview">
+          <!-- 小预览图将显示在这里 -->
+        </div>
+        <div class="stars" id="complete-stars" style="font-size: 1.8rem; margin: 1rem 0;">
+          ★★★
+        </div>
+        <div class="level-complete-info" id="level-complete-info">
+          <p>关卡进度已保存</p>
+        </div>
+        <div class="actions">
+          <button class="btn" onclick="closeCompleteDialog()">继续</button>
+          <button class="btn" id="next-level-btn" onclick="goToNextLevel()">下一关</button>
+          <button class="btn primary" onclick="backToLevels()">选择关卡</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 引入脚本 -->
+    <script src="../shared/js/gameUtils.js"></script>
+    <script src="../shared/js/storage.js"></script>
+    <script src="../shared/js/gameAuth.js"></script>
+    <script src="../shared/js/authStorage.js"></script>
+    <script src="nonogram.js"></script>
+    <script src="game.js"></script>
+  </body>
+</html>
