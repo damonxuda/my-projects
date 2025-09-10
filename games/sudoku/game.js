@@ -37,7 +37,10 @@ class SudokuGame {
     await this.initAuth();
     
     await this.checkURLParams();
+    console.log('🔍 After checkURLParams - isLevelMode:', this.gameState.isLevelMode);
+    console.log('🔍 After checkURLParams - board length:', this.gameState.board?.length || 0);
     this.loadGame();
+    console.log('🔍 After loadGame - board length:', this.gameState.board?.length || 0);
     this.createBoard();
     
     // 确保棋盘显示正确的数据
@@ -129,14 +132,20 @@ class SudokuGame {
     const difficulty = urlParams.get('difficulty');
     const level = urlParams.get('level');
     
+    console.log('🔍 URL params - difficulty:', difficulty, 'level:', level);
+    
     if (difficulty && level) {
+      console.log('🎯 Entering level mode');
       this.gameState.isLevelMode = true;
       this.gameState.difficulty = difficulty;
       this.gameState.currentLevel = parseInt(level);
       
       // 加载关卡数据
       await this.loadLevelData(difficulty, parseInt(level));
+      console.log('✅ Level data loaded, board length:', this.gameState.board?.length || 0);
       this.updateUIForLevelMode();
+    } else {
+      console.log('❌ No URL params for level mode');
     }
   }
 
