@@ -70,11 +70,13 @@
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
       }
       
-      .header .back-btn:hover {
-        background: rgba(255, 255, 255, 0.35);
-        border-color: rgba(255, 255, 255, 0.6);
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      @media (hover: hover) and (pointer: fine) {
+        .header .back-btn:hover {
+          background: rgba(255, 255, 255, 0.35);
+          border-color: rgba(255, 255, 255, 0.6);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
       }
       
       .header .title {
@@ -152,10 +154,16 @@
         white-space: nowrap;
       }
       
-      .btn:hover,
       .btn:active {
         background: rgba(255, 255, 255, 0.3);
         transform: translateY(-1px);
+      }
+      
+      @media (hover: hover) and (pointer: fine) {
+        .btn:hover {
+          background: rgba(255, 255, 255, 0.3);
+          transform: translateY(-1px);
+        }
       }
       
       .btn.primary {
@@ -163,8 +171,10 @@
         border-color: rgba(255, 107, 157, 1);
       }
       
-      .btn.primary:hover {
-        background: rgba(255, 107, 157, 1);
+      @media (hover: hover) and (pointer: fine) {
+        .btn.primary:hover {
+          background: rgba(255, 107, 157, 1);
+        }
       }
       
       /* 游戏板容器 */
@@ -264,8 +274,11 @@
         border-color: #ff6b9d;
       }
       
-      .nonogram-cell:hover {
-        background: rgba(255, 107, 157, 0.1);
+      /* Only apply hover effects on non-touch devices to prevent sticky hover on mobile */
+      @media (hover: hover) and (pointer: fine) {
+        .nonogram-cell:hover {
+          background: rgba(255, 107, 157, 0.1);
+        }
       }
       
       @keyframes shake {
@@ -307,11 +320,18 @@
         gap: 0.3rem;
       }
       
-      .control-btn:hover,
       .control-btn:active {
         background: rgba(255, 255, 255, 0.3);
         border-color: rgba(255, 255, 255, 0.5);
         transform: translateY(-1px);
+      }
+      
+      @media (hover: hover) and (pointer: fine) {
+        .control-btn:hover {
+          background: rgba(255, 255, 255, 0.3);
+          border-color: rgba(255, 255, 255, 0.5);
+          transform: translateY(-1px);
+        }
       }
       
       .control-btn.active {
@@ -319,8 +339,10 @@
         border-color: rgba(255, 107, 157, 1);
       }
       
-      .control-btn.active:hover {
-        background: rgba(255, 107, 157, 1);
+      @media (hover: hover) and (pointer: fine) {
+        .control-btn.active:hover {
+          background: rgba(255, 107, 157, 1);
+        }
       }
       
       /* 游戏完成对话框 */

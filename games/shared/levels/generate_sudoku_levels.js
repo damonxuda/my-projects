@@ -8,12 +8,13 @@ const path = require('path');
 // 数独算法类（从sudoku.js移植）
 class SudokuEngine {
   constructor() {
+    // Number of holes (empty cells) to create - fewer holes = easier (more clues)
     this.difficultyMap = {
-      easy: 38,
-      medium: 48, 
-      hard: 55,
-      expert: 60,
-      master: 65
+      easy: 28,      // 53 clues (easier for beginners)
+      medium: 40,    // 41 clues  
+      hard: 50,      // 31 clues
+      expert: 58,    // 23 clues
+      master: 64     // 17 clues (very challenging)
     };
   }
 
@@ -155,7 +156,7 @@ class SudokuEngine {
 
   getEstimatedTime(difficulty, holes) {
     const baseTime = {
-      easy: 120,     // 2分钟
+      easy: 90,      // 1.5分钟 (easier with more clues)
       medium: 300,   // 5分钟
       hard: 600,     // 10分钟
       expert: 1200,  // 20分钟
