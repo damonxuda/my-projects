@@ -170,6 +170,18 @@ class SudokuGame {
       this.gameState.isComplete = false;
       
       console.log(`✅ Level ${levelNumber} loaded:`, levelData);
+      
+      // 调试：验证实际加载的puzzle数据
+      const actualZeros = levelData.puzzle.flat().filter(cell => cell === 0).length;
+      const actualFilled = levelData.puzzle.flat().filter(cell => cell !== 0).length;
+      console.log(`🔍 Actual puzzle analysis: ${actualZeros} zeros, ${actualFilled} filled`);
+      console.log(`🔍 Expected: 28 zeros, 53 filled`);
+      
+      if (actualZeros !== 28) {
+        console.error(`❌ Data mismatch! Expected 28 zeros but got ${actualZeros}`);
+        console.log(`🔍 First row of puzzle:`, levelData.puzzle[0]);
+      }
+      
       this.hideLoading();
     } catch (error) {
       console.error('❌ Failed to load level:', error);
