@@ -6,7 +6,7 @@ const VideoPlayer = ({ video, apiUrl, onClose }) => {
   const [videoUrl, setVideoUrl] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const { getToken, isSignedIn } = useAuth();
+  const { getCachedToken, isSignedIn } = useAuth();
 
   useEffect(() => {
     const loadVideoUrl = async () => {
@@ -15,7 +15,7 @@ const VideoPlayer = ({ video, apiUrl, onClose }) => {
         console.log('📋 video对象:', video);
         console.log('🌐 apiUrl:', apiUrl);
         
-        const token = await getToken();
+        const token = await getCachedToken();
         console.log('🎫 获取到token:', token ? '有效' : '无效');
         
         const requestUrl = `${apiUrl}/videos/url/${encodeURIComponent(video.key)}`;
@@ -60,7 +60,7 @@ const VideoPlayer = ({ video, apiUrl, onClose }) => {
     if (video && isSignedIn) {
       loadVideoUrl();
     }
-  }, [video, isSignedIn, apiUrl, getToken]);
+  }, [video, isSignedIn, apiUrl, getCachedToken]);
 
   if (!video) return null;
 
