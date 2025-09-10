@@ -167,7 +167,6 @@ class SudokuLevelsPage {
       }
     }
   }
-  }
 
   // 创建默认进度
   createDefaultProgress() {
