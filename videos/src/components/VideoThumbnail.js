@@ -111,16 +111,52 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getToken, c
     }
   }, [fileName, apiUrl, getToken, isLargeVideoWithoutThumbnail]);
 
-  // 组件挂载时获取缩略图 - 添加随机延迟避免并发峰值
-  useEffect(() => {
-    // 随机延迟0-1000ms，避免所有缩略图同时请求
-    const delay = Math.random() * 1000;
-    const timeoutId = setTimeout(() => {
-      fetchThumbnail();
-    }, delay);
+  // 尝试直接使用缓存的缩略图URL（避免不必要的Lambda调用）
+  const tryDirectThumbnailUrl = useCallback((fileName) => {
+    if (!fileName) return null;
+    
+    // 构建预期的缩略图URL
+    const bucketUrl = 'https://damonxuda-video-files.s3.ap-northeast-1.amazonaws.com';
+    const thumbnailPath = fileName.replace(/\.[^/.]+$/, '.jpg').replace('videos/', 'thumbnails/');
+    return `${bucketUrl}/${thumbnailPath}`;
+  }, []);
 
-    return () => clearTimeout(timeoutId);
-  }, [fileName, apiUrl, fetchThumbnail]);
+  // 组件挂载时先尝试直接缩略图，失败后再调用Lambda
+  useEffect(() => {
+    if (!fileName) return;
+    
+    // 跳过大视频文件
+    if (isLargeVideoWithoutThumbnail(fileName)) {
+      console.log(`跳过大视频文件的缩略图请求: ${fileName}`);
+      setLoading(false);
+      return;
+    }
+
+    // 先尝试直接缩略图URL
+    const directUrl = tryDirectThumbnailUrl(fileName);
+    if (directUrl) {
+      console.log(`🎯 尝试直接缩略图URL: ${directUrl}`);
+      
+      // 创建一个图片来测试URL是否存在
+      const img = new Image();
+      img.onload = () => {
+        console.log(`✅ 缩略图直接命中: ${fileName}`);
+        setThumbnailUrl(directUrl);
+        setLoading(false);
+        setError(false);
+      };
+      img.onerror = () => {
+        console.log(`❌ 缩略图不存在，调用Lambda: ${fileName}`);
+        // 缩略图不存在，调用Lambda生成
+        const delay = Math.random() * 1000;
+        const timeoutId = setTimeout(() => {
+          fetchThumbnail();
+        }, delay);
+        return () => clearTimeout(timeoutId);
+      };
+      img.src = directUrl;
+    }
+  }, [fileName, isLargeVideoWithoutThumbnail, tryDirectThumbnailUrl, fetchThumbnail]);
 
   return (
     <div className="relative w-full h-32 rounded-lg group cursor-pointer overflow-hidden">
