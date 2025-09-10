@@ -847,19 +847,25 @@ class SudokuGame {
         saved = this.storage.loadProgress();
       }
       
+      // 在关卡模式下不加载保存的进度，总是使用预设关卡数据
       if (saved && saved.puzzle && !saved.isComplete) {
-        this.gameState = {
-          ...saved,
-          fixedCells: new Set(Array.from(saved.fixedCells || [])),
-          conflicts: new Set(Array.from(saved.conflicts || [])),
-          startTime: saved.startTime ? Date.now() - saved.elapsedTime : null
-        };
-        
-        // 设置难度选择器
-        this.elements.difficulty.value = this.gameState.difficulty;
-        
-        this.updateBoard();
-        this.startTimer();
+        if (this.gameState.isLevelMode) {
+          console.log('🎯 In level mode - skipping saved progress, using preset level data');
+        } else {
+          console.log('📂 Loading saved progress');
+          this.gameState = {
+            ...saved,
+            fixedCells: new Set(Array.from(saved.fixedCells || [])),
+            conflicts: new Set(Array.from(saved.conflicts || [])),
+            startTime: saved.startTime ? Date.now() - saved.elapsedTime : null
+          };
+          
+          // 设置难度选择器
+          this.elements.difficulty.value = this.gameState.difficulty;
+          
+          this.updateBoard();
+          this.startTimer();
+        }
       } else {
         // 检查是否是关卡模式，如果是则不要开始新游戏
         if (!this.gameState.isLevelMode) {
