@@ -75,21 +75,21 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getToken, c
       });
 
       if (!response.ok) {
-        // 对于403认证错误，清除token缓存后重试
+        // 对于403认证错误，只在第一次重试时清除token缓存
         if (response.status === 403 && retryCount < 3) {
           if (clearTokenCache && retryCount === 0) {
-            console.log(`🔑 收到403错误，清除token缓存后重试...`);
+            console.log(`🔑 ${fileName}: 收到403错误，清除token缓存后重试...`);
             clearTokenCache();
           }
-          const delay = Math.min(1000 * Math.pow(2, retryCount), 10000); // 指数退避：1s, 2s, 4s, 最大10s
-          console.log(`缩略图请求失败 (${response.status})，${delay}ms后重试 (${retryCount + 1}/3)...`);
+          const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
+          console.log(`${fileName}: 缩略图请求失败 (${response.status})，${delay}ms后重试 (${retryCount + 1}/3)...`);
           setTimeout(() => fetchThumbnail(retryCount + 1), delay);
           return;
         }
-        // 对于502/503等服务器错误，直接重试
+        // 对于502/503等服务器错误，直接重试但不清除token缓存
         if (response.status >= 500 && retryCount < 3) {
           const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
-          console.log(`缩略图请求失败 (${response.status})，${delay}ms后重试 (${retryCount + 1}/3)...`);
+          console.log(`${fileName}: 服务器错误 (${response.status})，${delay}ms后重试 (${retryCount + 1}/3)... (不清除token)`);
           setTimeout(() => fetchThumbnail(retryCount + 1), delay);
           return;
         }

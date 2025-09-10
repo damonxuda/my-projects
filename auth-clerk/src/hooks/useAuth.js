@@ -128,12 +128,22 @@ export const useAuth = () => {
     return await tokenPromise;
   };
 
-  // ✅ 强制清除token缓存 - 用于处理token过期或认证失败
+  // ✅ 智能清除token缓存 - 避免频繁清除影响其他组件
   const clearTokenCache = () => {
-    console.log('🗑️ 强制清除token缓存');
+    const now = Date.now();
+    const timeSinceLastClear = now - (window.lastTokenClear || 0);
+    
+    // 如果距离上次清除不足10秒，跳过清除（防止连锁反应）
+    if (timeSinceLastClear < 10000) {
+      console.log('🛑 跳过token清除（距离上次清除不足10秒，防止连锁反应）');
+      return;
+    }
+    
+    console.log('🗑️ 智能清除token缓存');
     setCachedToken(null);
     setTokenExpiry(null);
-    tokenPromise = null; // 也清除正在进行的请求
+    tokenPromise = null;
+    window.lastTokenClear = now;
   };
 
   // 获取所有用户（管理员功能）- 保持原有逻辑不变
