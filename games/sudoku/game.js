@@ -176,6 +176,19 @@ class SudokuGame {
       const emptyCount = levelData.puzzle.flat().filter(cell => cell === 0).length;
       console.log(`🔢 Empty cells count: ${emptyCount}`);
       
+      // 强制在页面上显示调试信息
+      const debugDiv = document.createElement('div');
+      debugDiv.id = 'debug-info';
+      debugDiv.style.cssText = 'position:fixed;top:10px;left:10px;background:red;color:white;padding:10px;z-index:9999;font-size:12px;';
+      debugDiv.innerHTML = `
+        <strong>调试信息:</strong><br>
+        关卡: ${difficulty} Level ${levelNumber}<br>
+        第一行: [${levelData.puzzle[0].join(', ')}]<br>
+        空格数: ${emptyCount}<br>
+        <button onclick="this.parentElement.remove()">关闭</button>
+      `;
+      document.body.appendChild(debugDiv);
+      
       // 设置游戏状态
       this.gameState.puzzle = this.engine.cloneBoard(levelData.puzzle);
       this.gameState.solution = this.engine.cloneBoard(levelData.solution);
