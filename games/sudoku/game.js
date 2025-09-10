@@ -44,8 +44,15 @@ class SudokuGame {
   // 初始化认证系统
   async initAuth() {
     try {
+      // 检查认证系统是否存在
+      if (!this.gameAuth) {
+        console.warn('⚠️ GameAuth not available, continuing without auth');
+        this.isAuthReady = false;
+        return;
+      }
+      
       // 等待认证系统初始化
-      if (this.gameAuth && !this.gameAuth.isInitialized) {
+      if (!this.gameAuth.isInitialized) {
         console.log('🔐 Waiting for auth system initialization...');
         
         // 等待最多5秒钟认证系统初始化
@@ -53,6 +60,12 @@ class SudokuGame {
         while (!this.gameAuth.isInitialized && attempts < 50) {
           await new Promise(resolve => setTimeout(resolve, 100));
           attempts++;
+        }
+        
+        if (!this.gameAuth.isInitialized) {
+          console.warn('⚠️ Auth system initialization timeout, continuing without auth');
+          this.isAuthReady = false;
+          return;
         }
       }
       
@@ -210,6 +223,14 @@ class SudokuGame {
       currentLevel: document.getElementById('current-level'),
       numberPad: document.querySelectorAll('.num-btn')
     };
+    
+    // 检查关键元素是否存在
+    if (!this.elements.board) {
+      console.error('❌ Critical DOM element #sudoku-board not found');
+      throw new Error('Critical DOM element #sudoku-board not found');
+    }
+    
+    console.log('✅ DOM elements initialized successfully');
   }
 
   // 初始化事件监听器
@@ -492,10 +513,25 @@ class SudokuGame {
 
   // 更新棋盘显示
   updateBoard() {
+    if (!this.elements.board) {
+      console.error('❌ Board element not found in updateBoard');
+      return;
+    }
+    
     const cells = this.elements.board.children;
+    
+    if (cells.length !== 81) {
+      console.error(`❌ Expected 81 cells, found ${cells.length}`);
+      return;
+    }
     
     for (let i = 0; i < 81; i++) {
       const cell = cells[i];
+      if (!cell) {
+        console.error(`❌ Cell ${i} not found`);
+        continue;
+      }
+      
       const row = Math.floor(i / 9);
       const col = i % 9;
       const value = this.gameState.board[row][col];
