@@ -37,10 +37,7 @@ class SudokuGame {
     await this.initAuth();
     
     await this.checkURLParams();
-    console.log('🔍 After checkURLParams - isLevelMode:', this.gameState.isLevelMode);
-    console.log('🔍 After checkURLParams - board length:', this.gameState.board?.length || 0);
     this.loadGame();
-    console.log('🔍 After loadGame - board length:', this.gameState.board?.length || 0);
     this.createBoard();
     
     // 确保棋盘显示正确的数据 - 检查DOM是否ready
@@ -49,9 +46,7 @@ class SudokuGame {
       const cells = this.elements.board.children;
       if (cells.length === 81) {
         this.updateBoard();
-        console.log('🎯 Initial board update after createBoard - DOM ready');
-      } else {
-        console.log(`⚠️ DOM not ready: found ${cells.length} cells, expected 81`);
+        console.log('🎯 Board updated after DOM ready');
       }
     }
   }
@@ -138,20 +133,14 @@ class SudokuGame {
     const difficulty = urlParams.get('difficulty');
     const level = urlParams.get('level');
     
-    console.log('🔍 URL params - difficulty:', difficulty, 'level:', level);
-    
     if (difficulty && level) {
-      console.log('🎯 Entering level mode');
       this.gameState.isLevelMode = true;
       this.gameState.difficulty = difficulty;
       this.gameState.currentLevel = parseInt(level);
       
       // 加载关卡数据
       await this.loadLevelData(difficulty, parseInt(level));
-      console.log('✅ Level data loaded, board length:', this.gameState.board?.length || 0);
       this.updateUIForLevelMode();
-    } else {
-      console.log('❌ No URL params for level mode');
     }
   }
 
@@ -182,18 +171,6 @@ class SudokuGame {
       const emptyCount = levelData.puzzle.flat().filter(cell => cell === 0).length;
       console.log(`🔢 Empty cells count: ${emptyCount}`);
       
-      // 强制在页面上显示调试信息
-      const debugDiv = document.createElement('div');
-      debugDiv.id = 'debug-info';
-      debugDiv.style.cssText = 'position:fixed;top:10px;left:10px;background:red;color:white;padding:10px;z-index:9999;font-size:12px;';
-      debugDiv.innerHTML = `
-        <strong>调试信息:</strong><br>
-        关卡: ${difficulty} Level ${levelNumber}<br>
-        第一行: [${levelData.puzzle[0].join(', ')}]<br>
-        空格数: ${emptyCount}<br>
-        <button onclick="this.parentElement.remove()">关闭</button>
-      `;
-      document.body.appendChild(debugDiv);
       
       // 设置游戏状态
       this.gameState.puzzle = this.engine.cloneBoard(levelData.puzzle);
