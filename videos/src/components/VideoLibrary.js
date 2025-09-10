@@ -564,7 +564,7 @@ const VideoLibrary = () => {
                   onVideoPlay={handleVideoPlay}
                   getVideoUrl={getVideoUrl}
                   apiUrl={API_BASE_URL}
-                  getToken={getCachedToken}
+                  getCachedToken={getCachedToken}
                   clearTokenCache={clearTokenCache}
                   onDelete={handleDelete}
                 />

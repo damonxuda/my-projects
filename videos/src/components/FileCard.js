@@ -15,7 +15,7 @@ const FileCard = ({
   onVideoPlay,
   getVideoUrl,
   apiUrl,
-  getToken,
+  getCachedToken,
   clearTokenCache,
   onDelete,
 }) => {
@@ -239,7 +239,7 @@ const FileCard = ({
               fileSize={item.size}
               fileName={item.key}  // 使用完整的S3路径
               apiUrl={apiUrl}
-              getToken={getToken}
+              getCachedToken={getCachedToken}
               clearTokenCache={clearTokenCache}
             />
           ) : (

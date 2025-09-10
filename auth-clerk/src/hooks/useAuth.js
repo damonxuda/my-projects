@@ -410,22 +410,30 @@ export const useAuth = () => {
         throw new Error('无法获取认证token');
       }
       
-      const response = await fetch(
-        `${VIDEO_API_URL}/videos/list?path=${encodeURIComponent(path)}`,
-        {
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
+      const requestUrl = `${VIDEO_API_URL}/videos/list?path=${encodeURIComponent(path)}`;
+      console.log('🔍 fetchVideoList - Request URL:', requestUrl);
+      console.log('🔍 fetchVideoList - VIDEO_API_URL:', VIDEO_API_URL);
+      
+      const response = await fetch(requestUrl, {
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         }
-      );
+      });
+      
+      console.log('📡 fetchVideoList - Response status:', response.status);
+      console.log('📡 fetchVideoList - Response headers:', Object.fromEntries(response.headers.entries()));
       
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('❌ fetchVideoList - Error response:', errorText);
         throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
       
-      const data = await response.json();
+      const responseText = await response.text();
+      console.log('📄 fetchVideoList - Raw response (first 200 chars):', responseText.substring(0, 200));
+      
+      const data = JSON.parse(responseText);
       return data;
       
     } catch (error) {

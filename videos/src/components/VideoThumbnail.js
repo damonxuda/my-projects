@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Film, Play, HardDrive, Loader } from 'lucide-react';
 
-const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getToken, clearTokenCache }) => {
+const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getCachedToken, clearTokenCache }) => {
   const [thumbnailUrl, setThumbnailUrl] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -48,7 +48,7 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getToken, c
 
   // 获取缩略图 - 带重试机制
   const fetchThumbnail = useCallback(async (retryCount = 0) => {
-    if (!fileName || !apiUrl || !getToken) {
+    if (!fileName || !apiUrl || !getCachedToken) {
       return;
     }
 
@@ -64,7 +64,7 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getToken, c
     setError(false);
 
     try {
-      const token = await getToken();
+      const token = await getCachedToken();
       
       const response = await fetch(`${apiUrl}/videos/thumbnail/${encodeURIComponent(fileName)}`, {
         method: 'POST',
@@ -109,7 +109,7 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getToken, c
     } finally {
       setLoading(false);
     }
-  }, [fileName, apiUrl, getToken, isLargeVideoWithoutThumbnail]);
+  }, [fileName, apiUrl, getCachedToken, isLargeVideoWithoutThumbnail]);
 
   // 尝试直接使用缓存的缩略图URL（避免不必要的Lambda调用）
   const tryDirectThumbnailUrl = useCallback((fileName) => {
@@ -117,7 +117,8 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getToken, c
     
     // 构建预期的缩略图URL
     const bucketUrl = 'https://damonxuda-video-files.s3.ap-northeast-1.amazonaws.com';
-    const thumbnailPath = fileName.replace(/\.[^/.]+$/, '.jpg').replace('videos/', 'thumbnails/');
+    // 正确的路径构建：videos/xxx.mp4 -> thumbnails/videos/xxx.jpg
+    const thumbnailPath = `thumbnails/${fileName.replace(/\.[^/.]+$/, '.jpg')}`;
     return `${bucketUrl}/${thumbnailPath}`;
   }, []);
 
