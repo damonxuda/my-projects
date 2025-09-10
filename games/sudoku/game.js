@@ -146,17 +146,26 @@ class SudokuGame {
       this.showLoading();
       
       if (!this.levels[difficulty]) {
-        const response = await fetch(`../shared/levels/sudoku/${difficulty}.json`);
+        // 添加缓存破坏参数强制重新加载
+        const timestamp = Date.now();
+        const response = await fetch(`../shared/levels/sudoku/${difficulty}.json?v=${timestamp}`);
         if (!response.ok) {
           throw new Error(`Failed to load ${difficulty} levels`);
         }
         this.levels[difficulty] = await response.json();
+        console.log(`🔄 Loaded ${difficulty} levels from server with cache-busting`);
       }
       
       const levelData = this.levels[difficulty].find(l => l.level === levelNumber);
       if (!levelData) {
         throw new Error(`Level ${levelNumber} not found`);
       }
+      
+      // 调试信息：显示第一行数据
+      console.log(`🎯 Loading ${difficulty} level ${levelNumber}`);
+      console.log('📋 First row of puzzle:', levelData.puzzle[0]);
+      const emptyCount = levelData.puzzle.flat().filter(cell => cell === 0).length;
+      console.log(`🔢 Empty cells count: ${emptyCount}`);
       
       // 设置游戏状态
       this.gameState.puzzle = this.engine.cloneBoard(levelData.puzzle);
