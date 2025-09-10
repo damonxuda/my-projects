@@ -34,8 +34,8 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getToken })
     return filename.split('.').pop().toUpperCase();
   };
 
-  // 获取缩略图
-  const fetchThumbnail = useCallback(async () => {
+  // 获取缩略图 - 带重试机制
+  const fetchThumbnail = useCallback(async (retryCount = 0) => {
     if (!fileName || !apiUrl || !getToken) {
       return;
     }
@@ -55,6 +55,12 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getToken })
       });
 
       if (!response.ok) {
+        // 对于502等服务器错误，尝试重试
+        if (response.status >= 500 && retryCount < 2) {
+          console.log(`缩略图请求失败 (${response.status})，${2000 * (retryCount + 1)}ms后重试...`);
+          setTimeout(() => fetchThumbnail(retryCount + 1), 2000 * (retryCount + 1));
+          return;
+        }
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -66,15 +72,22 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getToken })
         throw new Error('Invalid response from thumbnail API');
       }
     } catch (err) {
+      console.error(`缩略图加载失败 (${fileName}):`, err.message);
       setError(true);
     } finally {
       setLoading(false);
     }
   }, [fileName, apiUrl, getToken]);
 
-  // 组件挂载时获取缩略图
+  // 组件挂载时获取缩略图 - 添加随机延迟避免并发峰值
   useEffect(() => {
-    fetchThumbnail();
+    // 随机延迟0-1000ms，避免所有缩略图同时请求
+    const delay = Math.random() * 1000;
+    const timeoutId = setTimeout(() => {
+      fetchThumbnail();
+    }, delay);
+
+    return () => clearTimeout(timeoutId);
   }, [fileName, apiUrl, fetchThumbnail]);
 
   return (
