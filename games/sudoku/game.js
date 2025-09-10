@@ -46,7 +46,6 @@ class SudokuGame {
       const cells = this.elements.board.children;
       if (cells.length === 81) {
         this.updateBoard();
-        console.log('🎯 Board updated after DOM ready');
       }
     }
   }
@@ -157,19 +156,12 @@ class SudokuGame {
           throw new Error(`Failed to load ${difficulty} levels`);
         }
         this.levels[difficulty] = await response.json();
-        console.log(`🔄 Loaded ${difficulty} levels from server with cache-busting`);
       }
       
       const levelData = this.levels[difficulty].find(l => l.level === levelNumber);
       if (!levelData) {
         throw new Error(`Level ${levelNumber} not found`);
       }
-      
-      // 调试信息：显示第一行数据
-      console.log(`🎯 Loading ${difficulty} level ${levelNumber}`);
-      console.log('📋 First row of puzzle:', levelData.puzzle[0]);
-      const emptyCount = levelData.puzzle.flat().filter(cell => cell === 0).length;
-      console.log(`🔢 Empty cells count: ${emptyCount}`);
       
       
       // 设置游戏状态
@@ -183,18 +175,6 @@ class SudokuGame {
       this.gameState.elapsedTime = 0;
       this.gameState.isComplete = false;
       
-      console.log(`✅ Level ${levelNumber} loaded:`, levelData);
-      
-      // 调试：验证实际加载的puzzle数据
-      const actualZeros = levelData.puzzle.flat().filter(cell => cell === 0).length;
-      const actualFilled = levelData.puzzle.flat().filter(cell => cell !== 0).length;
-      console.log(`🔍 Actual puzzle analysis: ${actualZeros} zeros, ${actualFilled} filled`);
-      console.log(`🔍 Expected: 28 zeros, 53 filled`);
-      
-      if (actualZeros !== 28) {
-        console.error(`❌ Data mismatch! Expected 28 zeros but got ${actualZeros}`);
-        console.log(`🔍 First row of puzzle:`, levelData.puzzle[0]);
-      }
       
       this.hideLoading();
     } catch (error) {
@@ -262,7 +242,6 @@ class SudokuGame {
       throw new Error('Critical DOM element #sudoku-board not found');
     }
     
-    console.log('✅ DOM elements initialized successfully');
   }
 
   // 初始化事件监听器
@@ -346,7 +325,6 @@ class SudokuGame {
       this.elements.board.appendChild(cell);
     }
     
-    console.log(`✅ Created ${this.elements.board.children.length} cells`);
   }
 
   // 开始新游戏
@@ -660,7 +638,6 @@ class SudokuGame {
           timeInSeconds,
           stars
         );
-        console.log('✅ Level progress saved to cloud');
       } else {
         // 回退到本地存储（使用SudokuLevelsManager如果可用）
         if (window.SudokuLevelsManager) {
@@ -670,7 +647,6 @@ class SudokuGame {
             this.gameState.elapsedTime
           );
         }
-        console.log('✅ Level progress saved locally');
       }
     } catch (error) {
       console.error('Failed to record level completion:', error);
@@ -831,8 +807,7 @@ class SudokuGame {
           true;
           
         if (shouldLoadProgress) {
-          console.log('📂 Loading saved progress for current level');
-          this.gameState = {
+            this.gameState = {
             ...saved,
             fixedCells: new Set(Array.from(saved.fixedCells || [])),
             conflicts: new Set(Array.from(saved.conflicts || [])),
@@ -844,8 +819,6 @@ class SudokuGame {
           
           this.updateBoard();
           this.startTimer();
-        } else {
-          console.log('🎯 In level mode - saved progress is for different level, using preset level data');
         }
       } else {
         // 检查是否是关卡模式，如果是则不要开始新游戏
