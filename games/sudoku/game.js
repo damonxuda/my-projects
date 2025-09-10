@@ -43,10 +43,16 @@ class SudokuGame {
     console.log('🔍 After loadGame - board length:', this.gameState.board?.length || 0);
     this.createBoard();
     
-    // 确保棋盘显示正确的数据
+    // 确保棋盘显示正确的数据 - 检查DOM是否ready
     if (this.gameState.board && this.gameState.board.length > 0) {
-      this.updateBoard();
-      console.log('🎯 Initial board update after createBoard');
+      // 确保有81个cell元素存在
+      const cells = this.elements.board.children;
+      if (cells.length === 81) {
+        this.updateBoard();
+        console.log('🎯 Initial board update after createBoard - DOM ready');
+      } else {
+        console.log(`⚠️ DOM not ready: found ${cells.length} cells, expected 81`);
+      }
     }
   }
 
