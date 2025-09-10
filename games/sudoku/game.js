@@ -847,12 +847,14 @@ class SudokuGame {
         saved = this.storage.loadProgress();
       }
       
-      // 在关卡模式下不加载保存的进度，总是使用预设关卡数据
+      // 智能进度加载：关卡模式下只加载匹配当前关卡的进度
       if (saved && saved.puzzle && !saved.isComplete) {
-        if (this.gameState.isLevelMode) {
-          console.log('🎯 In level mode - skipping saved progress, using preset level data');
-        } else {
-          console.log('📂 Loading saved progress');
+        const shouldLoadProgress = this.gameState.isLevelMode ? 
+          (saved.difficulty === this.gameState.difficulty && saved.currentLevel === this.gameState.currentLevel) :
+          true;
+          
+        if (shouldLoadProgress) {
+          console.log('📂 Loading saved progress for current level');
           this.gameState = {
             ...saved,
             fixedCells: new Set(Array.from(saved.fixedCells || [])),
@@ -865,6 +867,8 @@ class SudokuGame {
           
           this.updateBoard();
           this.startTimer();
+        } else {
+          console.log('🎯 In level mode - saved progress is for different level, using preset level data');
         }
       } else {
         // 检查是否是关卡模式，如果是则不要开始新游戏
