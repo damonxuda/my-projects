@@ -237,6 +237,21 @@ jobs:
             echo "ℹ️ No root index.html found"
           fi
           
+          # 部署favicon文件
+          if [ -f "./favicon.svg" ]; then
+            aws s3 cp ./favicon.svg s3://damonxuda-projects/favicon.svg
+            echo "✅ favicon.svg deployed"
+          else
+            echo "ℹ️ No favicon.svg found"
+          fi
+          
+          if [ -f "./favicon.ico" ]; then
+            aws s3 cp ./favicon.ico s3://damonxuda-projects/favicon.ico
+            echo "✅ favicon.ico deployed"
+          else
+            echo "ℹ️ No favicon.ico found"
+          fi
+          
           if [ -d "./games" ]; then
             echo "🎮 Deploying games directory..."
             aws s3 sync ./games/ s3://damonxuda-projects/games/ \
