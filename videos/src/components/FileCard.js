@@ -16,6 +16,7 @@ const FileCard = ({
   getVideoUrl,
   apiUrl,
   getToken,
+  clearTokenCache,
   onDelete,
 }) => {
   const [videoUrl, setVideoUrl] = useState(null);
@@ -239,6 +240,7 @@ const FileCard = ({
               fileName={item.key}  // 使用完整的S3路径
               apiUrl={apiUrl}
               getToken={getToken}
+              clearTokenCache={clearTokenCache}
             />
           ) : (
             <div className="w-full h-32 bg-gradient-to-br from-gray-400 to-gray-600 rounded-lg flex items-center justify-center">

@@ -17,7 +17,7 @@ const VideoLibrary = () => {
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [isProcessingYouTube, setIsProcessingYouTube] = useState(false);
 
-  const { user, isSignedIn, isAdmin, fetchVideoList, getVideoUrl, getCachedToken } =
+  const { user, isSignedIn, isAdmin, fetchVideoList, getVideoUrl, getCachedToken, clearTokenCache } =
     useAuth();
 
   const API_BASE_URL = process.env.REACT_APP_VIDEO_API_URL;
@@ -565,6 +565,7 @@ const VideoLibrary = () => {
                   getVideoUrl={getVideoUrl}
                   apiUrl={API_BASE_URL}
                   getToken={getCachedToken}
+                  clearTokenCache={clearTokenCache}
                   onDelete={handleDelete}
                 />
               ))}

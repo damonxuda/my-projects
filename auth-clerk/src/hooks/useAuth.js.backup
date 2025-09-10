@@ -108,8 +108,8 @@ export const useAuth = () => {
         const freshToken = await getToken();
         if (freshToken) {
           setCachedToken(freshToken);
-          // 设置过期时间为3分钟后（保守策略，避免token在服务器端过期）
-          setTokenExpiry(now + 3 * 60 * 1000);
+          // 设置过期时间为50分钟后（Clerk token通常1小时过期，提前10分钟刷新）
+          setTokenExpiry(now + 50 * 60 * 1000);
           return freshToken;
         }
         throw new Error('无法获取token');
@@ -126,14 +126,6 @@ export const useAuth = () => {
     })();
     
     return await tokenPromise;
-  };
-
-  // ✅ 强制清除token缓存 - 用于处理token过期或认证失败
-  const clearTokenCache = () => {
-    console.log('🗑️ 强制清除token缓存');
-    setCachedToken(null);
-    setTokenExpiry(null);
-    tokenPromise = null; // 也清除正在进行的请求
   };
 
   // 获取所有用户（管理员功能）- 保持原有逻辑不变
@@ -490,7 +482,6 @@ export const useAuth = () => {
     fetchVideoList,
     getVideoUrl,
     getToken,
-    getCachedToken,
-    clearTokenCache
+    getCachedToken
   };
 };
