@@ -293,6 +293,11 @@ class SudokuGame {
 
   // 创建9x9棋盘
   createBoard() {
+    if (!this.elements.board) {
+      console.error('❌ Board element not found in createBoard');
+      return;
+    }
+    
     this.elements.board.innerHTML = '';
     
     for (let i = 0; i < 81; i++) {
@@ -308,6 +313,8 @@ class SudokuGame {
       
       this.elements.board.appendChild(cell);
     }
+    
+    console.log(`✅ Created ${this.elements.board.children.length} cells`);
   }
 
   // 开始新游戏
