@@ -137,23 +137,37 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getToken, c
     if (directUrl) {
       console.log(`🎯 尝试直接缩略图URL: ${directUrl}`);
       
-      // 创建一个图片来测试URL是否存在
+      // 创建一个图片来测试URL是否存在，添加超时保护
       const img = new Image();
+      img.crossOrigin = 'anonymous'; // 避免CORS问题
+      
+      const timeout = setTimeout(() => {
+        console.log(`⏰ 缩略图检测超时，调用Lambda: ${fileName}`);
+        // 超时则调用Lambda
+        const delay = Math.random() * 1000;
+        setTimeout(() => {
+          fetchThumbnail();
+        }, delay);
+      }, 3000); // 3秒超时
+      
       img.onload = () => {
+        clearTimeout(timeout);
         console.log(`✅ 缩略图直接命中: ${fileName}`);
         setThumbnailUrl(directUrl);
         setLoading(false);
         setError(false);
       };
+      
       img.onerror = () => {
+        clearTimeout(timeout);
         console.log(`❌ 缩略图不存在，调用Lambda: ${fileName}`);
         // 缩略图不存在，调用Lambda生成
         const delay = Math.random() * 1000;
-        const timeoutId = setTimeout(() => {
+        setTimeout(() => {
           fetchThumbnail();
         }, delay);
-        return () => clearTimeout(timeoutId);
       };
+      
       img.src = directUrl;
     }
   }, [fileName, isLargeVideoWithoutThumbnail, tryDirectThumbnailUrl, fetchThumbnail]);
