@@ -833,8 +833,11 @@ class SudokuGame {
         this.updateBoard();
         this.startTimer();
       } else {
-        // 开始新游戏
-        setTimeout(() => this.startNewGame(), 100);
+        // 检查是否是关卡模式，如果是则不要开始新游戏
+        if (!this.gameState.isLevelMode) {
+          // 只有在非关卡模式下才开始新游戏
+          setTimeout(() => this.startNewGame(), 100);
+        }
       }
     } catch (error) {
       console.error('Load game failed:', error);
@@ -851,7 +854,10 @@ class SudokuGame {
         this.updateBoard();
         this.startTimer();
       } else {
-        setTimeout(() => this.startNewGame(), 100);
+        // 检查是否是关卡模式，如果是则不要开始新游戏
+        if (!this.gameState.isLevelMode) {
+          setTimeout(() => this.startNewGame(), 100);
+        }
       }
     }
   }
