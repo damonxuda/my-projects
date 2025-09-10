@@ -34,9 +34,29 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getToken })
     return filename.split('.').pop().toUpperCase();
   };
 
+  // 检查是否是无缩略图的大视频文件
+  const isLargeVideoWithoutThumbnail = useCallback((fileName) => {
+    const largeVideosWithoutThumbnail = [
+      'BBAN-024.mp4',
+      'ri.mp4'
+    ];
+    
+    return largeVideosWithoutThumbnail.some(videoName => 
+      fileName && fileName.toLowerCase().includes(videoName.toLowerCase())
+    );
+  }, []);
+
   // 获取缩略图 - 带重试机制
   const fetchThumbnail = useCallback(async (retryCount = 0) => {
     if (!fileName || !apiUrl || !getToken) {
+      return;
+    }
+
+    // 检查是否是大视频文件，如果是则直接跳过缩略图请求
+    if (isLargeVideoWithoutThumbnail(fileName)) {
+      console.log(`跳过大视频文件的缩略图请求: ${fileName}`);
+      setLoading(false);
+      setError(false);
       return;
     }
 
@@ -78,7 +98,7 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getToken })
     } finally {
       setLoading(false);
     }
-  }, [fileName, apiUrl, getToken]);
+  }, [fileName, apiUrl, getToken, isLargeVideoWithoutThumbnail]);
 
   // 组件挂载时获取缩略图 - 添加随机延迟避免并发峰值
   useEffect(() => {
