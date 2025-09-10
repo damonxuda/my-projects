@@ -108,8 +108,8 @@ export const useAuth = () => {
         const freshToken = await getToken();
         if (freshToken) {
           setCachedToken(freshToken);
-          // 设置过期时间为3分钟后（保守策略，避免token在服务器端过期）
-          setTokenExpiry(now + 3 * 60 * 1000);
+          // 设置过期时间为30秒后（极保守策略，频繁刷新确保token有效）
+          setTokenExpiry(now + 30 * 1000);
           return freshToken;
         }
         throw new Error('无法获取token');
