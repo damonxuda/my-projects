@@ -108,8 +108,8 @@ export const useAuth = () => {
         const freshToken = await getToken();
         if (freshToken) {
           setCachedToken(freshToken);
-          // 设置过期时间为25分钟后（根据实际观测，Clerk token约30分钟过期，留5分钟buffer）
-          setTokenExpiry(now + 25 * 60 * 1000);
+          // 设置过期时间为45秒后（根据Clerk rate limit策略和实际观测，平衡刷新频率和缓存效果）
+          setTokenExpiry(now + 45 * 1000);
           return freshToken;
         }
         throw new Error('无法获取token');
