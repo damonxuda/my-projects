@@ -39,6 +39,12 @@ class SudokuGame {
     await this.checkURLParams();
     this.loadGame();
     this.createBoard();
+    
+    // 确保棋盘显示正确的数据
+    if (this.gameState.board && this.gameState.board.length > 0) {
+      this.updateBoard();
+      console.log('🎯 Initial board update after createBoard');
+    }
   }
 
   // 初始化认证系统
