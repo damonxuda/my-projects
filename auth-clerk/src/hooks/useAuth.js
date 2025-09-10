@@ -406,7 +406,12 @@ export const useAuth = () => {
   const fetchVideoList = async (path = '') => {
     try {
       const token = await getCachedToken();
+      console.log('🎫 getCachedToken result:', token ? `${token.substring(0, 20)}...` : 'null/undefined');
+      console.log('🎫 Token type:', typeof token);
+      console.log('🎫 Token length:', token ? token.length : 'N/A');
+      
       if (!token) {
+        console.error('❌ Token is falsy:', token);
         throw new Error('无法获取认证token');
       }
       
