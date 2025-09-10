@@ -102,7 +102,24 @@ const VideoPlayer = ({ video, apiUrl, onClose }) => {
               src={videoUrl}
               controls
               className="responsive-video"
-              onError={() => setError('视频播放失败')}
+              onError={(e) => {
+                console.error('视频播放错误:', e);
+                console.error('错误代码:', e.target.error?.code);
+                console.error('错误消息:', e.target.error?.message);
+                setError(`视频播放失败 (错误代码: ${e.target.error?.code || 'unknown'})`);
+              }}
+              onLoadedMetadata={(e) => {
+                console.log('视频元数据加载完成');
+                console.log('视频时长:', e.target.duration);
+                console.log('视频宽度:', e.target.videoWidth);
+                console.log('视频高度:', e.target.videoHeight);
+                if (e.target.videoWidth === 0 || e.target.videoHeight === 0) {
+                  console.warn('⚠️ 检测到可能的纯音频文件或视频流损坏');
+                }
+              }}
+              onCanPlay={() => {
+                console.log('✅ 视频可以开始播放');
+              }}
             >
               您的浏览器不支持视频播放
             </video>
