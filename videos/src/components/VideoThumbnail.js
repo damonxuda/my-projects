@@ -55,10 +55,11 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getToken })
       });
 
       if (!response.ok) {
-        // 对于502等服务器错误，尝试重试
-        if (response.status >= 500 && retryCount < 2) {
-          console.log(`缩略图请求失败 (${response.status})，${2000 * (retryCount + 1)}ms后重试...`);
-          setTimeout(() => fetchThumbnail(retryCount + 1), 2000 * (retryCount + 1));
+        // 对于502/503等服务器错误和403认证错误，尝试重试
+        if ((response.status >= 500 || response.status === 403) && retryCount < 3) {
+          const delay = Math.min(1000 * Math.pow(2, retryCount), 10000); // 指数退避：1s, 2s, 4s, 最大10s
+          console.log(`缩略图请求失败 (${response.status})，${delay}ms后重试 (${retryCount + 1}/3)...`);
+          setTimeout(() => fetchThumbnail(retryCount + 1), delay);
           return;
         }
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
