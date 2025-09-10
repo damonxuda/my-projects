@@ -86,7 +86,8 @@ export const useAuth = () => {
     };
   };
 
-  // ✅ 获取缓存的Token - 避免频繁调用导致403错误
+  // ✅ 获取缓存的Token - 避免频繁调用导致403错误，支持并发保护
+  let tokenPromise = null;
   const getCachedToken = async () => {
     const now = Date.now();
     
@@ -95,23 +96,36 @@ export const useAuth = () => {
       return cachedToken;
     }
     
-    try {
-      // 获取新的token
-      const freshToken = await getToken();
-      if (freshToken) {
-        setCachedToken(freshToken);
-        // 设置过期时间为50分钟后（Clerk token通常1小时过期，提前10分钟刷新）
-        setTokenExpiry(now + 50 * 60 * 1000);
-        return freshToken;
-      }
-      throw new Error('无法获取token');
-    } catch (error) {
-      // 如果获取失败但有缓存token，尝试使用缓存token
-      if (cachedToken) {
-        return cachedToken;
-      }
-      throw error;
+    // 如果已经有正在进行的token请求，等待它完成
+    if (tokenPromise) {
+      return await tokenPromise;
     }
+    
+    // 创建新的token请求
+    tokenPromise = (async () => {
+      try {
+        // 获取新的token
+        const freshToken = await getToken();
+        if (freshToken) {
+          setCachedToken(freshToken);
+          // 设置过期时间为50分钟后（Clerk token通常1小时过期，提前10分钟刷新）
+          setTokenExpiry(now + 50 * 60 * 1000);
+          return freshToken;
+        }
+        throw new Error('无法获取token');
+      } catch (error) {
+        // 如果获取失败但有缓存token，尝试使用缓存token
+        if (cachedToken) {
+          return cachedToken;
+        }
+        throw error;
+      } finally {
+        // 请求完成后清除promise
+        tokenPromise = null;
+      }
+    })();
+    
+    return await tokenPromise;
   };
 
   // 获取所有用户（管理员功能）- 保持原有逻辑不变
