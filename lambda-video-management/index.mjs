@@ -31,7 +31,8 @@ const execAsync = promisify(exec);
 
 // Token缓存 - 避免Clerk API速率限制
 const tokenCache = new Map();
-const TOKEN_CACHE_TTL = 5 * 60 * 1000; // 5分钟缓存
+const TOKEN_CACHE_TTL = 40 * 1000; // 40秒缓存，与前端45秒保持一致且略短
+// 最后同步时间: 2025-09-11 09:15 - 从Lambda云端同步并修改缓存时间
 
 export const handler = async (event) => {
   // CORS处理完全交给Function URL配置
@@ -699,14 +700,20 @@ async function generateThumbnail(videoKey, corsHeaders) {
         }),
         { expiresIn: 3600 }
       );
+      
+      const responseBody = JSON.stringify({
+        success: true,
+        thumbnailUrl,
+        cached: true
+      });
+      
+      console.log("响应体大小:", responseBody.length, "字符");
+      console.log("缩略图URL长度:", thumbnailUrl.length, "字符");
+      
       return {
         statusCode: 200,
         headers: corsHeaders,
-        body: JSON.stringify({
-          success: true,
-          thumbnailUrl,
-          cached: true
-        }),
+        body: responseBody,
       };
     }
 
