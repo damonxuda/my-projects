@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Film, Play, HardDrive, Loader } from 'lucide-react';
+import thumbnailCache from '../utils/thumbnailCache';
 
 const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getCachedToken, clearTokenCache }) => {
   const [thumbnailUrl, setThumbnailUrl] = useState(null);
@@ -139,7 +140,7 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getCachedTo
     return `${bucketUrl}/${thumbnailPath}`;
   }, []);
 
-  // 组件挂载时先尝试直接缩略图，失败后再调用Lambda
+  // 组件挂载时使用批量缓存机制加载缩略图
   useEffect(() => {
     if (!fileName) return;
     
@@ -150,45 +151,56 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getCachedTo
       return;
     }
 
-    // 先尝试直接缩略图URL（现在放在videos目录下）
-    const directUrl = tryDirectThumbnailUrl(fileName);
-    if (directUrl) {
-      console.log(`🎯 尝试直接缩略图URL: ${directUrl}`);
-      
-      // 创建一个图片来测试URL是否存在，添加超时保护
-      const img = new Image();
-      img.crossOrigin = 'anonymous'; // 避免CORS问题
-      
-      const timeout = setTimeout(() => {
-        console.log(`⏰ 缩略图检测超时，调用Lambda: ${fileName}`);
-        // 超时则调用Lambda
-        const delay = Math.random() * 3000 + 1000; // 1-4秒随机延迟
-        setTimeout(() => {
-          fetchThumbnail();
-        }, delay);
-      }, 5000); // 5秒超时
-      
-      img.onload = () => {
-        clearTimeout(timeout);
-        console.log(`✅ 缩略图直接命中: ${fileName}`);
-        setThumbnailUrl(directUrl);
+    loadThumbnailFromCache();
+  }, [fileName, isLargeVideoWithoutThumbnail, loadThumbnailFromCache]);
+
+  // 从缓存加载缩略图
+  const loadThumbnailFromCache = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(false);
+
+      // 1. 先尝试从缓存获取
+      const cachedUrl = thumbnailCache.getThumbnailUrl(fileName);
+      if (cachedUrl) {
+        console.log(`📦 缓存命中: ${fileName}`);
+        setThumbnailUrl(cachedUrl);
         setLoading(false);
-        setError(false);
-      };
+        return;
+      }
+
+      // 2. 缓存未命中，需要批量加载该文件夹的缩略图
+      console.log(`📡 缓存未命中，批量加载: ${fileName}`);
       
-      img.onerror = () => {
-        clearTimeout(timeout);
-        console.log(`❌ 缩略图不存在，调用Lambda: ${fileName}`);
-        // 缩略图不存在，调用Lambda生成
-        const delay = Math.random() * 3000 + 1000; // 1-4秒随机延迟
+      // 确定文件夹路径
+      const pathParts = fileName.split('/');
+      const folderPath = pathParts.length > 2 ? pathParts[1] : ''; // videos/Movies/xxx.mp4 -> Movies
+
+      // 批量加载该文件夹的所有缩略图
+      await thumbnailCache.loadBatchThumbnails(folderPath, apiUrl, getCachedToken);
+      
+      // 3. 批量加载完成后，再次尝试获取缩略图URL
+      const batchLoadedUrl = thumbnailCache.getThumbnailUrl(fileName);
+      if (batchLoadedUrl) {
+        console.log(`✅ 批量加载成功: ${fileName}`);
+        setThumbnailUrl(batchLoadedUrl);
+      } else {
+        console.log(`❌ 批量加载后仍无缩略图: ${fileName}，回退到单独生成`);
+        // 如果批量加载后仍然没有，回退到原来的单独生成逻辑
+        const delay = Math.random() * 2000 + 1000; // 1-3秒随机延迟
         setTimeout(() => {
           fetchThumbnail();
         }, delay);
-      };
+        return;
+      }
       
-      img.src = directUrl;
+    } catch (error) {
+      console.error(`缩略图加载失败 (${fileName}):`, error.message);
+      setError(true);
+    } finally {
+      setLoading(false);
     }
-  }, [fileName, isLargeVideoWithoutThumbnail, tryDirectThumbnailUrl, fetchThumbnail]);
+  }, [fileName, apiUrl, getCachedToken, fetchThumbnail]);
 
   return (
     <div className="relative w-full h-32 rounded-lg group cursor-pointer overflow-hidden">
