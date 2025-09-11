@@ -120,9 +120,6 @@ export const handler = async (event) => {
       const rawVideoKey = rawPath.replace("/videos/thumbnail/", "");
       const videoKey = decodeURIComponent(rawVideoKey);
       return await generateThumbnail(videoKey, corsHeaders);
-    } else if (method === "GET" && path === "/videos/thumbnails/batch") {
-      const pathParam = event.queryStringParameters?.path || "";
-      return await getBatchThumbnails(pathParam, corsHeaders);
     }
 
     console.log("路由不匹配");
@@ -685,12 +682,9 @@ async function generateThumbnail(videoKey, corsHeaders) {
       };
     }
 
-    // 构建缩略图文件名 - 缩略图在thumbnails/目录下
+    // 构建缩略图文件名 - videoKey已经包含了videos/前缀
     const videoPath = videoKey;
-    // videos/xxx.mp4 -> thumbnails/xxx.jpg
-    // videos/Movies/xxx.mp4 -> thumbnails/Movies/xxx.jpg  
-    const baseName = videoKey.replace('videos/', '');
-    const thumbnailKey = `thumbnails/${baseName.replace(/\.[^.]+$/, '.jpg')}`;
+    const thumbnailKey = `thumbnails/${videoKey.replace('videos/', '').replace(/\.[^.]+$/, '')}.jpg`;
     
     console.log("缩略图路径:", thumbnailKey);
 
@@ -895,106 +889,6 @@ async function createVideoThumbnail(videoPath, thumbnailKey) {
       // 如果文件不存在（HTTP流模式），这是正常的
       console.log("临时视频文件清理（文件可能不存在，这是正常的）");
     }
-  }
-}
-
-// 批量获取缩略图预签名URLs
-async function getBatchThumbnails(pathParam, corsHeaders) {
-  try {
-    console.log("=== 开始批量获取缩略图 ===");
-    console.log("Path参数:", pathParam);
-
-    // 构建S3前缀 - 如果有path参数则使用，否则获取根目录
-    const s3Prefix = pathParam ? `videos/${pathParam}/` : "videos/";
-    console.log("S3前缀:", s3Prefix);
-
-    // 获取该路径下的所有视频文件
-    const listCommand = new ListObjectsV2Command({
-      Bucket: VIDEO_BUCKET,
-      Prefix: s3Prefix,
-    });
-
-    const response = await s3Client.send(listCommand);
-    console.log("S3响应:", response.Contents?.length || 0, "个对象");
-
-    // 过滤出视频文件
-    const videoFiles = response.Contents?.filter((item) => {
-      const filename = item.Key.split("/").pop();
-      const isVideo = isVideoFile(filename);
-      const hasSize = item.Size > 0;
-      return isVideo && hasSize;
-    }) || [];
-
-    console.log("视频文件:", videoFiles.length, "个");
-
-    // 为每个视频生成缩略图预签名URL
-    const thumbnailUrls = {};
-    
-    for (const videoFile of videoFiles) {
-      const videoKey = videoFile.Key;
-      const baseName = videoKey.replace('videos/', '');
-      const thumbnailKey = `thumbnails/${baseName.replace(/\.[^.]+$/, '.jpg')}`;
-      
-      console.log(`处理: ${videoKey} -> ${thumbnailKey}`);
-      
-      // 检查缩略图是否存在
-      try {
-        await s3Client.send(new HeadObjectCommand({
-          Bucket: VIDEO_BUCKET,
-          Key: thumbnailKey,
-        }));
-        
-        // 生成24小时有效期的预签名URL
-        const signedUrl = await getSignedUrl(
-          s3Client,
-          new GetObjectCommand({
-            Bucket: VIDEO_BUCKET,
-            Key: thumbnailKey,
-          }),
-          { expiresIn: 24 * 60 * 60 } // 24小时
-        );
-        
-        thumbnailUrls[videoKey] = signedUrl;
-        console.log(`✅ ${videoKey}: 缩略图URL已生成`);
-        
-      } catch (error) {
-        if (error.name === "NotFound") {
-          console.log(`❌ ${videoKey}: 缩略图不存在`);
-          thumbnailUrls[videoKey] = null; // 标记为需要生成
-        } else {
-          console.error(`❌ ${videoKey}: 检查缩略图失败:`, error.message);
-          thumbnailUrls[videoKey] = null;
-        }
-      }
-    }
-
-    console.log("批量处理完成，生成URL数量:", Object.keys(thumbnailUrls).length);
-
-    return {
-      statusCode: 200,
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        success: true,
-        path: pathParam,
-        thumbnailUrls,
-        count: Object.keys(thumbnailUrls).length,
-        expiresAt: Date.now() + (24 * 60 * 60 * 1000), // 24小时后过期
-      }),
-    };
-
-  } catch (error) {
-    console.error("批量获取缩略图失败:", error);
-    return {
-      statusCode: 500,
-      headers: corsHeaders,
-      body: JSON.stringify({
-        error: "Failed to get batch thumbnails",
-        details: error.message,
-      }),
-    };
   }
 }
 
