@@ -127,33 +127,6 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getCachedTo
     }
   }, [fileName, apiUrl, getCachedToken, isLargeVideoWithoutThumbnail]);
 
-  // 尝试直接使用缓存的缩略图URL（避免不必要的Lambda调用）
-  const tryDirectThumbnailUrl = useCallback((fileName) => {
-    if (!fileName) return null;
-    
-    // 构建预期的缩略图URL - 缩略图在thumbnails/目录下
-    const bucketUrl = 'https://damonxuda-video-files.s3.ap-northeast-1.amazonaws.com';
-    // videos/xxx.mp4 -> thumbnails/xxx.jpg
-    // videos/Movies/xxx.mp4 -> thumbnails/Movies/xxx.jpg
-    const baseName = fileName.split('/').slice(1).join('/'); // 去掉videos/前缀
-    const thumbnailPath = `thumbnails/${baseName.replace(/\.[^/.]+$/, '.jpg')}`;
-    return `${bucketUrl}/${thumbnailPath}`;
-  }, []);
-
-  // 组件挂载时使用批量缓存机制加载缩略图
-  useEffect(() => {
-    if (!fileName) return;
-    
-    // 跳过大视频文件
-    if (isLargeVideoWithoutThumbnail(fileName)) {
-      console.log(`跳过大视频文件的缩略图请求: ${fileName}`);
-      setLoading(false);
-      return;
-    }
-
-    loadThumbnailFromCache();
-  }, [fileName, isLargeVideoWithoutThumbnail, loadThumbnailFromCache]);
-
   // 从缓存加载缩略图
   const loadThumbnailFromCache = useCallback(async () => {
     try {
@@ -201,6 +174,33 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getCachedTo
       setLoading(false);
     }
   }, [fileName, apiUrl, getCachedToken, fetchThumbnail]);
+
+  // 尝试直接使用缓存的缩略图URL（避免不必要的Lambda调用）
+  const tryDirectThumbnailUrl = useCallback((fileName) => {
+    if (!fileName) return null;
+    
+    // 构建预期的缩略图URL - 缩略图在thumbnails/目录下
+    const bucketUrl = 'https://damonxuda-video-files.s3.ap-northeast-1.amazonaws.com';
+    // videos/xxx.mp4 -> thumbnails/xxx.jpg
+    // videos/Movies/xxx.mp4 -> thumbnails/Movies/xxx.jpg
+    const baseName = fileName.split('/').slice(1).join('/'); // 去掉videos/前缀
+    const thumbnailPath = `thumbnails/${baseName.replace(/\.[^/.]+$/, '.jpg')}`;
+    return `${bucketUrl}/${thumbnailPath}`;
+  }, []);
+
+  // 组件挂载时使用批量缓存机制加载缩略图
+  useEffect(() => {
+    if (!fileName) return;
+    
+    // 跳过大视频文件
+    if (isLargeVideoWithoutThumbnail(fileName)) {
+      console.log(`跳过大视频文件的缩略图请求: ${fileName}`);
+      setLoading(false);
+      return;
+    }
+
+    loadThumbnailFromCache();
+  }, [fileName, isLargeVideoWithoutThumbnail, loadThumbnailFromCache]);
 
   return (
     <div className="relative w-full h-32 rounded-lg group cursor-pointer overflow-hidden">
