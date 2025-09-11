@@ -138,7 +138,7 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getCachedTo
     return `${bucketUrl}/${thumbnailPath}`;
   }, []);
 
-  // 组件挂载时先尝试直接缩略图，失败后再调用Lambda
+  // 组件挂载时直接调用Lambda获取缩略图（使用预签名URL）
   useEffect(() => {
     if (!fileName) return;
     
@@ -149,45 +149,13 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getCachedTo
       return;
     }
 
-    // 先尝试直接缩略图URL
-    const directUrl = tryDirectThumbnailUrl(fileName);
-    if (directUrl) {
-      console.log(`🎯 尝试直接缩略图URL: ${directUrl}`);
-      
-      // 创建一个图片来测试URL是否存在，添加超时保护
-      const img = new Image();
-      img.crossOrigin = 'anonymous'; // 避免CORS问题
-      
-      const timeout = setTimeout(() => {
-        console.log(`⏰ 缩略图检测超时，调用Lambda: ${fileName}`);
-        // 超时则调用Lambda
-        const delay = Math.random() * 5000 + 2000; // 2-7秒随机延迟
-        setTimeout(() => {
-          fetchThumbnail();
-        }, delay);
-      }, 8000); // 8秒超时，给S3检查更多时间
-      
-      img.onload = () => {
-        clearTimeout(timeout);
-        console.log(`✅ 缩略图直接命中: ${fileName}`);
-        setThumbnailUrl(directUrl);
-        setLoading(false);
-        setError(false);
-      };
-      
-      img.onerror = () => {
-        clearTimeout(timeout);
-        console.log(`❌ 缩略图不存在，调用Lambda: ${fileName}`);
-        // 缩略图不存在，调用Lambda生成
-        const delay = Math.random() * 5000 + 2000; // 2-7秒随机延迟
-        setTimeout(() => {
-          fetchThumbnail();
-        }, delay);
-      };
-      
-      img.src = directUrl;
-    }
-  }, [fileName, isLargeVideoWithoutThumbnail, tryDirectThumbnailUrl, fetchThumbnail]);
+    // 直接调用Lambda获取缩略图预签名URL
+    console.log(`🎯 直接调用Lambda获取缩略图: ${fileName}`);
+    const delay = Math.random() * 3000 + 1000; // 1-4秒随机延迟，避免并发
+    setTimeout(() => {
+      fetchThumbnail();
+    }, delay);
+  }, [fileName, isLargeVideoWithoutThumbnail, fetchThumbnail]);
 
   return (
     <div className="relative w-full h-32 rounded-lg group cursor-pointer overflow-hidden">
