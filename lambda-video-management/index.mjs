@@ -682,9 +682,12 @@ async function generateThumbnail(videoKey, corsHeaders) {
       };
     }
 
-    // 构建缩略图文件名 - 缩略图现在和视频文件在同一目录下
+    // 构建缩略图文件名 - 缩略图在videos/thumbnails/目录下
     const videoPath = videoKey;
-    const thumbnailKey = videoKey.replace(/\.[^.]+$/, '.jpg');
+    // videos/xxx.mp4 -> videos/thumbnails/xxx.jpg
+    // videos/Movies/xxx.mp4 -> videos/thumbnails/Movies/xxx.jpg  
+    const baseName = videoKey.replace('videos/', '');
+    const thumbnailKey = `videos/thumbnails/${baseName.replace(/\.[^.]+$/, '.jpg')}`;
     
     console.log("缩略图路径:", thumbnailKey);
 
