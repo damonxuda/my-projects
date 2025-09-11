@@ -96,7 +96,22 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getCachedTo
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const responseText = await response.text();
+      
+      // 检查响应是否是HTML而不是JSON
+      if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
+        console.error(`❌ ${fileName} - 缩略图API返回HTML响应:`, responseText.substring(0, 500));
+        throw new Error('缩略图服务返回HTML页面而非JSON数据');
+      }
+      
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error(`❌ ${fileName} - 缩略图JSON解析失败:`, parseError);
+        console.error(`❌ ${fileName} - 原始响应:`, responseText);
+        throw new Error(`缩略图JSON解析失败: ${parseError.message}`);
+      }
 
       if (data.success && data.thumbnailUrl) {
         setThumbnailUrl(data.thumbnailUrl);

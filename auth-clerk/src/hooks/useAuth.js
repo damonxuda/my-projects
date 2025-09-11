@@ -438,7 +438,21 @@ export const useAuth = () => {
       const responseText = await response.text();
       console.log('📄 fetchVideoList - Raw response (first 200 chars):', responseText.substring(0, 200));
       
-      const data = JSON.parse(responseText);
+      // 检查响应是否是HTML而不是JSON
+      if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
+        console.error('❌ fetchVideoList - 收到HTML响应而非JSON:', responseText.substring(0, 500));
+        throw new Error('服务器返回HTML页面而非JSON数据，请检查API端点配置');
+      }
+      
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('❌ fetchVideoList - JSON解析失败:', parseError);
+        console.error('❌ fetchVideoList - 原始响应:', responseText);
+        throw new Error(`JSON解析失败: ${parseError.message}. 响应内容: ${responseText.substring(0, 200)}`);
+      }
+      
       return data;
       
     } catch (error) {
@@ -466,7 +480,23 @@ export const useAuth = () => {
         throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
       
-      const data = await response.json();
+      const responseText = await response.text();
+      
+      // 检查响应是否是HTML而不是JSON
+      if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
+        console.error('❌ getVideoUrl - 收到HTML响应而非JSON:', responseText.substring(0, 500));
+        throw new Error('服务器返回HTML页面而非JSON数据，请检查API端点配置');
+      }
+      
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('❌ getVideoUrl - JSON解析失败:', parseError);
+        console.error('❌ getVideoUrl - 原始响应:', responseText);
+        throw new Error(`JSON解析失败: ${parseError.message}. 响应内容: ${responseText.substring(0, 200)}`);
+      }
+      
       return data;
       
     } catch (error) {

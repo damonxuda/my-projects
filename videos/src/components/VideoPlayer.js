@@ -36,12 +36,21 @@ const VideoPlayer = ({ video, apiUrl, onClose }) => {
         }
 
         const responseText = await response.text();
+        console.log('📄 VideoPlayer - Raw response (first 200 chars):', responseText.substring(0, 200));
+        
+        // 检查响应是否是HTML而不是JSON
+        if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
+          console.error('❌ VideoPlayer - 收到HTML响应而非JSON:', responseText.substring(0, 500));
+          throw new Error('视频服务返回HTML页面而非JSON数据，请检查API端点配置');
+        }
         
         let data;
         try {
           data = JSON.parse(responseText);
         } catch (parseError) {
-          throw new Error('服务器返回的数据格式错误');
+          console.error('❌ VideoPlayer - JSON解析失败:', parseError);
+          console.error('❌ VideoPlayer - 原始响应:', responseText);
+          throw new Error(`视频URL JSON解析失败: ${parseError.message}. 响应内容: ${responseText.substring(0, 200)}`);
         }
         
         if (data.url) {

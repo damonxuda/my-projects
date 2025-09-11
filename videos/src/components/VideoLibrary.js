@@ -56,11 +56,22 @@ const VideoLibrary = () => {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.details || `删除失败: ${response.status}`);
+        const errorText = await response.text();
+        try {
+          const errorData = JSON.parse(errorText);
+          throw new Error(errorData.details || `删除失败: ${response.status}`);
+        } catch (parseError) {
+          console.error('删除API错误响应解析失败:', parseError);
+          throw new Error(`删除失败: ${response.status} - ${errorText}`);
+        }
       }
 
-      await response.json();
+      const responseText = await response.text();
+      try {
+        JSON.parse(responseText); // 验证响应是有效的JSON
+      } catch (parseError) {
+        console.warn('删除API响应不是有效JSON，但操作可能已成功:', responseText);
+      }
 
       // 刷新当前文件夹
       await loadItems(currentPath);
@@ -121,10 +132,24 @@ const VideoLibrary = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`上传失败: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`YouTube视频上传失败: ${response.status} - ${errorText.substring(0, 200)}`);
       }
 
-      await response.json();
+      const responseText = await response.text();
+      
+      // 检查响应是否是HTML而不是JSON (保护性检查，不影响正常功能)
+      if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
+        console.error('❌ YouTube上传 - 收到HTML响应:', responseText.substring(0, 500));
+        throw new Error('YouTube上传服务返回HTML页面，请检查API配置');
+      }
+      
+      try {
+        JSON.parse(responseText); // 验证响应是有效的JSON
+      } catch (parseError) {
+        console.warn('YouTube上传响应不是有效JSON，但操作可能已成功:', responseText.substring(0, 200));
+        // 不抛出错误，因为YouTube功能之前是正常的
+      }
 
       // 成功后重置表单并刷新列表
       setYoutubeUrl("");
