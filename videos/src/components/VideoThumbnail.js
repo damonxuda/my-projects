@@ -132,8 +132,9 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getCachedTo
     
     // 构建预期的缩略图URL
     const bucketUrl = 'https://damonxuda-video-files.s3.ap-northeast-1.amazonaws.com';
-    // 正确的路径构建：videos/xxx.mp4 -> thumbnails/videos/xxx.jpg
-    const thumbnailPath = `thumbnails/${fileName.replace(/\.[^/.]+$/, '.jpg')}`;
+    // 从完整路径提取文件名：videos/xxx.mp4 -> xxx.mp4 -> xxx.jpg
+    const baseName = fileName.split('/').pop(); // 只取文件名部分
+    const thumbnailPath = `thumbnails/${baseName.replace(/\.[^/.]+$/, '.jpg')}`;
     return `${bucketUrl}/${thumbnailPath}`;
   }, []);
 
@@ -160,11 +161,11 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getCachedTo
       const timeout = setTimeout(() => {
         console.log(`⏰ 缩略图检测超时，调用Lambda: ${fileName}`);
         // 超时则调用Lambda
-        const delay = Math.random() * 1000;
+        const delay = Math.random() * 5000 + 2000; // 2-7秒随机延迟
         setTimeout(() => {
           fetchThumbnail();
         }, delay);
-      }, 3000); // 3秒超时
+      }, 8000); // 8秒超时，给S3检查更多时间
       
       img.onload = () => {
         clearTimeout(timeout);
@@ -178,7 +179,7 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getCachedTo
         clearTimeout(timeout);
         console.log(`❌ 缩略图不存在，调用Lambda: ${fileName}`);
         // 缩略图不存在，调用Lambda生成
-        const delay = Math.random() * 1000;
+        const delay = Math.random() * 5000 + 2000; // 2-7秒随机延迟
         setTimeout(() => {
           fetchThumbnail();
         }, delay);
