@@ -130,12 +130,12 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getCachedTo
   const tryDirectThumbnailUrl = useCallback((fileName) => {
     if (!fileName) return null;
     
-    // 构建预期的缩略图URL - 缩略图在videos/thumbnails/目录下
+    // 构建预期的缩略图URL - 缩略图在thumbnails/目录下
     const bucketUrl = 'https://damonxuda-video-files.s3.ap-northeast-1.amazonaws.com';
-    // videos/xxx.mp4 -> videos/thumbnails/xxx.jpg
-    // videos/Movies/xxx.mp4 -> videos/thumbnails/Movies/xxx.jpg
+    // videos/xxx.mp4 -> thumbnails/xxx.jpg
+    // videos/Movies/xxx.mp4 -> thumbnails/Movies/xxx.jpg
     const baseName = fileName.split('/').slice(1).join('/'); // 去掉videos/前缀
-    const thumbnailPath = `videos/thumbnails/${baseName.replace(/\.[^/.]+$/, '.jpg')}`;
+    const thumbnailPath = `thumbnails/${baseName.replace(/\.[^/.]+$/, '.jpg')}`;
     return `${bucketUrl}/${thumbnailPath}`;
   }, []);
 
