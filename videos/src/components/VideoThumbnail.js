@@ -130,15 +130,14 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getCachedTo
   const tryDirectThumbnailUrl = useCallback((fileName) => {
     if (!fileName) return null;
     
-    // 构建预期的缩略图URL
+    // 构建预期的缩略图URL - 缩略图和视频文件在同一目录下
     const bucketUrl = 'https://damonxuda-video-files.s3.ap-northeast-1.amazonaws.com';
-    // 从完整路径提取文件名：videos/xxx.mp4 -> xxx.mp4 -> xxx.jpg
-    const baseName = fileName.split('/').pop(); // 只取文件名部分
-    const thumbnailPath = `thumbnails/${baseName.replace(/\.[^/.]+$/, '.jpg')}`;
+    // 直接替换扩展名：videos/xxx.mp4 -> videos/xxx.jpg
+    const thumbnailPath = fileName.replace(/\.[^/.]+$/, '.jpg');
     return `${bucketUrl}/${thumbnailPath}`;
   }, []);
 
-  // 组件挂载时直接调用Lambda获取缩略图（使用预签名URL）
+  // 组件挂载时先尝试直接缩略图，失败后再调用Lambda
   useEffect(() => {
     if (!fileName) return;
     
@@ -149,13 +148,45 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getCachedTo
       return;
     }
 
-    // 直接调用Lambda获取缩略图预签名URL
-    console.log(`🎯 直接调用Lambda获取缩略图: ${fileName}`);
-    const delay = Math.random() * 3000 + 1000; // 1-4秒随机延迟，避免并发
-    setTimeout(() => {
-      fetchThumbnail();
-    }, delay);
-  }, [fileName, isLargeVideoWithoutThumbnail, fetchThumbnail]);
+    // 先尝试直接缩略图URL（现在放在videos目录下）
+    const directUrl = tryDirectThumbnailUrl(fileName);
+    if (directUrl) {
+      console.log(`🎯 尝试直接缩略图URL: ${directUrl}`);
+      
+      // 创建一个图片来测试URL是否存在，添加超时保护
+      const img = new Image();
+      img.crossOrigin = 'anonymous'; // 避免CORS问题
+      
+      const timeout = setTimeout(() => {
+        console.log(`⏰ 缩略图检测超时，调用Lambda: ${fileName}`);
+        // 超时则调用Lambda
+        const delay = Math.random() * 3000 + 1000; // 1-4秒随机延迟
+        setTimeout(() => {
+          fetchThumbnail();
+        }, delay);
+      }, 5000); // 5秒超时
+      
+      img.onload = () => {
+        clearTimeout(timeout);
+        console.log(`✅ 缩略图直接命中: ${fileName}`);
+        setThumbnailUrl(directUrl);
+        setLoading(false);
+        setError(false);
+      };
+      
+      img.onerror = () => {
+        clearTimeout(timeout);
+        console.log(`❌ 缩略图不存在，调用Lambda: ${fileName}`);
+        // 缩略图不存在，调用Lambda生成
+        const delay = Math.random() * 3000 + 1000; // 1-4秒随机延迟
+        setTimeout(() => {
+          fetchThumbnail();
+        }, delay);
+      };
+      
+      img.src = directUrl;
+    }
+  }, [fileName, isLargeVideoWithoutThumbnail, tryDirectThumbnailUrl, fetchThumbnail]);
 
   return (
     <div className="relative w-full h-32 rounded-lg group cursor-pointer overflow-hidden">

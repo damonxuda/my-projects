@@ -682,9 +682,9 @@ async function generateThumbnail(videoKey, corsHeaders) {
       };
     }
 
-    // 构建缩略图文件名 - videoKey已经包含了videos/前缀
+    // 构建缩略图文件名 - 缩略图现在和视频文件在同一目录下
     const videoPath = videoKey;
-    const thumbnailKey = `thumbnails/${videoKey.replace('videos/', '').replace(/\.[^.]+$/, '')}.jpg`;
+    const thumbnailKey = videoKey.replace(/\.[^.]+$/, '.jpg');
     
     console.log("缩略图路径:", thumbnailKey);
 
