@@ -52,23 +52,31 @@ class ThumbnailCache {
 
   // 获取单个视频的缩略图URL
   getThumbnailUrl(videoKey) {
+    console.log(`🔍 getThumbnailUrl调用: ${videoKey}`);
+    
     // 确定文件夹路径
     const pathParts = videoKey.split('/');
     const path = pathParts.length > 2 ? pathParts[1] : ''; // videos/Movies/xxx.mp4 -> Movies
+    console.log(`📁 解析文件夹路径: ${path}`);
 
     // 先检查内存缓存
     let cacheData = this.cache.get(path);
+    console.log(`💭 内存缓存检查: ${cacheData ? '有数据' : '无数据'}`);
     
     // 如果内存中没有，尝试从localStorage加载
     if (!cacheData) {
+      console.log(`💾 尝试从localStorage加载: ${path}`);
       cacheData = this.loadFromStorage(path);
     }
 
     // 如果有有效缓存，直接返回
     if (cacheData && this.isCacheValid(cacheData)) {
-      return cacheData.thumbnailUrls[videoKey] || null;
+      const url = cacheData.thumbnailUrls[videoKey] || null;
+      console.log(`✅ 找到缓存的URL: ${videoKey} -> ${url ? '有URL' : '无URL'}`);
+      return url;
     }
 
+    console.log(`❌ 无有效缓存，需要加载: ${videoKey}`);
     return null; // 需要加载
   }
 
@@ -98,11 +106,17 @@ class ThumbnailCache {
   async _performBatchLoad(path, apiUrl, getCachedToken) {
     try {
       console.log(`🚀 批量加载缩略图: ${path}`);
+      console.log(`📝 API URL: ${apiUrl}`);
+      console.log(`📝 获取Token中...`);
       
       const token = await getCachedToken();
+      console.log(`📝 Token获取完成: ${token ? '有token' : '无token'}`);
+      
       const pathParam = path ? `?path=${encodeURIComponent(path)}` : '';
       const url = `${apiUrl}/videos/thumbnails/batch${pathParam}`;
+      console.log(`📝 完整URL: ${url}`);
 
+      console.log(`📝 发起网络请求...`);
       const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -110,11 +124,16 @@ class ThumbnailCache {
         },
       });
 
+      console.log(`📝 响应状态: ${response.status}`);
       if (!response.ok) {
-        throw new Error(`批量获取缩略图失败: ${response.status}`);
+        const responseText = await response.text();
+        console.error(`❌ 响应内容: ${responseText}`);
+        throw new Error(`批量获取缩略图失败: ${response.status} - ${responseText}`);
       }
 
+      console.log(`📝 解析JSON响应...`);
       const data = await response.json();
+      console.log(`📝 响应数据:`, data);
       
       if (data.success) {
         // 保存到内存和localStorage

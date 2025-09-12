@@ -370,7 +370,14 @@ async function listVideos(corsHeaders) {
     };
   } catch (error) {
     console.error("获取视频列表失败:", error);
-    throw new Error(`Failed to list videos: ${error.message}`);
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        error: "Failed to list videos",
+        details: error.message,
+      }),
+    };
   }
 }
 
@@ -403,7 +410,14 @@ async function getVideoUrl(videoKey, corsHeaders) {
     };
   } catch (error) {
     console.error("生成视频URL失败:", error);
-    throw new Error(`Failed to generate video URL: ${error.message}`);
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        error: "Failed to generate video URL",
+        details: error.message,
+      }),
+    };
   }
 }
 
@@ -822,7 +836,8 @@ async function createVideoThumbnail(videoPath, thumbnailKey) {
           Key: videoPath,
         }));
         const fileSize = headResult.ContentLength;
-        const downloadSize = Math.min(fileSize, 100 * 1024 * 1024); // 最多100MB
+        // 增大下载大小以包含moov atom，对于大文件下载前1GB
+        const downloadSize = Math.min(fileSize, 1024 * 1024 * 1024); // 最多1GB
         
         console.log(`下载前${Math.round(downloadSize/1024/1024)}MB进行处理...`);
         
@@ -937,25 +952,34 @@ async function getBatchThumbnails(pathParam, corsHeaders) {
       
       console.log(`处理: ${videoKey} -> ${thumbnailKey}`);
       
-      // 检查缩略图是否存在
+      // 检查缩略图是否存在且为有效文件（大于1KB）
       try {
-        await s3Client.send(new HeadObjectCommand({
+        const headResult = await s3Client.send(new HeadObjectCommand({
           Bucket: VIDEO_BUCKET,
           Key: thumbnailKey,
         }));
         
-        // 生成24小时有效期的预签名URL
-        const signedUrl = await getSignedUrl(
-          s3Client,
-          new GetObjectCommand({
-            Bucket: VIDEO_BUCKET,
-            Key: thumbnailKey,
-          }),
-          { expiresIn: 24 * 60 * 60 } // 24小时
-        );
+        const fileSize = headResult.ContentLength;
+        console.log(`${thumbnailKey} 大小: ${fileSize} bytes`);
         
-        thumbnailUrls[videoKey] = signedUrl;
-        console.log(`✅ ${videoKey}: 缩略图URL已生成`);
+        // 只有大于300字节的文件才认为是有效缩略图（156字节是无效占位符，940字节白色缩略图是有效的）
+        if (fileSize > 300) {
+          // 生成24小时有效期的预签名URL
+          const signedUrl = await getSignedUrl(
+            s3Client,
+            new GetObjectCommand({
+              Bucket: VIDEO_BUCKET,
+              Key: thumbnailKey,
+            }),
+            { expiresIn: 24 * 60 * 60 } // 24小时
+          );
+          
+          thumbnailUrls[videoKey] = signedUrl;
+          console.log(`✅ ${videoKey}: 有效缩略图URL已生成 (${fileSize} bytes)`);
+        } else {
+          console.log(`⚠️ ${videoKey}: 缩略图文件过小 (${fileSize} bytes)，视为无效，标记重新生成`);
+          thumbnailUrls[videoKey] = null; // 标记为需要重新生成
+        }
         
       } catch (error) {
         if (error.name === "NotFound") {
