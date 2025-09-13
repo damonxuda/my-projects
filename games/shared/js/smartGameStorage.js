@@ -309,9 +309,8 @@ class SmartGameStorage {
   }
 
   getUserId() {
-    if (window.useAuth) {
-      const auth = window.useAuth();
-      return auth?.user?.id || null;
+    if (window.Clerk && window.Clerk.user) {
+      return window.Clerk.user.id || null;
     }
     return null;
   }
