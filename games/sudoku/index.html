@@ -429,6 +429,9 @@
         <h1 class="title">数独</h1>
         <div class="timer" id="timer">00:00</div>
       </div>
+
+      <!-- 用户状态显示 -->
+      <div id="user-status-widget"></div>
       
       <!-- 控制面板 -->
       <div class="controls">
@@ -503,10 +506,20 @@
     </div>
     
     <!-- 引入脚本 -->
+    <!-- Supabase 客户端库 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <!-- 游戏配置 (必须最先加载) -->
+    <script src="../shared/js/gameConfig.js"></script>
+    
+    <!-- 注意：统一认证系统通过上级页面注入，游戏页面直接使用全局的useAuth -->
+    
+    <!-- 游戏工具和智能存储 -->
     <script src="../shared/js/gameUtils.js"></script>
-    <script src="../shared/js/storage.js"></script>
-    <script src="../shared/js/gameAuth.js"></script>
-    <script src="../shared/js/authStorage.js"></script>
+    <script src="../shared/js/smartGameStorage.js"></script>
+    <script src="../shared/js/userStatusWidget.js"></script>
+    
+    <!-- 游戏逻辑 -->
     <script src="sudoku.js"></script>
     <script src="game.js"></script>
   </body>
