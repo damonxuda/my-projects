@@ -1,4 +1,7 @@
-// 数织专用存储类
+// 使用统一的智能存储系统 - SmartNonogramStorage
+// (定义在 ../shared/js/smartGameStorage.js)
+
+// LEGACY - 被 SmartNonogramStorage 替代
 class AuthenticatedNonogramStorage extends AuthenticatedGameStorage {
   constructor() {
     super('nonogram');
@@ -90,16 +93,16 @@ class AuthenticatedNonogramStorage extends AuthenticatedGameStorage {
 class NonogramGame {
   constructor() {
     this.engine = new NonogramEngine();
-    this.storage = null;
+    this.storage = new SmartNonogramStorage(); // 智能存储系统
     this.currentLevel = null;
     this.currentDifficulty = 'easy';
     this.levelNumber = 1;
     this.timer = null;
     this.isLoading = false;
-    
+
     // UI元素引用
     this.elements = {};
-    
+
     this.init();
   }
 
@@ -164,17 +167,10 @@ class NonogramGame {
     };
   }
 
-  // 初始化存储系统
+  // 初始化存储系统（智能存储系统自动处理认证）
   async initStorage() {
-    this.storage = new AuthenticatedNonogramStorage();
-    
-    // 如果认证系统可用，初始化存储
-    if (window.gameAuth && window.gameAuth.isInitialized) {
-      const auth = window.gameAuth.getAuthStatus();
-      if (auth.isSignedIn && window.gameAuth.getSupabaseClient()) {
-        await this.storage.initialize(window.gameAuth, window.gameAuth.getSupabaseClient());
-      }
-    }
+    // 智能存储系统已经自动处理认证，无需额外初始化
+    console.log('🧠 Using SmartNonogramStorage - authentication handled automatically');
   }
 
   // 设置事件监听
@@ -189,12 +185,7 @@ class NonogramGame {
     this.elements.restartBtn?.addEventListener('click', () => this.restartGame());
     this.elements.levelsBtn?.addEventListener('click', () => this.goToLevels());
     
-    // 监听认证状态变化
-    if (window.gameAuth) {
-      window.gameAuth.onAuthChange((isSignedIn) => {
-        this.handleAuthChange(isSignedIn);
-      });
-    }
+    // 智能存储系统自动处理认证状态变化
   }
 
   // 加载并开始游戏
@@ -620,15 +611,10 @@ class NonogramGame {
     }
   }
 
-  // 处理认证状态变化
+  // 处理认证状态变化（智能存储系统自动处理）
   async handleAuthChange(isSignedIn) {
-    if (isSignedIn && window.gameAuth.getSupabaseClient()) {
-      try {
-        await this.storage.initialize(window.gameAuth, window.gameAuth.getSupabaseClient());
-      } catch (error) {
-        console.error('Failed to sync after auth change:', error);
-      }
-    }
+    // 智能存储系统已经自动处理认证状态变化
+    console.log(`🔐 Nonogram Auth status changed: ${isSignedIn} - SmartStorage handling automatically`);
   }
 
   // 显示加载状态

@@ -548,6 +548,52 @@ class SmartNonogramStorage extends SmartGameStorage {
       sound: true
     };
   }
+
+  // 更新关卡记录
+  async updateLevelRecord(difficulty, levelNumber, timeInSeconds, stars) {
+    try {
+      const progress = await this.loadProgress();
+
+      // 确保进度结构存在
+      if (!progress[difficulty]) {
+        progress[difficulty] = {
+          current_level: 1,
+          completed_levels: [],
+          level_records: {}
+        };
+      }
+
+      // 更新关卡记录
+      const record = progress[difficulty].level_records[levelNumber] || { attempts: 0 };
+      record.attempts++;
+      record.completed = true;
+      record.best_time = record.best_time ? Math.min(record.best_time, timeInSeconds) : timeInSeconds;
+      record.best_stars = record.best_stars ? Math.max(record.best_stars, stars) : stars;
+      record.last_completed = new Date().toISOString();
+
+      progress[difficulty].level_records[levelNumber] = record;
+
+      // 添加到已完成关卡列表
+      if (!progress[difficulty].completed_levels.includes(levelNumber)) {
+        progress[difficulty].completed_levels.push(levelNumber);
+      }
+
+      // 解锁下一关
+      progress[difficulty].current_level = Math.max(
+        progress[difficulty].current_level,
+        Math.min(50, levelNumber + 1)
+      );
+
+      // 保存进度
+      await this.saveProgress(progress);
+
+      console.log(`✅ Nonogram Level ${levelNumber} completion recorded with ${stars} stars`);
+
+    } catch (error) {
+      console.error('Failed to update nonogram level record:', error);
+      throw error;
+    }
+  }
 }
 
 // 导出

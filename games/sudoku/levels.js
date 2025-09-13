@@ -1,15 +1,12 @@
-// 数独关卡选择页面逻辑 - 集成认证系统
+// 数独关卡选择页面逻辑 - 集成智能存储系统
 class SudokuLevelsPage {
   constructor() {
-    this.storage = new SudokuStorage(); // 保留作为备用
-    this.authStorage = new AuthenticatedSudokuStorage();
-    this.gameAuth = window.gameAuth;
+    this.storage = new SmartSudokuStorage(); // 智能存储系统
     this.currentDifficulty = 'easy';
     this.levels = {};
     this.progress = {};
     this.elements = {};
-    this.isAuthReady = false;
-    
+
     this.init();
   }
 
@@ -17,77 +14,12 @@ class SudokuLevelsPage {
   async init() {
     this.initElements();
     this.initEventListeners();
-    
-    // 初始化认证系统
-    await this.initAuth();
-    
+
     await this.loadAllLevels();
     await this.loadProgress();
     this.updateDisplay();
   }
 
-  // 初始化认证系统
-  async initAuth() {
-    try {
-      // 等待认证系统初始化
-      if (this.gameAuth && !this.gameAuth.isInitialized) {
-        console.log('🔐 Waiting for auth system initialization...');
-        
-        let attempts = 0;
-        while (!this.gameAuth.isInitialized && attempts < 50) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-          attempts++;
-        }
-      }
-      
-      // 初始化认证存储
-      if (this.gameAuth && this.gameAuth.isInitialized) {
-        const supabaseClient = this.gameAuth.getSupabaseClient();
-        if (supabaseClient) {
-          await this.authStorage.initialize(this.gameAuth, supabaseClient);
-          this.isAuthReady = true;
-          console.log('✅ Levels page: Authenticated storage initialized');
-        }
-      }
-      
-      // 监听认证状态变化
-      if (this.gameAuth) {
-        this.gameAuth.onAuthChange((isSignedIn) => {
-          this.handleAuthChange(isSignedIn);
-        });
-      }
-      
-    } catch (error) {
-      console.warn('Levels page auth initialization failed:', error);
-      this.isAuthReady = false;
-    }
-  }
-
-  // 处理认证状态变化
-  async handleAuthChange(isSignedIn) {
-    if (isSignedIn && !this.isAuthReady) {
-      try {
-        const supabaseClient = this.gameAuth.getSupabaseClient();
-        if (supabaseClient) {
-          await this.authStorage.initialize(this.gameAuth, supabaseClient);
-          this.isAuthReady = true;
-          
-          // 重新加载进度数据
-          await this.loadProgress();
-          this.updateDisplay();
-        }
-      } catch (error) {
-        console.error('Failed to initialize levels auth storage:', error);
-      }
-    } else if (!isSignedIn) {
-      this.isAuthReady = false;
-      console.log('🔐 Levels: User signed out, using local storage');
-      
-      // 重新加载本地数据
-      await this.loadProgress();
-      this.updateDisplay();
-    }
-  }
 
   // 获取DOM元素
   initElements() {
@@ -138,33 +70,15 @@ class SudokuLevelsPage {
     }
   }
 
-  // 加载用户进度（使用认证存储系统）
+  // 加载用户进度（使用智能存储系统）
   async loadProgress() {
     try {
-      let savedProgress = null;
-      
-      if (this.isAuthReady) {
-        // 从云端加载进度
-        savedProgress = await this.authStorage.loadProgress();
-        console.log('✅ Progress loaded from cloud:', savedProgress);
-      } else {
-        // 从本地存储加载进度
-        savedProgress = this.storage.load('level_progress');
-        console.log('✅ Progress loaded from local:', savedProgress);
-      }
-      
+      const savedProgress = await this.storage.loadProgress();
       this.progress = savedProgress || this.createDefaultProgress();
-      
+      console.log('✅ Progress loaded:', this.progress);
     } catch (error) {
       console.error('❌ Failed to load progress:', error);
-      // 回退到本地存储
-      try {
-        const localProgress = this.storage.load('level_progress');
-        this.progress = localProgress || this.createDefaultProgress();
-      } catch (localError) {
-        console.error('❌ Local fallback failed:', localError);
-        this.progress = this.createDefaultProgress();
-      }
+      this.progress = this.createDefaultProgress();
     }
   }
 
@@ -172,15 +86,15 @@ class SudokuLevelsPage {
   createDefaultProgress() {
     const defaultProgress = {};
     const difficulties = ['easy', 'medium', 'hard', 'expert', 'master'];
-    
+
     difficulties.forEach(difficulty => {
       defaultProgress[difficulty] = {
-        unlockedLevel: 1,
-        completedLevels: [],
-        levelRecords: {} // level_number -> {time, stars, attempts}
+        current_level: 1,
+        completed_levels: [],
+        level_records: {} // level_number -> {best_time, best_stars, attempts, completed, last_completed}
       };
     });
-    
+
     return defaultProgress;
   }
 
@@ -207,10 +121,14 @@ class SudokuLevelsPage {
   updateLevelsGrid() {
     const grid = this.elements.levelsGrid;
     grid.innerHTML = '';
-    
+
     const levels = this.levels[this.currentDifficulty] || [];
-    const difficultyProgress = this.progress[this.currentDifficulty] || { unlockedLevel: 1, completedLevels: [], levelRecords: {} };
-    
+    const difficultyProgress = this.progress[this.currentDifficulty] || {
+      current_level: 1,
+      completed_levels: [],
+      level_records: {}
+    };
+
     levels.forEach(level => {
       const levelCard = this.createLevelCard(level, difficultyProgress);
       grid.appendChild(levelCard);
@@ -221,11 +139,11 @@ class SudokuLevelsPage {
   createLevelCard(level, difficultyProgress) {
     const card = document.createElement('a');
     card.className = 'level-card';
-    
-    const isUnlocked = level.level <= difficultyProgress.unlockedLevel;
-    const isCompleted = difficultyProgress.completedLevels.includes(level.level);
-    const isCurrent = level.level === difficultyProgress.unlockedLevel && !isCompleted;
-    const record = difficultyProgress.levelRecords[level.level];
+
+    const isUnlocked = level.level <= difficultyProgress.current_level;
+    const isCompleted = difficultyProgress.completed_levels.includes(level.level);
+    const isCurrent = level.level === difficultyProgress.current_level && !isCompleted;
+    const record = difficultyProgress.level_records[level.level];
     
     // 设置状态样式
     if (!isUnlocked) {
@@ -250,18 +168,18 @@ class SudokuLevelsPage {
     card.appendChild(levelNumber);
     
     // 星级显示（完成的关卡）
-    if (record && record.stars) {
+    if (record && record.best_stars) {
       const stars = document.createElement('div');
       stars.className = 'level-stars';
-      stars.textContent = '★'.repeat(record.stars) + '☆'.repeat(3 - record.stars);
+      stars.textContent = '★'.repeat(record.best_stars) + '☆'.repeat(3 - record.best_stars);
       card.appendChild(stars);
     }
-    
+
     // 最佳时间（完成的关卡）
-    if (record && record.time) {
+    if (record && record.best_time) {
       const time = document.createElement('div');
       time.className = 'level-time';
-      time.textContent = GameUtils.formatTime(record.time);
+      time.textContent = GameUtils.formatTime(record.best_time * 1000); // 转换为毫秒
       card.appendChild(time);
     }
     
@@ -270,23 +188,26 @@ class SudokuLevelsPage {
 
   // 更新进度统计
   updateProgressStats() {
-    const difficultyProgress = this.progress[this.currentDifficulty] || { completedLevels: [], levelRecords: {} };
-    const completed = difficultyProgress.completedLevels.length;
-    
+    const difficultyProgress = this.progress[this.currentDifficulty] || {
+      completed_levels: [],
+      level_records: {}
+    };
+    const completed = difficultyProgress.completed_levels.length;
+
     // 计算总星数
     let totalStars = 0;
     let bestTime = null;
-    
-    Object.values(difficultyProgress.levelRecords).forEach(record => {
-      if (record.stars) totalStars += record.stars;
-      if (record.time && (!bestTime || record.time < bestTime)) {
-        bestTime = record.time;
+
+    Object.values(difficultyProgress.level_records).forEach(record => {
+      if (record.best_stars) totalStars += record.best_stars;
+      if (record.best_time && (!bestTime || record.best_time < bestTime)) {
+        bestTime = record.best_time;
       }
     });
     
     this.elements.completedCount.textContent = `${completed}/50`;
     this.elements.totalStars.textContent = totalStars;
-    this.elements.bestTime.textContent = bestTime ? GameUtils.formatTime(bestTime) : '--:--';
+    this.elements.bestTime.textContent = bestTime ? GameUtils.formatTime(bestTime * 1000) : '--:--'; // 转换为毫秒
   }
 
   // 更新总体统计
@@ -373,50 +294,7 @@ class SudokuLevelsPage {
   }
 }
 
-// 全局函数供其他页面调用
-window.SudokuLevelsManager = {
-  // 记录关卡完成
-  recordCompletion(difficulty, level, time) {
-    const storage = new SudokuStorage();
-    const progress = storage.load('level_progress') || {};
-    
-    if (!progress[difficulty]) {
-      progress[difficulty] = { unlockedLevel: 1, completedLevels: [], levelRecords: {} };
-    }
-    
-    // 计算星级（基于时间）
-    const levels = JSON.parse(localStorage.getItem(`sudoku_levels_${difficulty}`) || '[]');
-    const levelData = levels.find(l => l.level === level);
-    const estimatedTime = levelData ? levelData.estimated_time : 300;
-    
-    let stars = 1;
-    if (time <= estimatedTime * 0.8) stars = 3;
-    else if (time <= estimatedTime * 1.2) stars = 2;
-    
-    // 记录成绩
-    const record = progress[difficulty].levelRecords[level] || { attempts: 0 };
-    record.attempts++;
-    
-    if (!record.time || time < record.time) {
-      record.time = time;
-      record.stars = stars;
-    }
-    
-    progress[difficulty].levelRecords[level] = record;
-    
-    // 解锁下一关
-    if (!progress[difficulty].completedLevels.includes(level)) {
-      progress[difficulty].completedLevels.push(level);
-    }
-    
-    if (level >= progress[difficulty].unlockedLevel) {
-      progress[difficulty].unlockedLevel = Math.min(50, level + 1);
-    }
-    
-    storage.save('level_progress', progress);
-    return stars;
-  }
-};
+// 已废弃 - 现在使用智能存储系统
 
 // 页面加载完成后初始化
 document.addEventListener('DOMContentLoaded', () => {

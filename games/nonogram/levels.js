@@ -1,4 +1,7 @@
-// 数织专用存储类
+// 使用统一的智能存储系统 - SmartNonogramStorage
+// (定义在 ../shared/js/smartGameStorage.js)
+
+// LEGACY - 被 SmartNonogramStorage 替代
 class AuthenticatedNonogramStorage extends AuthenticatedGameStorage {
   constructor() {
     super('nonogram');
@@ -92,7 +95,7 @@ class NonogramLevels {
     this.currentDifficulty = 'easy';
     this.levels = {};
     this.progress = null;
-    this.storage = null;
+    this.storage = new SmartNonogramStorage(); // 智能存储系统
     this.isLoading = false;
     
     // 难度配置
@@ -154,18 +157,10 @@ class NonogramLevels {
     }
   }
 
-  // 初始化存储系统
+  // 初始化存储系统（智能存储系统自动处理认证）
   async initStorage() {
-    // 创建数织专用的存储实例
-    this.storage = new AuthenticatedNonogramStorage();
-    
-    // 如果全局认证系统可用，初始化存储
-    if (window.gameAuth && window.gameAuth.isInitialized) {
-      const auth = window.gameAuth.getAuthStatus();
-      if (auth.isSignedIn && window.gameAuth.getSupabaseClient()) {
-        await this.storage.initialize(window.gameAuth, window.gameAuth.getSupabaseClient());
-      }
-    }
+    // 智能存储系统已经自动处理认证，无需额外初始化
+    console.log('🧠 Using SmartNonogramStorage - authentication handled automatically');
   }
 
   // 加载进度数据
@@ -418,20 +413,15 @@ class NonogramLevels {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
 
-  // 处理认证状态变化
+  // 处理认证状态变化（智能存储系统自动处理）
   async handleAuthChange(isSignedIn) {
-    if (isSignedIn && window.gameAuth.getSupabaseClient()) {
-      // 用户登录，初始化云同步
-      try {
-        await this.storage.initialize(window.gameAuth, window.gameAuth.getSupabaseClient());
-        // 重新加载进度（可能从云端同步）
-        await this.loadProgress();
-        this.renderLevels();
-        this.updateStats();
-      } catch (error) {
-        console.error('Failed to sync after auth change:', error);
-      }
-    }
+    // 智能存储系统已经自动处理认证状态变化
+    console.log(`🔐 Nonogram Levels Auth status changed: ${isSignedIn} - SmartStorage handling automatically`);
+
+    // 重新加载进度以反映可能的数据变化
+    await this.loadProgress();
+    this.renderLevels();
+    this.updateStats();
   }
 
   // 显示/隐藏加载状态
