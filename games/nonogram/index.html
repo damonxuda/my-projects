@@ -592,19 +592,10 @@
     </div>
     
     <!-- 引入脚本 -->
-    <!-- Supabase 客户端库 -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <!-- 游戏配置 (必须最先加载) -->
-    <script src="../shared/js/gameConfig.js"></script>
-    
-    <!-- 注意：统一认证系统通过上级页面注入，游戏页面直接使用全局的useAuth -->
-    
-    <!-- 游戏工具和智能存储 -->
     <script src="../shared/js/gameUtils.js"></script>
-    <script src="../shared/js/smartGameStorage.js"></script>
-    
-    <!-- 游戏逻辑 -->
+    <script src="../shared/js/storage.js"></script>
+    <script src="../shared/js/gameAuth.js"></script>
+    <script src="../shared/js/authStorage.js"></script>
     <script src="nonogram.js"></script>
     <script src="game.js"></script>
   </body>

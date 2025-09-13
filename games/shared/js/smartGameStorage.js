@@ -294,18 +294,16 @@ class SmartGameStorage {
   // ===================
 
   isUserLoggedIn() {
-    // 检查统一认证系统
-    if (window.useAuth) {
-      const auth = window.useAuth();
-      return auth?.isSignedIn || false;
+    // 检查Clerk SSO登录状态
+    if (window.Clerk && window.Clerk.user) {
+      return true;
     }
     return false;
   }
 
   getUser() {
-    if (window.useAuth) {
-      const auth = window.useAuth();
-      return auth?.user || null;
+    if (window.Clerk && window.Clerk.user) {
+      return window.Clerk.user;
     }
     return null;
   }

@@ -1,11 +1,14 @@
 // 数独关卡选择页面逻辑 - 集成认证系统
 class SudokuLevelsPage {
   constructor() {
-    this.storage = new SmartSudokuStorage(); // 新的智能存储系统
+    this.storage = new SudokuStorage(); // 保留作为备用
+    this.authStorage = new AuthenticatedSudokuStorage();
+    this.gameAuth = window.gameAuth;
     this.currentDifficulty = 'easy';
     this.levels = {};
     this.progress = {};
     this.elements = {};
+    this.isAuthReady = false;
     
     this.init();
   }
@@ -14,27 +17,75 @@ class SudokuLevelsPage {
   async init() {
     this.initElements();
     this.initEventListeners();
-
-    // 初始化用户状态组件
-    this.initUserStatusWidget();
-
-    // 智能存储系统自动处理认证
-
+    
+    // 初始化认证系统
+    await this.initAuth();
+    
     await this.loadAllLevels();
     await this.loadProgress();
     this.updateDisplay();
   }
 
-  // 初始化用户状态组件
-  initUserStatusWidget() {
+  // 初始化认证系统
+  async initAuth() {
     try {
-      const container = document.getElementById('user-status-widget');
-      if (container) {
-        const widget = new UserStatusWidget(this.storage);
-        widget.appendTo(container);
+      // 等待认证系统初始化
+      if (this.gameAuth && !this.gameAuth.isInitialized) {
+        console.log('🔐 Waiting for auth system initialization...');
+        
+        let attempts = 0;
+        while (!this.gameAuth.isInitialized && attempts < 50) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
+        }
       }
+      
+      // 初始化认证存储
+      if (this.gameAuth && this.gameAuth.isInitialized) {
+        const supabaseClient = this.gameAuth.getSupabaseClient();
+        if (supabaseClient) {
+          await this.authStorage.initialize(this.gameAuth, supabaseClient);
+          this.isAuthReady = true;
+          console.log('✅ Levels page: Authenticated storage initialized');
+        }
+      }
+      
+      // 监听认证状态变化
+      if (this.gameAuth) {
+        this.gameAuth.onAuthChange((isSignedIn) => {
+          this.handleAuthChange(isSignedIn);
+        });
+      }
+      
     } catch (error) {
-      console.error('Failed to initialize user status widget:', error);
+      console.warn('Levels page auth initialization failed:', error);
+      this.isAuthReady = false;
+    }
+  }
+
+  // 处理认证状态变化
+  async handleAuthChange(isSignedIn) {
+    if (isSignedIn && !this.isAuthReady) {
+      try {
+        const supabaseClient = this.gameAuth.getSupabaseClient();
+        if (supabaseClient) {
+          await this.authStorage.initialize(this.gameAuth, supabaseClient);
+          this.isAuthReady = true;
+          
+          // 重新加载进度数据
+          await this.loadProgress();
+          this.updateDisplay();
+        }
+      } catch (error) {
+        console.error('Failed to initialize levels auth storage:', error);
+      }
+    } else if (!isSignedIn) {
+      this.isAuthReady = false;
+      console.log('🔐 Levels: User signed out, using local storage');
+      
+      // 重新加载本地数据
+      await this.loadProgress();
+      this.updateDisplay();
     }
   }
 
@@ -87,14 +138,31 @@ class SudokuLevelsPage {
     }
   }
 
-  // 加载用户进度（使用智能存储系统）
+  // 加载用户进度（使用认证存储系统）
   async loadProgress() {
     try {
-      const savedProgress = await this.storage.load('level_progress');
+      let savedProgress = null;
+      
+      if (this.isAuthReady) {
+        // 从云端加载进度
+        savedProgress = await this.authStorage.loadProgress();
+        console.log('✅ Progress loaded from cloud:', savedProgress);
+      } else {
+        // 从本地存储加载进度
+        savedProgress = this.storage.load('level_progress');
+        console.log('✅ Progress loaded from local:', savedProgress);
+      }
+      
       this.progress = savedProgress || this.createDefaultProgress();
-      console.log('✅ Progress loaded from smart storage:', savedProgress);
+      
     } catch (error) {
       console.error('❌ Failed to load progress:', error);
+      // 回退到本地存储
+      try {
+        const localProgress = this.storage.load('level_progress');
+        this.progress = localProgress || this.createDefaultProgress();
+      } catch (localError) {
+        console.error('❌ Local fallback failed:', localError);
         this.progress = this.createDefaultProgress();
       }
     }
@@ -308,23 +376,23 @@ class SudokuLevelsPage {
 // 全局函数供其他页面调用
 window.SudokuLevelsManager = {
   // 记录关卡完成
-  async recordCompletion(difficulty, level, time) {
-    const storage = new SmartSudokuStorage();
-    const progress = await storage.load('level_progress') || {};
-
+  recordCompletion(difficulty, level, time) {
+    const storage = new SudokuStorage();
+    const progress = storage.load('level_progress') || {};
+    
     if (!progress[difficulty]) {
       progress[difficulty] = { unlockedLevel: 1, completedLevels: [], levelRecords: {} };
     }
-
+    
     // 计算星级（基于时间）
     const levels = JSON.parse(localStorage.getItem(`sudoku_levels_${difficulty}`) || '[]');
     const levelData = levels.find(l => l.level === level);
     const estimatedTime = levelData ? levelData.estimated_time : 300;
-
+    
     let stars = 1;
     if (time <= estimatedTime * 0.8) stars = 3;
     else if (time <= estimatedTime * 1.2) stars = 2;
-
+    
     // 记录成绩
     const record = progress[difficulty].levelRecords[level] || { attempts: 0 };
     record.attempts++;
@@ -345,7 +413,7 @@ window.SudokuLevelsManager = {
       progress[difficulty].unlockedLevel = Math.min(50, level + 1);
     }
     
-    await storage.save('level_progress', progress);
+    storage.save('level_progress', progress);
     return stars;
   }
 };
