@@ -340,9 +340,16 @@ class SmartGameStorage {
 
   isUserLoggedIn() {
     // 检查Clerk SSO登录状态
+    console.log('🔐 检查用户登录状态:');
+    console.log('  - window.Clerk:', !!window.Clerk);
+    console.log('  - window.Clerk.user:', window.Clerk ? !!window.Clerk.user : 'N/A');
+    console.log('  - window.Clerk.loaded:', window.Clerk ? window.Clerk.loaded : 'N/A');
+
     if (window.Clerk && window.Clerk.user) {
+      console.log('✅ 用户已登录:', window.Clerk.user.id);
       return true;
     }
+    console.log('❌ 用户未登录');
     return false;
   }
 
