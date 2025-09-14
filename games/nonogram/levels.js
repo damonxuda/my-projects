@@ -138,12 +138,7 @@ class NonogramLevels {
       });
     }
 
-    // 监听认证状态变化
-    if (window.gameAuth) {
-      window.gameAuth.onAuthChange((isSignedIn) => {
-        this.handleAuthChange(isSignedIn);
-      });
-    }
+    // Legacy gameAuth监听已移除 - SmartGameStorage自动处理认证状态变化
   }
 
   // 切换难度
