@@ -13,12 +13,22 @@ class SmartGameStorage {
     // 监听网络状态变化
     window.addEventListener('online', () => {
       this.isOnline = true;
+      console.log(`🌐 [${this.gameType}] 网络已连接，开始处理同步队列`);
       this.processSyncQueue();
     });
-    
+
     window.addEventListener('offline', () => {
       this.isOnline = false;
+      console.log(`📱 [${this.gameType}] 网络已断开`);
     });
+
+    // 定期同步机制 - 每30秒检查一次同步队列
+    this.syncInterval = setInterval(() => {
+      if (this.syncQueue.length > 0) {
+        console.log(`⏰ [${this.gameType}] 定期同步检查 - 队列长度: ${this.syncQueue.length}`);
+        this.processSyncQueue();
+      }
+    }, 30000);
   }
 
   // ===================
@@ -49,15 +59,25 @@ class SmartGameStorage {
         } else {
           console.warn(`⚠️ [${this.gameType}] 云端保存失败，已加入同步队列`);
           this.addToSyncQueue('save', key, data, timestamp);
+          // 立即尝试同步队列
+          setTimeout(() => this.processSyncQueue(), 1000);
         }
       } catch (error) {
         console.error(`❌ [${this.gameType}] 云端保存出错:`, error);
         this.addToSyncQueue('save', key, data, timestamp);
+        // 立即尝试同步队列
+        setTimeout(() => this.processSyncQueue(), 1000);
       }
     } else if (isLoggedIn && !this.isOnline) {
       // 注册用户但离线 - 加入同步队列
       console.log(`📱 [${this.gameType}] 用户已登录但离线，数据已加入同步队列`);
       this.addToSyncQueue('save', key, data, timestamp);
+    } else if (isLoggedIn) {
+      // 其他情况下的注册用户 - 也尝试加入同步队列
+      console.log(`🔄 [${this.gameType}] 注册用户，加入同步队列稍后处理`);
+      this.addToSyncQueue('save', key, data, timestamp);
+      // 延迟尝试同步
+      setTimeout(() => this.processSyncQueue(), 2000);
     }
 
     return true;
@@ -260,32 +280,57 @@ class SmartGameStorage {
   }
 
   async processSyncQueue() {
-    if (!this.isOnline || !this.isUserLoggedIn() || this.syncQueue.length === 0) {
+    // 详细的条件检查和日志
+    console.log(`🔄 [${this.gameType}] 同步队列检查 - 在线: ${this.isOnline}, 登录: ${this.isUserLoggedIn()}, 队列长度: ${this.syncQueue.length}`);
+
+    if (!this.isOnline) {
+      console.log(`❌ [${this.gameType}] 网络离线，跳过同步`);
       return;
     }
 
-    console.log(`🔄 [${this.gameType}] 处理同步队列 (${this.syncQueue.length} 项)...`);
-    
+    if (!this.isUserLoggedIn()) {
+      console.log(`❌ [${this.gameType}] 用户未登录，跳过同步`);
+      return;
+    }
+
+    if (this.syncQueue.length === 0) {
+      console.log(`✅ [${this.gameType}] 同步队列为空`);
+      return;
+    }
+
+    console.log(`🔄 [${this.gameType}] 开始处理同步队列 (${this.syncQueue.length} 项)...`);
+
     const queue = [...this.syncQueue];
     this.syncQueue = [];
+    let successCount = 0;
+    let failCount = 0;
 
     for (const item of queue) {
       try {
+        console.log(`📤 [${this.gameType}] 同步数据: ${item.key} (${item.operation})`);
         if (item.operation === 'save') {
           const success = await this.saveToCloud(item.key, item.data, item.timestamp);
-          if (!success) {
+          if (success) {
+            successCount++;
+            console.log(`✅ [${this.gameType}] 同步成功: ${item.key}`);
+          } else {
+            failCount++;
+            console.warn(`❌ [${this.gameType}] 同步失败: ${item.key} - 重新加入队列`);
             this.syncQueue.push(item); // 失败则重新加入队列
           }
         }
       } catch (error) {
-        console.error('同步队列处理错误:', error);
+        failCount++;
+        console.error(`❌ [${this.gameType}] 同步队列处理错误:`, error);
         this.syncQueue.push(item); // 失败则重新加入队列
       }
     }
 
     if (this.syncQueue.length === 0) {
       this.lastSyncTime = Date.now();
-      console.log(`✅ [${this.gameType}] 同步队列处理完成`);
+      console.log(`✅ [${this.gameType}] 同步队列处理完成 - 成功: ${successCount}, 失败: ${failCount}`);
+    } else {
+      console.warn(`⚠️ [${this.gameType}] 同步队列仍有 ${this.syncQueue.length} 项待处理 - 成功: ${successCount}, 失败: ${failCount}`);
     }
   }
 
@@ -386,6 +431,12 @@ class SmartGameStorage {
       userId: this.getUserId(),
       gameType: this.gameType
     };
+  }
+
+  // 手动强制同步 - 游戏可以在关键时刻调用
+  async forceSyncNow() {
+    console.log(`🔄 [${this.gameType}] 手动强制同步`);
+    await this.processSyncQueue();
   }
 
   // 清除本地数据
