@@ -169,7 +169,7 @@ export const useAuth = () => {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin]);
+  }, []);
 
   // ✅ 为用户分配模块权限（通过Lambda API）- 保持原有逻辑不变
   const assignModuleAccess = async (userEmailOrId, moduleOrModules, isGranting = true) => {
@@ -504,12 +504,12 @@ export const useAuth = () => {
     }
   };
 
-  // 自动加载用户列表（如果是管理员）- 保持原有逻辑不变
-  useEffect(() => {
-    if (userLoaded && isSignedIn && isAdmin()) {
-      fetchAllUsers();
-    }
-  }, [userLoaded, isSignedIn, user]);
+  // 注释掉自动加载，改为手动触发避免依赖循环
+  // useEffect(() => {
+  //   if (userLoaded && isSignedIn && isAdmin()) {
+  //     fetchAllUsers();
+  //   }
+  // }, [userLoaded, isSignedIn, user?.id, fetchAllUsers]);
 
   // ✅ 用户变更时清空缓存的token
   useEffect(() => {

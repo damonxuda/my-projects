@@ -1,7 +1,7 @@
 // auth-clerk/src/components/ModuleAccessGuard.jsx
 import React from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { SignInButton } from '@clerk/clerk-react';
+import { SignInButton, UserButton } from '@clerk/clerk-react';
 
 const ModuleAccessGuard = ({ 
   module, 
@@ -77,18 +77,26 @@ const ModuleAccessGuard = ({
             </p>
           </div>
           <div className="space-y-3">
-            <button 
+            <button
               onClick={() => window.location.reload()}
               className="w-full px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-medium transition-colors"
             >
               重新检查权限
             </button>
-            <button 
+            <button
               onClick={() => window.location.href = '/'}
               className="w-full px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 font-medium transition-colors"
             >
               返回首页
             </button>
+          </div>
+
+          {/* 添加登出选项 */}
+          <div className="mt-6 pt-4 border-t border-gray-200">
+            <p className="text-sm text-gray-600 mb-3">需要切换账号？</p>
+            <div className="flex justify-center">
+              <UserButton afterSignOutUrl="/" />
+            </div>
           </div>
         </div>
       </div>

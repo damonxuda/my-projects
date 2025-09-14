@@ -1,22 +1,11 @@
 // admin-permissions/src/App.js
 import React, { useState } from 'react';
-import { ClerkAuthProvider, useAuth, ModuleAccessGuard, UserManagement, UserProfile } from '../../auth-clerk/src';
+import { ClerkAuthProvider, useAuth, UserManagement, UserProfile, ModuleAccessGuard } from '../../auth-clerk/src';
 import { User, Users, Shield, Settings } from 'lucide-react';
 
 const AdminPermissionsApp = () => {
   const [activeTab, setActiveTab] = useState('users');
-  const { user, isAdmin, loading: authLoading } = useAuth();
-
-  if (authLoading) {
-    return (
-      <div className="max-w-6xl mx-auto p-6 bg-gray-50 min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">正在加载权限管理系统...</p>
-        </div>
-      </div>
-    );
-  }
+  const { user, isAdmin } = useAuth();
 
   return (
     <div className="max-w-6xl mx-auto p-6 bg-gray-50 min-h-screen">
@@ -203,11 +192,41 @@ const AdminPermissionsApp = () => {
   );
 };
 
-// 主应用组件 - 包装Clerk认证和权限保护
+// 主应用组件 - 包装Clerk认证和管理员权限保护
 const App = () => {
   return (
     <ClerkAuthProvider publishableKey={process.env.REACT_APP_CLERK_PUBLISHABLE_KEY}>
-      <ModuleAccessGuard module="admin-permissions">
+      <ModuleAccessGuard
+        module="admin-permissions"
+        noAccessComponent={
+          <div className="max-w-6xl mx-auto p-6 bg-gray-50 min-h-screen flex items-center justify-center">
+            <div className="max-w-md mx-auto text-center p-8 bg-white rounded-lg shadow-lg">
+              <div className="mb-6">
+                <svg className="mx-auto h-16 w-16 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">需要管理员权限</h2>
+              <p className="text-gray-600 mb-4">
+                只有系统管理员可以访问权限管理系统
+              </p>
+              <div className="bg-yellow-50 p-4 rounded-lg mb-6">
+                <p className="text-sm text-yellow-800 mb-2">
+                  如需管理员权限，请联系系统管理员
+                </p>
+              </div>
+              <div className="space-y-3">
+                <button
+                  onClick={() => window.location.href = '/'}
+                  className="w-full px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 font-medium transition-colors"
+                >
+                  返回首页
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+      >
         <AdminPermissionsApp />
       </ModuleAccessGuard>
     </ClerkAuthProvider>
