@@ -591,9 +591,6 @@
                 // 标记Clerk已初始化
                 window.clerkInitialized = true;
 
-                // 创建登录按钮
-                createAuthButton();
-
                 // 触发自定义事件通知游戏可以开始初始化
                 window.dispatchEvent(new CustomEvent('clerkReady'));
               } else {
@@ -620,53 +617,6 @@
         }
       });
 
-      function createAuthButton() {
-        // 创建登录/登出按钮容器
-        const authContainer = document.createElement('div');
-        authContainer.id = 'auth-container';
-        authContainer.style.cssText = `
-          position: fixed;
-          top: 20px;
-          right: 20px;
-          z-index: 1000;
-          background: rgba(255,255,255,0.9);
-          padding: 10px;
-          border-radius: 8px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        `;
-
-        const authButton = document.createElement('button');
-        authButton.id = 'auth-button';
-        authButton.style.cssText = `
-          padding: 8px 16px;
-          border: none;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 14px;
-        `;
-
-        function updateAuthButton() {
-          if (window.Clerk.user) {
-            authButton.textContent = `登出 (${window.Clerk.user.firstName || window.Clerk.user.emailAddresses[0]?.emailAddress})`;
-            authButton.style.background = '#ef4444';
-            authButton.style.color = 'white';
-            authButton.onclick = () => window.Clerk.signOut();
-          } else {
-            authButton.textContent = '登录';
-            authButton.style.background = '#3b82f6';
-            authButton.style.color = 'white';
-            authButton.onclick = () => window.Clerk.openSignIn();
-          }
-        }
-
-        authContainer.appendChild(authButton);
-        document.body.appendChild(authContainer);
-
-        updateAuthButton();
-
-        // 监听用户状态变化
-        window.Clerk.addListener('user', updateAuthButton);
-      }
     </script>
 
     <!-- Supabase 客户端 -->
