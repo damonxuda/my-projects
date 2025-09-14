@@ -111,20 +111,30 @@ class NonogramEngine {
 
   // 检查游戏是否完成
   checkCompletion() {
+    console.log('🔍 开始检查数织完成状态...');
+    let incompleteCells = [];
+
     for (let row = 0; row < this.size; row++) {
       for (let col = 0; col < this.size; col++) {
         const currentState = this.grid[row][col];
         const shouldBeFilled = this.solution[row][col] === 1;
-        
+
         if (shouldBeFilled && currentState !== this.CELL_STATES.FILLED) {
-          return false;
+          incompleteCells.push(`(${row},${col}): 应该填充但未填充`);
         }
         if (!shouldBeFilled && currentState === this.CELL_STATES.FILLED) {
-          return false;
+          incompleteCells.push(`(${row},${col}): 不应填充但已填充`);
         }
       }
     }
-    return true;
+
+    if (incompleteCells.length > 0) {
+      console.log('❌ 数织未完成，未完成的格子:', incompleteCells.slice(0, 5));
+      return false;
+    } else {
+      console.log('✅ 数织完成！');
+      return true;
+    }
   }
 
   // 获取游戏进度（0-1）

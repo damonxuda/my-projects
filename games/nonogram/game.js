@@ -293,8 +293,12 @@ class NonogramGame {
       });
       
       // 检查是否完成
+      console.log('🔍 检查游戏完成状态:', result.isComplete);
       if (result.isComplete) {
+        console.log('✅ 游戏完成，调用handleGameComplete');
         this.handleGameComplete();
+      } else {
+        console.log('❌ 游戏尚未完成');
       }
     }
   }
