@@ -646,6 +646,15 @@
             console.log('✅ Clerk 初始化成功');
             console.log('   - Clerk loaded:', window.Clerk.loaded);
 
+            // 尝试手动恢复session（重要：从Cookie恢复登录状态）
+            console.log('🔄 尝试从Cookie恢复用户session...');
+            try {
+              await window.Clerk.client.sessions.getSessionList();
+              console.log('✅ Session列表获取成功');
+            } catch (e) {
+              console.warn('⚠️ Session恢复可能需要时间:', e.message);
+            }
+
             // 详细的Clerk状态调试信息
             console.log('🔍 详细的Clerk状态调试:');
             console.log('   - window.Clerk:', window.Clerk);
@@ -658,7 +667,7 @@
 
             // 等待用户状态完全恢复（重要：跨页面跳转时需要时间恢复状态）
             let retryCount = 0;
-            const maxRetries = 10; // 最多重试10次
+            const maxRetries = 20; // 增加到20次重试
             const checkUserState = async () => {
               console.log(`🔄 检查用户状态 (尝试 ${retryCount + 1}/${maxRetries})`);
               console.log('   - User:', window.Clerk.user ? `${window.Clerk.user.id}` : 'Not logged in');
@@ -688,7 +697,7 @@
               } else {
                 // 继续等待用户状态恢复
                 retryCount++;
-                setTimeout(checkUserState, 200); // 每200ms检查一次
+                setTimeout(checkUserState, 500); // 增加到500ms检查一次，给更多时间
               }
             };
 
