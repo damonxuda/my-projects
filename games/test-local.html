@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>本地用户登录测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .btn {
+            background: #007cba;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        .btn:hover {
+            background: #005a87;
+        }
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.info { background: #d1ecf1; color: #0c5460; }
+        .log {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+        }
+        .test-actions {
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Games模块用户认证本地测试</h1>
+
+        <div class="status info">
+            <strong>测试目的：</strong>验证SmartGameStorage的用户状态识别和数据同步逻辑
+        </div>
+
+        <div class="test-actions">
+            <button class="btn" onclick="setupMockUser()">1. 设置模拟登录用户</button>
+            <button class="btn" onclick="testUserDetection()">2. 测试用户检测</button>
+            <button class="btn" onclick="testDataSave()">3. 测试数据保存</button>
+            <button class="btn" onclick="testDataLoad()">4. 测试数据加载</button>
+            <button class="btn" onclick="cleanupTestData()">5. 清理测试数据</button>
+        </div>
+
+        <div id="status"></div>
+
+        <h3>测试日志：</h3>
+        <div id="log" class="log"></div>
+    </div>
+
+    <!-- Supabase 客户端 -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+    <!-- 游戏存储系统 -->
+    <script src="shared/js/smartGameStorage.js"></script>
+
+    <script>
+        let storage = null;
+        const testUserId = `test_user_${Date.now()}`;
+
+        function log(message) {
+            console.log(message);
+            const logEl = document.getElementById('log');
+            logEl.innerHTML += message + '\n';
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function showStatus(message, type = 'info') {
+            document.getElementById('status').innerHTML =
+                `<div class="status ${type}">${message}</div>`;
+        }
+
+        function setupMockUser() {
+            log('🧪 设置模拟Clerk对象和用户...');
+
+            // 创建模拟的Clerk对象
+            window.Clerk = {
+                loaded: true,
+                user: {
+                    id: testUserId,
+                    primaryEmailAddress: {
+                        emailAddress: 'test@example.com'
+                    },
+                    firstName: '测试',
+                    lastName: '用户'
+                },
+                session: {
+                    id: `sess_${testUserId}`,
+                    status: 'active'
+                }
+            };
+
+            window.clerkInitialized = true;
+
+            log(`✅ 模拟用户已设置: ${testUserId}`);
+            showStatus(`模拟用户已设置: ${testUserId}`, 'success');
+        }
+
+        function testUserDetection() {
+            log('🔍 测试用户状态检测...');
+
+            try {
+                storage = new SmartSudokuStorage(); // 使用数独存储测试
+                const isLoggedIn = storage.isUserLoggedIn();
+
+                if (isLoggedIn) {
+                    log('✅ 用户状态检测成功：已登录');
+                    showStatus('用户状态检测：已登录 ✅', 'success');
+                } else {
+                    log('❌ 用户状态检测失败：未登录');
+                    showStatus('用户状态检测：未登录 ❌', 'error');
+                }
+            } catch (error) {
+                log(`❌ 测试失败: ${error.message}`);
+                showStatus(`测试失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function testDataSave() {
+            log('💾 测试数据保存到Supabase...');
+
+            try {
+                if (!storage) {
+                    storage = new SmartSudokuStorage();
+                }
+
+                const testData = {
+                    level: 1,
+                    difficulty: 'easy',
+                    completed: true,
+                    time: 120,
+                    timestamp: Date.now()
+                };
+
+                await storage.save('test_progress', testData);
+                log('✅ 测试数据保存成功');
+                log(`📊 保存的数据: ${JSON.stringify(testData, null, 2)}`);
+                showStatus('数据保存测试：成功 ✅', 'success');
+            } catch (error) {
+                log(`❌ 数据保存失败: ${error.message}`);
+                showStatus(`数据保存失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function testDataLoad() {
+            log('📖 测试从Supabase加载数据...');
+
+            try {
+                if (!storage) {
+                    storage = new SmartSudokuStorage();
+                }
+
+                const loadedData = await storage.load('test_progress');
+                log('✅ 数据加载成功');
+                log(`📊 加载的数据: ${JSON.stringify(loadedData, null, 2)}`);
+                showStatus('数据加载测试：成功 ✅', 'success');
+            } catch (error) {
+                log(`❌ 数据加载失败: ${error.message}`);
+                showStatus(`数据加载失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function cleanupTestData() {
+            log('🧹 清理测试数据...');
+
+            try {
+                // 这里需要直接调用Supabase删除测试用户的所有数据
+                const supabaseUrl = 'https://bxppkwqrqwxfgzvonvcb.supabase.co';
+                const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4cHBrd3FycXd4Zmd6dm9udmNiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjYzMDkzOTEsImV4cCI6MjA0MTg4NTM5MX0.SJmEGNmI6W9X-dq8qLFnlKXNxZsC3yTvhOHBFwFcKNg';
+
+                const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+                const { error } = await supabase
+                    .from('game_progress')
+                    .delete()
+                    .eq('user_id', testUserId);
+
+                if (error) throw error;
+
+                log('✅ 测试数据清理完成');
+                showStatus('测试数据清理：完成 ✅', 'success');
+            } catch (error) {
+                log(`❌ 清理失败: ${error.message}`);
+                showStatus(`清理失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 页面加载时显示说明
+        window.addEventListener('load', () => {
+            log('🎮 Games模块本地测试环境已准备就绪');
+            log('');
+            log('测试步骤:');
+            log('1. 点击"设置模拟登录用户"创建测试用户');
+            log('2. 点击"测试用户检测"验证用户状态识别');
+            log('3. 点击"测试数据保存"验证云端保存功能');
+            log('4. 点击"测试数据加载"验证云端加载功能');
+            log('5. 点击"清理测试数据"删除测试数据');
+            log('');
+        });
+    </script>
+</body>
+</html>
