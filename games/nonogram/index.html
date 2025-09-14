@@ -599,16 +599,23 @@
 
     <!-- 环境变量配置 -->
     <script>
-      // 设置 Supabase 环境变量
-      window.REACT_APP_SUPABASE_URL = 'https://qeedsnqbudbogqpcerqb.supabase.co';
-      window.REACT_APP_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlZWRzbnFidWRib2dxcGNlcnFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NjMxOTIsImV4cCI6MjA3MDAzOTE5Mn0.-hWnQwcpvXjX1dMJcNaQC7AUp8jYC9ozhgjFzSHeAGo';
+      // GitHub Actions 会在部署时替换这些占位符
+      window.REACT_APP_SUPABASE_URL = '{{SUPABASE_URL}}';
+      window.REACT_APP_SUPABASE_ANON_KEY = '{{SUPABASE_ANON_KEY}}';
+
+      // 本地开发时的fallback（如果占位符未被替换）
+      if (window.REACT_APP_SUPABASE_URL === '{{SUPABASE_URL}}') {
+        window.REACT_APP_SUPABASE_URL = 'https://qeedsnqbudbogqpcerqb.supabase.co';
+        window.REACT_APP_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlZWRzbnFidWRib2dxcGNlcnFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NjMxOTIsImV4cCI6MjA3MDAzOTE5Mn0.-hWnQwcpvXjX1dMJcNaQC7AUp8jYC9ozhgjFzSHeAGo';
+      }
     </script>
 
     <!-- 引入脚本 -->
     <script src="../shared/js/gameUtils.js"></script>
     <script src="../shared/js/storage.js"></script>
+    <!-- Legacy auth modules commented out - using SmartGameStorage instead -->
     <!-- <script src="../shared/js/gameAuth.js"></script> -->
-    <script src="../shared/js/authStorage.js"></script>
+    <!-- <script src="../shared/js/authStorage.js"></script> -->
 
     <!-- 智能存储系统 -->
     <script src="../shared/js/gameConfig.js"></script>
