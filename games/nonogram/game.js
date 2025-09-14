@@ -279,9 +279,11 @@ class NonogramGame {
 
   // 处理格子点击
   handleCellClick(row, col) {
+    console.log(`🖱️ 点击格子 (${row}, ${col}), 游戏已完成: ${this.engine.completed}`);
     if (this.engine.completed) return;
 
     const result = this.engine.clickCell(row, col);
+    console.log(`🎯 点击结果:`, result);
     if (result.success) {
       this.updateCell(row, col, result.newState);
       this.updateProgress(result.progress);
