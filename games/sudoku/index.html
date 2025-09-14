@@ -514,16 +514,36 @@
             await window.Clerk.load();
             console.log('✅ Clerk 初始化成功');
             console.log('   - Clerk loaded:', window.Clerk.loaded);
-            console.log('   - User:', window.Clerk.user ? `${window.Clerk.user.id}` : 'Not logged in');
 
-            // 标记Clerk已初始化
-            window.clerkInitialized = true;
+            // 等待用户状态完全恢复（重要：跨页面跳转时需要时间恢复状态）
+            let retryCount = 0;
+            const maxRetries = 10; // 最多重试10次
+            const checkUserState = async () => {
+              console.log(`🔄 检查用户状态 (尝试 ${retryCount + 1}/${maxRetries})`);
+              console.log('   - User:', window.Clerk.user ? `${window.Clerk.user.id}` : 'Not logged in');
 
-            // 创建登录按钮
-            createAuthButton();
+              if (window.Clerk.user || retryCount >= maxRetries - 1) {
+                // 用户状态已恢复或达到最大重试次数
+                console.log('✅ 用户状态检查完成');
 
-            // 触发自定义事件通知游戏可以开始初始化
-            window.dispatchEvent(new CustomEvent('clerkReady'));
+                // 标记Clerk已初始化
+                window.clerkInitialized = true;
+
+                // 创建登录按钮
+                createAuthButton();
+
+                // 触发自定义事件通知游戏可以开始初始化
+                window.dispatchEvent(new CustomEvent('clerkReady'));
+              } else {
+                // 继续等待用户状态恢复
+                retryCount++;
+                setTimeout(checkUserState, 200); // 每200ms检查一次
+              }
+            };
+
+            // 开始检查用户状态
+            await checkUserState();
+
           } catch (error) {
             console.error('❌ Clerk 初始化失败:', error);
             // 即使失败也要让游戏继续，以游客模式运行
