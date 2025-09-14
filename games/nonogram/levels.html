@@ -479,6 +479,36 @@
     <!-- Clerk SDK for SSO -->
     <script crossorigin="anonymous" data-clerk-publishable-key="pk_test_bWlnaHR5LWRvZy0zOS5jbGVyay5hY2NvdW50cy5kZXYk" src="https://mighty-dog-39.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" type="text/javascript"></script>
 
+    <!-- Clerk 初始化 (按照官方最佳实践) -->
+    <script>
+      window.addEventListener("load", async function () {
+        if (window.Clerk) {
+          try {
+            console.log('🔄 开始Clerk初始化...');
+            await window.Clerk.load();
+            console.log('✅ Clerk.load() 完成');
+
+            // 官方推荐的简单检查方式
+            if (window.Clerk.user) {
+              console.log('👤 用户已登录: ' + window.Clerk.user.id);
+            } else {
+              console.log('❌ 用户未登录');
+            }
+
+            // 标记Clerk已初始化
+            window.clerkInitialized = true;
+
+          } catch (error) {
+            console.error('❌ Clerk初始化失败:', error);
+            window.clerkInitialized = true; // 即使失败也标记，避免阻塞游戏
+          }
+        } else {
+          console.error('❌ Clerk SDK 未加载');
+          window.clerkInitialized = true;
+        }
+      });
+    </script>
+
     <!-- 引入脚本 -->
     <script src="../shared/js/gameUtils.js"></script>
     <script src="../shared/js/storage.js"></script>
