@@ -596,6 +596,7 @@
 
     <!-- Clerk 初始化和登录UI -->
     <script>
+      window.clerkInitialized = false;
       window.addEventListener('load', async () => {
         if (window.Clerk) {
           try {
@@ -604,13 +605,25 @@
             console.log('   - Clerk loaded:', window.Clerk.loaded);
             console.log('   - User:', window.Clerk.user ? `${window.Clerk.user.id}` : 'Not logged in');
 
+            // 标记Clerk已初始化
+            window.clerkInitialized = true;
+
             // 创建登录按钮
             createAuthButton();
+
+            // 触发自定义事件通知游戏可以开始初始化
+            window.dispatchEvent(new CustomEvent('clerkReady'));
           } catch (error) {
             console.error('❌ Clerk 初始化失败:', error);
+            // 即使失败也要让游戏继续，以游客模式运行
+            window.clerkInitialized = true;
+            window.dispatchEvent(new CustomEvent('clerkReady'));
           }
         } else {
           console.error('❌ Clerk SDK 未加载');
+          // 没有Clerk SDK也要让游戏继续
+          window.clerkInitialized = true;
+          window.dispatchEvent(new CustomEvent('clerkReady'));
         }
       });
 

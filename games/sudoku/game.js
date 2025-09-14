@@ -2,7 +2,7 @@
 class SudokuGame {
   constructor() {
     this.engine = new SudokuEngine();
-    this.storage = new SmartSudokuStorage(); // 新的统一存储系统
+    this.storage = null; // 延迟初始化，等待Clerk准备就绪
     this.gameState = {
       puzzle: [],
       solution: [],
@@ -22,8 +22,38 @@ class SudokuGame {
     this.levels = {};
     this.isAuthReady = false;
     this.authInitPromise = null;
-    
-    this.init();
+
+    // 等待Clerk初始化完成后再开始游戏初始化
+    this.waitForClerkAndInit();
+  }
+
+  // 等待Clerk初始化完成，然后开始游戏初始化
+  waitForClerkAndInit() {
+    const startInit = () => {
+      console.log('🎮 开始初始化Sudoku游戏 - Clerk状态:', window.clerkInitialized);
+
+      // 现在可以安全地初始化存储系统了
+      this.storage = new SmartSudokuStorage();
+
+      // 开始游戏初始化
+      this.init();
+    };
+
+    // 检查Clerk是否已经初始化
+    if (window.clerkInitialized) {
+      startInit();
+    } else {
+      // 等待Clerk初始化完成事件
+      window.addEventListener('clerkReady', startInit, { once: true });
+
+      // 设置超时保护，避免永久等待
+      setTimeout(() => {
+        if (!this.storage) {
+          console.warn('⚠️ Clerk初始化超时，以游客模式继续');
+          startInit();
+        }
+      }, 5000); // 5秒超时
+    }
   }
 
   // 初始化游戏

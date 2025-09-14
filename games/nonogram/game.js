@@ -8,7 +8,7 @@
 class NonogramGame {
   constructor() {
     this.engine = new NonogramEngine();
-    this.storage = new SmartNonogramStorage(); // 智能存储系统
+    this.storage = null; // 延迟初始化，等待Clerk准备就绪
     this.currentLevel = null;
     this.currentDifficulty = 'easy';
     this.levelNumber = 1;
@@ -18,7 +18,37 @@ class NonogramGame {
     // UI元素引用
     this.elements = {};
 
-    this.init();
+    // 等待Clerk初始化完成后再开始游戏初始化
+    this.waitForClerkAndInit();
+  }
+
+  // 等待Clerk初始化完成，然后开始游戏初始化
+  waitForClerkAndInit() {
+    const startInit = () => {
+      console.log('🎮 开始初始化游戏 - Clerk状态:', window.clerkInitialized);
+
+      // 现在可以安全地初始化存储系统了
+      this.storage = new SmartNonogramStorage();
+
+      // 开始游戏初始化
+      this.init();
+    };
+
+    // 检查Clerk是否已经初始化
+    if (window.clerkInitialized) {
+      startInit();
+    } else {
+      // 等待Clerk初始化完成事件
+      window.addEventListener('clerkReady', startInit, { once: true });
+
+      // 设置超时保护，避免永久等待
+      setTimeout(() => {
+        if (!this.storage) {
+          console.warn('⚠️ Clerk初始化超时，以游客模式继续');
+          startInit();
+        }
+      }, 5000); // 5秒超时
+    }
   }
 
   async init() {

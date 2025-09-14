@@ -342,13 +342,22 @@ class SmartGameStorage {
     // 检查Clerk SSO登录状态
     console.log('🔐 检查用户登录状态:');
     console.log('  - window.Clerk:', !!window.Clerk);
-    console.log('  - window.Clerk.user:', window.Clerk ? !!window.Clerk.user : 'N/A');
     console.log('  - window.Clerk.loaded:', window.Clerk ? window.Clerk.loaded : 'N/A');
+    console.log('  - window.Clerk.user:', window.Clerk ? !!window.Clerk.user : 'N/A');
+    console.log('  - window.clerkInitialized:', window.clerkInitialized);
 
-    if (window.Clerk && window.Clerk.user) {
+    // 确保Clerk已完全初始化且用户已登录
+    if (window.Clerk && window.Clerk.loaded && window.Clerk.user) {
       console.log('✅ 用户已登录:', window.Clerk.user.id);
       return true;
     }
+
+    // 如果Clerk还在加载中，不能确定用户状态
+    if (window.Clerk && !window.Clerk.loaded) {
+      console.log('⏳ Clerk正在加载中...');
+      return false;
+    }
+
     console.log('❌ 用户未登录');
     return false;
   }
