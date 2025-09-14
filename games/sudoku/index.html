@@ -515,16 +515,36 @@
             console.log('✅ Clerk 初始化成功');
             console.log('   - Clerk loaded:', window.Clerk.loaded);
 
+            // 详细的Clerk状态调试信息
+            console.log('🔍 详细的Clerk状态调试:');
+            console.log('   - window.Clerk:', window.Clerk);
+            console.log('   - window.Clerk.loaded:', window.Clerk ? window.Clerk.loaded : 'N/A');
+            console.log('   - window.Clerk.user:', window.Clerk ? window.Clerk.user : 'N/A');
+            console.log('   - window.Clerk.session:', window.Clerk ? window.Clerk.session : 'N/A');
+            console.log('   - Current URL:', window.location.href);
+            console.log('   - Document.domain:', document.domain);
+            console.log('   - Cookies:', document.cookie);
+
             // 等待用户状态完全恢复（重要：跨页面跳转时需要时间恢复状态）
             let retryCount = 0;
             const maxRetries = 10; // 最多重试10次
             const checkUserState = async () => {
               console.log(`🔄 检查用户状态 (尝试 ${retryCount + 1}/${maxRetries})`);
               console.log('   - User:', window.Clerk.user ? `${window.Clerk.user.id}` : 'Not logged in');
+              console.log('   - Session:', window.Clerk.session ? 'Active' : 'None');
+              console.log('   - Session ID:', window.Clerk.session ? window.Clerk.session.id : 'N/A');
 
               if (window.Clerk.user || retryCount >= maxRetries - 1) {
                 // 用户状态已恢复或达到最大重试次数
                 console.log('✅ 用户状态检查完成');
+                if (window.Clerk.user) {
+                  console.log('👤 最终用户信息:');
+                  console.log('   - User ID:', window.Clerk.user.id);
+                  console.log('   - Email:', window.Clerk.user.primaryEmailAddress?.emailAddress);
+                  console.log('   - First Name:', window.Clerk.user.firstName);
+                } else {
+                  console.log('❌ 最终结果：用户未登录，将以游客模式继续');
+                }
 
                 // 标记Clerk已初始化
                 window.clerkInitialized = true;

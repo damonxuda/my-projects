@@ -430,7 +430,4 @@ document.addEventListener('DOMContentLoaded', () => {
   window.nonogramLevels = new NonogramLevels();
 });
 
-// 导出到全局作用域
-if (typeof window !== 'undefined') {
-  window.AuthenticatedNonogramStorage = AuthenticatedNonogramStorage;
-}
+// 导出到全局作用域 (清理过期代码)
