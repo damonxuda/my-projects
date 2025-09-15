@@ -165,66 +165,56 @@
         position: fixed;
         top: 1rem;
         right: 1rem;
-        background: rgba(255, 255, 255, 0.15);
-        border: 2px solid rgba(255, 255, 255, 0.2);
-        border-radius: 12px;
-        padding: 1rem;
-        backdrop-filter: blur(10px);
-        min-width: 200px;
-        z-index: 100;
+        z-index: 9999;
       }
 
       .auth-user-info {
         display: flex;
-        align-items: center;
-        gap: 0.5rem;
+        justify-content: center;
         margin-bottom: 0.5rem;
-        color: white;
       }
 
       .auth-user-avatar {
-        width: 32px;
-        height: 32px;
+        width: 48px;
+        height: 48px;
         border-radius: 50%;
-        background: rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.2);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.2rem;
-      }
-
-      .auth-user-details {
-        flex: 1;
-        min-width: 0;
-      }
-
-      .auth-user-name {
-        font-size: 0.9rem;
+        font-size: 1.4rem;
         font-weight: 600;
-        margin-bottom: 0.2rem;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(5px);
       }
 
-      .auth-user-email {
-        font-size: 0.75rem;
-        opacity: 0.8;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+      .auth-user-avatar:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: scale(1.05);
+      }
+
+      .auth-user-avatar img {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
       }
 
       .auth-button {
-        background: rgba(255, 255, 255, 0.2);
-        border: 1px solid rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.2);
         border-radius: 6px;
         color: white;
-        padding: 0.5rem 1rem;
-        font-size: 0.85rem;
+        padding: 0.4rem 0.8rem;
+        font-size: 0.75rem;
         cursor: pointer;
         transition: all 0.3s ease;
         width: 100%;
+        font-weight: 400;
       }
 
       .auth-button:hover {
@@ -292,13 +282,14 @@
         .auth-section {
           top: 0.5rem;
           right: 0.5rem;
-          padding: 0.8rem;
-          min-width: 180px;
         }
-        .auth-user-name {
-          font-size: 0.8rem;
+        .auth-user-avatar {
+          width: 40px;
+          height: 40px;
+          font-size: 1.2rem;
         }
-        .auth-user-email {
+        .auth-button {
+          padding: 0.35rem 0.6rem;
           font-size: 0.7rem;
         }
       }
@@ -335,13 +326,8 @@
       <!-- 已登录状态 -->
       <div id="auth-user-view" style="display: none;">
         <div class="auth-user-info">
-          <div class="auth-user-avatar" id="user-avatar">👤</div>
-          <div class="auth-user-details">
-            <div class="auth-user-name" id="user-name">用户名</div>
-            <div class="auth-user-email" id="user-email">user@example.com</div>
-          </div>
+          <div class="auth-user-avatar" id="user-avatar" title="点击查看用户菜单">👤</div>
         </div>
-        <button class="auth-button" id="logout-btn">🚪 登出</button>
       </div>
     </div>
 
@@ -412,10 +398,7 @@
         const authLoginView = document.getElementById('auth-login-view');
         const authUserView = document.getElementById('auth-user-view');
         const loginBtn = document.getElementById('login-btn');
-        const logoutBtn = document.getElementById('logout-btn');
         const userAvatar = document.getElementById('user-avatar');
-        const userName = document.getElementById('user-name');
-        const userEmail = document.getElementById('user-email');
 
         // 更新UI状态
         function updateAuthUI(isSignedIn, user) {
@@ -425,10 +408,35 @@
             authLoginView.style.display = 'none';
             authUserView.style.display = 'block';
 
-            // 显示用户信息
-            userName.textContent = user.firstName || user.username || '用户';
-            userEmail.textContent = user.primaryEmailAddress?.emailAddress || '';
-            userAvatar.textContent = (user.firstName || user.username || '用户')[0].toUpperCase();
+            // 显示用户头像
+            if (user.imageUrl && user.hasImage) {
+              // 如果有Clerk上传的头像，直接显示
+              userAvatar.innerHTML = `<img src="${user.imageUrl}" alt="用户头像" />`;
+            } else if (user.firstName || user.lastName) {
+              // 有姓名时使用UI-Avatars生成首字母头像
+              const firstName = user.firstName || '';
+              const lastName = user.lastName || '';
+              const fullName = (firstName + ' ' + lastName).trim();
+
+              if (fullName) {
+                const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&size=48&background=667eea&color=fff&bold=true&rounded=true`;
+                userAvatar.innerHTML = `<img src="${avatarUrl}" alt="用户头像" />`;
+              } else {
+                // 只有单个名字时的fallback
+                const singleName = firstName || lastName;
+                const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(singleName)}&size=48&background=667eea&color=fff&bold=true&rounded=true`;
+                userAvatar.innerHTML = `<img src="${avatarUrl}" alt="用户头像" />`;
+              }
+            } else if (user.primaryEmailAddress?.emailAddress) {
+              // 只有邮箱时使用邮箱生成头像
+              const email = user.primaryEmailAddress.emailAddress;
+              const emailPrefix = email.split('@')[0];
+              const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(emailPrefix)}&size=48&background=764ba2&color=fff&bold=true&rounded=true&length=1`;
+              userAvatar.innerHTML = `<img src="${avatarUrl}" alt="用户头像" />`;
+            } else {
+              // 最终fallback
+              userAvatar.innerHTML = '👤';
+            }
 
             console.log('👤 Games页面用户已登录:', user.primaryEmailAddress?.emailAddress);
           } else {
@@ -480,16 +488,93 @@
             }
           });
 
-          // 登出按钮事件
-          logoutBtn.addEventListener('click', async () => {
-            try {
-              await window.Clerk.signOut();
-              updateAuthUI(false, null);
-            } catch (error) {
-              console.error('Games页面登出失败:', error);
-              alert('登出失败，请稍后重试');
-            }
+          // 头像点击事件 - 显示用户菜单
+          userAvatar.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            showUserMenu(e);
           });
+
+          // 创建用户菜单
+          function showUserMenu(event) {
+            // 移除已存在的菜单
+            const existingMenu = document.getElementById('user-menu');
+            if (existingMenu) {
+              existingMenu.remove();
+            }
+
+            // 创建菜单
+            const menu = document.createElement('div');
+            menu.id = 'user-menu';
+            menu.innerHTML = `
+              <div style="
+                position: fixed;
+                top: ${event.clientY + 10}px;
+                left: ${event.clientX - 100}px;
+                background: rgba(255, 255, 255, 0.95);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                border-radius: 8px;
+                padding: 0.5rem 0;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+                z-index: 10000;
+                color: #333;
+                font-size: 0.85rem;
+                min-width: 130px;
+              ">
+                <div class="menu-item" data-action="profile" style="padding: 0.6rem 1rem; cursor: pointer; transition: background 0.2s;">
+                  📝 编辑资料
+                </div>
+                <div class="menu-item" data-action="logout" style="padding: 0.6rem 1rem; cursor: pointer; transition: background 0.2s;">
+                  🚪 登出
+                </div>
+              </div>
+            `;
+
+            document.body.appendChild(menu);
+
+            // 菜单项悬停效果
+            menu.querySelectorAll('.menu-item').forEach(item => {
+              item.addEventListener('mouseenter', () => {
+                item.style.background = 'rgba(0, 0, 0, 0.1)';
+              });
+              item.addEventListener('mouseleave', () => {
+                item.style.background = 'transparent';
+              });
+            });
+
+            // 菜单点击事件
+            menu.addEventListener('click', async (e) => {
+              const action = e.target.getAttribute('data-action');
+              menu.remove();
+
+              if (action === 'profile') {
+                // 打开Clerk用户资料编辑
+                try {
+                  await window.Clerk.openUserProfile();
+                } catch (error) {
+                  alert('无法打开用户资料编辑，请联系管理员');
+                }
+              } else if (action === 'logout') {
+                if (confirm('确定要登出吗？')) {
+                  try {
+                    await window.Clerk.signOut();
+                    updateAuthUI(false, null);
+                  } catch (error) {
+                    console.error('Games页面登出失败:', error);
+                    alert('登出失败，请稍后重试');
+                  }
+                }
+              }
+            });
+
+            // 点击其他地方关闭菜单
+            setTimeout(() => {
+              document.addEventListener('click', function closeMenu() {
+                menu.remove();
+                document.removeEventListener('click', closeMenu);
+              });
+            }, 100);
+          }
 
           // 监听认证状态变化
           window.Clerk.addListener(({ user, session }) => {
