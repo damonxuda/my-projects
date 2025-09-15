@@ -568,7 +568,7 @@
             }
           }
 
-          // 策略4: 直接解析URL token绕过网络验证 (解决跨模块架构差异)
+          // 🔥 策略4: 直接解析URL token绕过网络验证 (解决跨模块架构差异)
           const urlParams = new URLSearchParams(window.location.search);
           const sessionToken = urlParams.get('session');
           if (sessionToken && !window.Clerk.user) {
@@ -578,6 +578,11 @@
               const tokenParts = sessionToken.split('.');
               if (tokenParts.length === 3) {
                 const payload = JSON.parse(atob(tokenParts[1]));
+                console.log('🎯 Token解析成功:', {
+                  userId: payload.sub,
+                  sessionId: payload.sid,
+                  exp: new Date(payload.exp * 1000).toLocaleString()
+                });
 
                 // 🔥 创建模拟用户对象供SmartGameStorage使用
                 window.mockClerkUser = {
@@ -590,6 +595,7 @@
                   originalSessionToken: sessionToken
                 };
 
+                console.log('✅ 跨模块认证成功! 用户ID:', payload.sub);
 
                 // 🔥 立即标记初始化完成，让SmartGameStorage重新检查
                 window.clerkInitialized = true;
@@ -603,6 +609,7 @@
                 cleanUrl.searchParams.delete('session');
                 window.history.replaceState({}, '', cleanUrl);
 
+                console.log('🎉 跨模块认证初始化完成!');
 
                 // 🔥 通知SmartGameStorage重新加载数据
                 setTimeout(() => {
@@ -641,6 +648,7 @@
 
           // 🔥 策略6: 最终状态确认
           if (window.crossModuleAuthCompleted) {
+            console.log('✅ 跨模块认证已完成，跳过传统Clerk状态检查');
           } else if (window.Clerk.user) {
             console.log('👤 用户已登录: ' + window.Clerk.user.id);
             console.log('📧 用户邮箱:', window.Clerk.user.emailAddresses?.[0]?.emailAddress);

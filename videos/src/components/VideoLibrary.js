@@ -20,6 +20,29 @@ const VideoLibrary = () => {
   const { user, isSignedIn, isAdmin, fetchVideoList, getVideoUrl, getCachedToken, clearTokenCache } =
     useAuth();
 
+  // 🔥 测试跨模块身份传递功能
+  const handleTestCrossModuleAuth = async () => {
+    if (!isSignedIn) {
+      alert('请先登录');
+      return;
+    }
+
+    try {
+      // 获取当前session token
+      const token = await getCachedToken();
+      if (token) {
+        // 生成带session的Games模块URL
+        const gamesUrl = `http://localhost:8081/nonogram/levels.html?session=${encodeURIComponent(token)}`;
+        window.open(gamesUrl, '_blank');
+      } else {
+        alert('无法获取session token');
+      }
+    } catch (error) {
+      console.error('获取session token失败:', error);
+      alert('获取session token失败');
+    }
+  };
+
   const API_BASE_URL = process.env.REACT_APP_VIDEO_API_URL;
 
   // 提取YouTube视频ID（用于添加新视频）
@@ -400,14 +423,25 @@ const VideoLibrary = () => {
       <div className="mb-6 bg-white rounded-lg shadow-sm border">
         {!showAddYouTube ? (
           <div className="p-4">
-            <button
-              onClick={() => setShowAddYouTube(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-            >
-              <Youtube size={20} />
-              <span>添加YouTube视频</span>
-              <Plus size={16} />
-            </button>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setShowAddYouTube(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                <Youtube size={20} />
+                <span>添加YouTube视频</span>
+                <Plus size={16} />
+              </button>
+
+              {/* 🔥 测试跨模块身份传递按钮 */}
+              <button
+                onClick={handleTestCrossModuleAuth}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <span>🎮</span>
+                <span>测试跳转到Games模块</span>
+              </button>
+            </div>
           </div>
         ) : (
           <div className="p-4 border-l-4 border-red-500 bg-red-50">

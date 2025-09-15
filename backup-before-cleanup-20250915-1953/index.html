@@ -640,14 +640,22 @@
     <script>
       window.clerkInitialized = false;
       window.addEventListener('load', async () => {
-        // 策略4: 直接解析URL token绕过网络验证 (解决跨模块架构差异)
+        // 🔥 策略4: 直接解析URL token绕过网络验证 (解决跨模块架构差异)
         const urlParams = new URLSearchParams(window.location.search);
         const sessionToken = urlParams.get('session');
         if (sessionToken && !window.mockClerkUser) {
+          console.log('🔍 发现session token，尝试直接解析...');
           const tokenParts = sessionToken.split('.');
           if (tokenParts.length === 3) {
             try {
               const payload = JSON.parse(atob(tokenParts[1]));
+              console.log('🔓 JWT token解析成功:', {
+                sub: payload.sub,
+                sid: payload.sid,
+                iss: payload.iss,
+                exp: payload.exp,
+                nbf: payload.nbf
+              });
 
               // 创建模拟用户对象绕过Clerk网络验证
               window.mockClerkUser = {
@@ -660,6 +668,10 @@
                 parsedAt: Date.now()
               };
 
+              console.log('✅ 跨模块认证成功! 用户ID:', payload.sub);
+              console.log('   - Session ID:', payload.sid);
+              console.log('   - Token过期时间:', new Date(payload.exp * 1000).toLocaleString());
+              console.log('   - 认证来源: token-parsed (绕过网络验证)');
 
               // 防止重复初始化
               if (window.clerkInitialized) {
@@ -674,6 +686,7 @@
               // 认证成功后重新加载游戏数据
               setTimeout(() => {
                 if (window.nonogramGame && window.nonogramGame.storage) {
+                  console.log('🔄 重新加载游戏数据...');
                   // 触发数据重新加载
                   window.dispatchEvent(new CustomEvent('authChanged'));
                 }
@@ -681,9 +694,10 @@
 
               return; // 跳过传统Clerk初始化
             } catch (parseError) {
-              // Token解析失败，fallback到传统Clerk初始化
+              console.warn('⚠️ Token解析失败，fallback到传统Clerk初始化:', parseError);
             }
           } else {
+            console.warn('⚠️ Token格式无效，fallback到传统Clerk初始化');
           }
         }
 

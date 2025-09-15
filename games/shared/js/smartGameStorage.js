@@ -347,7 +347,18 @@ class SmartGameStorage {
     console.log('  - window.Clerk.session:', window.Clerk ? !!window.Clerk.session : 'N/A');
     console.log('  - window.clerkInitialized:', window.clerkInitialized);
 
-    // 🔥 策略1: 最高优先级 - 检查活跃的session (React模块传递过来的核心指标)
+    // 🔥 策略1: 最高优先级 - 检查模拟用户对象 (跨模块token解析)
+    if (window.mockClerkUser && window.mockClerkUser.isAuthenticated) {
+      console.log('✅ 用户已登录 (跨模块token解析):', {
+        userId: window.mockClerkUser.id,
+        email: window.mockClerkUser.emailAddresses?.[0]?.emailAddress,
+        sessionId: window.mockClerkUser.sessionId,
+        authSource: window.mockClerkUser.authSource
+      });
+      return true;
+    }
+
+    // 🔥 策略2: 检查活跃的session (React模块传递过来的核心指标)
     if (window.Clerk && window.Clerk.user && window.Clerk.session) {
       console.log('✅ 用户已登录 (活跃session):', {
         userId: window.Clerk.user.id,
@@ -357,13 +368,13 @@ class SmartGameStorage {
       return true;
     }
 
-    // 🔥 策略2: 用户对象存在检查 (兼容之前的快速检查)
+    // 🔥 策略3: 用户对象存在检查 (兼容之前的快速检查)
     if (window.Clerk && window.Clerk.user) {
       console.log('✅ 用户已登录 (用户对象检查):', window.Clerk.user.id);
       return true;
     }
 
-    // 🔥 策略3: 已初始化状态下的用户检查
+    // 🔥 策略4: 已初始化状态下的用户检查
     if (window.clerkInitialized && window.Clerk) {
       // 检查是否有任何形式的认证信息
       if (window.Clerk.user || window.Clerk.session) {
@@ -375,31 +386,78 @@ class SmartGameStorage {
       }
     }
 
-    // 🔥 策略4: 传统的完全加载检查
+    // 🔥 策略5: 传统的完全加载检查
     if (window.Clerk && window.Clerk.loaded && window.Clerk.user) {
       console.log('✅ 用户已登录 (传统完全加载检查):', window.Clerk.user.id);
       return true;
     }
 
-    // 🔥 策略5: 等待状态判断
+    // 🔥 策略6: localStorage缓存数据检查 (React模块兼容性)
+    try {
+      const clerkEnv = localStorage.getItem('__clerk_environment');
+      if (clerkEnv) {
+        const envData = JSON.parse(clerkEnv);
+        if (envData.user && envData.session) {
+          console.log('✅ 用户已登录 (localStorage缓存检查):', {
+            userId: envData.user.id,
+            email: envData.user.emailAddresses?.[0]?.emailAddress,
+            sessionId: envData.session.id
+          });
+          return true;
+        }
+      }
+    } catch (error) {
+      console.log('⚠️ localStorage检查失败:', error);
+    }
+
+    // 🔥 策略7: 等待状态判断
     if (window.Clerk && !window.clerkInitialized) {
       console.log('⏳ Clerk正在初始化中，稍后再试...');
       return false;
     }
 
-    // 🔥 策略6: 最终的未登录判断
+    // 🔥 策略8: 最终的未登录判断
     console.log('❌ 用户未登录或session已过期');
     return false;
   }
 
   getUser() {
     // 🔥 增强的用户对象获取 - 多策略检查
+
+    // 🔥 策略1: 模拟用户对象 (跨模块token解析)
+    if (window.mockClerkUser && window.mockClerkUser.isAuthenticated) {
+      console.log('👤 获取用户对象成功 (跨模块token解析):', {
+        id: window.mockClerkUser.id,
+        email: window.mockClerkUser.emailAddresses?.[0]?.emailAddress,
+        authSource: window.mockClerkUser.authSource
+      });
+      return window.mockClerkUser;
+    }
+
+    // 🔥 策略2: 标准Clerk用户对象
     if (window.Clerk && window.Clerk.user) {
       console.log('👤 获取用户对象成功:', {
         id: window.Clerk.user.id,
         email: window.Clerk.user.emailAddresses?.[0]?.emailAddress
       });
       return window.Clerk.user;
+    }
+
+    // 🔥 策略3: localStorage缓存数据获取 (React模块兼容性)
+    try {
+      const clerkEnv = localStorage.getItem('__clerk_environment');
+      if (clerkEnv) {
+        const envData = JSON.parse(clerkEnv);
+        if (envData.user) {
+          console.log('👤 获取用户对象成功 (localStorage缓存):', {
+            id: envData.user.id,
+            email: envData.user.emailAddresses?.[0]?.emailAddress
+          });
+          return envData.user;
+        }
+      }
+    } catch (error) {
+      console.log('⚠️ localStorage用户获取失败:', error);
     }
 
     // 如果没有用户对象但初始化完成，可能是未登录状态
@@ -413,9 +471,29 @@ class SmartGameStorage {
   }
 
   getUserId() {
+    // 🔥 策略1: 模拟用户对象 (跨模块token解析)
+    if (window.mockClerkUser && window.mockClerkUser.isAuthenticated) {
+      return window.mockClerkUser.id || null;
+    }
+
+    // 🔥 策略2: 标准Clerk用户对象
     if (window.Clerk && window.Clerk.user) {
       return window.Clerk.user.id || null;
     }
+
+    // 🔥 策略3: localStorage缓存数据获取
+    try {
+      const clerkEnv = localStorage.getItem('__clerk_environment');
+      if (clerkEnv) {
+        const envData = JSON.parse(clerkEnv);
+        if (envData.user && envData.user.id) {
+          return envData.user.id;
+        }
+      }
+    } catch (error) {
+      console.log('⚠️ localStorage用户ID获取失败:', error);
+    }
+
     return null;
   }
 

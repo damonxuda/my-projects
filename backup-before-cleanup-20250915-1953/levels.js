@@ -194,7 +194,13 @@ class NonogramLevels {
       // 构建游戏链接，如果有跨模块认证状态则传递session token
       let gameUrl = `./index.html?difficulty=${difficulty}&level=${levelNumber}`;
 
-      // 如果存在跨模块认证状态，传递session token到游戏页面
+      // 🔥 如果存在跨模块认证状态，传递session token到游戏页面
+      console.log('🔍 检查token传递条件:', {
+        mockClerkUser: !!window.mockClerkUser,
+        isAuthenticated: window.mockClerkUser?.isAuthenticated,
+        currentUrl: window.location.href
+      });
+
       if (window.mockClerkUser && window.mockClerkUser.isAuthenticated) {
         // 优先使用保存的session token，fallback到URL参数
         let sessionToken = window.mockClerkUser.originalSessionToken;
@@ -203,9 +209,18 @@ class NonogramLevels {
           sessionToken = urlParams.get('session');
         }
 
+        console.log('🔍 Session token来源:', sessionToken ?
+          (window.mockClerkUser.originalSessionToken ? '已保存的token' : 'URL参数') :
+          'Not found');
+
         if (sessionToken) {
           gameUrl += `&session=${encodeURIComponent(sessionToken)}`;
+          console.log('🔗 传递session token到游戏页面:', levelNumber);
+        } else {
+          console.warn('⚠️ 虽然用户已认证，但没有找到session token');
         }
+      } else {
+        console.log('ℹ️ 用户未通过跨模块认证，不传递session token');
       }
 
       levelCard.href = gameUrl;
