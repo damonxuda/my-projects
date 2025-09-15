@@ -498,13 +498,18 @@
             // 标记Clerk已初始化
             window.clerkInitialized = true;
 
+            // 触发自定义事件，通知游戏可以开始初始化
+            window.dispatchEvent(new CustomEvent('clerkReady'));
+
           } catch (error) {
             console.error('❌ Clerk初始化失败:', error);
             window.clerkInitialized = true; // 即使失败也标记，避免阻塞游戏
+            window.dispatchEvent(new CustomEvent('clerkReady'));
           }
         } else {
           console.error('❌ Clerk SDK 未加载');
           window.clerkInitialized = true;
+          window.dispatchEvent(new CustomEvent('clerkReady'));
         }
       });
     </script>
