@@ -154,14 +154,31 @@ export const useAuth = () => {
 
     setLoading(true);
     try {
+      console.log('🔄 开始获取用户列表，API URL:', LAMBDA_API_URL);
       const response = await fetch(LAMBDA_API_URL);
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌ API响应错误:', { status: response.status, text: errorText });
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
 
-      const data = await response.json();
+      const responseText = await response.text();
+      console.log('📄 Raw response text:', responseText.substring(0, 200) + '...');
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('❌ JSON解析失败:', parseError);
+        console.error('❌ 原始响应内容:', responseText);
+        throw new Error(`JSON解析失败: ${parseError.message}`);
+      }
+
       const usersData = data.users || [];
+      console.log('✅ 成功获取用户数据:', usersData.length, '个用户');
       setUsers(usersData);
       return usersData; // 🔥 关键修复：返回用户数据
 
