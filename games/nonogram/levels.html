@@ -485,6 +485,15 @@
         if (window.Clerk) {
           try {
             console.log('🔄 开始Clerk初始化...');
+
+            // 🔥 跨页面导航优化：检查是否已有用户会话
+            if (window.Clerk.user) {
+              console.log('🚀 检测到现有用户会话 (跨页面导航): ' + window.Clerk.user.id);
+              window.clerkInitialized = true;
+              window.dispatchEvent(new CustomEvent('clerkReady'));
+              return; // 直接返回，无需重新加载
+            }
+
             await window.Clerk.load();
             console.log('✅ Clerk.load() 完成');
 

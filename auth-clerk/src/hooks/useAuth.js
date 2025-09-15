@@ -146,26 +146,29 @@ export const useAuth = () => {
     window.lastTokenClear = now;
   };
 
-  // 获取所有用户（管理员功能）- 保持原有逻辑不变
+  // 获取所有用户（管理员功能）- 修复返回值问题
   const fetchAllUsers = useCallback(async () => {
     if (!isAdmin()) {
-      return;
+      return [];
     }
-    
+
     setLoading(true);
     try {
       const response = await fetch(LAMBDA_API_URL);
-      
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-      
+
       const data = await response.json();
-      setUsers(data.users || []);
+      const usersData = data.users || [];
+      setUsers(usersData);
+      return usersData; // 🔥 关键修复：返回用户数据
 
     } catch (error) {
       console.error('获取用户列表失败:', error);
       setUsers([]);
+      return []; // 🔥 关键修复：错误时也要返回空数组
     } finally {
       setLoading(false);
     }

@@ -346,6 +346,13 @@ class SmartGameStorage {
     console.log('  - window.Clerk.user:', window.Clerk ? !!window.Clerk.user : 'N/A');
     console.log('  - window.clerkInitialized:', window.clerkInitialized);
 
+    // 🔥 优化1: 跨页面导航的快速检查 - 如果有用户对象就认为已登录
+    // 这解决了从其他已登录页面导航过来时的时机问题
+    if (window.Clerk && window.Clerk.user) {
+      console.log('✅ 用户已登录 (快速检查):', window.Clerk.user.id);
+      return true;
+    }
+
     // 优先检查：如果clerkInitialized为true且有用户对象，即使loaded为false也认为已登录
     // 这解决了时机问题：在clerkReady事件触发后，loaded状态可能有短暂延迟
     if (window.clerkInitialized && window.Clerk && window.Clerk.user) {
