@@ -339,56 +339,76 @@ class SmartGameStorage {
   // ===================
 
   isUserLoggedIn() {
-    // 检查Clerk SSO登录状态
+    // 🔥 增强的用户登录状态检查 - 专门优化跨模块身份传递
     console.log('🔐 检查用户登录状态:');
     console.log('  - window.Clerk:', !!window.Clerk);
     console.log('  - window.Clerk.loaded:', window.Clerk ? window.Clerk.loaded : 'N/A');
     console.log('  - window.Clerk.user:', window.Clerk ? !!window.Clerk.user : 'N/A');
+    console.log('  - window.Clerk.session:', window.Clerk ? !!window.Clerk.session : 'N/A');
     console.log('  - window.clerkInitialized:', window.clerkInitialized);
 
-    // 🔥 优化1: 跨页面导航的快速检查 - 如果有用户对象就认为已登录
-    // 这解决了从其他已登录页面导航过来时的时机问题
+    // 🔥 策略1: 最高优先级 - 检查活跃的session (React模块传递过来的核心指标)
+    if (window.Clerk && window.Clerk.user && window.Clerk.session) {
+      console.log('✅ 用户已登录 (活跃session):', {
+        userId: window.Clerk.user.id,
+        email: window.Clerk.user.emailAddresses?.[0]?.emailAddress,
+        sessionId: window.Clerk.session.id
+      });
+      return true;
+    }
+
+    // 🔥 策略2: 用户对象存在检查 (兼容之前的快速检查)
     if (window.Clerk && window.Clerk.user) {
-      console.log('✅ 用户已登录 (快速检查):', window.Clerk.user.id);
+      console.log('✅ 用户已登录 (用户对象检查):', window.Clerk.user.id);
       return true;
     }
 
-    // 优先检查：如果clerkInitialized为true且有用户对象，即使loaded为false也认为已登录
-    // 这解决了时机问题：在clerkReady事件触发后，loaded状态可能有短暂延迟
-    if (window.clerkInitialized && window.Clerk && window.Clerk.user) {
-      console.log('✅ 用户已登录 (通过clerkInitialized检查):', window.Clerk.user.id);
-      return true;
-    }
-
-    // 传统检查：确保Clerk已完全初始化且用户已登录
-    if (window.Clerk && window.Clerk.loaded && window.Clerk.user) {
-      console.log('✅ 用户已登录 (传统检查):', window.Clerk.user.id);
-      return true;
-    }
-
-    // 如果Clerk还在加载中但clerkInitialized已为true，给一次机会检查用户
-    if (window.clerkInitialized && window.Clerk && !window.Clerk.loaded) {
-      console.log('🔄 Clerk已初始化但loaded为false，检查用户对象...');
-      if (window.Clerk.user) {
-        console.log('✅ 找到用户对象，认为已登录:', window.Clerk.user.id);
+    // 🔥 策略3: 已初始化状态下的用户检查
+    if (window.clerkInitialized && window.Clerk) {
+      // 检查是否有任何形式的认证信息
+      if (window.Clerk.user || window.Clerk.session) {
+        console.log('✅ 用户已登录 (初始化后检查):', {
+          user: !!window.Clerk.user,
+          session: !!window.Clerk.session
+        });
         return true;
       }
     }
 
-    // 如果Clerk还在加载中且clerkInitialized为false，不能确定用户状态
-    if (window.Clerk && !window.Clerk.loaded && !window.clerkInitialized) {
-      console.log('⏳ Clerk正在加载中...');
+    // 🔥 策略4: 传统的完全加载检查
+    if (window.Clerk && window.Clerk.loaded && window.Clerk.user) {
+      console.log('✅ 用户已登录 (传统完全加载检查):', window.Clerk.user.id);
+      return true;
+    }
+
+    // 🔥 策略5: 等待状态判断
+    if (window.Clerk && !window.clerkInitialized) {
+      console.log('⏳ Clerk正在初始化中，稍后再试...');
       return false;
     }
 
-    console.log('❌ 用户未登录');
+    // 🔥 策略6: 最终的未登录判断
+    console.log('❌ 用户未登录或session已过期');
     return false;
   }
 
   getUser() {
+    // 🔥 增强的用户对象获取 - 多策略检查
     if (window.Clerk && window.Clerk.user) {
+      console.log('👤 获取用户对象成功:', {
+        id: window.Clerk.user.id,
+        email: window.Clerk.user.emailAddresses?.[0]?.emailAddress
+      });
       return window.Clerk.user;
     }
+
+    // 如果没有用户对象但初始化完成，可能是未登录状态
+    if (window.clerkInitialized) {
+      console.log('❌ 用户对象不存在 (已初始化)');
+    } else {
+      console.log('⏳ 用户对象不存在 (未初始化)');
+    }
+
     return null;
   }
 

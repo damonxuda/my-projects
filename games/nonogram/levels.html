@@ -479,48 +479,92 @@
     <!-- Clerk SDK for SSO -->
     <script crossorigin="anonymous" data-clerk-publishable-key="pk_test_bWlnaHR5LWRvZy0zOS5jbGVyay5hY2NvdW50cy5kZXYk" src="https://mighty-dog-39.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" type="text/javascript"></script>
 
-    <!-- Clerk 初始化 (按照官方最佳实践) -->
+    <!-- Clerk 初始化 (增强跨模块身份传递) -->
     <script>
-      window.addEventListener("load", async function () {
-        if (window.Clerk) {
-          try {
-            console.log('🔄 开始Clerk初始化...');
-
-            // 🔥 跨页面导航优化：检查是否已有用户会话
-            if (window.Clerk.user) {
-              console.log('🚀 检测到现有用户会话 (跨页面导航): ' + window.Clerk.user.id);
-              window.clerkInitialized = true;
-              window.dispatchEvent(new CustomEvent('clerkReady'));
-              return; // 直接返回，无需重新加载
-            }
-
-            await window.Clerk.load();
-            console.log('✅ Clerk.load() 完成');
-
-            // 官方推荐的简单检查方式
-            if (window.Clerk.user) {
-              console.log('👤 用户已登录: ' + window.Clerk.user.id);
-            } else {
-              console.log('❌ 用户未登录');
-            }
-
-            // 标记Clerk已初始化
-            window.clerkInitialized = true;
-
-            // 触发自定义事件，通知游戏可以开始初始化
-            window.dispatchEvent(new CustomEvent('clerkReady'));
-
-          } catch (error) {
-            console.error('❌ Clerk初始化失败:', error);
-            window.clerkInitialized = true; // 即使失败也标记，避免阻塞游戏
-            window.dispatchEvent(new CustomEvent('clerkReady'));
-          }
-        } else {
+      // 🔥 改进的Clerk初始化策略 - 专门解决React模块到Games模块的身份传递问题
+      async function initializeClerkForGames() {
+        if (!window.Clerk) {
           console.error('❌ Clerk SDK 未加载');
           window.clerkInitialized = true;
           window.dispatchEvent(new CustomEvent('clerkReady'));
+          return;
         }
-      });
+
+        try {
+          console.log('🔄 开始增强的Clerk初始化...');
+          console.log('🔍 Clerk对象状态:', {
+            loaded: window.Clerk.loaded,
+            user: !!window.Clerk.user,
+            session: !!window.Clerk.session
+          });
+
+          // 🔥 策略1: 检查是否已经有活跃的session (从React模块导航过来)
+          if (window.Clerk.user && window.Clerk.session) {
+            console.log('🚀 检测到活跃session (React模块导航): ' + window.Clerk.user.id);
+            window.clerkInitialized = true;
+            window.dispatchEvent(new CustomEvent('clerkReady'));
+            return;
+          }
+
+          // 🔥 策略2: 强制等待Clerk完全加载
+          console.log('⏳ 等待Clerk完全加载...');
+          await window.Clerk.load();
+
+          // 再次检查加载后的状态
+          console.log('✅ Clerk.load() 完成，当前状态:', {
+            loaded: window.Clerk.loaded,
+            user: !!window.Clerk.user,
+            session: !!window.Clerk.session
+          });
+
+          // 🔥 策略3: 如果仍然没有用户但有session token，尝试恢复session
+          if (!window.Clerk.user && window.Clerk.session) {
+            console.log('🔄 检测到session但无用户对象，尝试恢复...');
+            // 给Clerk一点时间来同步用户状态
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            if (window.Clerk.user) {
+              console.log('✅ Session恢复成功: ' + window.Clerk.user.id);
+            }
+          }
+
+          // 🔥 策略4: 最终状态确认
+          if (window.Clerk.user) {
+            console.log('👤 用户已登录: ' + window.Clerk.user.id);
+            console.log('📧 用户邮箱:', window.Clerk.user.emailAddresses?.[0]?.emailAddress);
+          } else {
+            console.log('❌ 用户未登录');
+          }
+
+          // 标记初始化完成
+          window.clerkInitialized = true;
+          window.dispatchEvent(new CustomEvent('clerkReady'));
+
+        } catch (error) {
+          console.error('❌ Clerk初始化失败:', error);
+          // 即使失败也要标记完成，避免阻塞游戏
+          window.clerkInitialized = true;
+          window.dispatchEvent(new CustomEvent('clerkReady'));
+        }
+      }
+
+      // 🔥 多重触发策略 - 确保在各种情况下都能正确初始化
+
+      // 策略A: 标准的load事件
+      window.addEventListener("load", initializeClerkForGames);
+
+      // 策略B: DOMContentLoaded事件 (更早触发)
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeClerkForGames);
+      } else {
+        // 如果DOM已经加载完成，立即执行
+        setTimeout(initializeClerkForGames, 100);
+      }
+
+      // 策略C: 如果Clerk已经可用，立即尝试初始化
+      if (window.Clerk) {
+        setTimeout(initializeClerkForGames, 50);
+      }
     </script>
 
     <!-- 引入脚本 -->
