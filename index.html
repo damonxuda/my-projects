@@ -136,7 +136,7 @@
           <div class="access-badge private">🔐 需要登录</div>
         </a>
         
-        <a href="/games/" class="nav-button public">
+        <a href="/games/" class="nav-button public" id="games-link">
           <div class="button-title">🎮 休闲时刻</div>
           <div class="access-badge public">🌍 公开访问</div>
         </a>
@@ -151,5 +151,56 @@
         <p>点击上方按钮进入相应模块</p>
       </div>
     </div>
+
+    <!-- Clerk SDK for cross-module authentication -->
+    <script crossorigin="anonymous" data-clerk-publishable-key="pk_test_bWlnaHR5LWRvZy0zOS5jbGVyay5hY2NvdW50cy5kZXYk" src="https://mighty-dog-39.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" type="text/javascript"></script>
+
+    <script>
+      // 跨模块认证逻辑
+      window.addEventListener('load', async () => {
+        if (!window.Clerk) {
+          console.log('Clerk not available, using basic navigation');
+          return;
+        }
+
+        try {
+          await window.Clerk.load();
+
+          // 获取Games链接按钮
+          const gamesLink = document.getElementById('games-link');
+
+          if (gamesLink) {
+            // 添加点击事件处理器
+            gamesLink.addEventListener('click', async (e) => {
+              e.preventDefault(); // 阻止默认链接行为
+
+              // 检查用户是否已登录
+              if (window.Clerk.user && window.Clerk.session) {
+                try {
+                  // 获取session token
+                  const sessionToken = await window.Clerk.session.getToken();
+
+                  if (sessionToken) {
+                    // 带token跳转到Games
+                    const gamesUrl = `/games/nonogram/levels.html?session=${encodeURIComponent(sessionToken)}`;
+                    console.log('🚀 跨模块认证跳转到Games:', gamesUrl);
+                    window.location.href = gamesUrl;
+                    return;
+                  }
+                } catch (tokenError) {
+                  console.error('获取session token失败:', tokenError);
+                }
+              }
+
+              // 如果没有登录或获取token失败，使用普通跳转
+              console.log('🔓 普通跳转到Games (游客模式)');
+              window.location.href = '/games/';
+            });
+          }
+        } catch (error) {
+          console.error('Clerk初始化失败:', error);
+        }
+      });
+    </script>
   </body>
 </html>
