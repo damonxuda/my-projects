@@ -346,14 +346,30 @@ class SmartGameStorage {
     console.log('  - window.Clerk.user:', window.Clerk ? !!window.Clerk.user : 'N/A');
     console.log('  - window.clerkInitialized:', window.clerkInitialized);
 
-    // 确保Clerk已完全初始化且用户已登录
-    if (window.Clerk && window.Clerk.loaded && window.Clerk.user) {
-      console.log('✅ 用户已登录:', window.Clerk.user.id);
+    // 优先检查：如果clerkInitialized为true且有用户对象，即使loaded为false也认为已登录
+    // 这解决了时机问题：在clerkReady事件触发后，loaded状态可能有短暂延迟
+    if (window.clerkInitialized && window.Clerk && window.Clerk.user) {
+      console.log('✅ 用户已登录 (通过clerkInitialized检查):', window.Clerk.user.id);
       return true;
     }
 
-    // 如果Clerk还在加载中，不能确定用户状态
-    if (window.Clerk && !window.Clerk.loaded) {
+    // 传统检查：确保Clerk已完全初始化且用户已登录
+    if (window.Clerk && window.Clerk.loaded && window.Clerk.user) {
+      console.log('✅ 用户已登录 (传统检查):', window.Clerk.user.id);
+      return true;
+    }
+
+    // 如果Clerk还在加载中但clerkInitialized已为true，给一次机会检查用户
+    if (window.clerkInitialized && window.Clerk && !window.Clerk.loaded) {
+      console.log('🔄 Clerk已初始化但loaded为false，检查用户对象...');
+      if (window.Clerk.user) {
+        console.log('✅ 找到用户对象，认为已登录:', window.Clerk.user.id);
+        return true;
+      }
+    }
+
+    // 如果Clerk还在加载中且clerkInitialized为false，不能确定用户状态
+    if (window.Clerk && !window.Clerk.loaded && !window.clerkInitialized) {
       console.log('⏳ Clerk正在加载中...');
       return false;
     }
