@@ -53,20 +53,59 @@ const QuizMain = () => {
     courseName: "",
   });
 
-  // SSO入口：检测跨模块认证token
+  // SSO入口：检测跨模块认证token并解析
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const sessionToken = urlParams.get('session');
 
     if (sessionToken && !isSignedIn) {
       console.log('🔗 Quiz检测到跨模块认证token，处理中...');
+
+      try {
+        // 🔥 直接解析JWT token获取用户信息 (参考Games模块实现)
+        const tokenParts = sessionToken.split('.');
+        if (tokenParts.length === 3) {
+          const payload = JSON.parse(atob(tokenParts[1]));
+
+          // 🔥 将JWT数据写入localStorage，让clerk-react识别
+          const clerkData = {
+            user: {
+              id: payload.sub,
+              emailAddresses: [{ emailAddress: payload.email || 'user@crossmodule.auth' }],
+              firstName: payload.given_name || 'Cross',
+              lastName: payload.family_name || 'Module'
+            },
+            session: {
+              id: payload.sid,
+              status: 'active'
+            },
+            client: {
+              id: payload.client_id || 'cross-module-client'
+            }
+          };
+
+          // 写入clerk-react期望的localStorage格式
+          localStorage.setItem('__clerk_environment', JSON.stringify(clerkData));
+
+          console.log('✅ Quiz跨模块认证token已解析并写入localStorage');
+          console.log('📋 解析的用户信息:', {
+            userId: payload.sub,
+            email: payload.email,
+            sessionId: payload.sid
+          });
+
+          // 刷新页面让clerk-react重新读取localStorage
+          setTimeout(() => {
+            window.location.reload();
+          }, 100);
+        }
+      } catch (error) {
+        console.error('❌ JWT token解析失败:', error);
+      }
+
       // 清理URL参数，避免token暴露
       const cleanUrl = window.location.pathname;
       window.history.replaceState({}, document.title, cleanUrl);
-
-      // 这里可以根据需要处理token，比如存储到localStorage
-      // 或者触发auth-clerk的认证流程
-      console.log('✅ Quiz跨模块认证token已处理');
     }
   }, [isSignedIn]);
 
