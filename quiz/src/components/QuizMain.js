@@ -64,17 +64,15 @@ const QuizMain = () => {
 
         try {
           // 🔥 使用Clerk的setSession()方法正确处理跨模块认证 (基于搜索到的最佳实践)
-          if (sessionToken && !isSignedIn) {
+          if (sessionToken) {
             console.log('🔄 尝试使用setSession()方法设置认证状态...');
 
             // 直接使用session token设置Clerk认证状态
             await setSession(sessionToken);
 
-          console.log('✅ Quiz跨模块认证成功，session已设置');
-        } else if (sessionToken && isSignedIn) {
-          console.log('ℹ️ 用户已登录，跳过token设置');
-        }
-      } catch (error) {
+            console.log('✅ Quiz跨模块认证成功，session已设置');
+          }
+        } catch (error) {
         console.error('❌ setSession失败，尝试fallback方案:', error);
 
         // Fallback: 如果setSession失败，仍然尝试解析JWT并设置localStorage
