@@ -276,6 +276,34 @@
     <script crossorigin="anonymous" data-clerk-publishable-key="pk_test_bWlnaHR5LWRvZy0zOS5jbGVyay5hY2NvdW50cy5kZXYk" src="https://mighty-dog-39.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" type="text/javascript"></script>
 
     <script>
+      // 🔥 全局函数：从localStorage获取缓存的token (避免网络超时)
+      function getCachedSessionToken() {
+        try {
+          // 首先尝试从mockClerkUser获取 (如果存在)
+          if (window.mockClerkUser && window.mockClerkUser.originalSessionToken) {
+            console.log('📦 从mockClerkUser获取缓存token');
+            return window.mockClerkUser.originalSessionToken;
+          }
+
+          // 从localStorage获取缓存的认证环境
+          const clerkEnv = localStorage.getItem('__clerk_environment');
+          if (clerkEnv) {
+            const envData = JSON.parse(clerkEnv);
+            if (envData.session && envData.session.id) {
+              console.log('📦 从localStorage获取缓存token');
+              // 这里我们返回session.id作为token (在跨模块认证中被设置)
+              return envData.session.id;
+            }
+          }
+
+          console.log('⚠️ 没有找到缓存的token');
+          return null;
+        } catch (error) {
+          console.error('❌ 获取缓存token失败:', error);
+          return null;
+        }
+      }
+
       // 主页面认证和跨模块跳转逻辑
       window.addEventListener('load', async () => {
         // DOM元素
@@ -288,33 +316,6 @@
         const quizLink = document.getElementById('quiz-link');
         const adminLink = document.getElementById('admin-link');
 
-        // 🔥 从localStorage获取缓存的token (避免网络超时)
-        function getCachedSessionToken() {
-          try {
-            // 首先尝试从mockClerkUser获取 (如果存在)
-            if (window.mockClerkUser && window.mockClerkUser.originalSessionToken) {
-              console.log('📦 从mockClerkUser获取缓存token');
-              return window.mockClerkUser.originalSessionToken;
-            }
-
-            // 从localStorage获取缓存的认证环境
-            const clerkEnv = localStorage.getItem('__clerk_environment');
-            if (clerkEnv) {
-              const envData = JSON.parse(clerkEnv);
-              if (envData.session && envData.session.id) {
-                console.log('📦 从localStorage获取缓存token');
-                // 这里我们返回session.id作为token (在跨模块认证中被设置)
-                return envData.session.id;
-              }
-            }
-
-            console.log('⚠️ 没有找到缓存的token');
-            return null;
-          } catch (error) {
-            console.error('❌ 获取缓存token失败:', error);
-            return null;
-          }
-        }
 
         // 更新UI状态
         function updateAuthUI(isSignedIn, user) {
