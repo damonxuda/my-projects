@@ -279,20 +279,35 @@
       // 🔥 全局函数：从localStorage获取缓存的token (避免网络超时)
       function getCachedSessionToken() {
         try {
-          // 首先尝试从mockClerkUser获取 (如果存在)
+          // 🔥 首先尝试从活跃的Clerk会话获取token
+          if (window.Clerk && window.Clerk.session) {
+            console.log('📦 从活跃Clerk会话获取token');
+            // 直接从活跃会话获取session token
+            return window.Clerk.session.id;
+          }
+
+          // 其次尝试从mockClerkUser获取 (如果存在)
           if (window.mockClerkUser && window.mockClerkUser.originalSessionToken) {
             console.log('📦 从mockClerkUser获取缓存token');
             return window.mockClerkUser.originalSessionToken;
           }
 
-          // 从localStorage获取缓存的认证环境
+          // 最后从localStorage获取缓存的认证环境
           const clerkEnv = localStorage.getItem('__clerk_environment');
           if (clerkEnv) {
             const envData = JSON.parse(clerkEnv);
+            console.log('🔍 localStorage数据结构:', envData);
+
+            // 检查多种可能的session结构
             if (envData.session && envData.session.id) {
-              console.log('📦 从localStorage获取缓存token');
-              // 这里我们返回session.id作为token (在跨模块认证中被设置)
+              console.log('📦 从localStorage获取session.id');
               return envData.session.id;
+            }
+
+            // 检查是否有其他session格式
+            if (envData.sessionId) {
+              console.log('📦 从localStorage获取sessionId');
+              return envData.sessionId;
             }
           }
 
@@ -704,7 +719,17 @@
             html += `<div>用户ID: ${data.user?.id || '未设置'}</div>`;
             html += `<div>邮箱: ${data.user?.emailAddresses?.[0]?.emailAddress || '未设置'}</div>`;
             html += `<div>会话ID: ${data.session?.id || '未设置'}</div>`;
-            console.log('🔍 LocalStorage认证数据:', data);
+
+            // 🔍 详细数据结构调试
+            console.log('🔍 完整LocalStorage数据结构:', JSON.stringify(data, null, 2));
+            console.log('🔍 session对象:', data.session);
+            console.log('🔍 session所有键:', data.session ? Object.keys(data.session) : '无session');
+
+            // 显示原始数据结构
+            html += '<details style="margin-top: 10px;"><summary>原始数据结构</summary>';
+            html += '<pre style="font-size: 10px; max-height: 200px; overflow-y: auto; background: #333; padding: 10px;">';
+            html += JSON.stringify(data, null, 2).substring(0, 1000) + '...';
+            html += '</pre></details>';
           } else {
             html += '<div style="color: #f48771;">❌ __clerk_environment 不存在</div>';
             console.log('🔍 LocalStorage无认证数据');
