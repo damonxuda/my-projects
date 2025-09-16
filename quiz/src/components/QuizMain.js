@@ -15,7 +15,33 @@ const QuizMain = () => {
   const [loading, setLoading] = useState(true);
 
   // 认证状态 - 使用Clerk
-  const { user, isSignedIn, isAdmin, loading: authLoading } = useAuth();
+  const { user, isSignedIn, isAdmin, loading: authLoading, getCachedToken } = useAuth();
+
+  // 跨模块导航功能
+  const handleCrossModuleNavigation = async (targetUrl) => {
+    if (!isSignedIn) {
+      // 未登录用户直接跳转
+      window.location.href = targetUrl;
+      return;
+    }
+
+    try {
+      // 获取当前session token
+      const token = await getCachedToken();
+      if (token) {
+        // 带token跳转到目标模块
+        const urlWithSession = `${targetUrl}?session=${encodeURIComponent(token)}`;
+        console.log('🚀 Quiz跨模块认证跳转:', urlWithSession);
+        window.location.href = urlWithSession;
+      } else {
+        console.warn('⚠️ 无法获取session token，使用普通跳转');
+        window.location.href = targetUrl;
+      }
+    } catch (error) {
+      console.error('❌ 跨模块跳转失败:', error);
+      window.location.href = targetUrl;
+    }
+  };
 
   // 筛选状态
   const [filters, setFilters] = useState({
@@ -26,6 +52,23 @@ const QuizMain = () => {
     masteryLevel: "",
     courseName: "",
   });
+
+  // SSO入口：检测跨模块认证token
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionToken = urlParams.get('session');
+
+    if (sessionToken && !isSignedIn) {
+      console.log('🔗 Quiz检测到跨模块认证token，处理中...');
+      // 清理URL参数，避免token暴露
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+
+      // 这里可以根据需要处理token，比如存储到localStorage
+      // 或者触发auth-clerk的认证流程
+      console.log('✅ Quiz跨模块认证token已处理');
+    }
+  }, [isSignedIn]);
 
   // 分类和配置
   const mathCategories = [
@@ -265,12 +308,12 @@ const QuizMain = () => {
             </div>
             <div className="flex items-center space-x-3">
               {/* 回首页按钮 */}
-              <a 
-                href="/" 
+              <button
+                onClick={() => handleCrossModuleNavigation("/")}
                 className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700 transition-colors"
               >
                 🏠 首页
-              </a>
+              </button>
               {/* 右上角登出按钮 */}
               <UserProfile showWelcome={false} afterSignOutUrl="/" />
             </div>

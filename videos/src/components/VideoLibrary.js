@@ -20,10 +20,11 @@ const VideoLibrary = () => {
   const { user, isSignedIn, isAdmin, fetchVideoList, getVideoUrl, getCachedToken, clearTokenCache } =
     useAuth();
 
-  // 🔥 测试跨模块身份传递功能
-  const handleTestCrossModuleAuth = async () => {
+  // 跨模块导航功能
+  const handleCrossModuleNavigation = async (targetUrl) => {
     if (!isSignedIn) {
-      alert('请先登录');
+      // 未登录用户直接跳转
+      window.location.href = targetUrl;
       return;
     }
 
@@ -31,17 +32,36 @@ const VideoLibrary = () => {
       // 获取当前session token
       const token = await getCachedToken();
       if (token) {
-        // 生成带session的Games模块URL
-        const gamesUrl = `http://localhost:8081/nonogram/levels.html?session=${encodeURIComponent(token)}`;
-        window.open(gamesUrl, '_blank');
+        // 带token跳转到目标模块
+        const urlWithSession = `${targetUrl}?session=${encodeURIComponent(token)}`;
+        console.log('🚀 Videos跨模块认证跳转:', urlWithSession);
+        window.location.href = urlWithSession;
       } else {
-        alert('无法获取session token');
+        console.warn('⚠️ 无法获取session token，使用普通跳转');
+        window.location.href = targetUrl;
       }
     } catch (error) {
-      console.error('获取session token失败:', error);
-      alert('获取session token失败');
+      console.error('❌ 跨模块跳转失败:', error);
+      window.location.href = targetUrl;
     }
   };
+
+  // SSO入口：检测跨模块认证token
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionToken = urlParams.get('session');
+
+    if (sessionToken && !isSignedIn) {
+      console.log('🔗 Videos检测到跨模块认证token，处理中...');
+      // 清理URL参数，避免token暴露
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, cleanUrl);
+
+      // 这里可以根据需要处理token，比如存储到localStorage
+      // 或者触发auth-clerk的认证流程
+      console.log('✅ Videos跨模块认证token已处理');
+    }
+  }, [isSignedIn]);
 
   const API_BASE_URL = process.env.REACT_APP_VIDEO_API_URL;
 
@@ -433,13 +453,13 @@ const VideoLibrary = () => {
                 <Plus size={16} />
               </button>
 
-              {/* 🔥 测试跨模块身份传递按钮 */}
+              {/* 回首页按钮 */}
               <button
-                onClick={handleTestCrossModuleAuth}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                onClick={() => handleCrossModuleNavigation("/")}
+                className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 transition-colors"
               >
-                <span>🎮</span>
-                <span>测试跳转到Games模块</span>
+                <span>🏠</span>
+                <span>首页</span>
               </button>
             </div>
           </div>

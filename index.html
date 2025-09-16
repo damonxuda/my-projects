@@ -481,8 +481,8 @@
                   const sessionToken = await window.Clerk.session.getToken();
 
                   if (sessionToken) {
-                    // 带token跳转到Games
-                    const gamesUrl = `/games/nonogram/levels.html?session=${encodeURIComponent(sessionToken)}`;
+                    // 带token跳转到Games主页
+                    const gamesUrl = `/games/?session=${encodeURIComponent(sessionToken)}`;
                     console.log('🚀 跨模块认证跳转到Games:', gamesUrl);
                     window.location.href = gamesUrl;
                     return;
