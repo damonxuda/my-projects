@@ -17,7 +17,7 @@ const VideoLibrary = () => {
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [isProcessingYouTube, setIsProcessingYouTube] = useState(false);
 
-  const { user, isSignedIn, isAdmin, fetchVideoList, getVideoUrl, getCachedToken, clearTokenCache } =
+  const { user, isSignedIn, isAdmin, fetchVideoList, getVideoUrl, getCachedToken, clearTokenCache, setSession } =
     useAuth();
 
   // 跨模块导航功能
@@ -48,59 +48,52 @@ const VideoLibrary = () => {
 
   // SSO入口：检测跨模块认证token并解析
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const sessionToken = urlParams.get('session');
+    const handleCrossModuleAuth = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const sessionToken = urlParams.get('session');
 
-    if (sessionToken && !isSignedIn) {
-      console.log('🔗 Videos检测到跨模块认证token，处理中...');
+      if (sessionToken) {
+        console.log('🔗 Videos检测到跨模块认证token，处理中...');
 
-      try {
-        // 🔥 直接解析JWT token获取用户信息 (参考Games模块实现)
-        const tokenParts = sessionToken.split('.');
-        if (tokenParts.length === 3) {
-          const payload = JSON.parse(atob(tokenParts[1]));
-
-          // 🔥 将JWT数据写入localStorage，让clerk-react识别
-          const clerkData = {
-            user: {
-              id: payload.sub,
-              emailAddresses: [{ emailAddress: payload.email || 'user@crossmodule.auth' }],
-              firstName: payload.given_name || 'Cross',
-              lastName: payload.family_name || 'Module'
-            },
-            session: {
-              id: payload.sid,
-              status: 'active'
-            },
-            client: {
-              id: payload.client_id || 'cross-module-client'
+        try {
+          // 🔥 使用Clerk的setSession()方法 (官方推荐)
+          if (!isSignedIn) {
+            console.log('🔄 Videos: 使用setSession()设置认证状态...');
+            await setSession(sessionToken);
+            console.log('✅ Videos跨模块认证成功');
+          }
+        } catch (error) {
+          console.error('❌ setSession失败，尝试fallback:', error);
+          // Fallback到localStorage方案
+          try {
+            const tokenParts = sessionToken.split('.');
+            if (tokenParts.length === 3) {
+              const payload = JSON.parse(atob(tokenParts[1]));
+              const clerkData = {
+                user: {
+                  id: payload.sub,
+                  emailAddresses: [{ emailAddress: payload.email || 'user@crossmodule.auth' }],
+                  firstName: payload.given_name || 'Cross',
+                  lastName: payload.family_name || 'Module'
+                },
+                session: { id: payload.sid, status: 'active' }
+              };
+              localStorage.setItem('__clerk_environment', JSON.stringify(clerkData));
+              setTimeout(() => window.location.reload(), 100);
             }
-          };
-
-          // 写入clerk-react期望的localStorage格式
-          localStorage.setItem('__clerk_environment', JSON.stringify(clerkData));
-
-          console.log('✅ Videos跨模块认证token已解析并写入localStorage');
-          console.log('📋 解析的用户信息:', {
-            userId: payload.sub,
-            email: payload.email,
-            sessionId: payload.sid
-          });
-
-          // 刷新页面让clerk-react重新读取localStorage
-          setTimeout(() => {
-            window.location.reload();
-          }, 100);
+          } catch (fallbackError) {
+            console.error('❌ Fallback也失败:', fallbackError);
+          }
         }
-      } catch (error) {
-        console.error('❌ JWT token解析失败:', error);
-      }
 
-      // 清理URL参数，避免token暴露
-      const cleanUrl = window.location.pathname;
-      window.history.replaceState({}, document.title, cleanUrl);
-    }
-  }, [isSignedIn]);
+        // 清理URL参数
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    };
+
+    handleCrossModuleAuth();
+  }, []);
 
   const API_BASE_URL = process.env.REACT_APP_VIDEO_API_URL;
 

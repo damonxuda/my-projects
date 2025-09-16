@@ -5,7 +5,7 @@ import { User, Users, Shield, Settings } from 'lucide-react';
 
 const AdminPermissionsApp = () => {
   const [activeTab, setActiveTab] = useState('users');
-  const { user, isAdmin, getCachedToken } = useAuth();
+  const { user, isAdmin, getCachedToken, setSession } = useAuth();
 
   // 跨模块导航功能
   const handleCrossModuleNavigation = async (targetUrl) => {
@@ -29,59 +29,66 @@ const AdminPermissionsApp = () => {
 
   // SSO入口：检测跨模块认证token并解析
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const sessionToken = urlParams.get('session');
+    const handleCrossModuleAuth = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const sessionToken = urlParams.get('session');
 
-    if (sessionToken) {
-      console.log('🔗 Admin检测到跨模块认证token，处理中...');
+      if (sessionToken) {
+        console.log('🔗 Admin检测到跨模块认证token，处理中...');
 
-      try {
-        // 🔥 直接解析JWT token获取用户信息 (参考Games模块实现)
-        const tokenParts = sessionToken.split('.');
-        if (tokenParts.length === 3) {
-          const payload = JSON.parse(atob(tokenParts[1]));
+        try {
+          // 🔥 使用Clerk的setSession()方法正确处理跨模块认证 (基于搜索到的最佳实践)
+          if (sessionToken) {
+            console.log('🔄 尝试使用setSession()方法设置认证状态...');
 
-          // 🔥 将JWT数据写入localStorage，让clerk-react识别
-          const clerkData = {
-            user: {
-              id: payload.sub,
-              emailAddresses: [{ emailAddress: payload.email || 'user@crossmodule.auth' }],
-              firstName: payload.given_name || 'Cross',
-              lastName: payload.family_name || 'Module'
-            },
-            session: {
-              id: payload.sid,
-              status: 'active'
-            },
-            client: {
-              id: payload.client_id || 'cross-module-client'
+            // 直接使用session token设置Clerk认证状态
+            await setSession(sessionToken);
+
+            console.log('✅ Admin跨模块认证成功，session已设置');
+          }
+        } catch (error) {
+          console.error('❌ setSession失败，尝试fallback方案:', error);
+
+          // Fallback: 如果setSession失败，仍然尝试解析JWT并设置localStorage
+          try {
+            const tokenParts = sessionToken.split('.');
+            if (tokenParts.length === 3) {
+              const payload = JSON.parse(atob(tokenParts[1]));
+              console.log('🔄 Fallback: 解析JWT token并设置localStorage');
+
+              const clerkData = {
+                user: {
+                  id: payload.sub,
+                  emailAddresses: [{ emailAddress: payload.email || 'user@crossmodule.auth' }],
+                  firstName: payload.given_name || 'Cross',
+                  lastName: payload.family_name || 'Module'
+                },
+                session: {
+                  id: payload.sid,
+                  status: 'active'
+                }
+              };
+
+              localStorage.setItem('__clerk_environment', JSON.stringify(clerkData));
+              console.log('✅ Fallback localStorage设置完成，即将刷新页面');
+
+              setTimeout(() => {
+                window.location.reload();
+              }, 100);
             }
-          };
-
-          // 写入clerk-react期望的localStorage格式
-          localStorage.setItem('__clerk_environment', JSON.stringify(clerkData));
-
-          console.log('✅ Admin跨模块认证token已解析并写入localStorage');
-          console.log('📋 解析的用户信息:', {
-            userId: payload.sub,
-            email: payload.email,
-            sessionId: payload.sid
-          });
-
-          // 刷新页面让clerk-react重新读取localStorage
-          setTimeout(() => {
-            window.location.reload();
-          }, 100);
+          } catch (fallbackError) {
+            console.error('❌ Fallback方案也失败:', fallbackError);
+          }
         }
-      } catch (error) {
-        console.error('❌ JWT token解析失败:', error);
-      }
 
-      // 清理URL参数，避免token暴露
-      const cleanUrl = window.location.pathname;
-      window.history.replaceState({}, document.title, cleanUrl);
-    }
-  }, []);
+        // 清理URL参数，避免token暴露
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+    };
+
+    handleCrossModuleAuth();
+  }, []); // 只在组件挂载时执行一次
 
   return (
     <div className="max-w-6xl mx-auto p-6 bg-gray-50 min-h-screen">
