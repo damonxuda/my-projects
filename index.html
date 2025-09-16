@@ -268,6 +268,7 @@
 
       <div class="footer">
         <p>点击上方按钮进入相应模块</p>
+        <button id="debug-auth-btn" style="margin-top: 10px; padding: 5px 10px; background: #333; color: #fff; border: 1px solid #666; border-radius: 3px; cursor: pointer; font-size: 12px;">🔍 调试认证状态</button>
       </div>
     </div>
 
@@ -617,6 +618,14 @@
             });
           }
 
+          // 🔍 添加调试按钮功能
+          const debugBtn = document.getElementById('debug-auth-btn');
+          if (debugBtn) {
+            debugBtn.addEventListener('click', () => {
+              showDebugModal();
+            });
+          }
+
         } catch (error) {
           console.error('Clerk初始化失败:', error);
           authStatus.textContent = '认证服务异常';
@@ -625,6 +634,170 @@
           loginBtn.disabled = true;
         }
       });
+
+      // 🔍 调试模态框功能
+      function showDebugModal() {
+        // 移除已存在的调试模态框
+        const existingModal = document.getElementById('debug-modal');
+        if (existingModal) {
+          existingModal.remove();
+        }
+
+        // 创建调试模态框
+        const modal = document.createElement('div');
+        modal.id = 'debug-modal';
+        modal.style.cssText = `
+          position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+          background: rgba(0,0,0,0.8); z-index: 9999; display: flex;
+          justify-content: center; align-items: center;
+        `;
+
+        const content = document.createElement('div');
+        content.style.cssText = `
+          background: #1e1e1e; color: #d4d4d4; padding: 20px;
+          border-radius: 10px; max-width: 600px; max-height: 80%;
+          overflow-y: auto; font-family: monospace; font-size: 14px;
+        `;
+
+        content.innerHTML = `
+          <h3 style="color: #4fc3f7; margin-top: 0;">🔍 跨模块认证调试工具</h3>
+          <div id="debug-content"></div>
+          <div style="margin-top: 20px;">
+            <button onclick="runDebugDiagnostic()" style="padding: 8px 15px; margin: 5px; background: #0d7377; color: white; border: none; border-radius: 3px; cursor: pointer;">运行诊断</button>
+            <button onclick="clearDebugLocalStorage()" style="padding: 8px 15px; margin: 5px; background: #d32f2f; color: white; border: none; border-radius: 3px; cursor: pointer;">清理缓存</button>
+            <button onclick="testCrossModuleAuth()" style="padding: 8px 15px; margin: 5px; background: #388e3c; color: white; border: none; border-radius: 3px; cursor: pointer;">测试跨模块</button>
+            <button onclick="closeDebugModal()" style="padding: 8px 15px; margin: 5px; background: #666; color: white; border: none; border-radius: 3px; cursor: pointer;">关闭</button>
+          </div>
+        `;
+
+        modal.appendChild(content);
+        document.body.appendChild(modal);
+
+        // 自动运行诊断
+        setTimeout(() => runDebugDiagnostic(), 100);
+
+        // 点击外部关闭
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) closeDebugModal();
+        });
+      }
+
+      function closeDebugModal() {
+        const modal = document.getElementById('debug-modal');
+        if (modal) modal.remove();
+      }
+
+      function runDebugDiagnostic() {
+        const content = document.getElementById('debug-content');
+        if (!content) return;
+
+        let html = '<div style="background: #2d2d2d; padding: 15px; border-radius: 5px; margin-bottom: 15px;">';
+
+        // 检查 LocalStorage
+        html += '<h4 style="color: #81c784; margin: 0 0 10px 0;">📦 LocalStorage 状态</h4>';
+        try {
+          const clerkEnv = localStorage.getItem('__clerk_environment');
+          if (clerkEnv) {
+            const data = JSON.parse(clerkEnv);
+            html += '<div style="color: #81c784;">✅ __clerk_environment 存在</div>';
+            html += `<div>用户ID: ${data.user?.id || '未设置'}</div>`;
+            html += `<div>邮箱: ${data.user?.emailAddresses?.[0]?.emailAddress || '未设置'}</div>`;
+            html += `<div>会话ID: ${data.session?.id || '未设置'}</div>`;
+            console.log('🔍 LocalStorage认证数据:', data);
+          } else {
+            html += '<div style="color: #f48771;">❌ __clerk_environment 不存在</div>';
+            console.log('🔍 LocalStorage无认证数据');
+          }
+        } catch (e) {
+          html += '<div style="color: #f48771;">❌ LocalStorage解析错误</div>';
+        }
+
+        html += '</div><div style="background: #2d2d2d; padding: 15px; border-radius: 5px; margin-bottom: 15px;">';
+
+        // 检查 Clerk 状态
+        html += '<h4 style="color: #81c784; margin: 0 0 10px 0;">🌐 Clerk SDK 状态</h4>';
+        if (typeof window.Clerk !== 'undefined') {
+          html += '<div style="color: #81c784;">✅ Clerk SDK 已加载</div>';
+          html += `<div>用户状态: ${window.Clerk.user ? '已登录' : '未登录'}</div>`;
+          if (window.Clerk.user) {
+            const email = window.Clerk.user.emailAddresses?.[0]?.emailAddress;
+            html += `<div>用户邮箱: ${email || '未知'}</div>`;
+            console.log('🔍 Clerk用户状态:', window.Clerk.user);
+          }
+          if (window.Clerk.session) {
+            html += `<div>会话ID: ${window.Clerk.session.id || '未知'}</div>`;
+            console.log('🔍 Clerk会话状态:', window.Clerk.session);
+          } else {
+            html += '<div style="color: #ffb74d;">⚠️ 无活跃会话</div>';
+          }
+        } else {
+          html += '<div style="color: #f48771;">❌ Clerk SDK 未加载</div>';
+        }
+
+        html += '</div><div style="background: #2d2d2d; padding: 15px; border-radius: 5px; margin-bottom: 15px;">';
+
+        // 检查 URL 参数
+        html += '<h4 style="color: #81c784; margin: 0 0 10px 0;">📝 URL 参数</h4>';
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionParam = urlParams.get('session');
+        if (sessionParam) {
+          html += '<div style="color: #81c784;">✅ 检测到session参数</div>';
+          html += `<div>Token长度: ${sessionParam.length} 字符</div>`;
+          console.log('🔍 URL session参数:', sessionParam.substring(0, 50) + '...');
+        } else {
+          html += '<div style="color: #ffb74d;">⚠️ 未检测到session参数</div>';
+        }
+
+        html += '</div>';
+
+        // 检查缓存token功能
+        html += '<div style="background: #2d2d2d; padding: 15px; border-radius: 5px; margin-bottom: 15px;">';
+        html += '<h4 style="color: #81c784; margin: 0 0 10px 0;">🔧 Token 获取测试</h4>';
+        try {
+          const cachedToken = getCachedSessionToken();
+          if (cachedToken) {
+            html += '<div style="color: #81c784;">✅ getCachedSessionToken() 工作正常</div>';
+            html += `<div>Token长度: ${cachedToken.length} 字符</div>`;
+            console.log('🔍 缓存token测试成功:', cachedToken.substring(0, 50) + '...');
+          } else {
+            html += '<div style="color: #f48771;">❌ getCachedSessionToken() 返回null</div>';
+          }
+        } catch (e) {
+          html += '<div style="color: #f48771;">❌ Token获取函数错误: ' + e.message + '</div>';
+        }
+        html += '</div>';
+
+        content.innerHTML = html;
+      }
+
+      function clearDebugLocalStorage() {
+        try {
+          const keys = Object.keys(localStorage).filter(key =>
+            key.includes('clerk') || key.includes('auth')
+          );
+          keys.forEach(key => localStorage.removeItem(key));
+          alert(`🧹 已清理 ${keys.length} 个认证相关缓存`);
+          console.log('🧹 清理完成:', keys);
+          setTimeout(() => runDebugDiagnostic(), 1000);
+        } catch (e) {
+          alert('清理失败: ' + e.message);
+        }
+      }
+
+      function testCrossModuleAuth() {
+        console.log('🧪 开始测试跨模块认证...');
+
+        // 测试token获取
+        const token = getCachedSessionToken();
+        if (token) {
+          const testUrl = `/quiz/?session=${encodeURIComponent(token)}`;
+          console.log('🚀 测试URL:', testUrl);
+          alert('即将在新标签页打开Quiz模块测试跨模块认证');
+          window.open(testUrl, '_blank');
+        } else {
+          alert('⚠️ 无法获取token，请先登录');
+        }
+      }
     </script>
   </body>
 </html>
