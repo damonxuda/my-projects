@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>跨模块认证调试工具</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #3c3c3c; border-radius: 5px; }
+        .section h3 { margin-top: 0; color: #4fc3f7; }
+        .log { background: #2d2d2d; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        .error { color: #f48771; }
+        .success { color: #81c784; }
+        .warning { color: #ffb74d; }
+        .button { padding: 10px 20px; margin: 5px; background: #0d7377; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        .button:hover { background: #14a085; }
+        .status { display: inline-block; padding: 5px 10px; border-radius: 3px; margin: 5px 0; }
+        .status.ok { background: #1b5e20; color: #c8e6c9; }
+        .status.error { background: #b71c1c; color: #ffcdd2; }
+        .status.warn { background: #e65100; color: #ffe0b2; }
+    </style>
+</head>
+<body>
+    <h1>🔍 跨模块认证调试工具</h1>
+    <p>这个工具帮助诊断跨模块认证问题</p>
+
+    <div class="section">
+        <h3>📋 快速诊断</h3>
+        <button class="button" onclick="runFullDiagnostic()">运行完整诊断</button>
+        <button class="button" onclick="clearLocalStorage()">清理LocalStorage</button>
+        <button class="button" onclick="simulateCrossModule()">模拟跨模块跳转</button>
+    </div>
+
+    <div class="section">
+        <h3>🔗 LocalStorage 状态</h3>
+        <div id="localStorage-status"></div>
+    </div>
+
+    <div class="section">
+        <h3>🌐 Clerk 状态</h3>
+        <div id="clerk-status"></div>
+    </div>
+
+    <div class="section">
+        <h3>📝 URL 参数</h3>
+        <div id="url-params"></div>
+    </div>
+
+    <div class="section">
+        <h3>🔧 调试日志</h3>
+        <div class="log" id="debug-log"></div>
+    </div>
+
+    <script>
+        let logDiv = document.getElementById('debug-log');
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warn' ? 'warning' : '';
+            logDiv.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(`[DEBUG] ${message}`);
+        }
+
+        function checkLocalStorage() {
+            const div = document.getElementById('localStorage-status');
+            let html = '';
+
+            try {
+                const clerkEnv = localStorage.getItem('__clerk_environment');
+                if (clerkEnv) {
+                    const data = JSON.parse(clerkEnv);
+                    html += '<div class="status ok">✅ __clerk_environment 存在</div>';
+                    html += `<div>用户ID: ${data.user?.id || '未设置'}</div>`;
+                    html += `<div>邮箱: ${data.user?.emailAddresses?.[0]?.emailAddress || '未设置'}</div>`;
+                    html += `<div>会话ID: ${data.session?.id || '未设置'}</div>`;
+                    html += `<div>会话状态: ${data.session?.status || '未设置'}</div>`;
+                } else {
+                    html += '<div class="status error">❌ __clerk_environment 不存在</div>';
+                }
+
+                // 检查其他相关的localStorage项
+                const allKeys = Object.keys(localStorage).filter(key =>
+                    key.includes('clerk') || key.includes('auth')
+                );
+                if (allKeys.length > 0) {
+                    html += '<div style="margin-top: 10px;"><strong>其他认证相关键:</strong></div>';
+                    allKeys.forEach(key => {
+                        html += `<div>• ${key}</div>`;
+                    });
+                }
+            } catch (error) {
+                html += '<div class="status error">❌ localStorage 解析错误</div>';
+                log(`LocalStorage 解析错误: ${error.message}`, 'error');
+            }
+
+            div.innerHTML = html;
+        }
+
+        function checkClerkStatus() {
+            const div = document.getElementById('clerk-status');
+            let html = '';
+
+            if (typeof window.Clerk !== 'undefined') {
+                html += '<div class="status ok">✅ Clerk SDK 已加载</div>';
+                html += `<div>用户状态: ${window.Clerk.user ? '已登录' : '未登录'}</div>`;
+
+                if (window.Clerk.user) {
+                    html += `<div>用户邮箱: ${window.Clerk.user.emailAddresses?.[0]?.emailAddress || '未知'}</div>`;
+                }
+
+                if (window.Clerk.session) {
+                    html += `<div>会话状态: 活跃</div>`;
+                    html += `<div>会话ID: ${window.Clerk.session.id || '未知'}</div>`;
+                } else {
+                    html += '<div class="status warn">⚠️ 无活跃会话</div>';
+                }
+            } else {
+                html += '<div class="status error">❌ Clerk SDK 未加载</div>';
+            }
+
+            div.innerHTML = html;
+        }
+
+        function checkUrlParams() {
+            const div = document.getElementById('url-params');
+            const urlParams = new URLSearchParams(window.location.search);
+            const sessionParam = urlParams.get('session');
+
+            let html = '';
+            if (sessionParam) {
+                html += '<div class="status ok">✅ 检测到session参数</div>';
+                html += `<div>Token长度: ${sessionParam.length} 字符</div>`;
+
+                // 尝试解析JWT
+                try {
+                    const tokenParts = sessionParam.split('.');
+                    if (tokenParts.length === 3) {
+                        const payload = JSON.parse(atob(tokenParts[1]));
+                        html += '<div class="status ok">✅ JWT格式正确</div>';
+                        html += `<div>用户ID: ${payload.sub || '未知'}</div>`;
+                        html += `<div>邮箱: ${payload.email || '未知'}</div>`;
+                        html += `<div>会话ID: ${payload.sid || '未知'}</div>`;
+
+                        // 检查过期时间
+                        if (payload.exp) {
+                            const expDate = new Date(payload.exp * 1000);
+                            const now = new Date();
+                            if (expDate > now) {
+                                html += `<div class="status ok">✅ Token未过期 (${expDate.toLocaleString()})</div>`;
+                            } else {
+                                html += `<div class="status error">❌ Token已过期 (${expDate.toLocaleString()})</div>`;
+                            }
+                        }
+                    } else {
+                        html += '<div class="status error">❌ JWT格式错误</div>';
+                    }
+                } catch (error) {
+                    html += '<div class="status error">❌ JWT解析失败</div>';
+                    log(`JWT解析错误: ${error.message}`, 'error');
+                }
+            } else {
+                html += '<div class="status warn">⚠️ 未检测到session参数</div>';
+            }
+
+            div.innerHTML = html;
+        }
+
+        function runFullDiagnostic() {
+            log('🚀 开始运行完整诊断...', 'success');
+
+            checkLocalStorage();
+            checkClerkStatus();
+            checkUrlParams();
+
+            log('✅ 完整诊断完成', 'success');
+        }
+
+        function clearLocalStorage() {
+            try {
+                const keysToRemove = Object.keys(localStorage).filter(key =>
+                    key.includes('clerk') || key.includes('auth')
+                );
+
+                keysToRemove.forEach(key => localStorage.removeItem(key));
+
+                log(`🧹 清理完成，删除了 ${keysToRemove.length} 个键`, 'success');
+
+                setTimeout(() => {
+                    runFullDiagnostic();
+                }, 1000);
+            } catch (error) {
+                log(`清理失败: ${error.message}`, 'error');
+            }
+        }
+
+        function simulateCrossModule() {
+            log('🔄 模拟跨模块跳转...', 'info');
+
+            // 检查是否有有效的session token可以传递
+            try {
+                const clerkEnv = localStorage.getItem('__clerk_environment');
+                if (clerkEnv) {
+                    const data = JSON.parse(clerkEnv);
+                    if (data.session?.id) {
+                        const mockUrl = `/quiz/?session=${encodeURIComponent(data.session.id)}`;
+                        log(`📋 模拟跳转URL: ${mockUrl}`, 'info');
+                        log('ℹ️ 在新标签页中打开此URL进行测试', 'info');
+                        window.open(mockUrl, '_blank');
+                        return;
+                    }
+                }
+
+                log('⚠️ 没有找到有效的session token进行模拟', 'warn');
+            } catch (error) {
+                log(`模拟失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 页面加载时自动运行诊断
+        window.addEventListener('load', () => {
+            log('🔍 调试工具已加载', 'success');
+            runFullDiagnostic();
+        });
+
+        // 监听storage变化
+        window.addEventListener('storage', (e) => {
+            if (e.key && e.key.includes('clerk')) {
+                log(`📦 检测到localStorage变化: ${e.key}`, 'info');
+                runFullDiagnostic();
+            }
+        });
+    </script>
+</body>
+</html>
