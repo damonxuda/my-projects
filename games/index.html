@@ -401,6 +401,33 @@
         const userAvatar = document.getElementById('user-avatar');
         const homeButton = document.getElementById('home-button');
 
+        // 🔥 从localStorage获取缓存的token (避免网络超时)
+        function getCachedSessionToken() {
+          try {
+            // 首先尝试从mockClerkUser获取 (如果存在)
+            if (window.mockClerkUser && window.mockClerkUser.originalSessionToken) {
+              console.log('📦 Games从mockClerkUser获取缓存token');
+              return window.mockClerkUser.originalSessionToken;
+            }
+
+            // 从localStorage获取缓存的认证环境
+            const clerkEnv = localStorage.getItem('__clerk_environment');
+            if (clerkEnv) {
+              const envData = JSON.parse(clerkEnv);
+              if (envData.session && envData.session.id) {
+                console.log('📦 Games从localStorage获取缓存token');
+                return envData.session.id;
+              }
+            }
+
+            console.log('⚠️ Games没有找到缓存的token');
+            return null;
+          } catch (error) {
+            console.error('❌ Games获取缓存token失败:', error);
+            return null;
+          }
+        }
+
         // 更新UI状态
         function updateAuthUI(isSignedIn, user) {
           if (isSignedIn && user) {
@@ -588,18 +615,14 @@
               e.preventDefault();
               // 检查用户是否已登录
               if (window.Clerk.user && window.Clerk.session) {
-                try {
-                  // 获取session token
-                  const sessionToken = await window.Clerk.session.getToken();
-                  if (sessionToken) {
-                    // 带token跳转到主站
-                    const homeUrl = `/?session=${encodeURIComponent(sessionToken)}`;
-                    console.log('🚀 Games跨模块认证跳转到主站:', homeUrl);
-                    window.location.href = homeUrl;
-                    return;
-                  }
-                } catch (tokenError) {
-                  console.error('获取session token失败:', tokenError);
+                // 获取缓存的session token (避免网络超时)
+                const sessionToken = getCachedSessionToken();
+                if (sessionToken) {
+                  // 带token跳转到主站
+                  const homeUrl = `/?session=${encodeURIComponent(sessionToken)}`;
+                  console.log('🚀 Games跨模块认证跳转到主站:', homeUrl);
+                  window.location.href = homeUrl;
+                  return;
                 }
               }
               // 如果没有登录或获取token失败，使用普通跳转

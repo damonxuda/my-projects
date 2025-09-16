@@ -287,6 +287,34 @@
         const quizLink = document.getElementById('quiz-link');
         const adminLink = document.getElementById('admin-link');
 
+        // 🔥 从localStorage获取缓存的token (避免网络超时)
+        function getCachedSessionToken() {
+          try {
+            // 首先尝试从mockClerkUser获取 (如果存在)
+            if (window.mockClerkUser && window.mockClerkUser.originalSessionToken) {
+              console.log('📦 从mockClerkUser获取缓存token');
+              return window.mockClerkUser.originalSessionToken;
+            }
+
+            // 从localStorage获取缓存的认证环境
+            const clerkEnv = localStorage.getItem('__clerk_environment');
+            if (clerkEnv) {
+              const envData = JSON.parse(clerkEnv);
+              if (envData.session && envData.session.id) {
+                console.log('📦 从localStorage获取缓存token');
+                // 这里我们返回session.id作为token (在跨模块认证中被设置)
+                return envData.session.id;
+              }
+            }
+
+            console.log('⚠️ 没有找到缓存的token');
+            return null;
+          } catch (error) {
+            console.error('❌ 获取缓存token失败:', error);
+            return null;
+          }
+        }
+
         // 更新UI状态
         function updateAuthUI(isSignedIn, user) {
           if (isSignedIn && user) {
@@ -527,19 +555,15 @@
 
               // 检查用户是否已登录
               if (window.Clerk.user && window.Clerk.session) {
-                try {
-                  // 获取session token
-                  const sessionToken = await window.Clerk.session.getToken();
+                // 获取缓存的session token (避免网络超时)
+                const sessionToken = getCachedSessionToken();
 
-                  if (sessionToken) {
-                    // 带token跳转到Games主页
-                    const gamesUrl = `/games/?session=${encodeURIComponent(sessionToken)}`;
-                    console.log('🚀 跨模块认证跳转到Games:', gamesUrl);
-                    window.location.href = gamesUrl;
-                    return;
-                  }
-                } catch (tokenError) {
-                  console.error('获取session token失败:', tokenError);
+                if (sessionToken) {
+                  // 带token跳转到Games主页
+                  const gamesUrl = `/games/?session=${encodeURIComponent(sessionToken)}`;
+                  console.log('🚀 跨模块认证跳转到Games:', gamesUrl);
+                  window.location.href = gamesUrl;
+                  return;
                 }
               }
 
@@ -555,18 +579,14 @@
               e.preventDefault();
               // 检查用户是否已登录
               if (window.Clerk.user && window.Clerk.session) {
-                try {
-                  // 获取session token
-                  const sessionToken = await window.Clerk.session.getToken();
-                  if (sessionToken) {
-                    // 带token跳转到Quiz模块
-                    const quizUrl = `/quiz/?session=${encodeURIComponent(sessionToken)}`;
-                    console.log('🚀 跨模块认证跳转到Quiz:', quizUrl);
-                    window.location.href = quizUrl;
-                    return;
-                  }
-                } catch (tokenError) {
-                  console.error('获取session token失败:', tokenError);
+                // 获取缓存的session token (避免网络超时)
+                const sessionToken = getCachedSessionToken();
+                if (sessionToken) {
+                  // 带token跳转到Quiz模块
+                  const quizUrl = `/quiz/?session=${encodeURIComponent(sessionToken)}`;
+                  console.log('🚀 跨模块认证跳转到Quiz:', quizUrl);
+                  window.location.href = quizUrl;
+                  return;
                 }
               }
               // 如果没有登录或获取token失败，使用普通跳转
@@ -581,18 +601,14 @@
               e.preventDefault();
               // 检查用户是否已登录
               if (window.Clerk.user && window.Clerk.session) {
-                try {
-                  // 获取session token
-                  const sessionToken = await window.Clerk.session.getToken();
-                  if (sessionToken) {
-                    // 带token跳转到Admin模块
-                    const adminUrl = `/admin/?session=${encodeURIComponent(sessionToken)}`;
-                    console.log('🚀 跨模块认证跳转到Admin:', adminUrl);
-                    window.location.href = adminUrl;
-                    return;
-                  }
-                } catch (tokenError) {
-                  console.error('获取session token失败:', tokenError);
+                // 获取缓存的session token (避免网络超时)
+                const sessionToken = getCachedSessionToken();
+                if (sessionToken) {
+                  // 带token跳转到Admin模块
+                  const adminUrl = `/admin/?session=${encodeURIComponent(sessionToken)}`;
+                  console.log('🚀 跨模块认证跳转到Admin:', adminUrl);
+                  window.location.href = adminUrl;
+                  return;
                 }
               }
               // 如果没有登录或获取token失败，使用普通跳转
