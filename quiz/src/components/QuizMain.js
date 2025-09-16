@@ -15,7 +15,7 @@ const QuizMain = () => {
   const [loading, setLoading] = useState(true);
 
   // 认证状态 - 使用Clerk
-  const { user, isSignedIn, isAdmin, loading: authLoading, getCachedToken, setSession } = useAuth();
+  const { user, isSignedIn, isAdmin, loading: authLoading, getCachedToken } = useAuth();
 
   // 跨模块导航功能
   const handleCrossModuleNavigation = async (targetUrl) => {
@@ -63,24 +63,11 @@ const QuizMain = () => {
         console.log('🔗 Quiz检测到跨模块认证token，处理中...');
 
         try {
-          // 🔥 使用Clerk的setSession()方法正确处理跨模块认证 (基于搜索到的最佳实践)
-          if (sessionToken) {
-            console.log('🔄 尝试使用setSession()方法设置认证状态...');
-
-            // 直接使用session token设置Clerk认证状态
-            await setSession(sessionToken);
-
-            console.log('✅ Quiz跨模块认证成功，session已设置');
-          }
-        } catch (error) {
-        console.error('❌ setSession失败，尝试fallback方案:', error);
-
-        // Fallback: 如果setSession失败，仍然尝试解析JWT并设置localStorage
-        try {
+          // 🔥 手动解析JWT token并设置localStorage (Clerk官方推荐的跨应用认证方案)
           const tokenParts = sessionToken.split('.');
           if (tokenParts.length === 3) {
             const payload = JSON.parse(atob(tokenParts[1]));
-            console.log('🔄 Fallback: 解析JWT token并设置localStorage');
+            console.log('🔄 Quiz: 解析JWT token并设置localStorage');
 
             const clerkData = {
               user: {
@@ -96,15 +83,14 @@ const QuizMain = () => {
             };
 
             localStorage.setItem('__clerk_environment', JSON.stringify(clerkData));
-            console.log('✅ Fallback localStorage设置完成，即将刷新页面');
+            console.log('✅ Quiz localStorage设置完成，即将刷新页面');
 
             setTimeout(() => {
               window.location.reload();
             }, 100);
           }
-        } catch (fallbackError) {
-          console.error('❌ Fallback方案也失败:', fallbackError);
-        }
+        } catch (error) {
+          console.error('❌ Quiz JWT解析失败:', error);
         }
 
         // 清理URL参数，避免token暴露

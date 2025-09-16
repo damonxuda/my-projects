@@ -17,7 +17,7 @@ const VideoLibrary = () => {
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [isProcessingYouTube, setIsProcessingYouTube] = useState(false);
 
-  const { user, isSignedIn, isAdmin, fetchVideoList, getVideoUrl, getCachedToken, clearTokenCache, setSession } =
+  const { user, isSignedIn, isAdmin, fetchVideoList, getVideoUrl, getCachedToken, clearTokenCache } =
     useAuth();
 
   // 跨模块导航功能
@@ -56,34 +56,31 @@ const VideoLibrary = () => {
         console.log('🔗 Videos检测到跨模块认证token，处理中...');
 
         try {
-          // 🔥 使用Clerk的setSession()方法 (官方推荐)
-          if (!isSignedIn) {
-            console.log('🔄 Videos: 使用setSession()设置认证状态...');
-            await setSession(sessionToken);
-            console.log('✅ Videos跨模块认证成功');
+          // 🔥 手动解析JWT token并设置localStorage (Clerk官方推荐的跨应用认证方案)
+          const tokenParts = sessionToken.split('.');
+          if (tokenParts.length === 3) {
+            const payload = JSON.parse(atob(tokenParts[1]));
+            console.log('🔄 Videos: 解析JWT token并设置localStorage');
+
+            const clerkData = {
+              user: {
+                id: payload.sub,
+                emailAddresses: [{ emailAddress: payload.email || 'user@crossmodule.auth' }],
+                firstName: payload.given_name || 'Cross',
+                lastName: payload.family_name || 'Module'
+              },
+              session: { id: payload.sid, status: 'active' }
+            };
+
+            localStorage.setItem('__clerk_environment', JSON.stringify(clerkData));
+            console.log('✅ Videos localStorage设置完成，即将刷新页面');
+
+            setTimeout(() => {
+              window.location.reload();
+            }, 100);
           }
         } catch (error) {
-          console.error('❌ setSession失败，尝试fallback:', error);
-          // Fallback到localStorage方案
-          try {
-            const tokenParts = sessionToken.split('.');
-            if (tokenParts.length === 3) {
-              const payload = JSON.parse(atob(tokenParts[1]));
-              const clerkData = {
-                user: {
-                  id: payload.sub,
-                  emailAddresses: [{ emailAddress: payload.email || 'user@crossmodule.auth' }],
-                  firstName: payload.given_name || 'Cross',
-                  lastName: payload.family_name || 'Module'
-                },
-                session: { id: payload.sid, status: 'active' }
-              };
-              localStorage.setItem('__clerk_environment', JSON.stringify(clerkData));
-              setTimeout(() => window.location.reload(), 100);
-            }
-          } catch (fallbackError) {
-            console.error('❌ Fallback也失败:', fallbackError);
-          }
+          console.error('❌ Videos JWT解析失败:', error);
         }
 
         // 清理URL参数
