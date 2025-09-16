@@ -105,11 +105,12 @@ const QuizMain = () => {
         } catch (fallbackError) {
           console.error('❌ Fallback方案也失败:', fallbackError);
         }
-      }
+        }
 
-      // 清理URL参数，避免token暴露
-      const cleanUrl = window.location.pathname;
-      window.history.replaceState({}, document.title, cleanUrl);
+        // 清理URL参数，避免token暴露
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
     };
 
     handleCrossModuleAuth();
