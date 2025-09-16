@@ -59,15 +59,31 @@ const QuizMain = () => {
       const urlParams = new URLSearchParams(window.location.search);
       const sessionToken = urlParams.get('session');
 
+      // 🔍 详细的URL参数调试
+      console.log('🔍 Quiz当前URL:', window.location.href);
+      console.log('🔍 URL查询字符串:', window.location.search);
+      console.log('🔍 URLSearchParams对象:', urlParams.toString());
+      console.log('🔍 所有URL参数:', Object.fromEntries(urlParams));
+      console.log('🔍 session参数值:', sessionToken);
+
       if (sessionToken) {
         console.log('🔗 Quiz检测到跨模块认证token，处理中...');
+        console.log('🔍 Token长度:', sessionToken.length);
+        console.log('🔍 Token前50个字符:', sessionToken.substring(0, 50));
 
         try {
           // 🔥 手动解析JWT token并设置localStorage (Clerk官方推荐的跨应用认证方案)
           const tokenParts = sessionToken.split('.');
+          console.log('🔍 Token分段数量:', tokenParts.length);
+
           if (tokenParts.length === 3) {
+            console.log('🔍 Header长度:', tokenParts[0].length);
+            console.log('🔍 Payload长度:', tokenParts[1].length);
+            console.log('🔍 Signature长度:', tokenParts[2].length);
+
             const payload = JSON.parse(atob(tokenParts[1]));
             console.log('🔄 Quiz: 解析JWT token并设置localStorage');
+            console.log('🔍 解析后的payload:', payload);
 
             const clerkData = {
               user: {
