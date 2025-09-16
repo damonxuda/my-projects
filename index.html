@@ -233,17 +233,17 @@
           <div class="access-badge public">🌍 公开访问</div>
         </a>
         
-        <a href="/quiz/" class="nav-button private">
+        <a href="/quiz/" class="nav-button private" id="quiz-link">
           <div class="button-title">📝 题库系统</div>
           <div class="access-badge private">🔐 需要登录</div>
         </a>
-        
+
         <a href="/games/" class="nav-button public" id="games-link">
           <div class="button-title">🎮 休闲时刻</div>
           <div class="access-badge public">🌍 公开访问</div>
         </a>
-        
-        <a href="/admin/" class="nav-button private">
+
+        <a href="/admin/" class="nav-button private" id="admin-link">
           <div class="button-title">⚙️ 系统管理</div>
           <div class="access-badge private">🔐 需要登录</div>
         </a>
@@ -284,6 +284,8 @@
         const loginBtn = document.getElementById('login-btn');
         const userAvatar = document.getElementById('user-avatar');
         const gamesLink = document.getElementById('games-link');
+        const quizLink = document.getElementById('quiz-link');
+        const adminLink = document.getElementById('admin-link');
 
         // 更新UI状态
         function updateAuthUI(isSignedIn, user) {
@@ -342,6 +344,55 @@
           loginBtn.textContent = '服务不可用';
           loginBtn.disabled = true;
           return;
+        }
+
+        // 🔥 SSO入口：检测跨模块认证token并解析 (添加到主站)
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionToken = urlParams.get('session');
+
+        if (sessionToken) {
+          console.log('🔗 主站检测到跨模块认证token，处理中...');
+
+          try {
+            // 🔥 手动解析JWT token并设置localStorage (与React模块统一)
+            const tokenParts = sessionToken.split('.');
+            if (tokenParts.length === 3) {
+              const payload = JSON.parse(atob(tokenParts[1]));
+              console.log('🔄 主站: 解析JWT token并设置localStorage');
+
+              const clerkData = {
+                user: {
+                  id: payload.sub,
+                  emailAddresses: [{ emailAddress: payload.email || 'user@crossmodule.auth' }],
+                  firstName: payload.given_name || 'Cross',
+                  lastName: payload.family_name || 'Module'
+                },
+                session: {
+                  id: payload.sid,
+                  status: 'active'
+                }
+              };
+
+              localStorage.setItem('__clerk_environment', JSON.stringify(clerkData));
+              console.log('✅ 主站localStorage设置完成，即将刷新页面');
+
+              // 清理URL参数，避免token暴露
+              const cleanUrl = window.location.pathname;
+              window.history.replaceState({}, document.title, cleanUrl);
+
+              // 刷新页面让clerk-js重新读取localStorage
+              setTimeout(() => {
+                window.location.reload();
+              }, 100);
+              return; // 阻止继续执行
+            }
+          } catch (error) {
+            console.error('❌ 主站JWT解析失败:', error);
+          }
+
+          // 清理URL参数
+          const cleanUrl = window.location.pathname;
+          window.history.replaceState({}, document.title, cleanUrl);
         }
 
         try {
@@ -495,6 +546,58 @@
               // 如果没有登录或获取token失败，使用普通跳转
               console.log('🔓 普通跳转到Games (游客模式)');
               window.location.href = '/games/';
+            });
+          }
+
+          // Quiz链接的跨模块认证处理
+          if (quizLink) {
+            quizLink.addEventListener('click', async (e) => {
+              e.preventDefault();
+              // 检查用户是否已登录
+              if (window.Clerk.user && window.Clerk.session) {
+                try {
+                  // 获取session token
+                  const sessionToken = await window.Clerk.session.getToken();
+                  if (sessionToken) {
+                    // 带token跳转到Quiz模块
+                    const quizUrl = `/quiz/?session=${encodeURIComponent(sessionToken)}`;
+                    console.log('🚀 跨模块认证跳转到Quiz:', quizUrl);
+                    window.location.href = quizUrl;
+                    return;
+                  }
+                } catch (tokenError) {
+                  console.error('获取session token失败:', tokenError);
+                }
+              }
+              // 如果没有登录或获取token失败，使用普通跳转
+              console.log('🔓 普通跳转到Quiz');
+              window.location.href = '/quiz/';
+            });
+          }
+
+          // Admin链接的跨模块认证处理
+          if (adminLink) {
+            adminLink.addEventListener('click', async (e) => {
+              e.preventDefault();
+              // 检查用户是否已登录
+              if (window.Clerk.user && window.Clerk.session) {
+                try {
+                  // 获取session token
+                  const sessionToken = await window.Clerk.session.getToken();
+                  if (sessionToken) {
+                    // 带token跳转到Admin模块
+                    const adminUrl = `/admin/?session=${encodeURIComponent(sessionToken)}`;
+                    console.log('🚀 跨模块认证跳转到Admin:', adminUrl);
+                    window.location.href = adminUrl;
+                    return;
+                  }
+                } catch (tokenError) {
+                  console.error('获取session token失败:', tokenError);
+                }
+              }
+              // 如果没有登录或获取token失败，使用普通跳转
+              console.log('🔓 普通跳转到Admin');
+              window.location.href = '/admin/';
             });
           }
 
