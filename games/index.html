@@ -381,7 +381,7 @@
       </div>
       
       <div class="back-section">
-        <a href="../" class="back-button">
+        <a href="../" class="back-button" id="home-button">
           ← 返回首页
         </a>
       </div>
@@ -399,6 +399,7 @@
         const authUserView = document.getElementById('auth-user-view');
         const loginBtn = document.getElementById('login-btn');
         const userAvatar = document.getElementById('user-avatar');
+        const homeButton = document.getElementById('home-button');
 
         // 更新UI状态
         function updateAuthUI(isSignedIn, user) {
@@ -580,6 +581,32 @@
           window.Clerk.addListener(({ user, session }) => {
             updateAuthUI(!!user, user);
           });
+
+          // 🔥 回首页按钮的跨模块认证处理
+          if (homeButton) {
+            homeButton.addEventListener('click', async (e) => {
+              e.preventDefault();
+              // 检查用户是否已登录
+              if (window.Clerk.user && window.Clerk.session) {
+                try {
+                  // 获取session token
+                  const sessionToken = await window.Clerk.session.getToken();
+                  if (sessionToken) {
+                    // 带token跳转到主站
+                    const homeUrl = `/?session=${encodeURIComponent(sessionToken)}`;
+                    console.log('🚀 Games跨模块认证跳转到主站:', homeUrl);
+                    window.location.href = homeUrl;
+                    return;
+                  }
+                } catch (tokenError) {
+                  console.error('获取session token失败:', tokenError);
+                }
+              }
+              // 如果没有登录或获取token失败，使用普通跳转
+              console.log('🔓 普通跳转到主站');
+              window.location.href = '/';
+            });
+          }
 
         } catch (error) {
           console.error('Games页面Clerk初始化失败:', error);
