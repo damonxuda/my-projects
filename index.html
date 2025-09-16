@@ -276,14 +276,24 @@
     <script crossorigin="anonymous" data-clerk-publishable-key="pk_test_bWlnaHR5LWRvZy0zOS5jbGVyay5hY2NvdW50cy5kZXYk" src="https://mighty-dog-39.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" type="text/javascript"></script>
 
     <script>
-      // 🔥 全局函数：从localStorage获取缓存的token (避免网络超时)
-      function getCachedSessionToken() {
+      // 🔥 全局函数：获取JWT token用于跨模块认证
+      async function getCachedSessionToken() {
         try {
-          // 🔥 首先尝试从活跃的Clerk会话获取token
+          // 🔥 首先尝试从活跃的Clerk会话获取JWT token
           if (window.Clerk && window.Clerk.session) {
-            console.log('📦 从活跃Clerk会话获取token');
-            // 直接从活跃会话获取session token
-            return window.Clerk.session.id;
+            console.log('📦 从活跃Clerk会话获取JWT token');
+            try {
+              // 获取JWT token而不是session ID
+              const jwtToken = await window.Clerk.session.getToken();
+              if (jwtToken) {
+                console.log('✅ 成功获取JWT token，长度:', jwtToken.length);
+                return jwtToken;
+              }
+            } catch (error) {
+              console.log('⚠️ 获取JWT token失败，回退到session ID:', error.message);
+              // 如果JWT获取失败，使用session ID
+              return window.Clerk.session.id;
+            }
           }
 
           // 其次尝试从mockClerkUser获取 (如果存在)
@@ -572,15 +582,19 @@
 
               // 检查用户是否已登录
               if (window.Clerk.user && window.Clerk.session) {
-                // 获取缓存的session token (避免网络超时)
-                const sessionToken = getCachedSessionToken();
+                try {
+                  // 获取JWT token用于跨模块认证
+                  const sessionToken = await getCachedSessionToken();
 
-                if (sessionToken) {
-                  // 带token跳转到Games主页
-                  const gamesUrl = `/games/?session=${encodeURIComponent(sessionToken)}`;
-                  console.log('🚀 跨模块认证跳转到Games:', gamesUrl);
-                  window.location.href = gamesUrl;
-                  return;
+                  if (sessionToken) {
+                    // 带token跳转到Games主页
+                    const gamesUrl = `/games/?session=${encodeURIComponent(sessionToken)}`;
+                    console.log('🚀 跨模块认证跳转到Games:', gamesUrl);
+                    window.location.href = gamesUrl;
+                    return;
+                  }
+                } catch (error) {
+                  console.error('❌ 获取token失败:', error);
                 }
               }
 
@@ -596,14 +610,18 @@
               e.preventDefault();
               // 检查用户是否已登录
               if (window.Clerk.user && window.Clerk.session) {
-                // 获取缓存的session token (避免网络超时)
-                const sessionToken = getCachedSessionToken();
-                if (sessionToken) {
-                  // 带token跳转到Quiz模块
-                  const quizUrl = `/quiz/?session=${encodeURIComponent(sessionToken)}`;
-                  console.log('🚀 跨模块认证跳转到Quiz:', quizUrl);
-                  window.location.href = quizUrl;
-                  return;
+                try {
+                  // 获取JWT token用于跨模块认证
+                  const sessionToken = await getCachedSessionToken();
+                  if (sessionToken) {
+                    // 带token跳转到Quiz模块
+                    const quizUrl = `/quiz/?session=${encodeURIComponent(sessionToken)}`;
+                    console.log('🚀 跨模块认证跳转到Quiz:', quizUrl);
+                    window.location.href = quizUrl;
+                    return;
+                  }
+                } catch (error) {
+                  console.error('❌ 获取token失败:', error);
                 }
               }
               // 如果没有登录或获取token失败，使用普通跳转
@@ -618,14 +636,18 @@
               e.preventDefault();
               // 检查用户是否已登录
               if (window.Clerk.user && window.Clerk.session) {
-                // 获取缓存的session token (避免网络超时)
-                const sessionToken = getCachedSessionToken();
-                if (sessionToken) {
-                  // 带token跳转到Admin模块
-                  const adminUrl = `/admin/?session=${encodeURIComponent(sessionToken)}`;
-                  console.log('🚀 跨模块认证跳转到Admin:', adminUrl);
-                  window.location.href = adminUrl;
-                  return;
+                try {
+                  // 获取JWT token用于跨模块认证
+                  const sessionToken = await getCachedSessionToken();
+                  if (sessionToken) {
+                    // 带token跳转到Admin模块
+                    const adminUrl = `/admin/?session=${encodeURIComponent(sessionToken)}`;
+                    console.log('🚀 跨模块认证跳转到Admin:', adminUrl);
+                    window.location.href = adminUrl;
+                    return;
+                  }
+                } catch (error) {
+                  console.error('❌ 获取token失败:', error);
                 }
               }
               // 如果没有登录或获取token失败，使用普通跳转
@@ -780,14 +802,26 @@
         html += '<div style="background: #2d2d2d; padding: 15px; border-radius: 5px; margin-bottom: 15px;">';
         html += '<h4 style="color: #81c784; margin: 0 0 10px 0;">🔧 Token 获取测试</h4>';
         try {
-          const cachedToken = getCachedSessionToken();
-          if (cachedToken) {
-            html += '<div style="color: #81c784;">✅ getCachedSessionToken() 工作正常</div>';
-            html += `<div>Token长度: ${cachedToken.length} 字符</div>`;
-            console.log('🔍 缓存token测试成功:', cachedToken.substring(0, 50) + '...');
-          } else {
-            html += '<div style="color: #f48771;">❌ getCachedSessionToken() 返回null</div>';
-          }
+          getCachedSessionToken().then(cachedToken => {
+            const tokenDiv = document.querySelector('#debug-content .token-result');
+            if (tokenDiv) {
+              if (cachedToken) {
+                tokenDiv.innerHTML = '<div style="color: #81c784;">✅ getCachedSessionToken() 工作正常</div>' +
+                  `<div>Token长度: ${cachedToken.length} 字符</div>` +
+                  `<div>Token类型: ${cachedToken.includes('.') && cachedToken.split('.').length === 3 ? 'JWT' : 'Session ID'}</div>`;
+                console.log('🔍 缓存token测试成功:', cachedToken.substring(0, 50) + '...');
+              } else {
+                tokenDiv.innerHTML = '<div style="color: #f48771;">❌ getCachedSessionToken() 返回null</div>';
+              }
+            }
+          }).catch(e => {
+            const tokenDiv = document.querySelector('#debug-content .token-result');
+            if (tokenDiv) {
+              tokenDiv.innerHTML = '<div style="color: #f48771;">❌ Token获取函数错误: ' + e.message + '</div>';
+            }
+          });
+
+          html += '<div class="token-result">⏳ 正在获取token...</div>';
         } catch (e) {
           html += '<div style="color: #f48771;">❌ Token获取函数错误: ' + e.message + '</div>';
         }
@@ -810,18 +844,23 @@
         }
       }
 
-      function testCrossModuleAuth() {
+      async function testCrossModuleAuth() {
         console.log('🧪 开始测试跨模块认证...');
 
-        // 测试token获取
-        const token = getCachedSessionToken();
-        if (token) {
-          const testUrl = `/quiz/?session=${encodeURIComponent(token)}`;
-          console.log('🚀 测试URL:', testUrl);
-          alert('即将在新标签页打开Quiz模块测试跨模块认证');
-          window.open(testUrl, '_blank');
-        } else {
-          alert('⚠️ 无法获取token，请先登录');
+        try {
+          // 测试token获取
+          const token = await getCachedSessionToken();
+          if (token) {
+            const testUrl = `/quiz/?session=${encodeURIComponent(token)}`;
+            console.log('🚀 测试URL:', testUrl);
+            alert('即将在新标签页打开Quiz模块测试跨模块认证');
+            window.open(testUrl, '_blank');
+          } else {
+            alert('⚠️ 无法获取token，请先登录');
+          }
+        } catch (error) {
+          console.error('❌ 测试失败:', error);
+          alert('❌ 测试失败: ' + error.message);
         }
       }
     </script>
