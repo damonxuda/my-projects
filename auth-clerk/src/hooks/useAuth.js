@@ -86,34 +86,50 @@ export const useAuth = () => {
     };
   };
 
-  // ✅ 获取缓存的Token - 避免频繁调用导致403错误，支持并发保护
+  // ✅ 统一的跨应用Token获取机制 - 优先使用共享session，避免创建独立认证
   let tokenPromise = null;
   const getCachedToken = async () => {
     const now = Date.now();
-    
+
     // 如果token还在有效期内，直接返回缓存的token
     if (cachedToken && tokenExpiry && now < tokenExpiry) {
       return cachedToken;
     }
-    
+
     // 如果已经有正在进行的token请求，等待它完成
     if (tokenPromise) {
       return await tokenPromise;
     }
-    
+
     // 创建新的token请求
     tokenPromise = (async () => {
       try {
-        // 获取新的token
+        // 🔥 关键修复：优先尝试从共享认证状态获取token
+
+        // 1. 首先检查是否有跨应用共享的session token
+        const sharedToken = await tryGetSharedSessionToken();
+        if (sharedToken) {
+          console.log('✅ React应用使用共享session token');
+          setCachedToken(sharedToken);
+          setTokenExpiry(now + 45 * 1000);
+          return sharedToken;
+        }
+
+        // 2. 如果没有共享token，从Clerk API获取新token
         const freshToken = await getToken();
         if (freshToken) {
+          console.log('✅ React应用从Clerk API获取新token');
           setCachedToken(freshToken);
-          // 设置过期时间为45秒后（根据Clerk rate limit策略和实际观测，平衡刷新频率和缓存效果）
           setTokenExpiry(now + 45 * 1000);
+
+          // 🔥 将新token同步到共享存储，供JS应用使用
+          await syncTokenToSharedStorage(freshToken);
+
           return freshToken;
         }
         throw new Error('无法获取token');
       } catch (error) {
+        console.warn('⚠️ Token获取失败，尝试使用缓存:', error.message);
         // 如果获取失败但有缓存token，尝试使用缓存token
         if (cachedToken) {
           return cachedToken;
@@ -124,8 +140,60 @@ export const useAuth = () => {
         tokenPromise = null;
       }
     })();
-    
+
     return await tokenPromise;
+  };
+
+  // 🔥 新增：尝试从共享认证状态获取token
+  const tryGetSharedSessionToken = async () => {
+    try {
+      // 方法1：从localStorage的__clerk_environment获取session
+      const clerkEnv = localStorage.getItem('__clerk_environment');
+      if (clerkEnv) {
+        const envData = JSON.parse(clerkEnv);
+        if (envData.session?.id) {
+          console.log('📦 React应用从localStorage获取共享session ID');
+          return envData.session.id;
+        }
+      }
+
+      // 方法2：检查全局Clerk对象（如果存在）
+      if (typeof window !== 'undefined' && window.Clerk && window.Clerk.session) {
+        console.log('📦 React应用从全局Clerk对象获取session token');
+        return await window.Clerk.session.getToken();
+      }
+
+      return null;
+    } catch (error) {
+      console.warn('⚠️ 获取共享session token失败:', error.message);
+      return null;
+    }
+  };
+
+  // 🔥 新增：将token同步到共享存储
+  const syncTokenToSharedStorage = async (token) => {
+    try {
+      // 将token信息同步到localStorage，供JS应用使用
+      const clerkEnv = localStorage.getItem('__clerk_environment');
+      let envData = {};
+
+      if (clerkEnv) {
+        envData = JSON.parse(clerkEnv);
+      }
+
+      // 更新session信息
+      envData.session = {
+        ...envData.session,
+        id: token,
+        lastUpdated: Date.now(),
+        source: 'react-app'
+      };
+
+      localStorage.setItem('__clerk_environment', JSON.stringify(envData));
+      console.log('🔄 React应用token已同步到共享存储');
+    } catch (error) {
+      console.warn('⚠️ Token同步到共享存储失败:', error.message);
+    }
   };
 
   // ✅ 智能清除token缓存 - 避免频繁清除影响其他组件
