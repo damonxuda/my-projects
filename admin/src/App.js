@@ -209,7 +209,6 @@ const App = () => {
   return (
     <ClerkAuthProvider
       publishableKey={process.env.REACT_APP_CLERK_PUBLISHABLE_KEY}
-      isSatellite={true}
     >
       <ModuleAccessGuard
         module="admin-permissions"

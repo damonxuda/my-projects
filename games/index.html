@@ -490,21 +490,11 @@
         }
 
         try {
-          // 配置Clerk为卫星应用模式
+          // 使用Clerk默认配置，无需isSatellite模式
           const clerkConfig = {
-            isSatellite: true,
-            domain: 'damonxuda.site'
+            // 移除isSatellite配置，让Clerk自动处理同域名下的认证状态共享
+            // JS和React应用将通过__session cookie自动共享认证状态
           };
-
-          // 检测是否是开发实例 (基于Clerk key)
-          const publishableKey = 'pk_test_bWlnaHR5LWRvZy0zOS5jbGVyay5hY2NvdW50cy5kZXYk';
-          const isDevelopmentInstance = publishableKey && publishableKey.includes('_test_');
-
-          // 开发实例必须设置signInUrl，生产实例在同域名下不设置
-          if (isDevelopmentInstance) {
-            clerkConfig.signInUrl = 'https://damonxuda.site/';
-            clerkConfig.signUpUrl = 'https://damonxuda.site/';
-          }
 
           await window.Clerk.load(clerkConfig);
 
