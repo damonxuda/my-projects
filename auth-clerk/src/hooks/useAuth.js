@@ -30,7 +30,7 @@ export const useAuth = () => {
     }
     
     // 默认管理员（你的邮箱）
-    return ['ops@damonxuda.site'];
+    return ['damon.xu@gmail.com'];
   };
 
   // 检查用户是否为管理员
@@ -46,9 +46,9 @@ export const useAuth = () => {
   // 检查用户是否为系统所有者（第一个管理员）
   const isOwner = () => {
     if (!user) return false;
-    
+
     const userEmail = user.emailAddresses[0]?.emailAddress;
-    return userEmail === 'ops@damonxuda.site'; // 你的邮箱作为所有者
+    return userEmail === 'damon.xu@gmail.com'; // 你的邮箱作为所有者
   };
 
   // 新增：检查用户是否有指定模块的访问权限
@@ -378,11 +378,38 @@ export const useAuth = () => {
         }
 
         console.log(`✅ 权限操作成功完成`);
-        
+
+        // 🔥 新增：同步更新Clerk用户的publicMetadata
+        try {
+          console.log(`🔄 同步更新Clerk用户元数据...`);
+
+          // 如果是当前登录用户，直接更新
+          if (targetUser.id === user.id) {
+            console.log(`📝 更新当前用户的元数据`);
+            await user.update({
+              publicMetadata: {
+                ...user.publicMetadata,
+                authorized_modules: newModules,
+                approved_by: user.emailAddresses[0].emailAddress,
+                approved_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }
+            });
+            console.log(`✅ 当前用户元数据已更新`);
+          } else {
+            // 对于其他用户，需要管理员权限通过Clerk Admin API更新
+            console.log(`📝 需要通过Admin API更新其他用户元数据 (User ID: ${targetUser.id})`);
+            console.log(`⚠️  前端无法直接更新其他用户元数据，需要Lambda API配合`);
+          }
+        } catch (metadataError) {
+          console.warn(`⚠️  更新用户元数据失败:`, metadataError);
+          // 不影响主流程，继续执行
+        }
+
         // 7. 重新加载用户数据以验证更新
         console.log(`🔄 重新加载用户数据进行验证...`);
         await new Promise(resolve => setTimeout(resolve, 1000)); // 等待1秒
-        
+
         try {
           await fetchAllUsers(); // 触发重新加载
           console.log(`✅ 用户数据已重新加载`);
