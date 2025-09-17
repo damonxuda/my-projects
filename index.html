@@ -368,10 +368,9 @@
         }
 
         try {
-          // 配置Clerk为主应用（非卫星模式）
+          // 显式设置domain以启用同域名下的认证状态共享
           await window.Clerk.load({
-            isSatellite: false,  // 主应用模式
-            domain: 'damonxuda.site'
+            domain: window.location.hostname
           });
 
           // 初始化UI状态

@@ -492,8 +492,8 @@
         try {
           // 使用Clerk默认配置，无需isSatellite模式
           const clerkConfig = {
-            // 移除isSatellite配置，让Clerk自动处理同域名下的认证状态共享
-            // JS和React应用将通过__session cookie自动共享认证状态
+            // 显式设置domain以启用同域名下的认证状态共享
+            domain: window.location.hostname
           };
 
           await window.Clerk.load(clerkConfig);

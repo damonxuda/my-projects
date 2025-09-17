@@ -10,11 +10,11 @@ const ClerkAuthProvider = ({
     throw new Error('ClerkAuthProvider requires publishableKey prop');
   }
 
-  // 简化配置：使用Clerk默认的同域名认证共享机制
+  // 同域名多应用配置：使用Clerk 2024年新的多应用支持
   const clerkConfig = {
-    publishableKey
-    // 移除isSatellite配置，让Clerk自动处理同域名下的认证状态共享
-    // React和JS应用将通过__session cookie自动共享认证状态
+    publishableKey,
+    // 显式设置domain以启用同域名下的认证状态共享
+    domain: window.location.hostname
   };
 
   return (
