@@ -51,10 +51,13 @@ const VideoApp = () => {
   );
 };
 
-// 主应用组件 - 包装Clerk认证和权限保护
+// 主应用组件 - 包装Clerk认证和权限保护（卫星模式）
 const App = () => {
   return (
-    <ClerkAuthProvider publishableKey={process.env.REACT_APP_CLERK_PUBLISHABLE_KEY}>
+    <ClerkAuthProvider
+      publishableKey={process.env.REACT_APP_CLERK_PUBLISHABLE_KEY}
+      isSatellite={true}
+    >
       <ModuleAccessGuard module="videos">
         <VideoApp />
       </ModuleAccessGuard>

@@ -387,7 +387,7 @@
       </div>
     </div>
 
-    <!-- Clerk SDK for authentication -->
+    <!-- Clerk SDK for satellite application authentication -->
     <script crossorigin="anonymous" data-clerk-publishable-key="pk_test_bWlnaHR5LWRvZy0zOS5jbGVyay5hY2NvdW50cy5kZXYk" src="https://mighty-dog-39.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" type="text/javascript"></script>
 
     <script>
@@ -477,18 +477,7 @@
           }
         }
 
-        // 检查URL参数中的跨模块认证token
-        const urlParams = new URLSearchParams(window.location.search);
-        const sessionToken = urlParams.get('session');
-        if (sessionToken) {
-          console.log('🔗 检测到跨模块认证token，处理中...');
-          authStatus.textContent = '跨模块认证中...';
-
-          // 清理URL参数
-          const cleanUrl = new URL(window.location);
-          cleanUrl.searchParams.delete('session');
-          window.history.replaceState({}, '', cleanUrl);
-        }
+        console.log('🛰️ Games模块运行在卫星模式，等待Clerk自动同步认证状态');
 
         // Clerk不可用时的fallback
         if (!window.Clerk) {
@@ -501,17 +490,27 @@
         }
 
         try {
-          await window.Clerk.load();
+          // 配置Clerk为卫星应用模式
+          await window.Clerk.load({
+            isSatellite: true,
+            domain: 'damonxuda.site',
+            // 登录操作重定向到主应用
+            signInUrl: '/?auth=signin&redirect=' + encodeURIComponent(window.location.href),
+            signUpUrl: '/?auth=signup&redirect=' + encodeURIComponent(window.location.href)
+          });
 
           // 初始化UI状态
           updateAuthUI(!!window.Clerk.user, window.Clerk.user);
 
-          // 登录按钮事件
+          // 登录按钮事件 - 卫星模式重定向到主应用
           loginBtn.addEventListener('click', async () => {
             try {
-              await window.Clerk.openSignIn();
+              // 卫星应用中重定向到主应用登录
+              const redirectUrl = '/?auth=signin&redirect=' + encodeURIComponent(window.location.href);
+              console.log('🚀 重定向到主应用登录:', redirectUrl);
+              window.location.href = redirectUrl;
             } catch (error) {
-              console.error('Games页面登录失败:', error);
+              console.error('Games页面登录重定向失败:', error);
               alert('登录失败，请稍后重试');
             }
           });
@@ -609,24 +608,12 @@
             updateAuthUI(!!user, user);
           });
 
-          // 🔥 回首页按钮的跨模块认证处理
+          // 回首页按钮 - 使用Clerk官方SSO机制
           if (homeButton) {
             homeButton.addEventListener('click', async (e) => {
               e.preventDefault();
-              // 检查用户是否已登录
-              if (window.Clerk.user && window.Clerk.session) {
-                // 获取缓存的session token (避免网络超时)
-                const sessionToken = getCachedSessionToken();
-                if (sessionToken) {
-                  // 带token跳转到主站
-                  const homeUrl = `/?session=${encodeURIComponent(sessionToken)}`;
-                  console.log('🚀 Games跨模块认证跳转到主站:', homeUrl);
-                  window.location.href = homeUrl;
-                  return;
-                }
-              }
-              // 如果没有登录或获取token失败，使用普通跳转
-              console.log('🔓 普通跳转到主站');
+              // 直接跳转，主应用会自动识别认证状态
+              console.log('🚀 返回主站 (Clerk SSO)');
               window.location.href = '/';
             });
           }

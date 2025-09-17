@@ -27,54 +27,10 @@ const AdminPermissionsApp = () => {
     }
   };
 
-  // SSO入口：检测跨模块认证token并解析
+  // 卫星应用模式：Clerk会自动处理认证状态同步，无需手动JWT解析
   useEffect(() => {
-    const handleCrossModuleAuth = async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const sessionToken = urlParams.get('session');
-
-      if (sessionToken) {
-        console.log('🔗 Admin检测到跨模块认证token，处理中...');
-
-        try {
-          // 🔥 手动解析JWT token并设置localStorage (Clerk官方推荐的跨应用认证方案)
-          const tokenParts = sessionToken.split('.');
-          if (tokenParts.length === 3) {
-            const payload = JSON.parse(atob(tokenParts[1]));
-            console.log('🔄 Admin: 解析JWT token并设置localStorage');
-
-            const clerkData = {
-              user: {
-                id: payload.sub,
-                emailAddresses: [{ emailAddress: payload.email || 'user@crossmodule.auth' }],
-                firstName: payload.given_name || 'Cross',
-                lastName: payload.family_name || 'Module'
-              },
-              session: {
-                id: payload.sid,
-                status: 'active'
-              }
-            };
-
-            localStorage.setItem('__clerk_environment', JSON.stringify(clerkData));
-            console.log('✅ Admin localStorage设置完成，即将刷新页面');
-
-            setTimeout(() => {
-              window.location.reload();
-            }, 100);
-          }
-        } catch (error) {
-          console.error('❌ Admin JWT解析失败:', error);
-        }
-
-        // 清理URL参数，避免token暴露
-        const cleanUrl = window.location.pathname;
-        window.history.replaceState({}, document.title, cleanUrl);
-      }
-    };
-
-    handleCrossModuleAuth();
-  }, []); // 只在组件挂载时执行一次
+    console.log('🛰️ Admin模块运行在卫星模式，等待Clerk自动同步认证状态');
+  }, []);
 
   return (
     <div className="max-w-6xl mx-auto p-6 bg-gray-50 min-h-screen">
@@ -261,10 +217,13 @@ const AdminPermissionsApp = () => {
   );
 };
 
-// 主应用组件 - 包装Clerk认证和管理员权限保护
+// 主应用组件 - 包装Clerk认证和管理员权限保护（卫星模式）
 const App = () => {
   return (
-    <ClerkAuthProvider publishableKey={process.env.REACT_APP_CLERK_PUBLISHABLE_KEY}>
+    <ClerkAuthProvider
+      publishableKey={process.env.REACT_APP_CLERK_PUBLISHABLE_KEY}
+      isSatellite={true}
+    >
       <ModuleAccessGuard
         module="admin-permissions"
         noAccessComponent={

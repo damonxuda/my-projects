@@ -3,10 +3,13 @@ import { ClerkAuthProvider, ModuleAccessGuard } from '../../auth-clerk/src';
 import React from 'react';
 import QuizMain from './components/QuizMain';
 
-// 主应用组件 - 包装Clerk认证
+// 主应用组件 - 包装Clerk认证（卫星模式）
 const App = () => {
   return (
-    <ClerkAuthProvider publishableKey={process.env.REACT_APP_CLERK_PUBLISHABLE_KEY}>
+    <ClerkAuthProvider
+      publishableKey={process.env.REACT_APP_CLERK_PUBLISHABLE_KEY}
+      isSatellite={true}
+    >
       <ModuleAccessGuard module="quiz">
         <QuizMain />
       </ModuleAccessGuard>
