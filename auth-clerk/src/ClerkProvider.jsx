@@ -18,9 +18,13 @@ const ClerkAuthProvider = ({
     ...(isSatellite && {
       isSatellite: true,
       domain: domain,
-      // 开发环境需要明确的signInUrl（生产环境Clerk会自动处理）
-      signInUrl: `https://${domain}/`,
-      signUpUrl: `https://${domain}/`,
+      // 对于同域名子目录结构，不设置signInUrl以避免same-origin错误
+      // Clerk会自动处理域内的认证状态同步
+      ...(window.location.hostname !== domain && {
+        // 只有在不同域名时才设置signInUrl
+        signInUrl: `https://${domain}/`,
+        signUpUrl: `https://${domain}/`
+      }),
       afterSignInUrl: window.location.href,
       afterSignUpUrl: window.location.href
     })
