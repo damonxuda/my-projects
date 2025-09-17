@@ -17,30 +17,11 @@ const QuizMain = () => {
   // 认证状态 - 使用Clerk
   const { user, isSignedIn, isAdmin, loading: authLoading, getCachedToken } = useAuth();
 
-  // 跨模块导航功能
-  const handleCrossModuleNavigation = async (targetUrl) => {
-    if (!isSignedIn) {
-      // 未登录用户直接跳转
-      window.location.href = targetUrl;
-      return;
-    }
-
-    try {
-      // 获取当前session token
-      const token = await getCachedToken();
-      if (token) {
-        // 带token跳转到目标模块
-        const urlWithSession = `${targetUrl}?session=${encodeURIComponent(token)}`;
-        console.log('🚀 Quiz跨模块认证跳转:', urlWithSession);
-        window.location.href = urlWithSession;
-      } else {
-        console.warn('⚠️ 无法获取session token，使用普通跳转');
-        window.location.href = targetUrl;
-      }
-    } catch (error) {
-      console.error('❌ 跨模块跳转失败:', error);
-      window.location.href = targetUrl;
-    }
+  // 跨模块导航功能 - 使用Clerk官方SSO机制
+  const handleCrossModuleNavigation = (targetUrl) => {
+    // 直接跳转，卫星应用会自动同步认证状态
+    console.log('🚀 跨模块跳转 (Clerk SSO):', targetUrl);
+    window.location.href = targetUrl;
   };
 
   // 筛选状态

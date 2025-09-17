@@ -18,11 +18,11 @@ const ClerkAuthProvider = ({
     ...(isSatellite && {
       isSatellite: true,
       domain: domain,
-      // 卫星应用的登录/注册URL指向主应用
-      signInUrl: '/?auth=signin',
-      signUpUrl: '/?auth=signup',
-      afterSignInUrl: window.location.pathname,
-      afterSignUpUrl: window.location.pathname
+      // 卫星应用的登录/注册URL指向主应用（绝对URL）
+      signInUrl: `https://${domain}/?auth=signin`,
+      signUpUrl: `https://${domain}/?auth=signup`,
+      afterSignInUrl: window.location.href,
+      afterSignUpUrl: window.location.href
     })
   };
 

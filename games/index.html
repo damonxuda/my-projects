@@ -494,9 +494,9 @@
           await window.Clerk.load({
             isSatellite: true,
             domain: 'damonxuda.site',
-            // 登录操作重定向到主应用
-            signInUrl: '/?auth=signin&redirect=' + encodeURIComponent(window.location.href),
-            signUpUrl: '/?auth=signup&redirect=' + encodeURIComponent(window.location.href)
+            // 登录操作重定向到主应用（绝对URL）
+            signInUrl: 'https://damonxuda.site/?auth=signin&redirect=' + encodeURIComponent(window.location.href),
+            signUpUrl: 'https://damonxuda.site/?auth=signup&redirect=' + encodeURIComponent(window.location.href)
           });
 
           // 初始化UI状态
@@ -505,8 +505,8 @@
           // 登录按钮事件 - 卫星模式重定向到主应用
           loginBtn.addEventListener('click', async () => {
             try {
-              // 卫星应用中重定向到主应用登录
-              const redirectUrl = '/?auth=signin&redirect=' + encodeURIComponent(window.location.href);
+              // 卫星应用中重定向到主应用登录（绝对URL）
+              const redirectUrl = 'https://damonxuda.site/?auth=signin&redirect=' + encodeURIComponent(window.location.href);
               console.log('🚀 重定向到主应用登录:', redirectUrl);
               window.location.href = redirectUrl;
             } catch (error) {

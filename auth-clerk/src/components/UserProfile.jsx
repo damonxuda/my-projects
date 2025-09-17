@@ -4,7 +4,7 @@ import { UserButton, useUser } from '@clerk/clerk-react';
 
 const UserProfile = ({ showWelcome = true, afterSignOutUrl = "/" }) => {
   const { user } = useUser();
-  
+
   if (!user) {
     return null;
   }
@@ -16,7 +16,12 @@ const UserProfile = ({ showWelcome = true, afterSignOutUrl = "/" }) => {
           欢迎, {user.firstName || user.emailAddresses[0]?.emailAddress}!
         </span>
       )}
-      <UserButton afterSignOutUrl={afterSignOutUrl} />
+      <UserButton
+        afterSignOutUrl={afterSignOutUrl}
+        // 卫星应用中的用户管理操作应重定向到主应用
+        userProfileUrl="https://damonxuda.site/"
+        signInUrl="https://damonxuda.site/?auth=signin"
+      />
     </div>
   );
 };
