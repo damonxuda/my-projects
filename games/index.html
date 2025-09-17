@@ -493,24 +493,20 @@
           // 配置Clerk为卫星应用模式
           await window.Clerk.load({
             isSatellite: true,
-            domain: 'damonxuda.site',
-            // 登录操作重定向到主应用（绝对URL）
-            signInUrl: 'https://damonxuda.site/?auth=signin&redirect=' + encodeURIComponent(window.location.href),
-            signUpUrl: 'https://damonxuda.site/?auth=signup&redirect=' + encodeURIComponent(window.location.href)
+            domain: 'damonxuda.site'
+            // 卫星应用不需要配置signInUrl，Clerk会自动处理
           });
 
           // 初始化UI状态
           updateAuthUI(!!window.Clerk.user, window.Clerk.user);
 
-          // 登录按钮事件 - 卫星模式重定向到主应用
+          // 登录按钮事件 - 卫星模式使用Clerk内置登录
           loginBtn.addEventListener('click', async () => {
             try {
-              // 卫星应用中重定向到主应用登录（绝对URL）
-              const redirectUrl = 'https://damonxuda.site/?auth=signin&redirect=' + encodeURIComponent(window.location.href);
-              console.log('🚀 重定向到主应用登录:', redirectUrl);
-              window.location.href = redirectUrl;
+              // 在卫星应用中调用Clerk登录，会自动处理跨域
+              await window.Clerk.openSignIn();
             } catch (error) {
-              console.error('Games页面登录重定向失败:', error);
+              console.error('Games页面登录失败:', error);
               alert('登录失败，请稍后重试');
             }
           });

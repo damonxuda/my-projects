@@ -18,9 +18,7 @@ const UserProfile = ({ showWelcome = true, afterSignOutUrl = "/" }) => {
       )}
       <UserButton
         afterSignOutUrl={afterSignOutUrl}
-        // 卫星应用中的用户管理操作应重定向到主应用
-        userProfileUrl="https://damonxuda.site/"
-        signInUrl="https://damonxuda.site/?auth=signin"
+        // 卫星应用中UserButton会自动处理跨域跳转
       />
     </div>
   );
