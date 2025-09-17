@@ -8,6 +8,35 @@ import './App.css';
 const VideoApp = () => {
   const { user, loading: authLoading } = useAuth();
 
+  // 用户显示信息生成函数 - 匹配games模块的显示逻辑
+  const getUserDisplayInfo = () => {
+    if (!user) return { display: "未登录", avatar: null };
+
+    // 优先显示姓名首字母（如DX for Damon XU）
+    if (user.firstName || user.lastName) {
+      const firstName = user.firstName || '';
+      const lastName = user.lastName || '';
+      const fullName = (firstName + ' ' + lastName).trim();
+
+      if (fullName) {
+        // 生成首字母显示和头像
+        const initials = fullName.split(' ').map(name => name.charAt(0).toUpperCase()).join('');
+        const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&size=32&background=667eea&color=fff&bold=true&rounded=true`;
+        return { display: initials, avatar: avatarUrl };
+      }
+    }
+
+    // Fallback到邮箱
+    if (user.emailAddresses?.[0]?.emailAddress) {
+      const email = user.emailAddresses[0].emailAddress;
+      const emailPrefix = email.split('@')[0];
+      const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(emailPrefix)}&size=32&background=764ba2&color=fff&bold=true&rounded=true&length=1`;
+      return { display: email, avatar: avatarUrl };
+    }
+
+    return { display: "用户", avatar: null };
+  };
+
   if (authLoading) {
     return (
       <div className="max-w-6xl mx-auto p-6 bg-gray-50 min-h-screen flex items-center justify-center">
@@ -28,8 +57,16 @@ const VideoApp = () => {
             <div className="flex items-center space-x-4">
               <h1 className="text-xl font-bold text-gray-900">视频中心</h1>
               <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <User size={16} />
-                <span>{user?.emailAddresses?.[0]?.emailAddress || user?.firstName}</span>
+                {getUserDisplayInfo().avatar ? (
+                  <img
+                    src={getUserDisplayInfo().avatar}
+                    alt="用户头像"
+                    className="w-6 h-6 rounded-full"
+                  />
+                ) : (
+                  <User size={16} />
+                )}
+                <span>{getUserDisplayInfo().display}</span>
               </div>
             </div>
             <div className="flex items-center space-x-3">

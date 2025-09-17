@@ -17,6 +17,35 @@ const QuizMain = () => {
   // 认证状态 - 使用Clerk
   const { user, isSignedIn, isAdmin, loading: authLoading } = useAuth();
 
+  // 用户显示信息生成函数 - 匹配games模块的显示逻辑
+  const getUserDisplayInfo = () => {
+    if (!user) return { display: "未登录", avatar: null };
+
+    // 优先显示姓名首字母（如DX for Damon XU）
+    if (user.firstName || user.lastName) {
+      const firstName = user.firstName || '';
+      const lastName = user.lastName || '';
+      const fullName = (firstName + ' ' + lastName).trim();
+
+      if (fullName) {
+        // 生成首字母显示和头像
+        const initials = fullName.split(' ').map(name => name.charAt(0).toUpperCase()).join('');
+        const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&size=32&background=667eea&color=fff&bold=true&rounded=true`;
+        return { display: initials, avatar: avatarUrl };
+      }
+    }
+
+    // Fallback到邮箱
+    if (user.emailAddresses?.[0]?.emailAddress) {
+      const email = user.emailAddresses[0].emailAddress;
+      const emailPrefix = email.split('@')[0];
+      const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(emailPrefix)}&size=32&background=764ba2&color=fff&bold=true&rounded=true&length=1`;
+      return { display: email, avatar: avatarUrl };
+    }
+
+    return { display: "用户", avatar: null };
+  };
+
   // 跨模块导航功能 - 使用Clerk官方SSO机制
   const handleCrossModuleNavigation = (targetUrl) => {
     // 直接跳转，卫星应用会自动同步认证状态
@@ -34,70 +63,10 @@ const QuizMain = () => {
     courseName: "",
   });
 
-  // SSO入口：检测跨模块认证token并解析
+  // 卫星应用模式：Clerk会自动处理认证状态同步，无需手动JWT解析
   useEffect(() => {
-    const handleCrossModuleAuth = async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const sessionToken = urlParams.get('session');
-
-      // 🔍 详细的URL参数调试
-      console.log('🔍 Quiz当前URL:', window.location.href);
-      console.log('🔍 URL查询字符串:', window.location.search);
-      console.log('🔍 URLSearchParams对象:', urlParams.toString());
-      console.log('🔍 所有URL参数:', Object.fromEntries(urlParams));
-      console.log('🔍 session参数值:', sessionToken);
-
-      if (sessionToken) {
-        console.log('🔗 Quiz检测到跨模块认证token，处理中...');
-        console.log('🔍 Token长度:', sessionToken.length);
-        console.log('🔍 Token前50个字符:', sessionToken.substring(0, 50));
-
-        try {
-          // 🔥 手动解析JWT token并设置localStorage (Clerk官方推荐的跨应用认证方案)
-          const tokenParts = sessionToken.split('.');
-          console.log('🔍 Token分段数量:', tokenParts.length);
-
-          if (tokenParts.length === 3) {
-            console.log('🔍 Header长度:', tokenParts[0].length);
-            console.log('🔍 Payload长度:', tokenParts[1].length);
-            console.log('🔍 Signature长度:', tokenParts[2].length);
-
-            const payload = JSON.parse(atob(tokenParts[1]));
-            console.log('🔄 Quiz: 解析JWT token并设置localStorage');
-            console.log('🔍 解析后的payload:', payload);
-
-            const clerkData = {
-              user: {
-                id: payload.sub,
-                emailAddresses: [{ emailAddress: payload.email || 'user@crossmodule.auth' }],
-                firstName: payload.given_name || 'Cross',
-                lastName: payload.family_name || 'Module'
-              },
-              session: {
-                id: payload.sid,
-                status: 'active'
-              }
-            };
-
-            localStorage.setItem('__clerk_environment', JSON.stringify(clerkData));
-            console.log('✅ Quiz localStorage设置完成，即将刷新页面');
-
-            setTimeout(() => {
-              window.location.reload();
-            }, 100);
-          }
-        } catch (error) {
-          console.error('❌ Quiz JWT解析失败:', error);
-        }
-
-        // 清理URL参数，避免token暴露
-        const cleanUrl = window.location.pathname;
-        window.history.replaceState({}, document.title, cleanUrl);
-      }
-    };
-
-    handleCrossModuleAuth();
-  }, []); // 只在组件挂载时执行一次
+    console.log('🛰️ Quiz模块运行在卫星模式，等待Clerk自动同步认证状态');
+  }, []);
 
   // 分类和配置
   const mathCategories = [
@@ -324,9 +293,17 @@ const QuizMain = () => {
             <div className="flex items-center space-x-4">
               <h1 className="text-xl font-bold text-gray-900">题库系统</h1>
               <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <User size={16} />
+                {getUserDisplayInfo().avatar ? (
+                  <img
+                    src={getUserDisplayInfo().avatar}
+                    alt="用户头像"
+                    className="w-6 h-6 rounded-full"
+                  />
+                ) : (
+                  <User size={16} />
+                )}
                 <span>
-                  {user?.emailAddresses?.[0]?.emailAddress || user?.firstName}
+                  {getUserDisplayInfo().display}
                 </span>
                 {isAdmin && (
                   <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
