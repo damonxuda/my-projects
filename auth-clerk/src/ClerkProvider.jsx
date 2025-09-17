@@ -12,16 +12,17 @@ const ClerkAuthProvider = ({
     throw new Error('ClerkAuthProvider requires publishableKey prop');
   }
 
+  // 检测是否是开发环境 (based on Clerk key)
+  const isDevelopmentInstance = publishableKey && publishableKey.includes('_test_');
+
   // isSatellite模式配置
   const clerkConfig = {
     publishableKey,
     ...(isSatellite && {
       isSatellite: true,
       domain: domain,
-      // 对于同域名子目录结构，不设置signInUrl以避免same-origin错误
-      // Clerk会自动处理域内的认证状态同步
-      ...(window.location.hostname !== domain && {
-        // 只有在不同域名时才设置signInUrl
+      // 开发实例必须设置signInUrl，生产实例在同域名下不设置
+      ...(isDevelopmentInstance && {
         signInUrl: `https://${domain}/`,
         signUpUrl: `https://${domain}/`
       }),

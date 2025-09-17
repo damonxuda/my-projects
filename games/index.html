@@ -494,12 +494,14 @@
           const clerkConfig = {
             isSatellite: true,
             domain: 'damonxuda.site'
-            // 对于同域名子目录结构，不设置signInUrl以避免same-origin错误
-            // Clerk会自动处理域内的认证状态同步
           };
 
-          // 只有在不同域名时才设置signInUrl (开发环境本地测试)
-          if (window.location.hostname !== 'damonxuda.site') {
+          // 检测是否是开发实例 (基于Clerk key)
+          const publishableKey = 'pk_test_bWlnaHR5LWRvZy0zOS5jbGVyay5hY2NvdW50cy5kZXYk';
+          const isDevelopmentInstance = publishableKey && publishableKey.includes('_test_');
+
+          // 开发实例必须设置signInUrl，生产实例在同域名下不设置
+          if (isDevelopmentInstance) {
             clerkConfig.signInUrl = 'https://damonxuda.site/';
             clerkConfig.signUpUrl = 'https://damonxuda.site/';
           }
