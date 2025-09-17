@@ -229,11 +229,15 @@ jobs:
       # 10. 部署根目录文件和games目录
       - name: Deploy root files
         if: steps.changes.outputs.root_files_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        env:
+          CLERK_PUBLISHABLE_KEY: ${{ secrets.REACT_APP_CLERK_PUBLISHABLE_KEY }}
         run: |
           echo "🚀 Deploying root directory files..."
           if [ -f "./index.html" ]; then
+            echo "🔧 Replacing environment variables in index.html..."
+            envsubst < ./index.html > ./index.html.tmp && mv ./index.html.tmp ./index.html
             aws s3 cp ./index.html s3://damonxuda-projects/index.html
-            echo "✅ Root index.html deployed"
+            echo "✅ Root index.html deployed with environment variables"
           else
             echo "ℹ️ No root index.html found"
           fi
