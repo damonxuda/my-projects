@@ -157,7 +157,6 @@ jobs:
           REACT_APP_CLERK_PUBLISHABLE_KEY: ${{ secrets.REACT_APP_CLERK_PUBLISHABLE_KEY }}
           REACT_APP_VIDEO_API_URL: ${{ secrets.REACT_APP_VIDEO_API_URL }}
           REACT_APP_USER_MANAGEMENT_API_URL: ${{ secrets.REACT_APP_USER_MANAGEMENT_API_URL }}
-          REACT_APP_ADMIN_EMAILS: ${{ secrets.REACT_APP_ADMIN_EMAILS }}
           GENERATE_SOURCEMAP: false
         run: |
           echo "🏗️ Building Videos React application..."
