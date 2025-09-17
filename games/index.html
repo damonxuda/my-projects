@@ -493,8 +493,10 @@
           // 配置Clerk为卫星应用模式
           await window.Clerk.load({
             isSatellite: true,
-            domain: 'damonxuda.site'
-            // 卫星应用不需要配置signInUrl，Clerk会自动处理
+            domain: 'damonxuda.site',
+            // 开发环境需要明确的signInUrl
+            signInUrl: 'https://damonxuda.site/',
+            signUpUrl: 'https://damonxuda.site/'
           });
 
           // 初始化UI状态

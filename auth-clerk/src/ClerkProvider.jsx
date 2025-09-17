@@ -17,8 +17,12 @@ const ClerkAuthProvider = ({
     publishableKey,
     ...(isSatellite && {
       isSatellite: true,
-      domain: domain
-      // 卫星应用不需要配置signInUrl/signUpUrl，Clerk会自动处理
+      domain: domain,
+      // 开发环境需要明确的signInUrl（生产环境Clerk会自动处理）
+      signInUrl: `https://${domain}/`,
+      signUpUrl: `https://${domain}/`,
+      afterSignInUrl: window.location.href,
+      afterSignUpUrl: window.location.href
     })
   };
 
