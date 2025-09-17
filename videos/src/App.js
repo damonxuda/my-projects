@@ -32,8 +32,17 @@ const VideoApp = () => {
                 <span>{user?.emailAddresses?.[0]?.emailAddress || user?.firstName}</span>
               </div>
             </div>
-            {/* 右上角登出按钮 */}
-            <UserProfile showWelcome={false} afterSignOutUrl="/" />
+            <div className="flex items-center space-x-3">
+              {/* 返回主页按钮 */}
+              <button
+                onClick={() => window.location.href = '/'}
+                className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700 transition-colors"
+              >
+                🏠 首页
+              </button>
+              {/* 右上角登出按钮 */}
+              <UserProfile showWelcome={false} afterSignOutUrl="/" />
+            </div>
           </div>
           <div className="mt-2">
             <p className="text-sm text-gray-600">

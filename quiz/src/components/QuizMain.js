@@ -15,7 +15,7 @@ const QuizMain = () => {
   const [loading, setLoading] = useState(true);
 
   // 认证状态 - 使用Clerk
-  const { user, isSignedIn, isAdmin, loading: authLoading, getCachedToken } = useAuth();
+  const { user, isSignedIn, isAdmin, loading: authLoading } = useAuth();
 
   // 跨模块导航功能 - 使用Clerk官方SSO机制
   const handleCrossModuleNavigation = (targetUrl) => {
