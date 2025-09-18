@@ -476,6 +476,13 @@
       </div>
     </div>
     
+    <!-- Environment Variables -->
+    <script>
+        window.REACT_APP_SUPABASE_URL = "${REACT_APP_SUPABASE_URL}";
+        window.REACT_APP_SUPABASE_ANON_KEY = "${REACT_APP_SUPABASE_ANON_KEY}";
+        window.REACT_APP_CLERK_PUBLISHABLE_KEY = "${CLERK_PUBLISHABLE_KEY}";
+    </script>
+
     <!-- Clerk SDK for SSO -->
     <script crossorigin="anonymous" data-clerk-publishable-key="${CLERK_PUBLISHABLE_KEY}" src="https://clerk.damonxuda.site/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" type="text/javascript"></script>
 
