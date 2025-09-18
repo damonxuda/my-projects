@@ -8,27 +8,41 @@ const VideoPlayer = ({ video, apiUrl, onClose }) => {
   const [error, setError] = useState('');
   const { getCachedToken, isSignedIn } = useAuth();
 
+  // 当video改变时重置状态
+  useEffect(() => {
+    setVideoUrl('');
+    setLoading(true);
+    setError('');
+  }, [video?.key]);
+
   useEffect(() => {
     const loadVideoUrl = async () => {
+      // 如果已经在加载或已经有URL，避免重复请求
+      if (loading || videoUrl) {
+        return;
+      }
+
       try {
+        setLoading(true);
+        setError('');
         console.log('🎬 开始加载视频URL');
         console.log('📋 video对象:', video);
         console.log('🌐 apiUrl:', apiUrl);
-        
+
         const token = await getCachedToken();
         console.log('🎫 获取到token:', token ? '有效' : '无效');
-        
+
         const requestUrl = `${apiUrl}/videos/url/${encodeURIComponent(video.key)}`;
         console.log('📡 完整请求URL:', requestUrl);
         console.log('🔑 video.key:', video.key);
-        
+
         const response = await fetch(requestUrl, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        
+
         console.log('📨 响应状态码:', response.status);
         console.log('📨 响应状态文本:', response.statusText);
-        
+
         if (!response.ok) {
           const errorText = await response.text();
           console.error('❌ 响应错误内容:', errorText);
@@ -37,13 +51,13 @@ const VideoPlayer = ({ video, apiUrl, onClose }) => {
 
         const responseText = await response.text();
         console.log('📄 VideoPlayer - Raw response (first 200 chars):', responseText.substring(0, 200));
-        
+
         // 检查响应是否是HTML而不是JSON
         if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
           console.error('❌ VideoPlayer - 收到HTML响应而非JSON:', responseText.substring(0, 500));
           throw new Error('视频服务返回HTML页面而非JSON数据，请检查API端点配置');
         }
-        
+
         let data;
         try {
           data = JSON.parse(responseText);
@@ -52,13 +66,13 @@ const VideoPlayer = ({ video, apiUrl, onClose }) => {
           console.error('❌ VideoPlayer - 原始响应:', responseText);
           throw new Error(`视频URL JSON解析失败: ${parseError.message}. 响应内容: ${responseText.substring(0, 200)}`);
         }
-        
+
         if (data.url) {
           setVideoUrl(data.url);
         } else {
           throw new Error('服务器返回的数据中没有视频URL');
         }
-        
+
       } catch (err) {
         setError(`加载视频失败: ${err.message}`);
       } finally {
@@ -69,7 +83,7 @@ const VideoPlayer = ({ video, apiUrl, onClose }) => {
     if (video && isSignedIn) {
       loadVideoUrl();
     }
-  }, [video, isSignedIn, apiUrl, getCachedToken]);
+  }, [video?.key, isSignedIn, apiUrl]);
 
   if (!video) return null;
 
