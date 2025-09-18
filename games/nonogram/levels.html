@@ -389,6 +389,12 @@
         </div>
       </div>
       
+      <!-- 移动端调试信息 -->
+      <div id="mobile-debug" style="background: #ffffcc; border: 2px solid #ffaa00; padding: 10px; margin: 10px; border-radius: 5px; font-size: 12px; display: none;">
+        <strong>🔧 移动端调试信息：</strong><br>
+        <div id="debug-info">初始化中...</div>
+      </div>
+
       <!-- 进度统计 -->
       <div class="progress-section">
         <div class="progress-title">
@@ -723,8 +729,44 @@
     <script src="levels.js"></script>
 
     <script>
-    // 调试功能
+    // 移动端调试信息显示
+    function updateMobileDebug(message) {
+      const debugDiv = document.getElementById('mobile-debug');
+      const debugInfo = document.getElementById('debug-info');
+      if (debugDiv && debugInfo) {
+        debugDiv.style.display = 'block';
+        debugInfo.innerHTML += '<br>' + new Date().toLocaleTimeString() + ': ' + message;
+      }
+    }
+
+    // 检测移动设备
+    function isMobileDevice() {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
+    // 页面加载时开始调试
     document.addEventListener('DOMContentLoaded', function() {
+      if (isMobileDevice()) {
+        updateMobileDebug('📱 检测到移动设备');
+        updateMobileDebug('🔍 Clerk对象: ' + (!!window.Clerk));
+        updateMobileDebug('🔍 clerkInitialized: ' + window.clerkInitialized);
+        updateMobileDebug('🔍 NonogramLevels: ' + (!!window.nonogramLevels));
+
+        // 5秒后检查初始化状态
+        setTimeout(() => {
+          updateMobileDebug('⏰ 5秒后检查:');
+          updateMobileDebug('  - Clerk用户: ' + (window.Clerk && window.Clerk.user ? window.Clerk.user.id : '无'));
+          updateMobileDebug('  - NonogramLevels: ' + (!!window.nonogramLevels));
+          updateMobileDebug('  - Storage对象: ' + (window.nonogramLevels && window.nonogramLevels.storage ? '有' : '无'));
+        }, 5000);
+
+        // 10秒后最终检查
+        setTimeout(() => {
+          updateMobileDebug('⏰ 10秒后最终检查:');
+          updateMobileDebug('  - 游戏是否初始化: ' + (window.nonogramLevels && window.nonogramLevels.storage ? '✅ 是' : '❌ 否'));
+        }, 10000);
+      }
+
       const debugBtn = document.getElementById('debug-btn');
       const debugModal = document.getElementById('debug-modal');
       const debugClose = document.getElementById('debug-close');
