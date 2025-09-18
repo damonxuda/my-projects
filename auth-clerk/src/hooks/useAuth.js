@@ -21,7 +21,7 @@ export const useAuth = () => {
   const [cachedToken, setCachedToken] = useState(null);
   const [tokenExpiry, setTokenExpiry] = useState(null);
 
-  // 管理员邮箱列表 - 完全通过环境变量配置
+  // 管理员邮箱列表 - 完全通过环境变量配置 (已更新为damon_xuda@163.com)
   const getAdminEmails = () => {
     // 从环境变量读取，支持多个管理员
     const envAdmins = process.env.REACT_APP_ADMIN_EMAILS;
