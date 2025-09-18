@@ -88,6 +88,9 @@
         window.REACT_APP_CLERK_PUBLISHABLE_KEY = "${CLERK_PUBLISHABLE_KEY}";
     </script>
 
+    <!-- JavaScript兼容性支持 -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6%2Ces2015%2Ces2016%2Ces2017%2Ces2018"></script>
+
     <!-- Clerk SDK -->
     <script crossorigin="anonymous" data-clerk-publishable-key="${CLERK_PUBLISHABLE_KEY}" src="https://clerk.damonxuda.site/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" type="text/javascript"></script>
 
