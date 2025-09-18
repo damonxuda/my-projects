@@ -508,8 +508,8 @@
       function loadClerkSDK() {
         const primaryScript = document.createElement('script');
         primaryScript.crossOrigin = 'anonymous';
-        primaryScript.setAttribute('data-clerk-publishable-key', 'pk_test_bWlnaHR5LWRvZy0zOS5jbGVyay5hY2NvdW50cy5kZXYk');
-        primaryScript.src = 'https://mighty-dog-39.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+        primaryScript.setAttribute('data-clerk-publishable-key', '${CLERK_PUBLISHABLE_KEY}');
+        primaryScript.src = 'https://clerk.damonxuda.site/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
         primaryScript.type = 'text/javascript';
 
         primaryScript.onload = function() {
@@ -522,7 +522,7 @@
           // 尝试备用CDN
           const fallbackScript = document.createElement('script');
           fallbackScript.crossOrigin = 'anonymous';
-          fallbackScript.setAttribute('data-clerk-publishable-key', 'pk_test_bWlnaHR5LWRvZy0zOS5jbGVyay5hY2NvdW50cy5kZXYk');
+          fallbackScript.setAttribute('data-clerk-publishable-key', '${CLERK_PUBLISHABLE_KEY}');
           fallbackScript.src = 'https://unpkg.com/@clerk/clerk-js@latest/dist/clerk.browser.js';
           fallbackScript.type = 'text/javascript';
 
