@@ -238,6 +238,11 @@
           <div class="access-badge private">🔐 需要登录</div>
         </a>
 
+        <a href="/videos/" class="nav-button private" id="videos-link">
+          <div class="button-title">🎬 视频中心</div>
+          <div class="access-badge private">🔐 需要登录</div>
+        </a>
+
         <a href="/games/" class="nav-button public" id="games-link">
           <div class="button-title">🎮 休闲时刻</div>
           <div class="access-badge public">🌍 公开访问</div>
@@ -286,6 +291,7 @@
         const userAvatar = document.getElementById('user-avatar');
         const gamesLink = document.getElementById('games-link');
         const quizLink = document.getElementById('quiz-link');
+        const videosLink = document.getElementById('videos-link');
         const adminLink = document.getElementById('admin-link');
 
 
@@ -535,6 +541,16 @@
               // 直接跳转，卫星应用会自动同步认证状态
               console.log('🚀 跳转到Quiz模块 (Clerk SSO)');
               window.location.href = '/quiz/';
+            });
+          }
+
+          // Videos链接 - 使用Clerk官方SSO机制
+          if (videosLink) {
+            videosLink.addEventListener('click', async (e) => {
+              e.preventDefault();
+              // 直接跳转，卫星应用会自动同步认证状态
+              console.log('🚀 跳转到Videos模块 (Clerk SSO)');
+              window.location.href = '/videos/';
             });
           }
 
