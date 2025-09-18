@@ -8,17 +8,10 @@ const VideoPlayer = ({ video, apiUrl, onClose }) => {
   const [error, setError] = useState('');
   const { getCachedToken, isSignedIn } = useAuth();
 
-  // 当video改变时重置状态
-  useEffect(() => {
-    setVideoUrl('');
-    setLoading(true);
-    setError('');
-  }, [video?.key]);
-
   useEffect(() => {
     const loadVideoUrl = async () => {
-      // 如果已经在加载或已经有URL，避免重复请求
-      if (loading || videoUrl) {
+      // 防止重复请求：如果已经有URL且是相同视频，直接返回
+      if (videoUrl) {
         return;
       }
 
@@ -84,6 +77,12 @@ const VideoPlayer = ({ video, apiUrl, onClose }) => {
       loadVideoUrl();
     }
   }, [video?.key, isSignedIn, apiUrl]);
+
+  // 当video改变时重置videoUrl
+  useEffect(() => {
+    setVideoUrl('');
+    setError('');
+  }, [video?.key]);
 
   if (!video) return null;
 
