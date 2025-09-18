@@ -91,7 +91,7 @@ const FileCard = ({
       };
       loadVideoUrl();
     }
-  }, [isVideo, item.key, getVideoUrl, videoUrl, item.name]);
+  }, [isVideo, item.key]);
 
 
 
