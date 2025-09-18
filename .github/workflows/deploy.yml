@@ -259,10 +259,18 @@ jobs:
           
           if [ -d "./games" ]; then
             echo "🎮 Deploying games directory..."
+
+            # 为games目录中的HTML文件替换环境变量
+            echo "🔧 Processing games HTML files for environment variables..."
+            find ./games -name "*.html" -type f | while read file; do
+              echo "Processing: $file"
+              envsubst < "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+            done
+
             aws s3 sync ./games/ s3://damonxuda-projects/games/ \
               --delete \
               --exclude ".DS_Store"
-            echo "✅ Games directory deployed"
+            echo "✅ Games directory deployed with environment variables"
           else
             echo "ℹ️ No games directory found"
           fi
