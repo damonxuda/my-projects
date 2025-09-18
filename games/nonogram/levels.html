@@ -490,7 +490,7 @@
     </script>
 
     <!-- JavaScript兼容性支持 -->
-    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6%2Ces2015%2Ces2016%2Ces2017%2Ces2018"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/polyfill@7.12.1/dist/polyfill.min.js"></script>
 
     <!-- Clerk SDK for SSO -->
     <script crossorigin="anonymous" data-clerk-publishable-key="${CLERK_PUBLISHABLE_KEY}" src="https://clerk.damonxuda.site/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" type="text/javascript"></script>
@@ -663,6 +663,18 @@
           } else if (window.Clerk.user) {
             console.log('👤 用户已登录: ' + window.Clerk.user.id);
             console.log('📧 用户邮箱:', window.Clerk.user.emailAddresses?.[0]?.emailAddress);
+
+            // 📱 移动端修复：认证完成后重新加载游戏数据
+            if (window.nonogramLevels && window.nonogramLevels.storage) {
+              console.log('🔄 认证完成，重新加载游戏数据...');
+              setTimeout(() => {
+                window.nonogramLevels.storage.loadProgress().then(progress => {
+                  console.log('🔄 用户数据重新加载完成，更新UI...');
+                  window.nonogramLevels.progress = progress;
+                  window.nonogramLevels.updateUI();
+                });
+              }, 100);
+            }
           } else {
             console.log('❌ 用户未登录');
           }
@@ -738,6 +750,24 @@
         debugInfo.innerHTML += '<br>' + new Date().toLocaleTimeString() + ': ' + message;
       }
     }
+
+    // 劫持console.log显示在页面上
+    const originalConsoleLog = console.log;
+    const originalConsoleWarn = console.warn;
+    const originalConsoleError = console.error;
+
+    console.log = function(...args) {
+      originalConsoleLog.apply(console, args);
+      updateMobileDebug('LOG: ' + args.join(' '));
+    };
+    console.warn = function(...args) {
+      originalConsoleWarn.apply(console, args);
+      updateMobileDebug('WARN: ' + args.join(' '));
+    };
+    console.error = function(...args) {
+      originalConsoleError.apply(console, args);
+      updateMobileDebug('ERROR: ' + args.join(' '));
+    };
 
     // 检测移动设备
     function isMobileDevice() {
