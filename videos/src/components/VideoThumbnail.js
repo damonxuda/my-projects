@@ -221,7 +221,7 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getCachedTo
 
     console.log(`🟡 开始调用 loadThumbnailFromCache: ${fileName}`);
     loadThumbnailFromCache();
-  }, [fileName, isLargeVideoWithoutThumbnail, loadThumbnailFromCache]);
+  }, [fileName, fileSize]); // 只依赖真正的值，不依赖函数
 
   return (
     <div className="relative w-full h-32 rounded-lg group cursor-pointer overflow-hidden">
