@@ -22,7 +22,7 @@ export const useAuth = () => {
   const [tokenExpiry, setTokenExpiry] = useState(null);
 
   // 管理员邮箱列表 - 完全通过环境变量配置 (已更新为damon_xuda@163.com)
-  const getAdminEmails = () => {
+  const getAdminEmails = (silent = false) => {
     // 从环境变量读取，支持多个管理员
     const envAdmins = process.env.REACT_APP_ADMIN_EMAILS;
     if (envAdmins) {
@@ -30,25 +30,28 @@ export const useAuth = () => {
     }
 
     // 如果没有配置环境变量，返回空数组（无管理员）
-    console.warn('⚠️ REACT_APP_ADMIN_EMAILS 环境变量未配置，系统无管理员');
+    // silent参数控制是否显示警告（某些模块可能不需要管理员功能）
+    if (!silent) {
+      console.warn('⚠️ REACT_APP_ADMIN_EMAILS 环境变量未配置，系统无管理员');
+    }
     return [];
   };
 
   // 检查用户是否为管理员
-  const isAdmin = () => {
+  const isAdmin = (silent = false) => {
     if (!user) return false;
-    
-    const adminEmails = getAdminEmails();
+
+    const adminEmails = getAdminEmails(silent);
     const userEmail = user.emailAddresses[0]?.emailAddress;
-    
+
     return adminEmails.includes(userEmail);
   };
 
   // 检查用户是否为系统所有者（第一个管理员）
-  const isOwner = () => {
+  const isOwner = (silent = false) => {
     if (!user) return false;
 
-    const adminEmails = getAdminEmails();
+    const adminEmails = getAdminEmails(silent);
     if (adminEmails.length === 0) return false;
 
     const userEmail = user.emailAddresses[0]?.emailAddress;
@@ -60,10 +63,16 @@ export const useAuth = () => {
   const hasModuleAccess = (moduleName) => {
     // 如果用户未加载完成或未登录，返回 false
     if (!userLoaded || !isSignedIn || !user) return false;
-    
-    // 管理员默认有所有模块访问权限
-    if (isAdmin()) return true;
-    
+
+    // 对于videos模块，不依赖管理员权限，只检查用户级别权限
+    if (moduleName === 'videos') {
+      // videos模块所有登录用户都可以访问，具体权限由Lambda函数控制
+      return true;
+    }
+
+    // 其他模块：管理员默认有所有模块访问权限
+    if (isAdmin(true)) return true; // 使用静默模式
+
     // 检查用户的 publicMetadata 中的授权模块
     const authorizedModules = user.publicMetadata?.authorized_modules || [];
     return authorizedModules.includes(moduleName);
@@ -72,10 +81,10 @@ export const useAuth = () => {
   // 新增：获取用户的所有授权模块
   const getUserModules = () => {
     if (!user) return [];
-    
+
     // 管理员有所有模块权限（这里可以根据需要调整）
-    if (isAdmin()) return ['quiz', 'future1', 'future2'];
-    
+    if (isAdmin(true)) return ['quiz', 'future1', 'future2'];
+
     return user.publicMetadata?.authorized_modules || [];
   };
 
@@ -221,7 +230,7 @@ export const useAuth = () => {
 
   // 获取所有用户（管理员功能）- 修复返回值问题
   const fetchAllUsers = useCallback(async () => {
-    if (!isAdmin()) {
+    if (!isAdmin(true)) {
       return [];
     }
 
@@ -266,7 +275,7 @@ export const useAuth = () => {
 
   // ✅ 为用户分配模块权限（通过Lambda API）- 保持原有逻辑不变
   const assignModuleAccess = async (userEmailOrId, moduleOrModules, isGranting = true) => {
-    if (!isAdmin()) {
+    if (!isAdmin(true)) {
       throw new Error('只有管理员可以分配权限');
     }
 
@@ -476,7 +485,7 @@ export const useAuth = () => {
 
   // ✅ 撤销用户权限（通过Lambda API）- 保持原有逻辑不变
   const revokeModuleAccess = async (userId) => {
-    if (!isAdmin()) {
+    if (!isAdmin(true)) {
       throw new Error('只有管理员可以撤销权限');
     }
 
@@ -642,8 +651,8 @@ export const useAuth = () => {
     user,
     isSignedIn: !!isSignedIn,
     isLoaded: userLoaded && authLoaded,
-    isAdmin: isAdmin(),
-    isOwner: isOwner(),
+    isAdmin: isAdmin(true), // 使用静默模式避免在videos模块显示警告
+    isOwner: isOwner(true), // 使用静默模式避免在videos模块显示警告
     authLoading: !userLoaded || !authLoaded,
     // 导出函数供其他组件使用
     getAdminEmails,

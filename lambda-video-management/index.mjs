@@ -96,7 +96,7 @@ export const handler = async (event) => {
     console.log("路由匹配 - Path:", path, "Method:", method);
 
     if (method === "GET" && path === "/videos/list") {
-      return await listVideos(corsHeaders);
+      return await listVideos(user, corsHeaders);
     } else if (method === "GET" && path.startsWith("/videos/url/")) {
       console.log("URL解析调试:");
       console.log("- event.requestContext.http.path:", event.requestContext.http.path);
@@ -110,7 +110,7 @@ export const handler = async (event) => {
       console.log("- 使用的rawPath:", rawPath);
       console.log("- 提取的rawVideoKey:", rawVideoKey);  
       console.log("- 解码后的videoKey:", videoKey);
-      return await getVideoUrl(videoKey, corsHeaders);
+      return await getVideoUrl(videoKey, user, corsHeaders);
     } else if (method === "POST" && path === "/upload-youtube") {
       return await uploadYouTubeJson(event, user, corsHeaders);
     } else if (method === "DELETE" && path === "/videos/delete") {
@@ -122,7 +122,7 @@ export const handler = async (event) => {
       return await generateThumbnail(videoKey, corsHeaders);
     } else if (method === "GET" && path === "/videos/thumbnails/batch") {
       const pathParam = event.queryStringParameters?.path || "";
-      return await getBatchThumbnails(pathParam, corsHeaders);
+      return await getBatchThumbnails(pathParam, user, corsHeaders);
     }
 
     console.log("路由不匹配");
@@ -326,10 +326,30 @@ function isYouTubeJsonFile(filename) {
   return filename.toLowerCase().endsWith(".youtube.json");
 }
 
-async function listVideos(corsHeaders) {
+// 文件夹权限配置
+const FOLDER_PERMISSIONS = {
+  "Movies": ["damon_xuda@163.com"], // Movies文件夹只有damon_xuda@163.com可以访问
+  // 可以继续添加其他受限文件夹
+  // "Private": ["admin@example.com"],
+  // "VIP": ["vip1@example.com", "vip2@example.com"],
+};
+
+// 检查用户是否有权限访问指定文件夹
+function hasAccessToFolder(userEmail, folderName) {
+  // 如果文件夹没有权限限制，所有人都可以访问
+  if (!FOLDER_PERMISSIONS[folderName]) {
+    return true;
+  }
+
+  // 检查用户是否在允许列表中
+  return FOLDER_PERMISSIONS[folderName].includes(userEmail);
+}
+
+async function listVideos(user, corsHeaders) {
   try {
     console.log("--- 开始获取视频列表 ---");
     console.log("VIDEO_BUCKET:", VIDEO_BUCKET);
+    console.log("用户邮箱:", user.emailAddresses?.[0]?.emailAddress);
 
     const command = new ListObjectsV2Command({
       Bucket: VIDEO_BUCKET,
@@ -339,13 +359,25 @@ async function listVideos(corsHeaders) {
     const response = await s3Client.send(command);
     console.log("S3响应:", response.Contents?.length || 0, "个对象");
 
-    // 支持视频文件和YouTube JSON文件
+    const userEmail = user.emailAddresses?.[0]?.emailAddress;
+
+    // 支持视频文件和YouTube JSON文件，并添加文件夹权限过滤
     const allFiles =
       response.Contents?.filter((item) => {
         const filename = item.Key.split("/").pop();
         const isVideo = isVideoFile(filename);
         const isYouTube = isYouTubeJsonFile(filename);
         const hasSize = item.Size > 0;
+
+        // 检查文件夹权限
+        const pathParts = item.Key.split("/");
+        if (pathParts.length > 2) { // videos/FolderName/file.mp4
+          const folderName = pathParts[1]; // 获取文件夹名称
+          if (!hasAccessToFolder(userEmail, folderName)) {
+            console.log(`权限过滤: 用户 ${userEmail} 无权访问文件夹 ${folderName}，跳过文件 ${filename}`);
+            return false;
+          }
+        }
 
         console.log(
           `文件检查: ${filename} | 是否视频: ${isVideo} | 是否YouTube: ${isYouTube} | 有大小: ${hasSize}`
@@ -354,7 +386,7 @@ async function listVideos(corsHeaders) {
         return (isVideo || isYouTube) && hasSize;
       }) || [];
 
-    console.log("过滤后的文件:", allFiles.length, "个");
+    console.log("权限过滤后的文件:", allFiles.length, "个");
     console.log(
       "文件列表:",
       allFiles.map((v) => v.Key.split("/").pop())
@@ -381,10 +413,30 @@ async function listVideos(corsHeaders) {
   }
 }
 
-async function getVideoUrl(videoKey, corsHeaders) {
+async function getVideoUrl(videoKey, user, corsHeaders) {
   try {
     console.log("--- 生成视频URL ---");
     console.log("videoKey:", videoKey);
+    console.log("用户邮箱:", user.emailAddresses?.[0]?.emailAddress);
+
+    // 检查文件夹权限
+    const pathParts = videoKey.split("/");
+    if (pathParts.length > 2) { // videos/FolderName/file.mp4
+      const folderName = pathParts[1]; // 获取文件夹名称
+      const userEmail = user.emailAddresses?.[0]?.emailAddress;
+
+      if (!hasAccessToFolder(userEmail, folderName)) {
+        console.log(`权限拒绝: 用户 ${userEmail} 无权访问文件夹 ${folderName} 中的视频 ${videoKey}`);
+        return {
+          statusCode: 403,
+          headers: corsHeaders,
+          body: JSON.stringify({
+            error: "Access denied to this folder",
+            details: `You don't have permission to access folder: ${folderName}`,
+          }),
+        };
+      }
+    }
 
     const command = new GetObjectCommand({
       Bucket: VIDEO_BUCKET,
@@ -914,10 +966,27 @@ async function createVideoThumbnail(videoPath, thumbnailKey) {
 }
 
 // 批量获取缩略图预签名URLs
-async function getBatchThumbnails(pathParam, corsHeaders) {
+async function getBatchThumbnails(pathParam, user, corsHeaders) {
   try {
     console.log("=== 开始批量获取缩略图 ===");
     console.log("Path参数:", pathParam);
+    console.log("用户邮箱:", user.emailAddresses?.[0]?.emailAddress);
+
+    // 检查文件夹权限
+    if (pathParam) {
+      const userEmail = user.emailAddresses?.[0]?.emailAddress;
+      if (!hasAccessToFolder(userEmail, pathParam)) {
+        console.log(`权限拒绝: 用户 ${userEmail} 无权访问文件夹 ${pathParam}`);
+        return {
+          statusCode: 403,
+          headers: corsHeaders,
+          body: JSON.stringify({
+            error: "Access denied to this folder",
+            details: `You don't have permission to access folder: ${pathParam}`,
+          }),
+        };
+      }
+    }
 
     // 构建S3前缀 - 如果有path参数则使用，否则获取根目录
     const s3Prefix = pathParam ? `videos/${pathParam}/` : "videos/";
@@ -932,11 +1001,25 @@ async function getBatchThumbnails(pathParam, corsHeaders) {
     const response = await s3Client.send(listCommand);
     console.log("S3响应:", response.Contents?.length || 0, "个对象");
 
-    // 过滤出视频文件
+    // 过滤出视频文件，并检查文件夹权限
+    const userEmail = user.emailAddresses?.[0]?.emailAddress;
     const videoFiles = response.Contents?.filter((item) => {
       const filename = item.Key.split("/").pop();
       const isVideo = isVideoFile(filename);
       const hasSize = item.Size > 0;
+
+      // 如果没有指定pathParam（查看根目录），需要检查文件夹权限
+      if (!pathParam) {
+        const pathParts = item.Key.split("/");
+        if (pathParts.length > 2) { // videos/FolderName/file.mp4
+          const folderName = pathParts[1]; // 获取文件夹名称
+          if (!hasAccessToFolder(userEmail, folderName)) {
+            console.log(`批量缩略图权限过滤: 用户 ${userEmail} 无权访问文件夹 ${folderName}，跳过文件 ${filename}`);
+            return false;
+          }
+        }
+      }
+
       return isVideo && hasSize;
     }) || [];
 
