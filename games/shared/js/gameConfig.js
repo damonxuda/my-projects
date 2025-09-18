@@ -29,26 +29,41 @@ window.SUPABASE_ANON_KEY = window.GAME_CONFIG.SUPABASE_ANON_KEY;
 // 简单的Supabase客户端创建函数
 window.createGameSupabaseClient = function() {
   try {
+    console.log('🔧 尝试创建Supabase客户端...');
+    console.log('  - SUPABASE_URL:', window.GAME_CONFIG.SUPABASE_URL);
+    console.log('  - SUPABASE_ANON_KEY存在:', !!window.GAME_CONFIG.SUPABASE_ANON_KEY);
+
+    // 检查环境变量
+    if (!window.GAME_CONFIG.SUPABASE_URL || !window.GAME_CONFIG.SUPABASE_ANON_KEY) {
+      console.error('❌ Supabase 配置缺失');
+      console.log('  - URL:', window.GAME_CONFIG.SUPABASE_URL);
+      console.log('  - Key存在:', !!window.GAME_CONFIG.SUPABASE_ANON_KEY);
+      return null;
+    }
+
     // 检查是否有@supabase/supabase-js库 (CDN版本)
     if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
+      console.log('✅ 使用window.supabase.createClient');
       return window.supabase.createClient(
         window.GAME_CONFIG.SUPABASE_URL,
         window.GAME_CONFIG.SUPABASE_ANON_KEY
       );
     }
-    
+
     // 检查全局的createClient函数
     if (typeof window.createClient !== 'undefined') {
+      console.log('✅ 使用window.createClient');
       return window.createClient(
         window.GAME_CONFIG.SUPABASE_URL,
         window.GAME_CONFIG.SUPABASE_ANON_KEY
       );
     }
-    
-    console.warn('Supabase library not loaded. Please include @supabase/supabase-js');
+
+    console.warn('⚠️ Supabase library not loaded. Please include @supabase/supabase-js');
+    console.log('Available globals:', Object.keys(window).filter(k => k.toLowerCase().includes('supabase')));
     return null;
   } catch (error) {
-    console.error('Failed to create Supabase client:', error);
+    console.error('❌ Failed to create Supabase client:', error);
     return null;
   }
 };
