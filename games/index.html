@@ -477,7 +477,7 @@
           }
         }
 
-        console.log('🛰️ Games模块运行在卫星模式，等待Clerk自动同步认证状态');
+        console.log('🎮 Games模块使用子目录模式，与主站同步认证状态');
 
         // Clerk不可用时的fallback
         if (!window.Clerk) {
@@ -490,8 +490,8 @@
         }
 
         try {
-          // 同域名多应用配置：完整的跨应用认证共享设置
-          const clerkConfig = {
+          // 同域名子目录配置：与主站保持一致的认证共享设置
+          await window.Clerk.load({
             // 核心同域名共享配置
             domain: window.location.hostname,
             // Cookie配置：确保认证状态在整个域名下共享
@@ -510,21 +510,28 @@
             ],
             // 启用跨应用session同步
             sessionSyncing: true
-          };
-
-          await window.Clerk.load(clerkConfig);
+          });
 
           // 初始化UI状态
           updateAuthUI(!!window.Clerk.user, window.Clerk.user);
 
-          // 登录按钮事件 - 卫星模式使用Clerk内置登录
+          // 登录按钮事件 - 子目录模式与主站一致
           loginBtn.addEventListener('click', async () => {
             try {
-              // 在卫星应用中调用Clerk登录，会自动处理跨域
+              loginBtn.disabled = true;
+              loginBtn.textContent = '登录中...';
+
               await window.Clerk.openSignIn();
             } catch (error) {
               console.error('Games页面登录失败:', error);
-              alert('登录失败，请稍后重试');
+              if (error.message.includes('rate') || error.message.includes('limit')) {
+                alert('请求过于频繁，请稍后重试');
+              } else {
+                alert('登录失败，请稍后重试');
+              }
+            } finally {
+              loginBtn.disabled = false;
+              loginBtn.textContent = '🔐 登录';
             }
           });
 
