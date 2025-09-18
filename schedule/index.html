@@ -225,6 +225,12 @@
     <!-- 引入Supabase库 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
+    <!-- 环境变量设置 -->
+    <script>
+        window.REACT_APP_SUPABASE_URL = "${REACT_APP_SUPABASE_URL}";
+        window.REACT_APP_SUPABASE_ANON_KEY = "${REACT_APP_SUPABASE_ANON_KEY}";
+    </script>
+
     <!-- 引入JavaScript文件 -->
     <script src="js/config.js"></script>
     <script src="js/app.js"></script>

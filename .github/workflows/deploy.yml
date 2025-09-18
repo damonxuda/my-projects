@@ -78,11 +78,22 @@ jobs:
             echo "force_deploy=false" >> $GITHUB_OUTPUT
           fi
 
-      # 5. 部署 Schedule 项目（静态文件）
+      # 5. 部署 Schedule 项目（静态文件 + 环境变量）
       - name: Deploy Schedule
         if: steps.changes.outputs.schedule_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        env:
+          REACT_APP_SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
+          REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.REACT_APP_SUPABASE_ANON_KEY }}
         run: |
           echo "🚀 Deploying Schedule to /schedule path..."
+
+          # 处理环境变量替换
+          if [ -f "./schedule/index.html" ]; then
+            echo "🔧 Processing schedule HTML files for environment variables..."
+            envsubst < "./schedule/index.html" > "./schedule/index.html.tmp" && mv "./schedule/index.html.tmp" "./schedule/index.html"
+            echo "✅ Environment variables processed"
+          fi
+
           aws s3 sync ./schedule/ s3://damonxuda-projects/schedule/ \
             --delete \
             --exclude "*.md" \
