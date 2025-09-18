@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏认证状态调试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .debug-panel {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .status-ok { color: #28a745; }
+        .status-error { color: #dc3545; }
+        .status-warning { color: #ffc107; }
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            overflow-x: auto;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 12px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 游戏认证状态调试面板</h1>
+
+    <div class="debug-panel">
+        <h3>🌐 基本环境信息</h3>
+        <div id="basic-info"></div>
+    </div>
+
+    <div class="debug-panel">
+        <h3>🔐 Clerk认证状态</h3>
+        <div id="clerk-status"></div>
+        <button onclick="checkClerkStatus()">🔄 刷新Clerk状态</button>
+    </div>
+
+    <div class="debug-panel">
+        <h3>👤 用户信息详情</h3>
+        <div id="user-details"></div>
+    </div>
+
+    <div class="debug-panel">
+        <h3>🎮 游戏存储状态</h3>
+        <div id="storage-status"></div>
+        <button onclick="testStorageConnection()">🧪 测试存储连接</button>
+    </div>
+
+    <div class="debug-panel">
+        <h3>💾 本地数据</h3>
+        <div id="local-data"></div>
+        <button onclick="showLocalData()">📂 显示本地数据</button>
+    </div>
+
+    <div class="debug-panel">
+        <h3>☁️ 云端数据测试</h3>
+        <div id="cloud-test"></div>
+        <button onclick="testCloudConnection()">🌐 测试云端连接</button>
+    </div>
+
+    <!-- Clerk SDK -->
+    <script crossorigin="anonymous" data-clerk-publishable-key="${CLERK_PUBLISHABLE_KEY}" src="https://clerk.damonxuda.site/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" type="text/javascript"></script>
+
+    <script>
+        // 基本信息显示
+        function showBasicInfo() {
+            const info = {
+                'URL': window.location.href,
+                'User Agent': navigator.userAgent,
+                'Platform': navigator.platform,
+                'Online': navigator.onLine,
+                'Cookies Enabled': navigator.cookieEnabled,
+                'Local Storage Available': typeof(Storage) !== "undefined",
+                'Current Time': new Date().toISOString()
+            };
+
+            document.getElementById('basic-info').innerHTML = Object.entries(info)
+                .map(([key, value]) => `<strong>${key}:</strong> ${value}`)
+                .join('<br>');
+        }
+
+        // 检查Clerk状态
+        async function checkClerkStatus() {
+            const statusDiv = document.getElementById('clerk-status');
+            let html = '';
+
+            try {
+                html += `<strong>Clerk对象存在:</strong> <span class="${window.Clerk ? 'status-ok' : 'status-error'}">${!!window.Clerk}</span><br>`;
+
+                if (window.Clerk) {
+                    html += `<strong>Clerk已加载:</strong> <span class="${window.Clerk.loaded ? 'status-ok' : 'status-warning'}">${window.Clerk.loaded}</span><br>`;
+                    html += `<strong>用户对象存在:</strong> <span class="${window.Clerk.user ? 'status-ok' : 'status-error'}">${!!window.Clerk.user}</span><br>`;
+                    html += `<strong>Session存在:</strong> <span class="${window.Clerk.session ? 'status-ok' : 'status-error'}">${!!window.Clerk.session}</span><br>`;
+
+                    if (window.Clerk.user) {
+                        html += `<strong>用户ID:</strong> ${window.Clerk.user.id}<br>`;
+                        html += `<strong>邮箱:</strong> ${window.Clerk.user.emailAddresses?.[0]?.emailAddress || 'N/A'}<br>`;
+                    }
+
+                    if (window.Clerk.session) {
+                        html += `<strong>Session ID:</strong> ${window.Clerk.session.id}<br>`;
+                        try {
+                            const token = await window.Clerk.session.getToken();
+                            html += `<strong>JWT Token:</strong> <span class="status-ok">✅ 获取成功 (${token ? token.substring(0, 20) + '...' : 'null'})</span><br>`;
+                        } catch (error) {
+                            html += `<strong>JWT Token:</strong> <span class="status-error">❌ 获取失败: ${error.message}</span><br>`;
+                        }
+                    }
+                }
+
+                // 检查localStorage中的认证信息
+                try {
+                    const clerkEnv = localStorage.getItem('__clerk_environment');
+                    if (clerkEnv) {
+                        const envData = JSON.parse(clerkEnv);
+                        html += `<strong>LocalStorage认证:</strong> <span class="status-ok">✅ 存在</span><br>`;
+                        html += `<strong>LS用户ID:</strong> ${envData.user?.id || 'N/A'}<br>`;
+                        html += `<strong>LS Session ID:</strong> ${envData.session?.id || 'N/A'}<br>`;
+                    } else {
+                        html += `<strong>LocalStorage认证:</strong> <span class="status-error">❌ 不存在</span><br>`;
+                    }
+                } catch (error) {
+                    html += `<strong>LocalStorage检查:</strong> <span class="status-error">❌ 解析失败</span><br>`;
+                }
+
+            } catch (error) {
+                html += `<strong>检查过程出错:</strong> <span class="status-error">${error.message}</span><br>`;
+            }
+
+            statusDiv.innerHTML = html;
+        }
+
+        // 显示用户详情
+        function showUserDetails() {
+            const detailsDiv = document.getElementById('user-details');
+
+            if (window.Clerk && window.Clerk.user) {
+                const user = window.Clerk.user;
+                const details = {
+                    'User ID': user.id,
+                    'First Name': user.firstName,
+                    'Last Name': user.lastName,
+                    'Email Addresses': user.emailAddresses?.map(e => e.emailAddress).join(', '),
+                    'Primary Email': user.primaryEmailAddress?.emailAddress,
+                    'Created At': user.createdAt,
+                    'Updated At': user.updatedAt,
+                    'Public Metadata': JSON.stringify(user.publicMetadata, null, 2),
+                    'Private Metadata': JSON.stringify(user.privateMetadata, null, 2)
+                };
+
+                detailsDiv.innerHTML = Object.entries(details)
+                    .map(([key, value]) => `<strong>${key}:</strong><br><div class="code-block">${value || 'N/A'}</div>`)
+                    .join('');
+            } else {
+                detailsDiv.innerHTML = '<span class="status-error">❌ 用户未登录或Clerk未初始化</span>';
+            }
+        }
+
+        // 测试存储连接
+        async function testStorageConnection() {
+            const statusDiv = document.getElementById('storage-status');
+            let html = '';
+
+            try {
+                // 检查SmartGameStorage是否存在
+                html += `<strong>SmartGameStorage类:</strong> <span class="${window.SmartNonogramStorage ? 'status-ok' : 'status-error'}">${!!window.SmartNonogramStorage}</span><br>`;
+
+                if (window.SmartNonogramStorage) {
+                    const storage = new window.SmartNonogramStorage();
+
+                    // 检查用户登录状态
+                    const isLoggedIn = storage.isUserLoggedIn();
+                    html += `<strong>存储系统识别登录状态:</strong> <span class="${isLoggedIn ? 'status-ok' : 'status-error'}">${isLoggedIn}</span><br>`;
+
+                    const userId = storage.getUserId();
+                    html += `<strong>存储系统获取用户ID:</strong> ${userId || 'N/A'}<br>`;
+
+                    const syncStatus = storage.getSyncStatus();
+                    html += `<strong>同步状态:</strong><br><div class="code-block">${JSON.stringify(syncStatus, null, 2)}</div>`;
+
+                    // 尝试加载进度
+                    try {
+                        const progress = await storage.loadProgress();
+                        html += `<strong>进度加载:</strong> <span class="status-ok">✅ 成功</span><br>`;
+                        html += `<strong>当前进度:</strong><br><div class="code-block">${JSON.stringify(progress, null, 2)}</div>`;
+                    } catch (error) {
+                        html += `<strong>进度加载:</strong> <span class="status-error">❌ 失败: ${error.message}</span><br>`;
+                    }
+                }
+
+            } catch (error) {
+                html += `<strong>存储测试出错:</strong> <span class="status-error">${error.message}</span><br>`;
+            }
+
+            statusDiv.innerHTML = html;
+        }
+
+        // 显示本地数据
+        function showLocalData() {
+            const dataDiv = document.getElementById('local-data');
+            let html = '';
+
+            try {
+                const gameKeys = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.includes('nonogram')) {
+                        gameKeys.push(key);
+                    }
+                }
+
+                html += `<strong>游戏相关本地存储键:</strong> ${gameKeys.length} 个<br>`;
+
+                gameKeys.forEach(key => {
+                    try {
+                        const value = localStorage.getItem(key);
+                        const data = JSON.parse(value);
+                        html += `<strong>${key}:</strong><br><div class="code-block">${JSON.stringify(data, null, 2)}</div>`;
+                    } catch (error) {
+                        html += `<strong>${key}:</strong> <span class="status-error">解析失败</span><br>`;
+                    }
+                });
+
+                if (gameKeys.length === 0) {
+                    html += '<span class="status-warning">⚠️ 没有找到游戏相关的本地数据</span>';
+                }
+
+            } catch (error) {
+                html += `<strong>本地数据检查出错:</strong> <span class="status-error">${error.message}</span><br>`;
+            }
+
+            dataDiv.innerHTML = html;
+        }
+
+        // 测试云端连接
+        async function testCloudConnection() {
+            const testDiv = document.getElementById('cloud-test');
+            let html = '';
+
+            try {
+                // 检查Supabase连接
+                html += `<strong>createGameSupabaseClient函数:</strong> <span class="${window.createGameSupabaseClient ? 'status-ok' : 'status-error'}">${!!window.createGameSupabaseClient}</span><br>`;
+
+                if (window.createGameSupabaseClient) {
+                    const supabase = window.createGameSupabaseClient();
+                    html += `<strong>Supabase客户端:</strong> <span class="status-ok">✅ 创建成功</span><br>`;
+
+                    // 尝试查询当前用户的数据
+                    if (window.Clerk && window.Clerk.user) {
+                        const userId = window.Clerk.user.id;
+                        html += `<strong>查询用户数据:</strong> ${userId}<br>`;
+
+                        try {
+                            const { data, error } = await supabase
+                                .from('game_progress')
+                                .select('*')
+                                .eq('user_id', userId)
+                                .eq('game', 'nonogram');
+
+                            if (error) {
+                                html += `<strong>云端查询:</strong> <span class="status-error">❌ 失败: ${error.message}</span><br>`;
+                            } else {
+                                html += `<strong>云端查询:</strong> <span class="status-ok">✅ 成功，找到 ${data.length} 条记录</span><br>`;
+                                if (data.length > 0) {
+                                    html += `<strong>云端数据:</strong><br><div class="code-block">${JSON.stringify(data, null, 2)}</div>`;
+                                }
+                            }
+                        } catch (queryError) {
+                            html += `<strong>云端查询:</strong> <span class="status-error">❌ 异常: ${queryError.message}</span><br>`;
+                        }
+                    } else {
+                        html += `<strong>云端查询:</strong> <span class="status-warning">⚠️ 用户未登录，无法查询</span><br>`;
+                    }
+                }
+
+            } catch (error) {
+                html += `<strong>云端测试出错:</strong> <span class="status-error">${error.message}</span><br>`;
+            }
+
+            testDiv.innerHTML = html;
+        }
+
+        // 初始化
+        async function init() {
+            showBasicInfo();
+
+            // 等待Clerk加载
+            if (window.Clerk) {
+                try {
+                    await window.Clerk.load({
+                        domain: window.location.hostname,
+                        cookieDomain: window.location.hostname.startsWith('localhost') ? 'localhost' : `.${window.location.hostname}`,
+                        cookiePath: '/',
+                        sessionSyncing: true
+                    });
+                } catch (error) {
+                    console.warn('Clerk加载失败:', error);
+                }
+            }
+
+            // 延迟检查各种状态
+            setTimeout(() => {
+                checkClerkStatus();
+                showUserDetails();
+            }, 1000);
+        }
+
+        // 页面加载完成后初始化
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
+
+    <!-- 加载游戏存储系统 -->
+    <script src="shared/js/gameConfig.js"></script>
+    <script src="shared/js/smartGameStorage.js"></script>
+</body>
+</html>
