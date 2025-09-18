@@ -21,16 +21,17 @@ export const useAuth = () => {
   const [cachedToken, setCachedToken] = useState(null);
   const [tokenExpiry, setTokenExpiry] = useState(null);
 
-  // 管理员邮箱列表 - 可以通过环境变量配置
+  // 管理员邮箱列表 - 完全通过环境变量配置
   const getAdminEmails = () => {
-    // 优先从环境变量读取，支持多个管理员
+    // 从环境变量读取，支持多个管理员
     const envAdmins = process.env.REACT_APP_ADMIN_EMAILS;
     if (envAdmins) {
       return envAdmins.split(',').map(email => email.trim());
     }
-    
-    // 默认管理员（你的邮箱）
-    return ['damon.xu@gmail.com'];
+
+    // 如果没有配置环境变量，返回空数组（无管理员）
+    console.warn('⚠️ REACT_APP_ADMIN_EMAILS 环境变量未配置，系统无管理员');
+    return [];
   };
 
   // 检查用户是否为管理员
@@ -47,8 +48,12 @@ export const useAuth = () => {
   const isOwner = () => {
     if (!user) return false;
 
+    const adminEmails = getAdminEmails();
+    if (adminEmails.length === 0) return false;
+
     const userEmail = user.emailAddresses[0]?.emailAddress;
-    return userEmail === 'damon.xu@gmail.com'; // 你的邮箱作为所有者
+    // 第一个管理员被认为是系统所有者
+    return userEmail === adminEmails[0];
   };
 
   // 新增：检查用户是否有指定模块的访问权限
