@@ -34,20 +34,31 @@ class NonogramGame {
       this.init();
     };
 
+    // 📱 移动端兼容性：强制启动机制
+    let gameStarted = false;
+
+    const forceStartGame = () => {
+      if (!gameStarted) {
+        gameStarted = true;
+        console.warn('🔥 强制启动游戏系统（移动端兼容）');
+        startInit();
+      }
+    };
+
     // 检查Clerk是否已经初始化
     if (window.clerkInitialized) {
-      startInit();
+      forceStartGame();
     } else {
       // 等待Clerk初始化完成事件
-      window.addEventListener('clerkReady', startInit, { once: true });
+      window.addEventListener('clerkReady', forceStartGame, { once: true });
 
-      // 设置超时保护，避免永久等待
-      setTimeout(() => {
-        if (!this.storage) {
-          console.warn('⚠️ Clerk初始化超时，以游客模式继续');
-          startInit();
-        }
-      }, 5000); // 5秒超时
+      // 📱 移动端强制启动：3秒后无论如何都启动游戏
+      setTimeout(forceStartGame, 3000); // 缩短到3秒，确保移动端快速启动
+
+      // 📱 额外保险：检测到移动设备时1秒后也启动
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        setTimeout(forceStartGame, 1000); // 移动端1秒强制启动
+      }
     }
   }
 
