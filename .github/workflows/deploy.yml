@@ -231,6 +231,8 @@ jobs:
         if: steps.changes.outputs.root_files_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
         env:
           CLERK_PUBLISHABLE_KEY: ${{ secrets.REACT_APP_CLERK_PUBLISHABLE_KEY }}
+          REACT_APP_SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
+          REACT_APP_SUPABASE_ANON_KEY: ${{ secrets.REACT_APP_SUPABASE_ANON_KEY }}
         run: |
           echo "🚀 Deploying root directory files..."
           if [ -f "./index.html" ]; then
