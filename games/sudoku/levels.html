@@ -65,8 +65,11 @@
         transition: all 0.3s ease;
       }
       
-      .header .back-btn:hover {
-        background: rgba(255, 255, 255, 0.3);
+      /* Only apply hover effects on non-touch devices to prevent sticky hover on mobile */
+      @media (hover: hover) and (pointer: fine) {
+        .header .back-btn:hover {
+          background: rgba(255, 255, 255, 0.3);
+        }
       }
       
       .header .title {
@@ -112,8 +115,10 @@
         font-weight: 600;
       }
       
-      .difficulty-tab:hover {
-        opacity: 1;
+      @media (hover: hover) and (pointer: fine) {
+        .difficulty-tab:hover {
+          opacity: 1;
+        }
       }
       
       /* 关卡网格 */
@@ -141,7 +146,15 @@
         color: white;
       }
       
-      .level-card:hover,
+      @media (hover: hover) and (pointer: fine) {
+        .level-card:hover {
+          transform: translateY(-2px);
+          background: rgba(255, 255, 255, 0.25);
+          border-color: rgba(255, 255, 255, 0.4);
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+      }
+
       .level-card:active {
         transform: translateY(-2px);
         background: rgba(255, 255, 255, 0.25);
@@ -388,60 +401,130 @@
         <div>加载关卡中...</div>
       </div>
     </div>
-    
-    <!-- 跨模块认证支持 -->
+
+    <!-- Environment Variables -->
     <script>
-      window.clerkInitialized = false;
-      window.addEventListener('load', async () => {
-        // 策略4: 直接解析URL token绕过网络验证 (解决跨模块架构差异)
-        const urlParams = new URLSearchParams(window.location.search);
-        const sessionToken = urlParams.get('session');
+        window.REACT_APP_SUPABASE_URL = "${REACT_APP_SUPABASE_URL}";
+        window.REACT_APP_SUPABASE_ANON_KEY = "${REACT_APP_SUPABASE_ANON_KEY}";
+        window.REACT_APP_CLERK_PUBLISHABLE_KEY = "${CLERK_PUBLISHABLE_KEY}";
+    </script>
 
-        if (sessionToken && !window.mockClerkUser) {
-          const tokenParts = sessionToken.split('.');
-          if (tokenParts.length === 3) {
-            try {
-              const payload = JSON.parse(atob(tokenParts[1]));
-              // 创建模拟用户对象绕过Clerk网络验证
-              window.mockClerkUser = {
-                id: payload.sub,
-                sessionId: payload.sid,
-                emailAddresses: [{ emailAddress: 'user@authenticated.com' }],
-                isAuthenticated: true,
-                authSource: 'token-parsed',
-                tokenExpiry: payload.exp,
-                parsedAt: Date.now(),
-                originalSessionToken: sessionToken // 保存原始token用于传递
-              };
+    <!-- JavaScript兼容性支持 -->
+    <script src="https://cdn.jsdelivr.net/npm/@babel/polyfill@7.12.1/dist/polyfill.min.js"></script>
 
-              console.log('✅ 数独关卡页 - 跨模块认证成功 (Token解析)');
-              console.log('   - User ID:', payload.sub);
-              console.log('   - Session ID:', payload.sid);
+    <!-- Clerk SDK for SSO -->
+    <script crossorigin="anonymous" data-clerk-publishable-key="${CLERK_PUBLISHABLE_KEY}" src="https://clerk.damonxuda.site/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" type="text/javascript"></script>
 
-              window.clerkInitialized = true;
-              window.dispatchEvent(new CustomEvent('clerkReady'));
-              return;
-            } catch (error) {
-              console.error('❌ 数独关卡页 - Token解析失败:', error);
-            }
-          }
+    <!-- Supabase SDK -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+    <!-- Clerk 初始化 (与数织游戏保持一致) -->
+    <script>
+      // 🔥 改进的Clerk初始化策略 - 专门解决React模块到Games模块的身份传递问题
+      async function initializeClerkForGames() {
+        // 🔥 防止重复初始化
+        if (window.clerkInitialized) {
+          console.log('⏭️ Clerk已初始化，跳过重复调用');
+          return;
         }
 
-        // 标记为已初始化（游客模式）
-        window.clerkInitialized = true;
-        window.dispatchEvent(new CustomEvent('clerkReady'));
-      });
+        if (!window.Clerk) {
+          console.error('❌ Clerk SDK 未加载');
+          window.clerkInitialized = true;
+          window.dispatchEvent(new CustomEvent('clerkReady'));
+          return;
+        }
+
+        try {
+          console.log('🔄 开始增强的Clerk初始化...');
+          console.log('🔍 Clerk对象状态:', {
+            loaded: window.Clerk.loaded,
+            user: !!window.Clerk.user,
+            session: !!window.Clerk.session
+          });
+
+          // 🔥 策略1: 检查是否已经有活跃的session (从React模块导航过来)
+          if (window.Clerk.user && window.Clerk.session) {
+            console.log('🚀 检测到活跃session (React模块导航): ' + window.Clerk.user.id);
+            window.clerkInitialized = true;
+            window.dispatchEvent(new CustomEvent('clerkReady'));
+            return;
+          }
+
+          // 🔥 策略2: 强制等待Clerk完全加载
+          console.log('⏳ 等待Clerk完全加载...');
+          await window.Clerk.load();
+
+          // 再次检查加载后的状态
+          console.log('✅ Clerk.load() 完成，当前状态:', {
+            loaded: window.Clerk.loaded,
+            user: !!window.Clerk.user,
+            session: !!window.Clerk.session
+          });
+
+          // 🔥 策略3: 直接读取localStorage中的缓存认证数据 (React模块方式)
+          if (!window.Clerk.user) {
+            console.log('🔍 尝试从localStorage读取缓存的认证数据...');
+            try {
+              const clerkEnv = localStorage.getItem('__clerk_environment');
+              if (clerkEnv) {
+                const envData = JSON.parse(clerkEnv);
+                console.log('📦 找到Clerk环境数据:', {
+                  hasUser: !!envData.user,
+                  hasSession: !!envData.session,
+                  hasClient: !!envData.client
+                });
+
+                // 如果localStorage中有用户和session数据，但Clerk对象中没有
+                if (envData.user && envData.session && !window.Clerk.user) {
+                  console.log('🔄 检测到localStorage中的用户session，尝试激活...');
+
+                  // 尝试使用session ID激活session
+                  const sessionId = envData.session.id;
+                  if (sessionId) {
+                    await window.Clerk.setActive({ session: sessionId });
+                    console.log('✅ localStorage Session激活成功，等待同步...');
+
+                    // 等待用户对象同步
+                    let attempts = 0;
+                    const maxAttempts = 5;
+                    while (!window.Clerk.user && attempts < maxAttempts) {
+                      await new Promise(resolve => setTimeout(resolve, 100));
+                      attempts++;
+                    }
+
+                    if (window.Clerk.user) {
+                      console.log('🎉 localStorage认证恢复成功!', {
+                        userId: window.Clerk.user.id,
+                        email: window.Clerk.user.emailAddresses?.[0]?.emailAddress
+                      });
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              console.log('⚠️ localStorage认证读取失败:', error);
+            }
+          }
+
+
+        } catch (error) {
+          console.error('❌ Clerk初始化失败:', error);
+        } finally {
+          // 🔥 无论成功还是失败，都标记为已初始化，避免无限等待
+          window.clerkInitialized = true;
+          window.dispatchEvent(new CustomEvent('clerkReady'));
+          console.log('✅ Clerk初始化流程完成');
+        }
+      }
+
+      // 🔥 页面加载完成后初始化
+      window.addEventListener('DOMContentLoaded', initializeClerkForGames);
     </script>
 
     <!-- 引入脚本 -->
     <script src="../shared/js/gameUtils.js"></script>
     <script src="../shared/js/storage.js"></script>
-    <!-- Legacy auth removed - using SmartGameStorage with Clerk -->
-    <!-- <script src="../shared/js/gameAuth.js"></script> -->
-    <!-- <script src="../shared/js/authStorage.js"></script> -->
-
-    <!-- Supabase SDK -->
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
     <!-- 智能存储系统 -->
     <script src="../shared/js/gameConfig.js"></script>

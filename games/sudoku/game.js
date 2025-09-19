@@ -22,6 +22,7 @@ class SudokuGame {
     this.levels = {};
     this.isAuthReady = false;
     this.authInitPromise = null;
+    this.gameStarted = false;  // 📱 移动端强制启动标志
 
     // 等待Clerk初始化完成后再开始游戏初始化
     this.waitForClerkAndInit();
@@ -74,14 +75,14 @@ class SudokuGame {
   async init() {
     this.initElements();
     this.initEventListeners();
-    
+
     // 初始化认证系统
     await this.initAuth();
-    
+
     await this.checkURLParams();
     this.loadGame();
     this.createBoard();
-    
+
     // 确保棋盘显示正确的数据 - 检查DOM是否ready
     if (this.gameState.board && this.gameState.board.length > 0) {
       // 确保有81个cell元素存在
@@ -89,6 +90,31 @@ class SudokuGame {
       if (cells.length === 81) {
         this.updateBoard();
       }
+    }
+
+    // 📱 移动端强制启动游戏机制
+    this.setupMobileForceStart();
+  }
+
+  // 📱 移动端强制启动机制（与数织游戏保持一致）
+  setupMobileForceStart() {
+    const forceStartGame = () => {
+      if (!this.gameStarted) {
+        console.log('📱 移动端强制启动数独游戏');
+        this.gameStarted = true;
+        // 确保游戏状态正确初始化
+        if (this.gameState.isLevelMode) {
+          this.startTimer();
+        }
+      }
+    }
+
+    // 📱 移动端强制启动：3秒后无论如何都启动游戏
+    setTimeout(forceStartGame, 3000); // 缩短到3秒，确保移动端快速启动
+
+    // 📱 额外保险：检测到移动设备时1秒后也启动
+    if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+      setTimeout(forceStartGame, 1000); // 移动端1秒强制启动
     }
   }
 
@@ -298,6 +324,12 @@ class SudokuGame {
       cell.dataset.col = i % 9;
       
       cell.addEventListener('click', () => {
+        this.selectCell(i);
+      });
+
+      // 📱 添加触摸支持（与数织游戏保持一致）
+      cell.addEventListener('touchstart', (e) => {
+        e.preventDefault();
         this.selectCell(i);
       });
       

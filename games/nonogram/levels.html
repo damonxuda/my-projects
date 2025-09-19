@@ -585,65 +585,6 @@
             }
           }
 
-          // 策略4: 直接解析URL token绕过网络验证 (解决跨模块架构差异)
-          const urlParams = new URLSearchParams(window.location.search);
-          const sessionToken = urlParams.get('session');
-          if (sessionToken && !window.Clerk.user) {
-            console.log('🔄 检测到URL session token，直接解析绕过网络验证:', sessionToken.substring(0, 20) + '...');
-            try {
-              // 🔥 直接解析JWT token获取用户信息 (绕过Clerk网络验证)
-              const tokenParts = sessionToken.split('.');
-              if (tokenParts.length === 3) {
-                const payload = JSON.parse(atob(tokenParts[1]));
-
-                // 🔥 创建模拟用户对象供SmartGameStorage使用
-                window.mockClerkUser = {
-                  id: payload.sub,
-                  sessionId: payload.sid,
-                  emailAddresses: [{ emailAddress: 'user@authenticated.com' }],
-                  isAuthenticated: true,
-                  authSource: 'token-parsed',
-                  // 🔥 保存原始session token，防止URL被清理后丢失
-                  originalSessionToken: sessionToken
-                };
-
-
-                // 🔥 立即标记初始化完成，让SmartGameStorage重新检查
-                window.clerkInitialized = true;
-
-                // 🔥 标记已通过跨模块认证，阻止传统Clerk初始化覆盖
-                window.crossModuleAuthCompleted = true;
-                window.dispatchEvent(new CustomEvent('clerkReady'));
-
-                // 清理URL参数
-                const cleanUrl = new URL(window.location);
-                cleanUrl.searchParams.delete('session');
-                window.history.replaceState({}, '', cleanUrl);
-
-
-                // 🔥 通知SmartGameStorage重新加载数据
-                setTimeout(() => {
-                  if (window.nonogramLevels && window.nonogramLevels.storage) {
-                    console.log('🔄 重新加载游戏数据...');
-                    window.nonogramLevels.loadProgress();
-                    // 🔥 重要：重新渲染levels以包含session token传递逻辑
-                    window.nonogramLevels.renderLevels();
-                    console.log('🔄 重新渲染levels以启用跨模块token传递...');
-                  }
-                }, 100);
-
-                return;  // 成功，退出初始化
-              }
-
-              // 同时尝试标准Clerk验证 (但不等待)
-              window.Clerk.setActive({ session: sessionToken }).catch(err => {
-                console.log('⚠️ 标准Clerk验证失败（已忽略）:', err.message);
-              });
-
-            } catch (error) {
-              console.log('❌ Token解析失败:', error);
-            }
-          }
 
           // 🔥 策略5: 如果仍然没有用户但有session token，尝试恢复session
           if (!window.Clerk.user && window.Clerk.session) {
