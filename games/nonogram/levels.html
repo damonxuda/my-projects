@@ -282,13 +282,11 @@
       .star-display .filled-star {
         color: #ffd700 !important;
         text-shadow:
-          0 0 10px rgba(255, 215, 0, 0.8),
-          0 0 6px rgba(255, 193, 7, 0.9),
-          0 0 3px rgba(255, 152, 0, 0.7),
-          0 0 2px rgba(255, 255, 255, 0.6),
-          0 0 1px rgba(0,0,0,0.4) !important;
-        filter: drop-shadow(0 0 6px #ffc107) brightness(1.6) saturate(1.4) !important;
-        animation: starGlow 2s ease-in-out infinite alternate !important;
+          0 0 3px rgba(255, 215, 0, 0.5),
+          0 0 2px rgba(255, 193, 7, 0.6),
+          0 0 1px rgba(255, 152, 0, 0.4),
+          0 0 1px rgba(0,0,0,0.3) !important;
+        filter: brightness(1.3) saturate(1.2) !important;
         font-weight: bold !important;
         position: relative !important;
         z-index: 10 !important;
@@ -299,24 +297,6 @@
         text-shadow: 0 0 1px rgba(0,0,0,0.7);
       }
 
-      @keyframes starGlow {
-        0% {
-          filter: drop-shadow(0 0 4px #ffc107) brightness(1.4) saturate(1.2);
-          text-shadow:
-            0 0 8px rgba(255, 215, 0, 0.7),
-            0 0 4px rgba(255, 193, 7, 0.8),
-            0 0 2px rgba(255, 152, 0, 0.6),
-            0 0 1px rgba(255, 255, 255, 0.5);
-        }
-        100% {
-          filter: drop-shadow(0 0 8px #ffd700) brightness(1.8) saturate(1.6);
-          text-shadow:
-            0 0 12px rgba(255, 215, 0, 0.9),
-            0 0 8px rgba(255, 193, 7, 1),
-            0 0 4px rgba(255, 152, 0, 0.8),
-            0 0 2px rgba(255, 255, 255, 0.7);
-        }
-      }
       
       /* 响应式设计 */
       @media (max-width: 768px) {
