@@ -14,7 +14,7 @@ const UserManagement = () => {
 
   const [processingUser, setProcessingUser] = useState(null);
   const [filter, setFilter] = useState('pending'); // pending, approved, all
-  const [availableModules] = useState(['schedule', 'quiz', 'videos', 'games', 'future1', 'future2']);
+  const [availableModules] = useState(['schedule', 'quiz', 'videos', 'future1', 'future2']);
 
   useEffect(() => {
     if (isAdmin) {
