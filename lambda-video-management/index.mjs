@@ -326,12 +326,29 @@ function isYouTubeJsonFile(filename) {
   return filename.toLowerCase().endsWith(".youtube.json");
 }
 
-// 文件夹权限配置
+// 获取管理员邮箱列表
+function getAdminEmails() {
+  const envAdmins = process.env.ADMIN_EMAILS;
+  if (envAdmins) {
+    return envAdmins.split(',').map(email => email.trim());
+  }
+  // 如果没有配置环境变量，返回空数组
+  console.warn('⚠️ ADMIN_EMAILS 环境变量未配置，无管理员权限');
+  return [];
+}
+
+// 检查用户是否为管理员
+function isAdmin(userEmail) {
+  const adminEmails = getAdminEmails();
+  return adminEmails.includes(userEmail);
+}
+
+// 文件夹权限配置 - 现在支持管理员权限
 const FOLDER_PERMISSIONS = {
-  "Movies": ["damon_xuda@163.com"], // Movies文件夹只有damon_xuda@163.com可以访问
+  "Movies": "admin_only", // Movies文件夹只有管理员可以访问
   // 可以继续添加其他受限文件夹
-  // "Private": ["admin@example.com"],
-  // "VIP": ["vip1@example.com", "vip2@example.com"],
+  // "Private": ["specific@example.com"], // 特定用户
+  // "VIP": "admin_only", // 仅管理员
 };
 
 // 检查用户是否有权限访问指定文件夹
@@ -341,8 +358,21 @@ function hasAccessToFolder(userEmail, folderName) {
     return true;
   }
 
-  // 检查用户是否在允许列表中
-  return FOLDER_PERMISSIONS[folderName].includes(userEmail);
+  const permission = FOLDER_PERMISSIONS[folderName];
+
+  // 如果设置为 "admin_only"，只有管理员可以访问
+  if (permission === "admin_only") {
+    const hasAdminAccess = isAdmin(userEmail);
+    console.log(`管理员权限检查: ${userEmail} -> ${hasAdminAccess ? '是管理员' : '不是管理员'}`);
+    return hasAdminAccess;
+  }
+
+  // 如果是数组，检查用户是否在允许列表中
+  if (Array.isArray(permission)) {
+    return permission.includes(userEmail);
+  }
+
+  return false;
 }
 
 async function listVideos(user, corsHeaders) {
