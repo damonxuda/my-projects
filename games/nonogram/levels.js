@@ -214,17 +214,10 @@ class NonogramLevels {
       if (isLocked) {
         levelCard.classList.add('locked');
         levelCard.removeAttribute('href');
-      } else if (isCompleted) {
-        levelCard.classList.add('completed');
       } else if (isCurrent) {
         levelCard.classList.add('current');
       }
 
-      // 关卡尺寸标签
-      const sizeLabel = document.createElement('div');
-      sizeLabel.className = 'level-size';
-      sizeLabel.textContent = `${level.size}×${level.size}`;
-      levelCard.appendChild(sizeLabel);
 
       // 星级显示
       const starDisplay = document.createElement('div');
@@ -238,9 +231,9 @@ class NonogramLevels {
       let starsHTML = '';
       for (let i = 1; i <= 3; i++) {
         if (i <= stars) {
-          starsHTML += '★'; // 亮星
+          starsHTML += '<span class="filled-star">★</span>'; // 亮星（上色）
         } else {
-          starsHTML += '☆'; // 暗星
+          starsHTML += '<span class="empty-star">☆</span>'; // 暗星（未上色）
         }
       }
       starDisplay.innerHTML = starsHTML;
@@ -267,19 +260,6 @@ class NonogramLevels {
         levelInfo.appendChild(levelTheme);
       }
 
-      // 星级显示（仅已完成的关卡）
-      if (isCompleted && record && record.stars) {
-        const stars = document.createElement('div');
-        stars.className = 'level-stars';
-        
-        for (let i = 0; i < 3; i++) {
-          const star = document.createElement('span');
-          star.textContent = i < record.stars ? '★' : '☆';
-          star.style.color = i < record.stars ? '#ffd700' : 'rgba(255, 255, 255, 0.3)';
-          stars.appendChild(star);
-        }
-        levelInfo.appendChild(stars);
-      }
 
       levelCard.appendChild(levelInfo);
       container.appendChild(levelCard);
@@ -289,13 +269,8 @@ class NonogramLevels {
   // 更新统计信息
   updateStats() {
     const difficulty = this.currentDifficulty;
-    const levels = this.levels[difficulty] || [];
-    const progress = this.progress[difficulty] || { completed_levels: [], level_records: {} };
-    
-    // 当前难度完成数量
-    const completedCount = progress.completed_levels.length;
-    const totalCount = levels.length;
-    
+    const progress = this.progress[difficulty] || { level_records: {} };
+
     // 总星数
     let totalStars = 0;
     Object.values(progress.level_records).forEach(record => {
@@ -303,9 +278,6 @@ class NonogramLevels {
     });
 
     // 更新显示
-    const completedEl = document.getElementById('completed-count');
-    if (completedEl) completedEl.textContent = completedCount;
-
     const starsEl = document.getElementById('total-stars');
     if (starsEl) starsEl.textContent = totalStars;
 

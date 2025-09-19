@@ -205,10 +205,6 @@
         pointer-events: none;
       }
       
-      .level-card.completed {
-        background: rgba(255, 107, 157, 0.6);
-        border-color: rgba(255, 107, 157, 0.8);
-      }
       
       .level-card.current {
         background: rgba(255, 193, 7, 0.6);
@@ -249,16 +245,6 @@
         white-space: nowrap;
       }
       
-      .level-size {
-        position: absolute;
-        top: 0.2rem;
-        right: 0.2rem;
-        font-size: 0.65rem;
-        opacity: 0.7;
-        background: rgba(0, 0, 0, 0.3);
-        padding: 1px 4px;
-        border-radius: 3px;
-      }
       
       .level-stars {
         display: flex;
@@ -282,10 +268,19 @@
         position: absolute;
         top: 0.15rem;
         left: 0.15rem;
-        font-size: 0.7rem;
-        color: #ffd700;
-        text-shadow: 0 0 2px rgba(0,0,0,0.5);
+        font-size: 0.8rem;
         z-index: 2;
+        line-height: 1;
+      }
+
+      .star-display .filled-star {
+        color: #ffd700;
+        text-shadow: 0 0 3px rgba(255, 215, 0, 0.8), 0 0 1px rgba(0,0,0,0.8);
+      }
+
+      .star-display .empty-star {
+        color: rgba(255, 255, 255, 0.3);
+        text-shadow: 0 0 1px rgba(0,0,0,0.5);
       }
       
       /* 响应式设计 */
@@ -390,7 +385,6 @@
           </div>
         </div>
       </div>
-      
 
       <!-- 进度统计 -->
       <div class="progress-section">
@@ -398,18 +392,14 @@
           <span>当前难度进度</span>
           <span id="current-difficulty-icon">🟢</span>
         </div>
-        <div class="progress-stats">
-          <div class="stat-item">
-            <span class="stat-value" id="completed-count">0</span>
-            <span class="stat-label">已完成</span>
-          </div>
+        <div class="progress-stats" style="justify-content: center;">
           <div class="stat-item">
             <span class="stat-value" id="total-stars">0</span>
             <span class="stat-label">总星数</span>
           </div>
         </div>
       </div>
-      
+
       <!-- 新手引导 -->
       <div id="newbie-guide" class="progress-section" style="background: rgba(255, 182, 193, 0.2); border-left: 4px solid #ff6b9d; display: none;">
         <div style="text-align: center; margin-bottom: 0.8rem;">
