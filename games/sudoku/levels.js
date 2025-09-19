@@ -245,11 +245,11 @@ class SudokuLevelsPage {
   // 更新总体统计
   updateOverallStats() {
     let totalCompleted = 0;
-    
+
     Object.values(this.progress).forEach(difficultyProgress => {
-      totalCompleted += difficultyProgress.completedLevels ? difficultyProgress.completedLevels.length : 0;
+      totalCompleted += difficultyProgress.completed_levels ? difficultyProgress.completed_levels.length : 0;
     });
-    
+
     this.elements.overallStats.textContent = `${totalCompleted}/250`;
   }
 
