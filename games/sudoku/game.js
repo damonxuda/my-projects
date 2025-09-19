@@ -555,18 +555,29 @@ class SudokuGame {
     if (this.engine.isComplete(this.gameState.board, this.gameState.solution)) {
       this.gameState.isComplete = true;
       this.stopTimer();
-      
+
+      console.log('🎉 数独游戏完成！');
+      console.log('🔍 游戏状态:', {
+        isLevelMode: this.gameState.isLevelMode,
+        difficulty: this.gameState.difficulty,
+        currentLevel: this.gameState.currentLevel,
+        elapsedTime: this.gameState.elapsedTime
+      });
+
       // 关卡模式：记录进度和星级
       if (this.gameState.isLevelMode) {
+        console.log('📝 关卡模式，开始记录进度...');
         const stars = this.calculateStars();
+        console.log('⭐ 计算星级:', stars);
         await this.recordLevelCompletion(stars);
         this.showLevelCompleteDialog(stars);
       } else {
+        console.log('🎮 随机模式，显示完成对话框');
         this.showCompleteDialog();
       }
-      
+
       await this.saveStats();
-      
+
       // 庆祝触觉反馈
       if (GameUtils.isTouchDevice()) {
         GameUtils.vibrate([100, 50, 100, 50, 200]);
@@ -590,12 +601,23 @@ class SudokuGame {
 
   // 记录关卡完成（使用智能存储系统）
   async recordLevelCompletion(stars) {
-    if (!this.gameState.isLevelMode) return;
+    if (!this.gameState.isLevelMode) {
+      console.log('❌ 不是关卡模式，跳过进度保存');
+      return;
+    }
 
     try {
       const difficulty = this.gameState.difficulty;
       const level = this.gameState.currentLevel;
       const timeInSeconds = Math.floor(this.gameState.elapsedTime / 1000);
+
+      console.log('💾 开始保存关卡进度:', {
+        difficulty,
+        level,
+        timeInSeconds,
+        stars,
+        storage: !!this.storage
+      });
 
       // 使用与数织游戏相同的进度保存机制
       await this.storage.updateLevelRecord(
@@ -605,6 +627,8 @@ class SudokuGame {
         stars
       );
 
+      console.log('✅ 关卡记录更新成功，开始强制同步...');
+
       // 强制同步到云端（与数织游戏保持一致）
       console.log('🔄 数独关卡完成，强制同步到云端');
       await this.storage.forceSyncNow();
@@ -612,7 +636,8 @@ class SudokuGame {
       console.log(`✅ Sudoku Level ${level} completion recorded with ${stars} stars`);
 
     } catch (error) {
-      console.error('Failed to record level completion:', error);
+      console.error('❌ Failed to record level completion:', error);
+      console.error('Error details:', error);
     }
   }
 
