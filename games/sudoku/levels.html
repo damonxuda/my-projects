@@ -157,14 +157,15 @@
       }
       
       .level-card.completed {
-        background: rgba(76, 175, 80, 0.6);
-        border-color: rgba(76, 175, 80, 0.8);
+        background: rgba(255, 107, 157, 0.6);
+        border-color: rgba(255, 107, 157, 0.8);
       }
       
       .level-card.current {
-        background: rgba(255, 193, 7, 0.6);
-        border-color: rgba(255, 193, 7, 0.8);
+        background: rgba(255, 193, 7, 0.7);
+        border-color: rgba(255, 193, 7, 1.0);
         animation: pulse 2s ease-in-out infinite;
+        box-shadow: 0 0 15px rgba(255, 193, 7, 0.5);
       }
       
       @keyframes pulse {
@@ -196,6 +197,34 @@
         opacity: 0.8;
       }
       
+      /* 星级显示 */
+      .star-display {
+        position: absolute;
+        top: 0.15rem;
+        left: 0.15rem;
+        font-size: 0.8rem;
+        z-index: 2;
+        line-height: 1;
+      }
+
+      .star-display .filled-star {
+        color: #ffd700 !important;
+        text-shadow:
+          0 0 3px rgba(255, 215, 0, 0.5),
+          0 0 2px rgba(255, 193, 7, 0.6),
+          0 0 1px rgba(255, 152, 0, 0.4),
+          0 0 1px rgba(0,0,0,0.3) !important;
+        filter: brightness(1.3) saturate(1.2) !important;
+        font-weight: bold !important;
+        position: relative !important;
+        z-index: 10 !important;
+      }
+
+      .star-display .empty-star {
+        color: rgba(255, 255, 255, 0.3);
+        text-shadow: 0 0 1px rgba(0,0,0,0.7);
+      }
+
       /* 锁定图标 */
       .level-card.locked::before {
         content: "🔒";
@@ -220,6 +249,10 @@
         font-weight: 600;
         margin-bottom: 0.5rem;
         text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
       }
       
       .progress-stats {
@@ -313,7 +346,7 @@
       <!-- 顶部导航 -->
       <div class="header">
         <a href="../" class="back-btn">← 返回游戏</a>
-        <h1 class="title">选择关卡</h1>
+        <h1 class="title">🧮 数独关卡</h1>
         <div class="stats" id="overall-stats">
           <div>0/250</div>
         </div>
@@ -321,19 +354,14 @@
       
       <!-- 进度统计 -->
       <div class="progress-section">
-        <div class="progress-title">当前难度进度</div>
-        <div class="progress-stats">
-          <div class="stat-item">
-            <span class="stat-value" id="completed-count">0</span>
-            <span class="stat-label">已完成</span>
-          </div>
-          <div class="stat-item">
+        <div class="progress-title">
+          <span>当前难度进度</span>
+          <span id="current-difficulty-icon">🟢</span>
+        </div>
+        <div class="progress-stats" style="justify-content: center;">
+          <div class="stat-item" style="text-align: center;">
             <span class="stat-value" id="total-stars">0</span>
             <span class="stat-label">总星数</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-value" id="best-time">--:--</span>
-            <span class="stat-label">最佳时间</span>
           </div>
         </div>
       </div>

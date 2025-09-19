@@ -58,9 +58,7 @@ class SudokuLevelsPage {
       levelsGrid: document.getElementById('levels-grid'),
       loading: document.getElementById('loading'),
       overallStats: document.getElementById('overall-stats'),
-      completedCount: document.getElementById('completed-count'),
-      totalStars: document.getElementById('total-stars'),
-      bestTime: document.getElementById('best-time')
+      totalStars: document.getElementById('total-stars')
     };
   }
 
@@ -197,13 +195,24 @@ class SudokuLevelsPage {
     levelNumber.textContent = level.level;
     card.appendChild(levelNumber);
     
-    // 星级显示（完成的关卡）
-    if (record && record.best_stars) {
-      const stars = document.createElement('div');
-      stars.className = 'level-stars';
-      stars.textContent = '★'.repeat(record.best_stars) + '☆'.repeat(3 - record.best_stars);
-      card.appendChild(stars);
+    // 星级显示
+    const starDisplay = document.createElement('div');
+    starDisplay.className = 'star-display';
+
+    // 获取该关卡的星级记录
+    const stars = record?.best_stars || 0;
+
+    // 生成星星显示（3颗星的容器）
+    let starsHTML = '';
+    for (let i = 1; i <= 3; i++) {
+      if (i <= stars) {
+        starsHTML += '<span class="filled-star">★</span>'; // 亮星（上色）
+      } else {
+        starsHTML += '<span class="empty-star">☆</span>'; // 暗星（未上色）
+      }
     }
+    starDisplay.innerHTML = starsHTML;
+    card.appendChild(starDisplay);
 
     // 最佳时间（完成的关卡）
     if (record && record.best_time) {
@@ -219,25 +228,18 @@ class SudokuLevelsPage {
   // 更新进度统计
   updateProgressStats() {
     const difficultyProgress = this.progress[this.currentDifficulty] || {
-      completed_levels: [],
       level_records: {}
     };
-    const completed = difficultyProgress.completed_levels.length;
 
     // 计算总星数
     let totalStars = 0;
-    let bestTime = null;
-
     Object.values(difficultyProgress.level_records).forEach(record => {
       if (record.best_stars) totalStars += record.best_stars;
-      if (record.best_time && (!bestTime || record.best_time < bestTime)) {
-        bestTime = record.best_time;
-      }
     });
-    
-    this.elements.completedCount.textContent = `${completed}/50`;
-    this.elements.totalStars.textContent = totalStars;
-    this.elements.bestTime.textContent = bestTime ? GameUtils.formatTime(bestTime * 1000) : '--:--'; // 转换为毫秒
+
+    // 更新显示
+    const starsEl = document.getElementById('total-stars');
+    if (starsEl) starsEl.textContent = totalStars;
   }
 
   // 更新总体统计
