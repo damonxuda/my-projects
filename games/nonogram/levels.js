@@ -214,6 +214,8 @@ class NonogramLevels {
       if (isLocked) {
         levelCard.classList.add('locked');
         levelCard.removeAttribute('href');
+      } else if (isCompleted) {
+        levelCard.classList.add('completed');
       } else if (isCurrent) {
         levelCard.classList.add('current');
       }
