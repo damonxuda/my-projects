@@ -271,7 +271,7 @@ class NonogramLevels {
   // 更新统计信息
   updateStats() {
     const difficulty = this.currentDifficulty;
-    const progress = this.progress[difficulty] || { level_records: {} };
+    const progress = this.progress[difficulty] || { level_records: {}, completed_levels: [] };
 
     // 总星数
     let totalStars = 0;
@@ -279,9 +279,32 @@ class NonogramLevels {
       if (record.best_stars) totalStars += record.best_stars;
     });
 
+    // 已完成关卡数
+    const completedCount = progress.completed_levels.length;
+
+    // 最佳时间
+    let bestTime = Infinity;
+    Object.values(progress.level_records).forEach(record => {
+      if (record.best_time && record.best_time < bestTime) {
+        bestTime = record.best_time;
+      }
+    });
+
     // 更新显示
     const starsEl = document.getElementById('total-stars');
     if (starsEl) starsEl.textContent = totalStars;
+
+    const completedEl = document.getElementById('completed-levels');
+    if (completedEl) completedEl.textContent = completedCount;
+
+    const bestTimeEl = document.getElementById('best-time');
+    if (bestTimeEl) {
+      if (bestTime !== Infinity) {
+        bestTimeEl.textContent = this.formatTime(bestTime);
+      } else {
+        bestTimeEl.textContent = '--:--';
+      }
+    }
 
     // 更新总体统计
     this.updateOverallStats();
