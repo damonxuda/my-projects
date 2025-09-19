@@ -277,13 +277,15 @@
         font-size: 1.2rem;
       }
       
-      /* 主题图标 */
-      .theme-icon {
+      /* 星级显示 */
+      .star-display {
         position: absolute;
         top: 0.15rem;
         left: 0.15rem;
-        font-size: 0.8rem;
-        opacity: 0.8;
+        font-size: 0.7rem;
+        color: #ffd700;
+        text-shadow: 0 0 2px rgba(0,0,0,0.5);
+        z-index: 2;
       }
       
       /* 响应式设计 */
@@ -404,10 +406,6 @@
           <div class="stat-item">
             <span class="stat-value" id="total-stars">0</span>
             <span class="stat-label">总星数</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-value" id="best-time">--:--</span>
-            <span class="stat-label">最佳时间</span>
           </div>
         </div>
       </div>

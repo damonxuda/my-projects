@@ -565,8 +565,37 @@ class NonogramGame {
     if (this.elements.currentLevel) {
       this.elements.currentLevel.textContent = this.levelNumber;
     }
-    
+
+    // 更新星级显示
+    this.updateLevelStars();
+
     this.updateProgress(this.engine.getProgress());
+  }
+
+  // 更新星级显示
+  async updateLevelStars() {
+    try {
+      const levelStarsEl = document.getElementById('level-stars');
+      if (!levelStarsEl) return;
+
+      // 加载进度数据
+      const progress = await this.storage.loadProgress();
+      const levelRecord = progress[this.currentDifficulty]?.level_records[this.levelNumber];
+      const stars = levelRecord?.best_stars || 0;
+
+      // 生成星星显示
+      let starsHTML = '';
+      for (let i = 1; i <= 3; i++) {
+        if (i <= stars) {
+          starsHTML += '★'; // 亮星
+        } else {
+          starsHTML += '☆'; // 暗星
+        }
+      }
+      levelStarsEl.innerHTML = starsHTML;
+    } catch (error) {
+      console.error('Failed to update level stars:', error);
+    }
   }
 
   // 更新进度显示

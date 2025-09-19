@@ -226,13 +226,25 @@ class NonogramLevels {
       sizeLabel.textContent = `${level.size}×${level.size}`;
       levelCard.appendChild(sizeLabel);
 
-      // 主题图标
-      if (level.theme && this.themeIcons[level.theme]) {
-        const themeIcon = document.createElement('div');
-        themeIcon.className = 'theme-icon';
-        themeIcon.textContent = this.themeIcons[level.theme];
-        levelCard.appendChild(themeIcon);
+      // 星级显示
+      const starDisplay = document.createElement('div');
+      starDisplay.className = 'star-display';
+
+      // 获取该关卡的星级记录
+      const levelRecord = progress.level_records[level.number];
+      const stars = levelRecord?.best_stars || 0;
+
+      // 生成星星显示（3颗星的容器）
+      let starsHTML = '';
+      for (let i = 1; i <= 3; i++) {
+        if (i <= stars) {
+          starsHTML += '★'; // 亮星
+        } else {
+          starsHTML += '☆'; // 暗星
+        }
       }
+      starDisplay.innerHTML = starsHTML;
+      levelCard.appendChild(starDisplay);
 
       // 关卡信息容器
       const levelInfo = document.createElement('div');
@@ -290,25 +302,12 @@ class NonogramLevels {
       if (record.best_stars) totalStars += record.best_stars;
     });
 
-    // 最佳时间
-    let bestTime = null;
-    Object.values(progress.level_records).forEach(record => {
-      if (record.best_time && (!bestTime || record.best_time < bestTime)) {
-        bestTime = record.best_time;
-      }
-    });
-    
     // 更新显示
     const completedEl = document.getElementById('completed-count');
     if (completedEl) completedEl.textContent = completedCount;
-    
+
     const starsEl = document.getElementById('total-stars');
     if (starsEl) starsEl.textContent = totalStars;
-    
-    const timeEl = document.getElementById('best-time');
-    if (timeEl) {
-      timeEl.textContent = bestTime ? this.formatTime(bestTime) : '--:--';
-    }
 
     // 更新总体统计
     this.updateOverallStats();
