@@ -838,6 +838,12 @@ class SudokuGame {
 // 全局函数（供HTML调用）
 function closeCompleteDialog() {
   document.getElementById('game-complete').style.display = 'none';
+
+  // 如果是关卡模式，返回关卡选择页面
+  if (game.gameState.isLevelMode) {
+    console.log('🔄 关卡模式完成，返回关卡选择页面');
+    window.location.href = 'levels.html';
+  }
 }
 
 function startNewGame() {
