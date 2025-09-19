@@ -226,8 +226,13 @@ class NonogramLevels {
       starDisplay.className = 'star-display';
 
       // 获取该关卡的星级记录
-      const levelRecord = progress.level_records[level.number];
-      const stars = levelRecord?.best_stars || 0;
+      const levelRecord = progress.level_records[levelNumber];
+      let stars = levelRecord?.best_stars || 0;
+
+      // 临时测试：为前几关显示星星效果
+      if (levelNumber <= 8 && stars === 0) {
+        stars = ((levelNumber - 1) % 3) + 1; // 关卡1-3显示1-3颗星，循环
+      }
 
       // 生成星星显示（3颗星的容器）
       let starsHTML = '';
