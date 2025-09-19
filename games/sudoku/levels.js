@@ -184,7 +184,24 @@ class SudokuLevelsPage {
     
     // 设置链接
     if (isUnlocked) {
-      card.href = `index.html?difficulty=${this.currentDifficulty}&level=${level.level}`;
+      // 构建游戏链接，如果有跨模块认证状态则传递session token
+      let gameUrl = `index.html?difficulty=${this.currentDifficulty}&level=${level.level}`;
+
+      // 如果存在跨模块认证状态，传递session token到游戏页面
+      if (window.mockClerkUser && window.mockClerkUser.isAuthenticated) {
+        // 优先使用保存的session token，fallback到URL参数
+        let sessionToken = window.mockClerkUser.originalSessionToken;
+        if (!sessionToken) {
+          const urlParams = new URLSearchParams(window.location.search);
+          sessionToken = urlParams.get('session');
+        }
+
+        if (sessionToken) {
+          gameUrl += `&session=${encodeURIComponent(sessionToken)}`;
+        }
+      }
+
+      card.href = gameUrl;
     } else {
       card.onclick = (e) => e.preventDefault();
     }
