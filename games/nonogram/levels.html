@@ -666,7 +666,8 @@
                 window.nonogramLevels.storage.loadProgress().then(progress => {
                   console.log('🔄 用户数据重新加载完成，更新UI...');
                   window.nonogramLevels.progress = progress;
-                  window.nonogramLevels.updateUI();
+                  window.nonogramLevels.renderLevels();
+                  window.nonogramLevels.updateStats();
                 });
               }, 100);
             }
