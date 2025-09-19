@@ -281,9 +281,15 @@
 
       .star-display .filled-star {
         color: #ffd700;
-        text-shadow: 0 0 12px rgba(255, 215, 0, 1), 0 0 8px rgba(255, 193, 7, 1), 0 0 4px rgba(255, 152, 0, 1), 0 0 2px rgba(0,0,0,0.8);
-        filter: drop-shadow(0 0 6px #ffc107) brightness(1.5) saturate(1.4);
-        animation: starGlow 2s ease-in-out infinite alternate;
+        text-shadow:
+          0 0 20px rgba(255, 215, 0, 1),
+          0 0 15px rgba(255, 193, 7, 1),
+          0 0 10px rgba(255, 152, 0, 1),
+          0 0 5px rgba(255, 215, 0, 0.9),
+          0 0 2px rgba(255, 255, 255, 0.8),
+          0 0 1px rgba(0,0,0,0.5);
+        filter: drop-shadow(0 0 8px #ffd700) brightness(2.0) saturate(1.8);
+        animation: starGlow 1.5s ease-in-out infinite alternate;
       }
 
       .star-display .empty-star {
@@ -293,10 +299,10 @@
 
       @keyframes starGlow {
         0% {
-          filter: drop-shadow(0 0 4px #ffc107) brightness(1.3) saturate(1.2);
+          filter: drop-shadow(0 0 6px #ffd700) brightness(1.8) saturate(1.6);
         }
         100% {
-          filter: drop-shadow(0 0 8px #ffd700) brightness(1.6) saturate(1.5);
+          filter: drop-shadow(0 0 12px #ffd700) brightness(2.2) saturate(2.0);
         }
       }
       
@@ -409,18 +415,10 @@
           <span>当前难度进度</span>
           <span id="current-difficulty-icon">🟢</span>
         </div>
-        <div class="progress-stats">
-          <div class="stat-item">
-            <span class="stat-value" id="completed-levels">0</span>
-            <span class="stat-label">已完成</span>
-          </div>
+        <div class="progress-stats" style="justify-content: center;">
           <div class="stat-item" style="text-align: center;">
             <span class="stat-value" id="total-stars">0</span>
             <span class="stat-label">总星数</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-value" id="best-time">00:06</span>
-            <span class="stat-label">最佳时间</span>
           </div>
         </div>
       </div>
