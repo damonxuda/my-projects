@@ -293,13 +293,21 @@
           async hasScheduleAccess() {
             const user = await this.getUserFromCache();
             if (!user) {
-              console.log('❌ 用户未登录');
+              console.log('❌ 用户未登录 - user is null/undefined');
               return false;
             }
+
+            console.log('📅 获取到用户信息:', {
+              id: user.id,
+              emailAddresses: user.emailAddresses,
+              primaryEmailAddress: user.primaryEmailAddress,
+              publicMetadata: user.publicMetadata
+            });
 
             // 检查管理员权限
             const adminEmails = this.getAdminEmails();
             const userEmail = user.emailAddresses?.[0]?.emailAddress || user.primaryEmailAddress?.emailAddress;
+            console.log(`📅 用户邮箱: ${userEmail}, 管理员邮箱列表: ${JSON.stringify(adminEmails)}`);
 
             if (adminEmails.includes(userEmail)) {
               console.log('✅ 管理员用户，拥有所有模块权限');
@@ -310,7 +318,11 @@
             const authorizedModules = user.publicMetadata?.authorized_modules || [];
             const hasAccess = authorizedModules.includes('schedule');
 
-            console.log(`📅 Schedule权限检查: 用户=${userEmail}, 授权模块=${JSON.stringify(authorizedModules)}, 有权限=${hasAccess}`);
+            console.log(`📅 Schedule权限检查详情:`);
+            console.log(`  - 用户: ${userEmail}`);
+            console.log(`  - publicMetadata:`, user.publicMetadata);
+            console.log(`  - 授权模块: ${JSON.stringify(authorizedModules)}`);
+            console.log(`  - 包含schedule: ${hasAccess}`);
 
             return hasAccess;
           }
@@ -392,112 +404,137 @@
             }
           } catch (error) {
             console.error('❌ 权限检查失败:', error);
-            scheduleAuth.redirectToLogin();
-            return false;
+
+            // 不要直接重定向，而是显示错误信息
+            if (authRetryCount < MAX_AUTH_RETRIES) {
+              authRetryCount++;
+              console.log(`⏰ 认证异常，重试中... (${authRetryCount}/${MAX_AUTH_RETRIES})`);
+              setTimeout(checkAuthentication, 1000);
+              return false;
+            } else {
+              // 多次重试后仍失败，显示登录页面
+              showLoginRequiredPage();
+              return false;
+            }
           }
         }
 
-        // 显示访问被拒绝页面
-        function showAccessDeniedPage() {
-          const loadingDiv = document.getElementById('auth-loading');
-          if (loadingDiv) {
-            loadingDiv.innerHTML = `
-              <div style="
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: white;
-                font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-                z-index: 9999;
-              ">
-                <div style="text-align: center; max-width: 400px; padding: 2rem;">
-                  <div style="font-size: 4rem; margin-bottom: 1rem;">🔒</div>
-                  <div style="font-size: 1.5rem; margin-bottom: 1rem; font-weight: 600;">访问被拒绝</div>
-                  <div style="font-size: 1rem; margin-bottom: 2rem; opacity: 0.9; line-height: 1.5;">
-                    您没有访问课程安排模块的权限。<br/>
-                    请联系管理员申请访问权限。
-                  </div>
-                  <button onclick="window.location.href='/'" style="
-                    background: rgba(255, 255, 255, 0.2);
-                    border: 1px solid rgba(255, 255, 255, 0.3);
-                    border-radius: 8px;
-                    color: white;
-                    padding: 0.8rem 1.5rem;
-                    font-size: 1rem;
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                    margin-right: 0.5rem;
-                  " onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
-                    返回主页
-                  </button>
-                </div>
-              </div>
-            `;
+        // 创建模态弹窗基础结构
+        function createModal(title, message, buttons) {
+          // 移除现有的加载界面
+          const loading = document.getElementById('auth-loading');
+          if (loading) {
+            loading.remove();
           }
-        }
 
-        // 显示未登录页面
-        function showLoginRequiredPage() {
-          const loadingDiv = document.getElementById('auth-loading');
-          if (loadingDiv) {
-            loadingDiv.innerHTML = `
+          // 显示主页面内容但保持模糊
+          const mainContent = document.querySelector('.container');
+          if (mainContent) {
+            mainContent.style.display = 'block';
+            mainContent.style.filter = 'blur(3px)';
+            mainContent.style.pointerEvents = 'none';
+          }
+
+          // 创建模态弹窗
+          const modal = document.createElement('div');
+          modal.id = 'auth-modal';
+          modal.innerHTML = `
+            <div style="
+              position: fixed;
+              top: 0;
+              left: 0;
+              width: 100%;
+              height: 100%;
+              background: rgba(0, 0, 0, 0.6);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              z-index: 10000;
+              backdrop-filter: blur(2px);
+            ">
               <div style="
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                color: white;
+                background: white;
+                border-radius: 16px;
+                padding: 2rem;
+                max-width: 420px;
+                width: 90%;
+                box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+                text-align: center;
                 font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-                z-index: 9999;
+                animation: modalSlideIn 0.3s ease-out;
               ">
-                <div style="text-align: center; max-width: 400px; padding: 2rem;">
-                  <div style="font-size: 4rem; margin-bottom: 1rem;">🔐</div>
-                  <div style="font-size: 1.5rem; margin-bottom: 1rem; font-weight: 600;">需要登录</div>
-                  <div style="font-size: 1rem; margin-bottom: 2rem; opacity: 0.9; line-height: 1.5;">
-                    访问课程安排模块需要先登录您的账户。
-                  </div>
-                  <div style="display: flex; gap: 0.5rem; justify-content: center;">
-                    <button onclick="window.location.href='/?auth=signin&redirect=' + encodeURIComponent(window.location.href)" style="
-                      background: rgba(255, 255, 255, 0.9);
-                      border: none;
+                <div style="font-size: 3rem; margin-bottom: 1rem;">${title.icon}</div>
+                <div style="font-size: 1.5rem; margin-bottom: 1rem; font-weight: 600; color: #333;">${title.text}</div>
+                <div style="font-size: 1rem; margin-bottom: 2rem; color: #666; line-height: 1.5;">${message}</div>
+                <div style="display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap;">
+                  ${buttons.map(btn => `
+                    <button onclick="${btn.action}" style="
+                      background: ${btn.primary ? '#667eea' : 'transparent'};
+                      border: ${btn.primary ? 'none' : '2px solid #667eea'};
                       border-radius: 8px;
-                      color: #667eea;
+                      color: ${btn.primary ? 'white' : '#667eea'};
                       padding: 0.8rem 1.5rem;
                       font-size: 1rem;
                       font-weight: 600;
                       cursor: pointer;
                       transition: all 0.3s ease;
-                    " onmouseover="this.style.background='rgba(255, 255, 255, 1)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.9)'">
-                      立即登录
+                      min-width: 100px;
+                    " onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.3)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                      ${btn.text}
                     </button>
-                    <button onclick="window.location.href='/'" style="
-                      background: rgba(255, 255, 255, 0.2);
-                      border: 1px solid rgba(255, 255, 255, 0.3);
-                      border-radius: 8px;
-                      color: white;
-                      padding: 0.8rem 1.5rem;
-                      font-size: 1rem;
-                      cursor: pointer;
-                      transition: all 0.3s ease;
-                    " onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
-                      返回主页
-                    </button>
-                  </div>
+                  `).join('')}
                 </div>
               </div>
-            `;
-          }
+            </div>
+            <style>
+              @keyframes modalSlideIn {
+                from {
+                  opacity: 0;
+                  transform: translateY(-20px) scale(0.95);
+                }
+                to {
+                  opacity: 1;
+                  transform: translateY(0) scale(1);
+                }
+              }
+            </style>
+          `;
+          document.body.appendChild(modal);
+        }
+
+        // 显示访问被拒绝模态框
+        function showAccessDeniedPage() {
+          createModal(
+            { icon: '🔒', text: '访问被拒绝' },
+            '您没有访问课程安排模块的权限。<br/>请联系管理员申请访问权限。',
+            [
+              {
+                text: '返回主页',
+                action: "window.location.href='/'",
+                primary: true
+              }
+            ]
+          );
+        }
+
+        // 显示未登录模态框
+        function showLoginRequiredPage() {
+          createModal(
+            { icon: '🔐', text: '需要登录' },
+            '访问课程安排模块需要先登录您的账户。',
+            [
+              {
+                text: '立即登录',
+                action: "window.location.href='/?auth=signin&redirect=' + encodeURIComponent(window.location.href)",
+                primary: true
+              },
+              {
+                text: '返回主页',
+                action: "window.location.href='/'",
+                primary: false
+              }
+            ]
+          );
         }
 
         // 初始化函数
