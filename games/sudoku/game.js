@@ -879,8 +879,18 @@ class SudokuGame {
   // 加载游戏（使用智能存储系统）
   async loadGame() {
     try {
-      // 🔥 关键修复：从current_game键加载游戏状态，而不是progress键
-      const saved = await this.storage.load('current_game');
+      // 🔥 关键修复：从current_game键加载游戏状态，向后兼容老数据
+      let saved = await this.storage.load('current_game');
+
+      // 🔄 向后兼容：如果current_game不存在，尝试从progress键加载老的游戏状态
+      if (!saved) {
+        console.log('📝 current_game数据不存在，尝试从progress键加载老的游戏状态');
+        const progressData = await this.storage.loadProgress();
+        if (progressData && progressData.board) {
+          saved = progressData;
+          console.log('✅ 从progress键成功加载老的游戏状态');
+        }
+      }
 
       // 智能进度加载：关卡模式下只加载匹配当前关卡的进度
       if (saved && saved.puzzle && !saved.isComplete) {

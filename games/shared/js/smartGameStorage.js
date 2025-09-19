@@ -210,8 +210,9 @@ class SmartGameStorage {
         .single();
 
       if (error) {
-        if (error.code === 'PGRST116') {
-          // 数据不存在
+        if (error.code === 'PGRST116' || error.code === 'PGRST301' || error.message?.includes('406')) {
+          // 数据不存在或406错误
+          console.log(`📝 [${this.gameType}] 云端数据不存在 (${key}): ${error.code || error.message}`);
           return null;
         }
         console.error(`❌ [${this.gameType}] 云端加载失败:`, error);
