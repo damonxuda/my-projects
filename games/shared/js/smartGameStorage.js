@@ -691,6 +691,55 @@ class SmartSudokuStorage extends SmartGameStorage {
       }
     };
   }
+
+  // 🔥 关键修复：添加数独游戏缺失的关卡进度更新方法
+  async updateLevelRecord(difficulty, levelNumber, timeInSeconds, stars) {
+    try {
+      const progress = await this.loadProgress();
+
+      // 确保进度结构存在
+      if (!progress[difficulty]) {
+        progress[difficulty] = {
+          current_level: 1,
+          completed_levels: [],
+          level_records: {}
+        };
+      }
+
+      // 更新关卡记录
+      const record = progress[difficulty].level_records[levelNumber] || { attempts: 0 };
+      record.attempts++;
+      record.completed = true;
+      record.best_time = record.best_time ? Math.min(record.best_time, timeInSeconds) : timeInSeconds;
+      record.best_stars = record.best_stars ? Math.max(record.best_stars, stars) : stars;
+      record.last_completed = new Date().toISOString();
+
+      progress[difficulty].level_records[levelNumber] = record;
+
+      // 添加到已完成关卡列表
+      if (!progress[difficulty].completed_levels.includes(levelNumber)) {
+        progress[difficulty].completed_levels.push(levelNumber);
+      }
+
+      // 解锁下一关（数独最多50关）
+      progress[difficulty].current_level = Math.max(
+        progress[difficulty].current_level,
+        Math.min(50, levelNumber + 1)
+      );
+
+      // 保存进度
+      await this.saveProgress(progress);
+
+      console.log(`✅ Sudoku Level ${levelNumber} completion recorded with ${stars} stars`);
+
+      // 🔥 强制同步到云端，确保跨设备数据一致
+      await this.forceSyncNow();
+
+    } catch (error) {
+      console.error(`❌ Failed to record Sudoku level completion:`, error);
+      throw error;
+    }
+  }
 }
 
 class SmartNonogramStorage extends SmartGameStorage {
