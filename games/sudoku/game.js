@@ -33,7 +33,21 @@ class SudokuGame {
       console.log('🎮 开始初始化Sudoku游戏 - Clerk状态:', window.clerkInitialized);
 
       // 现在可以安全地初始化存储系统了
-      this.storage = new SmartSudokuStorage();
+      try {
+        this.storage = new SmartSudokuStorage();
+        console.log('✅ SmartSudokuStorage 创建成功');
+      } catch (error) {
+        console.error('❌ SmartSudokuStorage 创建失败:', error);
+        console.log('尝试使用基础存储类...');
+        // 如果SmartSudokuStorage不可用，尝试使用基础存储
+        if (typeof SmartGameStorage !== 'undefined') {
+          this.storage = new SmartGameStorage('sudoku');
+          console.log('✅ 使用基础 SmartGameStorage');
+        } else {
+          console.error('❌ 所有存储类都不可用');
+          this.storage = null;
+        }
+      }
 
       // 开始游戏初始化
       this.init();
