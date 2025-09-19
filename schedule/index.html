@@ -289,7 +289,40 @@
             }
           }
 
-          // 检查是否已登录
+          // 检查用户是否有schedule模块访问权限
+          async hasScheduleAccess() {
+            const user = await this.getUserFromCache();
+            if (!user) {
+              console.log('❌ 用户未登录');
+              return false;
+            }
+
+            // 检查管理员权限
+            const adminEmails = this.getAdminEmails();
+            const userEmail = user.emailAddresses?.[0]?.emailAddress || user.primaryEmailAddress?.emailAddress;
+
+            if (adminEmails.includes(userEmail)) {
+              console.log('✅ 管理员用户，拥有所有模块权限');
+              return true;
+            }
+
+            // 检查用户的授权模块
+            const authorizedModules = user.publicMetadata?.authorized_modules || [];
+            const hasAccess = authorizedModules.includes('schedule');
+
+            console.log(`📅 Schedule权限检查: 用户=${userEmail}, 授权模块=${JSON.stringify(authorizedModules)}, 有权限=${hasAccess}`);
+
+            return hasAccess;
+          }
+
+          // 获取管理员邮箱列表
+          getAdminEmails() {
+            // 从环境变量读取管理员邮箱，与useAuth.js保持一致
+            const envAdmins = window.REACT_APP_ADMIN_EMAILS || 'damon.xu@gmail.com'; // 默认值
+            return envAdmins.split(',').map(email => email.trim());
+          }
+
+          // 检查是否已登录（仅用于向后兼容）
           async isSignedIn() {
             const user = await this.getUserFromCache();
             return !!user;
@@ -310,12 +343,12 @@
         // 认证检查函数
         async function checkAuthentication() {
           try {
-            console.log('🔍 开始认证检查...');
+            console.log('🔍 开始Schedule模块权限检查...');
 
-            const isSignedIn = await scheduleAuth.isSignedIn();
+            const hasAccess = await scheduleAuth.hasScheduleAccess();
 
-            if (isSignedIn) {
-              console.log('✅ 用户已登录，允许访问Schedule模块');
+            if (hasAccess) {
+              console.log('✅ 用户有Schedule模块访问权限');
               isAuthChecked = true;
 
               // 显示主要内容
@@ -331,7 +364,13 @@
 
               return true;
             } else {
-              console.log('❌ 用户未登录，需要重定向到登录页');
+              const isSignedIn = await scheduleAuth.isSignedIn();
+
+              if (!isSignedIn) {
+                console.log('❌ 用户未登录，需要重定向到登录页');
+              } else {
+                console.log('❌ 用户已登录但无Schedule模块访问权限');
+              }
 
               // 延迟重定向，给Clerk更多时间初始化
               if (authRetryCount < MAX_AUTH_RETRIES) {
@@ -340,14 +379,65 @@
                 setTimeout(checkAuthentication, 1000);
                 return false;
               } else {
-                scheduleAuth.redirectToLogin();
+                // 根据情况显示不同的错误信息
+                if (isSignedIn) {
+                  // 已登录但无权限，显示错误页面
+                  showAccessDeniedPage();
+                } else {
+                  // 未登录，重定向到登录页
+                  scheduleAuth.redirectToLogin();
+                }
                 return false;
               }
             }
           } catch (error) {
-            console.error('❌ 认证检查失败:', error);
+            console.error('❌ 权限检查失败:', error);
             scheduleAuth.redirectToLogin();
             return false;
+          }
+        }
+
+        // 显示访问被拒绝页面
+        function showAccessDeniedPage() {
+          const loadingDiv = document.getElementById('auth-loading');
+          if (loadingDiv) {
+            loadingDiv.innerHTML = `
+              <div style="
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+                z-index: 9999;
+              ">
+                <div style="text-align: center; max-width: 400px; padding: 2rem;">
+                  <div style="font-size: 4rem; margin-bottom: 1rem;">🔒</div>
+                  <div style="font-size: 1.5rem; margin-bottom: 1rem; font-weight: 600;">访问被拒绝</div>
+                  <div style="font-size: 1rem; margin-bottom: 2rem; opacity: 0.9; line-height: 1.5;">
+                    您没有访问课程安排模块的权限。<br/>
+                    请联系管理员申请访问权限。
+                  </div>
+                  <button onclick="window.location.href='/'" style="
+                    background: rgba(255, 255, 255, 0.2);
+                    border: 1px solid rgba(255, 255, 255, 0.3);
+                    border-radius: 8px;
+                    color: white;
+                    padding: 0.8rem 1.5rem;
+                    font-size: 1rem;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                  ">
+                    返回主页
+                  </button>
+                </div>
+              </div>
+            `;
           }
         }
 

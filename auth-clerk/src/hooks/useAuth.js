@@ -83,7 +83,7 @@ export const useAuth = () => {
     if (!user) return [];
 
     // 管理员有所有模块权限（这里可以根据需要调整）
-    if (isAdmin(true)) return ['quiz', 'future1', 'future2'];
+    if (isAdmin(true)) return ['schedule', 'quiz', 'future1', 'future2'];
 
     return user.publicMetadata?.authorized_modules || [];
   };
