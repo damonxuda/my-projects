@@ -869,7 +869,8 @@ class SudokuGame {
   // 保存游戏（使用智能存储系统）
   async saveGame() {
     try {
-      await this.storage.saveProgress(this.gameState);
+      // 🔥 关键修复：游戏状态保存到current_game键，避免覆盖关卡进度(progress键)
+      await this.storage.save('current_game', this.gameState);
     } catch (error) {
       console.error('Save game failed:', error);
     }
@@ -878,7 +879,8 @@ class SudokuGame {
   // 加载游戏（使用智能存储系统）
   async loadGame() {
     try {
-      const saved = await this.storage.loadProgress();
+      // 🔥 关键修复：从current_game键加载游戏状态，而不是progress键
+      const saved = await this.storage.load('current_game');
 
       // 智能进度加载：关卡模式下只加载匹配当前关卡的进度
       if (saved && saved.puzzle && !saved.isComplete) {
