@@ -256,10 +256,12 @@
       }
       
       .progress-stats {
-        display: flex;
-        justify-content: center;
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
         gap: 1rem;
         text-align: center;
+        width: 100%;
       }
       
       .stat-item {
@@ -358,8 +360,8 @@
           <span>当前难度进度</span>
           <span id="current-difficulty-icon">🟢</span>
         </div>
-        <div class="progress-stats" style="justify-content: center;">
-          <div class="stat-item" style="text-align: center;">
+        <div class="progress-stats">
+          <div class="stat-item">
             <span class="stat-value" id="total-stars">0</span>
             <span class="stat-label">总星数</span>
           </div>
