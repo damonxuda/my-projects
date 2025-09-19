@@ -138,8 +138,9 @@ class SudokuGame {
       this.gameState.startTime = Date.now();
       this.gameState.elapsedTime = 0;
       this.gameState.isComplete = false;
-      
-      
+
+      this.updateBoard();
+      this.startTimer();
       this.hideLoading();
     } catch (error) {
       console.error('❌ Failed to load level:', error);
