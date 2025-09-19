@@ -287,14 +287,14 @@ class NonogramLevels {
     // 总星数
     let totalStars = 0;
     Object.values(progress.level_records).forEach(record => {
-      if (record.stars) totalStars += record.stars;
+      if (record.best_stars) totalStars += record.best_stars;
     });
-    
+
     // 最佳时间
     let bestTime = null;
     Object.values(progress.level_records).forEach(record => {
-      if (record.time && (!bestTime || record.time < bestTime)) {
-        bestTime = record.time;
+      if (record.best_time && (!bestTime || record.best_time < bestTime)) {
+        bestTime = record.best_time;
       }
     });
     
