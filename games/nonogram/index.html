@@ -208,6 +208,24 @@
         justify-content: center;
         align-items: center;
       }
+
+      /* 移动端触摸区域 - 确保始终有可触摸的滚动区域 */
+      .touch-scroll-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1;
+        pointer-events: none;
+        /* 只在大棋盘下启用 */
+        display: none;
+      }
+
+      .large-grid-mode .touch-scroll-overlay {
+        display: block;
+        pointer-events: auto;
+      }
       
       /* 数织游戏板容器 - 支持缩放后的滚动边界 */
       .board-zoom-wrapper {
@@ -457,6 +475,45 @@
         border-color: #ddd;
       }
       
+      /* 移动端导航控制 */
+      .mobile-nav-controls {
+        position: absolute;
+        bottom: 60px;
+        left: 10px;
+        display: none;
+        flex-direction: row;
+        gap: 8px;
+        z-index: 15;
+        opacity: 0.9;
+      }
+
+      .large-grid-mode .mobile-nav-controls {
+        display: flex;
+      }
+
+      .nav-btn {
+        width: 35px;
+        height: 35px;
+        border-radius: 6px;
+        background: rgba(0, 0, 0, 0.7);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        font-size: 1rem;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        user-select: none;
+        touch-action: manipulation;
+      }
+
+      .nav-btn:active {
+        background: rgba(0, 0, 0, 0.9);
+        transform: scale(0.95);
+      }
+
       /* 缩放控制按钮 */
       .zoom-controls {
         position: absolute;
@@ -686,11 +743,23 @@
             </div>
           </div>
 
+          <!-- 移动端触摸滚动覆盖层 -->
+          <div class="touch-scroll-overlay" id="touch-scroll-overlay"></div>
+
           <!-- 缩放控制 -->
           <div class="zoom-controls" id="zoom-controls" style="display: none;">
             <button class="zoom-btn" id="zoom-in" title="放大">+</button>
             <button class="zoom-btn" id="zoom-out" title="缩小">−</button>
             <button class="zoom-btn" id="zoom-reset" title="重置" style="font-size: 0.9rem;">⌂</button>
+          </div>
+
+          <!-- 移动端导航控制 -->
+          <div class="mobile-nav-controls" id="mobile-nav-controls">
+            <button class="nav-btn" id="nav-up" title="向上">↑</button>
+            <button class="nav-btn" id="nav-down" title="向下">↓</button>
+            <button class="nav-btn" id="nav-left" title="向左">←</button>
+            <button class="nav-btn" id="nav-right" title="向右">→</button>
+            <button class="nav-btn" id="nav-center" title="居中" style="font-size: 0.8rem;">⌖</button>
           </div>
 
           <!-- 大棋盘提示 -->

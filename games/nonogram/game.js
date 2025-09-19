@@ -131,6 +131,16 @@ class NonogramGame {
       zoomIn: document.getElementById('zoom-in'),
       zoomOut: document.getElementById('zoom-out'),
       zoomReset: document.getElementById('zoom-reset'),
+
+      // 移动端导航控制
+      mobileNavControls: document.getElementById('mobile-nav-controls'),
+      navUp: document.getElementById('nav-up'),
+      navDown: document.getElementById('nav-down'),
+      navLeft: document.getElementById('nav-left'),
+      navRight: document.getElementById('nav-right'),
+      navCenter: document.getElementById('nav-center'),
+      touchScrollOverlay: document.getElementById('touch-scroll-overlay'),
+
       largeGridHint: document.getElementById('large-grid-hint'),
 
       // 完成对话框
@@ -165,7 +175,14 @@ class NonogramGame {
     this.elements.zoomOut?.addEventListener('click', () => this.zoomOut());
     this.elements.zoomReset?.addEventListener('click', () => this.resetZoom());
 
-    // 触摸手势支持（双指缩放）
+    // 移动端导航控制
+    this.elements.navUp?.addEventListener('click', () => this.scrollDirection('up'));
+    this.elements.navDown?.addEventListener('click', () => this.scrollDirection('down'));
+    this.elements.navLeft?.addEventListener('click', () => this.scrollDirection('left'));
+    this.elements.navRight?.addEventListener('click', () => this.scrollDirection('right'));
+    this.elements.navCenter?.addEventListener('click', () => this.scrollToCenter());
+
+    // 触摸手势支持（双指缩放和拖拽滚动）
     this.setupTouchGestures();
 
     // 窗口大小变化监听
@@ -342,11 +359,17 @@ class NonogramGame {
       // 显示缩放控制
       this.elements.zoomControls.style.display = 'flex';
 
+      // 为容器添加大棋盘模式样式
+      this.elements.boardScrollContainer.classList.add('large-grid-mode');
+
       // 显示提示信息
       this.showLargeGridHint();
     } else {
       // 隐藏缩放控制
       this.elements.zoomControls.style.display = 'none';
+
+      // 移除大棋盘模式样式
+      this.elements.boardScrollContainer.classList.remove('large-grid-mode');
 
       // 隐藏提示信息
       this.elements.largeGridHint.style.display = 'none';
@@ -357,14 +380,14 @@ class NonogramGame {
   showLargeGridHint() {
     if (this.elements.largeGridHint) {
       this.elements.largeGridHint.style.display = 'block';
-      this.elements.largeGridHint.textContent = '👆 可以滚动、双指缩放查看完整棋盘，缩放后可滚动到边界';
+      this.elements.largeGridHint.textContent = '👆 可以拖拽、双指缩放，或使用下方方向键滚动';
 
-      // 5秒后自动隐藏
+      // 6秒后自动隐藏
       setTimeout(() => {
         if (this.elements.largeGridHint) {
           this.elements.largeGridHint.style.display = 'none';
         }
-      }, 5000);
+      }, 6000);
     }
   }
 
@@ -425,23 +448,36 @@ class NonogramGame {
 
     let lastTouchDistance = 0;
     let isZooming = false;
+    let isDragging = false;
+    let lastTouchX = 0;
+    let lastTouchY = 0;
 
+    // 双指缩放和单指拖拽的统一处理
     this.elements.boardScrollContainer.addEventListener('touchstart', (e) => {
       if (e.touches.length === 2) {
+        // 双指缩放
         isZooming = true;
+        isDragging = false;
         lastTouchDistance = this.getTouchDistance(e.touches[0], e.touches[1]);
         e.preventDefault();
+      } else if (e.touches.length === 1 && this.isLargeGrid) {
+        // 单指拖拽（仅在大棋盘下启用）
+        isDragging = true;
+        isZooming = false;
+        lastTouchX = e.touches[0].clientX;
+        lastTouchY = e.touches[0].clientY;
       }
     }, { passive: false });
 
     this.elements.boardScrollContainer.addEventListener('touchmove', (e) => {
       if (isZooming && e.touches.length === 2 && this.isLargeGrid) {
+        // 双指缩放
         e.preventDefault();
 
         const currentDistance = this.getTouchDistance(e.touches[0], e.touches[1]);
         const distanceRatio = currentDistance / lastTouchDistance;
 
-        if (Math.abs(distanceRatio - 1) > 0.05) { // 降低敏感度阈值
+        if (Math.abs(distanceRatio - 1) > 0.05) {
           const newScale = this.zoomState.scale * distanceRatio;
 
           if (newScale >= this.zoomState.minScale && newScale <= this.zoomState.maxScale) {
@@ -451,12 +487,28 @@ class NonogramGame {
 
           lastTouchDistance = currentDistance;
         }
+      } else if (isDragging && e.touches.length === 1 && this.isLargeGrid) {
+        // 单指拖拽滚动
+        e.preventDefault();
+
+        const deltaX = lastTouchX - e.touches[0].clientX;
+        const deltaY = lastTouchY - e.touches[0].clientY;
+
+        const container = this.elements.boardScrollContainer;
+        container.scrollLeft += deltaX;
+        container.scrollTop += deltaY;
+
+        lastTouchX = e.touches[0].clientX;
+        lastTouchY = e.touches[0].clientY;
       }
     }, { passive: false });
 
     this.elements.boardScrollContainer.addEventListener('touchend', (e) => {
       if (e.touches.length < 2) {
         isZooming = false;
+      }
+      if (e.touches.length === 0) {
+        isDragging = false;
       }
     });
   }
@@ -475,6 +527,50 @@ class NonogramGame {
     this.resizeTimeout = setTimeout(() => {
       this.adjustBoardSize();
     }, 100);
+  }
+
+  // 方向按钮滚动控制
+  scrollDirection(direction) {
+    if (!this.isLargeGrid || !this.elements.boardScrollContainer) return;
+
+    const container = this.elements.boardScrollContainer;
+    const scrollStep = 100; // 每次滚动的像素数
+
+    switch (direction) {
+      case 'up':
+        container.scrollTop = Math.max(0, container.scrollTop - scrollStep);
+        break;
+      case 'down':
+        container.scrollTop = Math.min(
+          container.scrollHeight - container.clientHeight,
+          container.scrollTop + scrollStep
+        );
+        break;
+      case 'left':
+        container.scrollLeft = Math.max(0, container.scrollLeft - scrollStep);
+        break;
+      case 'right':
+        container.scrollLeft = Math.min(
+          container.scrollWidth - container.clientWidth,
+          container.scrollLeft + scrollStep
+        );
+        break;
+    }
+  }
+
+  // 滚动到中心位置
+  scrollToCenter() {
+    if (!this.isLargeGrid || !this.elements.boardScrollContainer) return;
+
+    const container = this.elements.boardScrollContainer;
+    const centerX = (container.scrollWidth - container.clientWidth) / 2;
+    const centerY = (container.scrollHeight - container.clientHeight) / 2;
+
+    container.scrollTo({
+      left: centerX,
+      top: centerY,
+      behavior: 'smooth'
+    });
   }
 
   // 调整游戏板尺寸
