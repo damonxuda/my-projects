@@ -228,9 +228,9 @@
       <p class="subtitle">选择要使用的功能模块</p>
       
       <div class="nav-buttons">
-        <a href="/schedule/" class="nav-button public">
+        <a href="/schedule/" class="nav-button private" id="schedule-link">
           <div class="button-title">📅 课程安排</div>
-          <div class="access-badge public">🌍 公开访问</div>
+          <div class="access-badge private">🔐 需要登录</div>
         </a>
         
         <a href="/quiz/" class="nav-button private" id="quiz-link">
@@ -289,6 +289,7 @@
         const authUserView = document.getElementById('auth-user-view');
         const loginBtn = document.getElementById('login-btn');
         const userAvatar = document.getElementById('user-avatar');
+        const scheduleLink = document.getElementById('schedule-link');
         const gamesLink = document.getElementById('games-link');
         const quizLink = document.getElementById('quiz-link');
         const videosLink = document.getElementById('videos-link');
@@ -523,6 +524,16 @@
               }
             }
           });
+
+          // Schedule链接 - 使用Clerk官方SSO机制
+          if (scheduleLink) {
+            scheduleLink.addEventListener('click', async (e) => {
+              e.preventDefault();
+              // 直接跳转，卫星应用会自动同步认证状态
+              console.log('🚀 跳转到Schedule模块 (Clerk SSO)');
+              window.location.href = '/schedule/';
+            });
+          }
 
           // Games链接 - 使用Clerk官方SSO机制
           if (gamesLink) {

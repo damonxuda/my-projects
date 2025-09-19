@@ -225,10 +225,224 @@
     <!-- 引入Supabase库 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
+    <!-- Clerk SDK -->
+    <script crossorigin="anonymous" data-clerk-publishable-key="${CLERK_PUBLISHABLE_KEY}" src="https://clerk.damonxuda.site/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" type="text/javascript"></script>
+
     <!-- 环境变量设置 -->
     <script>
         window.REACT_APP_SUPABASE_URL = "${REACT_APP_SUPABASE_URL}";
         window.REACT_APP_SUPABASE_ANON_KEY = "${REACT_APP_SUPABASE_ANON_KEY}";
+        window.CLERK_PUBLISHABLE_KEY = "${CLERK_PUBLISHABLE_KEY}";
+    </script>
+
+    <!-- Schedule 模块认证初始化 -->
+    <script>
+      // Schedule模块认证系统 - 基于games模块的Clerk-JS认证方案
+      (function() {
+        'use strict';
+
+        console.log('📅 Schedule模块认证系统开始初始化');
+
+        let isAuthChecked = false;
+        let authRetryCount = 0;
+        const MAX_AUTH_RETRIES = 3;
+
+        // 认证检查类
+        class ScheduleAuth {
+          constructor() {
+            this.userCache = null;
+            this.tokenCache = null;
+          }
+
+          // 从缓存获取用户信息（不直接从Clerk获取）
+          async getUserFromCache() {
+            try {
+              // 策略1: 从window.mockClerkUser获取（React应用设置的）
+              if (window.mockClerkUser && window.mockClerkUser.isAuthenticated) {
+                console.log('📅 从mockClerkUser获取用户信息');
+                this.userCache = window.mockClerkUser;
+                return window.mockClerkUser;
+              }
+
+              // 策略2: 从localStorage的__clerk_environment获取
+              const clerkEnv = localStorage.getItem('__clerk_environment');
+              if (clerkEnv) {
+                const envData = JSON.parse(clerkEnv);
+                if (envData.user && envData.session) {
+                  console.log('📅 从localStorage获取用户信息');
+                  this.userCache = envData.user;
+                  return envData.user;
+                }
+              }
+
+              // 策略3: 如果Clerk已初始化且有用户，获取但不直接使用
+              if (window.Clerk && window.Clerk.user) {
+                console.log('📅 从Clerk获取用户信息');
+                this.userCache = window.Clerk.user;
+                return window.Clerk.user;
+              }
+
+              return null;
+            } catch (error) {
+              console.error('❌ 获取缓存用户信息失败:', error);
+              return null;
+            }
+          }
+
+          // 检查是否已登录
+          async isSignedIn() {
+            const user = await this.getUserFromCache();
+            return !!user;
+          }
+
+          // 重定向到主页登录
+          redirectToLogin() {
+            console.log('🔄 重定向到主页进行登录');
+            const currentUrl = encodeURIComponent(window.location.href);
+            window.location.href = `/?auth=signin&redirect=${currentUrl}`;
+          }
+        }
+
+        // 创建认证实例
+        const scheduleAuth = new ScheduleAuth();
+        window.scheduleAuth = scheduleAuth; // 暴露给其他模块使用
+
+        // 认证检查函数
+        async function checkAuthentication() {
+          try {
+            console.log('🔍 开始认证检查...');
+
+            const isSignedIn = await scheduleAuth.isSignedIn();
+
+            if (isSignedIn) {
+              console.log('✅ 用户已登录，允许访问Schedule模块');
+              isAuthChecked = true;
+
+              // 显示主要内容
+              const mainContent = document.querySelector('.container');
+              if (mainContent) {
+                mainContent.style.display = 'block';
+              }
+
+              // 初始化Schedule应用
+              if (typeof initializeScheduleApp === 'function') {
+                initializeScheduleApp();
+              }
+
+              return true;
+            } else {
+              console.log('❌ 用户未登录，需要重定向到登录页');
+
+              // 延迟重定向，给Clerk更多时间初始化
+              if (authRetryCount < MAX_AUTH_RETRIES) {
+                authRetryCount++;
+                console.log(`⏰ 等待认证状态更新... (${authRetryCount}/${MAX_AUTH_RETRIES})`);
+                setTimeout(checkAuthentication, 1000);
+                return false;
+              } else {
+                scheduleAuth.redirectToLogin();
+                return false;
+              }
+            }
+          } catch (error) {
+            console.error('❌ 认证检查失败:', error);
+            scheduleAuth.redirectToLogin();
+            return false;
+          }
+        }
+
+        // 初始化函数
+        async function initializeAuth() {
+          // 先隐藏主要内容
+          const mainContent = document.querySelector('.container');
+          if (mainContent) {
+            mainContent.style.display = 'none';
+          }
+
+          // 显示加载状态
+          const loadingDiv = document.createElement('div');
+          loadingDiv.id = 'auth-loading';
+          loadingDiv.innerHTML = `
+            <div style="
+              position: fixed;
+              top: 0;
+              left: 0;
+              width: 100%;
+              height: 100%;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: white;
+              font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+              z-index: 9999;
+            ">
+              <div style="text-align: center;">
+                <div style="font-size: 2rem; margin-bottom: 1rem;">📅</div>
+                <div style="font-size: 1.2rem; margin-bottom: 0.5rem;">课程安排</div>
+                <div style="font-size: 0.9rem; opacity: 0.8;">正在验证登录状态...</div>
+              </div>
+            </div>
+          `;
+          document.body.appendChild(loadingDiv);
+
+          // 等待Clerk初始化
+          if (window.Clerk) {
+            try {
+              await window.Clerk.load({
+                domain: window.location.hostname,
+                cookieDomain: window.location.hostname.startsWith('localhost')
+                  ? 'localhost'
+                  : `.${window.location.hostname}`,
+                cookiePath: '/',
+                allowOrigins: [
+                  window.location.origin,
+                  `${window.location.protocol}//${window.location.hostname}`,
+                  `${window.location.protocol}//${window.location.hostname}/schedule`,
+                  `${window.location.protocol}//${window.location.hostname}/quiz`,
+                  `${window.location.protocol}//${window.location.hostname}/admin`,
+                  `${window.location.protocol}//${window.location.hostname}/videos`,
+                  `${window.location.protocol}//${window.location.hostname}/games`
+                ],
+                sessionSyncing: true
+              });
+
+              console.log('✅ Clerk初始化完成');
+            } catch (error) {
+              console.warn('⚠️ Clerk初始化失败，但继续认证检查:', error);
+            }
+          }
+
+          // 执行认证检查
+          const authResult = await checkAuthentication();
+
+          // 移除加载状态
+          const loading = document.getElementById('auth-loading');
+          if (loading) {
+            loading.remove();
+          }
+
+          return authResult;
+        }
+
+        // 页面加载完成后初始化
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', initializeAuth);
+        } else {
+          initializeAuth();
+        }
+
+        // 监听认证状态变化
+        if (window.Clerk) {
+          window.Clerk.addListener(({ user, session }) => {
+            if (!isAuthChecked && (user || session)) {
+              console.log('🔄 检测到认证状态变化，重新检查');
+              checkAuthentication();
+            }
+          });
+        }
+
+      })();
     </script>
 
     <!-- 引入JavaScript文件 -->

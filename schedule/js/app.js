@@ -817,7 +817,7 @@ function handleSaveCourse() {
 // 应用初始化
 async function initApp() {
   console.log('🚀 初始化应用 - 使用统一数据模型');
-  
+
   try {
     await ScheduleManager.init();
     UIManager.updateDisplay();
@@ -829,14 +829,11 @@ async function initApp() {
   }
 }
 
-// 页面加载完成后初始化
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-      initApp();
-  });
-} else {
-    initApp();
-}
+// 全局初始化函数，供认证系统调用
+window.initializeScheduleApp = initApp;
+
+// 注意：不再自动初始化，由认证系统控制
+// 认证通过后会调用 window.initializeScheduleApp()
 
 // 页面卸载时清理资源
 window.addEventListener('beforeunload', () => {
