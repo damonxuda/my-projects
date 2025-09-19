@@ -593,47 +593,23 @@ class SudokuGame {
     if (!this.gameState.isLevelMode) return;
 
     try {
-      // 使用智能存储系统更新关卡进度
-      const progress = await this.storage.loadProgress();
-
       const difficulty = this.gameState.difficulty;
       const level = this.gameState.currentLevel;
       const timeInSeconds = Math.floor(this.gameState.elapsedTime / 1000);
 
-      // 确保进度结构存在
-      if (!progress[difficulty]) {
-        progress[difficulty] = {
-          current_level: 1,
-          completed_levels: [],
-          level_records: {}
-        };
-      }
-
-      // 更新关卡记录
-      const record = progress[difficulty].level_records[level] || { attempts: 0 };
-      record.attempts++;
-      record.completed = true;
-      record.best_time = record.best_time ? Math.min(record.best_time, timeInSeconds) : timeInSeconds;
-      record.best_stars = record.best_stars ? Math.max(record.best_stars, stars) : stars;
-      record.last_completed = new Date().toISOString();
-
-      progress[difficulty].level_records[level] = record;
-
-      // 添加到已完成关卡列表
-      if (!progress[difficulty].completed_levels.includes(level)) {
-        progress[difficulty].completed_levels.push(level);
-      }
-
-      // 解锁下一关
-      progress[difficulty].current_level = Math.max(
-        progress[difficulty].current_level,
-        Math.min(50, level + 1)
+      // 使用与数织游戏相同的进度保存机制
+      await this.storage.updateLevelRecord(
+        difficulty,
+        level,
+        timeInSeconds,
+        stars
       );
 
-      // 保存进度到智能存储系统
-      await this.storage.saveProgress(progress);
+      // 强制同步到云端（与数织游戏保持一致）
+      console.log('🔄 数独关卡完成，强制同步到云端');
+      await this.storage.forceSyncNow();
 
-      console.log(`✅ Level ${level} completion recorded with ${stars} stars`);
+      console.log(`✅ Sudoku Level ${level} completion recorded with ${stars} stars`);
 
     } catch (error) {
       console.error('Failed to record level completion:', error);
