@@ -555,6 +555,12 @@
         const urlParams = new URLSearchParams(window.location.search);
         const sessionToken = urlParams.get('session');
 
+        console.log('🔍 数独游戏URL参数检查:');
+        console.log('   - 完整URL:', window.location.href);
+        console.log('   - URL参数:', window.location.search);
+        console.log('   - session token:', sessionToken ? `${sessionToken.substring(0, 20)}...` : 'null');
+        console.log('   - window.mockClerkUser存在:', !!window.mockClerkUser);
+
         if (sessionToken && !window.mockClerkUser) {
           const tokenParts = sessionToken.split('.');
           if (tokenParts.length === 3) {
