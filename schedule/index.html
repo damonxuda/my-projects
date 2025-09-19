@@ -384,8 +384,8 @@
                   // 已登录但无权限，显示错误页面
                   showAccessDeniedPage();
                 } else {
-                  // 未登录，重定向到登录页
-                  scheduleAuth.redirectToLogin();
+                  // 未登录，显示登录页面
+                  showLoginRequiredPage();
                 }
                 return false;
               }
@@ -432,9 +432,68 @@
                     font-size: 1rem;
                     cursor: pointer;
                     transition: all 0.3s ease;
-                  ">
+                    margin-right: 0.5rem;
+                  " onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
                     返回主页
                   </button>
+                </div>
+              </div>
+            `;
+          }
+        }
+
+        // 显示未登录页面
+        function showLoginRequiredPage() {
+          const loadingDiv = document.getElementById('auth-loading');
+          if (loadingDiv) {
+            loadingDiv.innerHTML = `
+              <div style="
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+                z-index: 9999;
+              ">
+                <div style="text-align: center; max-width: 400px; padding: 2rem;">
+                  <div style="font-size: 4rem; margin-bottom: 1rem;">🔐</div>
+                  <div style="font-size: 1.5rem; margin-bottom: 1rem; font-weight: 600;">需要登录</div>
+                  <div style="font-size: 1rem; margin-bottom: 2rem; opacity: 0.9; line-height: 1.5;">
+                    访问课程安排模块需要先登录您的账户。
+                  </div>
+                  <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                    <button onclick="window.location.href='/?auth=signin&redirect=' + encodeURIComponent(window.location.href)" style="
+                      background: rgba(255, 255, 255, 0.9);
+                      border: none;
+                      border-radius: 8px;
+                      color: #667eea;
+                      padding: 0.8rem 1.5rem;
+                      font-size: 1rem;
+                      font-weight: 600;
+                      cursor: pointer;
+                      transition: all 0.3s ease;
+                    " onmouseover="this.style.background='rgba(255, 255, 255, 1)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.9)'">
+                      立即登录
+                    </button>
+                    <button onclick="window.location.href='/'" style="
+                      background: rgba(255, 255, 255, 0.2);
+                      border: 1px solid rgba(255, 255, 255, 0.3);
+                      border-radius: 8px;
+                      color: white;
+                      padding: 0.8rem 1.5rem;
+                      font-size: 1rem;
+                      cursor: pointer;
+                      transition: all 0.3s ease;
+                    " onmouseover="this.style.background='rgba(255, 255, 255, 0.3)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.2)'">
+                      返回主页
+                    </button>
+                  </div>
                 </div>
               </div>
             `;
@@ -506,10 +565,12 @@
           // 执行认证检查
           const authResult = await checkAuthentication();
 
-          // 移除加载状态
-          const loading = document.getElementById('auth-loading');
-          if (loading) {
-            loading.remove();
+          // 只有认证成功时才移除加载状态，失败时由具体的错误处理函数来处理界面
+          if (authResult) {
+            const loading = document.getElementById('auth-loading');
+            if (loading) {
+              loading.remove();
+            }
           }
 
           return authResult;
