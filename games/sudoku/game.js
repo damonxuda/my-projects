@@ -616,28 +616,52 @@ class SudokuGame {
         level,
         timeInSeconds,
         stars,
-        storage: !!this.storage
+        storage: !!this.storage,
+        storageType: this.storage?.constructor?.name
       });
 
+      // 验证存储系统是否可用
+      if (!this.storage) {
+        console.error('❌ 存储系统未初始化!');
+        return;
+      }
+
+      // 检查updateLevelRecord方法是否存在
+      if (typeof this.storage.updateLevelRecord !== 'function') {
+        console.error('❌ updateLevelRecord方法不存在!', typeof this.storage.updateLevelRecord);
+        console.log('Storage methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(this.storage)));
+        return;
+      }
+
       // 使用与数织游戏相同的进度保存机制
-      await this.storage.updateLevelRecord(
+      console.log('🚀 调用 updateLevelRecord...');
+      const result = await this.storage.updateLevelRecord(
         difficulty,
         level,
         timeInSeconds,
         stars
       );
+      console.log('✅ updateLevelRecord 结果:', result);
 
       console.log('✅ 关卡记录更新成功，开始强制同步...');
 
       // 强制同步到云端（与数织游戏保持一致）
       console.log('🔄 数独关卡完成，强制同步到云端');
-      await this.storage.forceSyncNow();
+      const syncResult = await this.storage.forceSyncNow();
+      console.log('✅ forceSyncNow 结果:', syncResult);
 
       console.log(`✅ Sudoku Level ${level} completion recorded with ${stars} stars`);
+
+      // 验证数据是否真的保存了
+      const savedProgress = await this.storage.loadProgress();
+      console.log('🔍 验证保存的进度:', savedProgress);
+      const levelRecord = savedProgress?.[difficulty]?.level_records?.[level];
+      console.log(`🔍 Level ${level} 的记录:`, levelRecord);
 
     } catch (error) {
       console.error('❌ Failed to record level completion:', error);
       console.error('Error details:', error);
+      console.error('Stack trace:', error.stack);
     }
   }
 
