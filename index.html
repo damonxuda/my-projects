@@ -400,6 +400,33 @@
           // 初始化UI状态
           updateAuthUI(!!window.Clerk.user, window.Clerk.user);
 
+          // 初始化时同步现有认证状态
+          if (window.Clerk.user && window.Clerk.session) {
+            try {
+              const token = await window.Clerk.session.getToken();
+
+              window.mockClerkUser = {
+                ...window.Clerk.user,
+                isAuthenticated: true,
+                sessionId: window.Clerk.session.id,
+                originalSessionToken: token,
+                authSource: 'main-page-init'
+              };
+
+              const envData = {
+                user: window.Clerk.user,
+                session: window.Clerk.session,
+                lastUpdated: Date.now(),
+                source: 'main-page-init'
+              };
+              localStorage.setItem('__clerk_environment', JSON.stringify(envData));
+
+              console.log('✅ 初始化时已同步认证状态到全局缓存');
+            } catch (error) {
+              console.warn('⚠️ 初始化认证状态同步失败:', error);
+            }
+          }
+
           // 登录按钮事件
           loginBtn.addEventListener('click', async () => {
             try {
@@ -509,19 +536,52 @@
           }
 
           // 监听认证状态变化
-          window.Clerk.addListener(({ user, session }) => {
+          window.Clerk.addListener(async ({ user, session }) => {
             updateAuthUI(!!user, user);
 
-            // 处理登录成功后的重定向
+            // 同步认证状态到其他模块
             if (user && session) {
-              const redirectUrl = sessionStorage.getItem('postSignInRedirect');
-              if (redirectUrl) {
-                sessionStorage.removeItem('postSignInRedirect');
-                console.log('🚀 登录成功，重定向到:', redirectUrl);
-                setTimeout(() => {
-                  window.location.href = redirectUrl;
-                }, 1000);
+              try {
+                // 获取session token
+                const token = await session.getToken();
+
+                // 设置mockClerkUser供其他模块使用
+                window.mockClerkUser = {
+                  ...user,
+                  isAuthenticated: true,
+                  sessionId: session.id,
+                  originalSessionToken: token,
+                  authSource: 'main-page-sso'
+                };
+
+                // 设置localStorage供其他模块使用
+                const envData = {
+                  user: user,
+                  session: session,
+                  lastUpdated: Date.now(),
+                  source: 'main-page'
+                };
+                localStorage.setItem('__clerk_environment', JSON.stringify(envData));
+
+                console.log('✅ 主页认证状态已同步到全局缓存');
+
+                // 处理登录成功后的重定向
+                const redirectUrl = sessionStorage.getItem('postSignInRedirect');
+                if (redirectUrl) {
+                  sessionStorage.removeItem('postSignInRedirect');
+                  console.log('🚀 登录成功，重定向到:', redirectUrl);
+                  setTimeout(() => {
+                    window.location.href = redirectUrl;
+                  }, 1000);
+                }
+              } catch (error) {
+                console.warn('⚠️ 同步认证状态失败:', error);
               }
+            } else {
+              // 用户登出，清除全局认证状态
+              window.mockClerkUser = null;
+              localStorage.removeItem('__clerk_environment');
+              console.log('🧹 已清除全局认证状态');
             }
           });
 
