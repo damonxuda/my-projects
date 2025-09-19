@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>测试数独存储系统</title>
+</head>
+<body>
+    <h1>数独存储系统测试</h1>
+    <button id="test-storage">测试存储</button>
+    <div id="result"></div>
+
+    <script src="../shared/js/gameUtils.js"></script>
+    <script src="../shared/js/storage.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="../shared/js/gameConfig.js"></script>
+    <script src="../shared/js/smartGameStorage.js"></script>
+
+    <script>
+        document.getElementById('test-storage').addEventListener('click', async () => {
+            const resultDiv = document.getElementById('result');
+            try {
+                // 创建存储实例
+                const storage = new SmartSudokuStorage();
+                resultDiv.innerHTML += '<p>✅ SmartSudokuStorage 创建成功</p>';
+
+                // 检查方法
+                resultDiv.innerHTML += '<p>updateLevelRecord类型: ' + typeof storage.updateLevelRecord + '</p>';
+                resultDiv.innerHTML += '<p>loadProgress类型: ' + typeof storage.loadProgress + '</p>';
+                resultDiv.innerHTML += '<p>forceSyncNow类型: ' + typeof storage.forceSyncNow + '</p>';
+
+                // 测试保存
+                resultDiv.innerHTML += '<p>🚀 开始测试 updateLevelRecord...</p>';
+                await storage.updateLevelRecord('easy', 1, 120, 3);
+                resultDiv.innerHTML += '<p>✅ updateLevelRecord 调用成功</p>';
+
+                // 测试读取
+                const progress = await storage.loadProgress();
+                resultDiv.innerHTML += '<p>✅ 读取进度: ' + JSON.stringify(progress, null, 2) + '</p>';
+
+            } catch (error) {
+                resultDiv.innerHTML += '<p>❌ 错误: ' + error.message + '</p>';
+                resultDiv.innerHTML += '<p>详细: ' + error.stack + '</p>';
+            }
+        });
+    </script>
+</body>
+</html>
