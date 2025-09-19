@@ -389,11 +389,6 @@
         </div>
       </div>
       
-      <!-- 移动端调试信息 -->
-      <div id="mobile-debug" style="background: #000000; color: #00ff00; border: 2px solid #ff0000; padding: 15px; margin: 10px; border-radius: 8px; font-size: 14px; font-family: monospace; display: none;">
-        <strong style="color: #ffff00;">🔧 移动端调试信息：</strong><br>
-        <div id="debug-info" style="color: #00ff00;">初始化中...</div>
-      </div>
 
       <!-- 进度统计 -->
       <div class="progress-section">
@@ -721,12 +716,6 @@
     <!-- <script src="../shared/js/gameAuth.js"></script> -->
     <!-- <script src="../shared/js/authStorage.js"></script> -->
 
-    <!-- 调试按钮 (仅开发时显示) -->
-    <div id="debug-panel" style="position: fixed; bottom: 10px; right: 10px; z-index: 9999;">
-      <button id="debug-btn" style="background: #ff4444; color: white; border: none; padding: 8px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
-        🔍 调试
-      </button>
-    </div>
 
     <!-- 调试信息弹窗 -->
     <div id="debug-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; padding: 20px; overflow-y: auto;">
@@ -745,61 +734,6 @@
     <script src="levels.js"></script>
 
     <script>
-    // 移动端调试信息显示
-    function updateMobileDebug(message) {
-      const debugDiv = document.getElementById('mobile-debug');
-      const debugInfo = document.getElementById('debug-info');
-      if (debugDiv && debugInfo) {
-        debugDiv.style.display = 'block';
-        debugInfo.innerHTML += '<br>' + new Date().toLocaleTimeString() + ': ' + message;
-      }
-    }
-
-    // 劫持console.log显示在页面上
-    const originalConsoleLog = console.log;
-    const originalConsoleWarn = console.warn;
-    const originalConsoleError = console.error;
-
-    console.log = function(...args) {
-      originalConsoleLog.apply(console, args);
-      updateMobileDebug('LOG: ' + args.join(' '));
-    };
-    console.warn = function(...args) {
-      originalConsoleWarn.apply(console, args);
-      updateMobileDebug('WARN: ' + args.join(' '));
-    };
-    console.error = function(...args) {
-      originalConsoleError.apply(console, args);
-      updateMobileDebug('ERROR: ' + args.join(' '));
-    };
-
-    // 检测移动设备
-    function isMobileDevice() {
-      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    }
-
-    // 页面加载时开始调试
-    document.addEventListener('DOMContentLoaded', function() {
-      if (isMobileDevice()) {
-        updateMobileDebug('📱 检测到移动设备');
-        updateMobileDebug('🔍 Clerk对象: ' + (!!window.Clerk));
-        updateMobileDebug('🔍 clerkInitialized: ' + window.clerkInitialized);
-        updateMobileDebug('🔍 NonogramLevels: ' + (!!window.nonogramLevels));
-
-        // 5秒后检查初始化状态
-        setTimeout(() => {
-          updateMobileDebug('⏰ 5秒后检查:');
-          updateMobileDebug('  - Clerk用户: ' + (window.Clerk && window.Clerk.user ? window.Clerk.user.id : '无'));
-          updateMobileDebug('  - NonogramLevels: ' + (!!window.nonogramLevels));
-          updateMobileDebug('  - Storage对象: ' + (window.nonogramLevels && window.nonogramLevels.storage ? '有' : '无'));
-        }, 5000);
-
-        // 10秒后最终检查
-        setTimeout(() => {
-          updateMobileDebug('⏰ 10秒后最终检查:');
-          updateMobileDebug('  - 游戏是否初始化: ' + (window.nonogramLevels && window.nonogramLevels.storage ? '✅ 是' : '❌ 否'));
-        }, 10000);
-      }
 
       const debugBtn = document.getElementById('debug-btn');
       const debugModal = document.getElementById('debug-modal');
