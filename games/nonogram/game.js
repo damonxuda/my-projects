@@ -26,6 +26,7 @@ class NonogramGame {
       step: 0.2
     };
     this.isLargeGrid = false;
+    this.originalBoardSize = { width: 0, height: 0 };
 
     // 等待Clerk初始化完成后再开始游戏初始化
     this.waitForClerkAndInit();
@@ -112,6 +113,7 @@ class NonogramGame {
       currentLevel: document.getElementById('current-level'),
       progressIndicator: document.getElementById('progress-indicator'),
       nonogramBoard: document.getElementById('nonogram-board'),
+      boardZoomWrapper: document.getElementById('board-zoom-wrapper'),
       boardScrollContainer: document.getElementById('board-scroll-container'),
       loading: document.getElementById('loading'),
       gameComplete: document.getElementById('game-complete'),
@@ -355,13 +357,14 @@ class NonogramGame {
   showLargeGridHint() {
     if (this.elements.largeGridHint) {
       this.elements.largeGridHint.style.display = 'block';
+      this.elements.largeGridHint.textContent = '👆 可以滚动、双指缩放查看完整棋盘，缩放后可滚动到边界';
 
-      // 4秒后自动隐藏
+      // 5秒后自动隐藏
       setTimeout(() => {
         if (this.elements.largeGridHint) {
           this.elements.largeGridHint.style.display = 'none';
         }
-      }, 4000);
+      }, 5000);
     }
   }
 
@@ -392,9 +395,28 @@ class NonogramGame {
   }
 
   applyZoom() {
-    if (this.isLargeGrid && this.elements.nonogramBoard) {
-      this.elements.nonogramBoard.style.transform = `scale(${this.zoomState.scale})`;
+    if (this.isLargeGrid && this.elements.boardZoomWrapper) {
+      // 使用容器进行缩放，从左上角开始
+      this.elements.boardZoomWrapper.style.transform = `scale(${this.zoomState.scale})`;
+
+      // 更新滚动容器的尺寸以适应缩放后的内容
+      this.updateScrollContainerSize();
     }
+  }
+
+  // 更新滚动容器尺寸以支持正确的滚动边界
+  updateScrollContainerSize() {
+    if (!this.isLargeGrid || !this.elements.boardZoomWrapper) return;
+
+    const scaledWidth = this.originalBoardSize.width * this.zoomState.scale;
+    const scaledHeight = this.originalBoardSize.height * this.zoomState.scale;
+
+    // 设置容器的最小尺寸以支持滚动
+    const wrapper = this.elements.boardZoomWrapper;
+    wrapper.style.minWidth = scaledWidth + 'px';
+    wrapper.style.minHeight = scaledHeight + 'px';
+    wrapper.style.width = scaledWidth + 'px';
+    wrapper.style.height = scaledHeight + 'px';
   }
 
   // 设置触摸手势
@@ -419,7 +441,7 @@ class NonogramGame {
         const currentDistance = this.getTouchDistance(e.touches[0], e.touches[1]);
         const distanceRatio = currentDistance / lastTouchDistance;
 
-        if (Math.abs(distanceRatio - 1) > 0.1) { // 防止过于敏感
+        if (Math.abs(distanceRatio - 1) > 0.05) { // 降低敏感度阈值
           const newScale = this.zoomState.scale * distanceRatio;
 
           if (newScale >= this.zoomState.minScale && newScale <= this.zoomState.maxScale) {
@@ -458,24 +480,31 @@ class NonogramGame {
   // 调整游戏板尺寸
   adjustBoardSize() {
     const board = this.elements.nonogramBoard;
+    const wrapper = this.elements.boardZoomWrapper;
     const container = this.elements.boardScrollContainer;
 
-    if (!board || !container) return;
+    if (!board || !wrapper || !container) return;
 
     const size = this.currentLevel.size;
 
     if (this.isLargeGrid) {
       // 大棋盘：使用固定的较大尺寸，允许滚动
-      const cellSize = 24; // 固定格子大小，确保可点击性
+      const cellSize = 28; // 稍微增大格子大小
       const totalSize = (size + 8) * cellSize; // 为线索留出空间
 
+      // 设置棋盘尺寸
       board.style.width = totalSize + 'px';
       board.style.height = totalSize + 'px';
-      board.style.fontSize = '0.7rem';
+      board.style.fontSize = '0.75rem';
 
-      // 应用缩放
-      board.style.transform = `scale(${this.zoomState.scale})`;
-      board.style.transformOrigin = 'center center';
+      // 存储原始尺寸
+      this.originalBoardSize = { width: totalSize, height: totalSize };
+
+      // 移除容器居中样式
+      container.classList.remove('center-content');
+
+      // 应用缩放到容器
+      this.applyZoom();
 
     } else {
       // 小棋盘：适应容器大小
@@ -491,8 +520,12 @@ class NonogramGame {
       const fontSize = Math.max(10, Math.floor(cellSize * 0.6));
       board.style.fontSize = fontSize + 'px';
 
+      // 添加容器居中样式
+      container.classList.add('center-content');
+
       // 重置缩放
-      board.style.transform = 'scale(1)';
+      wrapper.style.transform = 'scale(1)';
+      this.updateScrollContainerSize();
     }
   }
 

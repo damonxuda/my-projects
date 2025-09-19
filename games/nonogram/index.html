@@ -197,31 +197,41 @@
         overflow: auto;
         -webkit-overflow-scrolling: touch;
         position: relative;
+        padding: 10px;
+        box-sizing: border-box;
+        /* 不使用flex居中，避免干扰滚动 */
+      }
+
+      /* 小棋盘的居中容器 */
+      .board-scroll-container.center-content {
         display: flex;
         justify-content: center;
         align-items: center;
-        padding: 10px;
-        box-sizing: border-box;
       }
       
+      /* 数织游戏板容器 - 支持缩放后的滚动边界 */
+      .board-zoom-wrapper {
+        position: relative;
+        transform-origin: top left;
+        transition: transform 0.3s ease;
+      }
+
       /* 数织游戏板 */
       .nonogram-board {
         background: rgba(255, 255, 255, 0.95);
         border-radius: 8px;
         display: grid;
         gap: 1px;
-        margin-bottom: 0.8rem;
+        margin: 0;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         position: relative;
-        /* 移除固定尺寸限制，允许根据内容大小调整 */
+        /* 移除transform，由容器负责缩放 */
         min-width: 300px;
-        /* 支持触摸平移和缩放 */
         touch-action: manipulation;
       }
 
       /* 适应小屏幕的特殊样式 */
       .nonogram-board.large-grid {
-        /* 对于大棋盘，确保最小可见性 */
         min-width: 350px;
         font-size: 0.7rem;
       }
@@ -670,8 +680,10 @@
       <!-- 游戏板容器 -->
       <div class="board-container">
         <div class="board-scroll-container" id="board-scroll-container">
-          <div class="nonogram-board" id="nonogram-board">
-            <!-- 游戏板将由JavaScript动态生成 -->
+          <div class="board-zoom-wrapper" id="board-zoom-wrapper">
+            <div class="nonogram-board" id="nonogram-board">
+              <!-- 游戏板将由JavaScript动态生成 -->
+            </div>
           </div>
 
           <!-- 缩放控制 -->
