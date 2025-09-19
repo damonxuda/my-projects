@@ -18,6 +18,15 @@ class NonogramGame {
     // UI元素引用
     this.elements = {};
 
+    // 缩放和平移相关状态
+    this.zoomState = {
+      scale: 1,
+      minScale: 0.5,
+      maxScale: 2,
+      step: 0.2
+    };
+    this.isLargeGrid = false;
+
     // 等待Clerk初始化完成后再开始游戏初始化
     this.waitForClerkAndInit();
   }
@@ -103,9 +112,10 @@ class NonogramGame {
       currentLevel: document.getElementById('current-level'),
       progressIndicator: document.getElementById('progress-indicator'),
       nonogramBoard: document.getElementById('nonogram-board'),
+      boardScrollContainer: document.getElementById('board-scroll-container'),
       loading: document.getElementById('loading'),
       gameComplete: document.getElementById('game-complete'),
-      
+
       // 按钮
       hintBtn: document.getElementById('hint-btn'),
       checkBtn: document.getElementById('check-btn'),
@@ -113,7 +123,14 @@ class NonogramGame {
       levelsBtn: document.getElementById('levels-btn'),
       fillMode: document.getElementById('fill-mode'),
       markMode: document.getElementById('mark-mode'),
-      
+
+      // 缩放控制
+      zoomControls: document.getElementById('zoom-controls'),
+      zoomIn: document.getElementById('zoom-in'),
+      zoomOut: document.getElementById('zoom-out'),
+      zoomReset: document.getElementById('zoom-reset'),
+      largeGridHint: document.getElementById('large-grid-hint'),
+
       // 完成对话框
       completeTime: document.getElementById('complete-time'),
       completeStars: document.getElementById('complete-stars'),
@@ -134,13 +151,24 @@ class NonogramGame {
     // 模式切换按钮
     this.elements.fillMode?.addEventListener('click', () => this.setGameMode('fill'));
     this.elements.markMode?.addEventListener('click', () => this.setGameMode('mark'));
-    
+
     // 操作按钮
     this.elements.hintBtn?.addEventListener('click', () => this.showHint());
     this.elements.checkBtn?.addEventListener('click', () => this.checkSolution());
     this.elements.restartBtn?.addEventListener('click', () => this.restartGame());
     this.elements.levelsBtn?.addEventListener('click', () => this.goToLevels());
-    
+
+    // 缩放控制按钮
+    this.elements.zoomIn?.addEventListener('click', () => this.zoomIn());
+    this.elements.zoomOut?.addEventListener('click', () => this.zoomOut());
+    this.elements.zoomReset?.addEventListener('click', () => this.resetZoom());
+
+    // 触摸手势支持（双指缩放）
+    this.setupTouchGestures();
+
+    // 窗口大小变化监听
+    window.addEventListener('resize', () => this.handleResize());
+
     // 智能存储系统自动处理认证状态变化
   }
 
@@ -201,26 +229,35 @@ class NonogramGame {
     const size = this.currentLevel.size;
     const rowClues = this.currentLevel.row_clues;
     const colClues = this.currentLevel.col_clues;
-    
+
+    // 判断是否为大棋盘
+    this.isLargeGrid = size >= 15;
+
     // 计算最大线索长度用于布局
     const maxRowClueLength = Math.max(...rowClues.map(clues => clues.length));
     const maxColClueLength = Math.max(...colClues.map(clues => clues.length));
-    
+
     // 设置网格布局
     const totalCols = maxRowClueLength + size;
     const totalRows = maxColClueLength + size;
-    
+
     this.elements.nonogramBoard.style.gridTemplateColumns = `repeat(${totalCols}, 1fr)`;
     this.elements.nonogramBoard.style.gridTemplateRows = `repeat(${totalRows}, 1fr)`;
-    
+
+    // 添加大棋盘样式类
+    this.elements.nonogramBoard.classList.toggle('large-grid', this.isLargeGrid);
+
     // 清空现有内容
     this.elements.nonogramBoard.innerHTML = '';
-    
+
     // 添加线索和游戏格子
     this.renderCluesAndCells(size, rowClues, colClues, maxRowClueLength, maxColClueLength);
-    
+
     // 设置合适的尺寸
     this.adjustBoardSize();
+
+    // 显示/隐藏缩放控制和提示
+    this.setupLargeGridFeatures();
   }
 
   // 渲染线索和游戏格子
@@ -297,25 +334,166 @@ class NonogramGame {
     }
   }
 
+  // 设置大棋盘特性
+  setupLargeGridFeatures() {
+    if (this.isLargeGrid) {
+      // 显示缩放控制
+      this.elements.zoomControls.style.display = 'flex';
+
+      // 显示提示信息
+      this.showLargeGridHint();
+    } else {
+      // 隐藏缩放控制
+      this.elements.zoomControls.style.display = 'none';
+
+      // 隐藏提示信息
+      this.elements.largeGridHint.style.display = 'none';
+    }
+  }
+
+  // 显示大棋盘提示
+  showLargeGridHint() {
+    if (this.elements.largeGridHint) {
+      this.elements.largeGridHint.style.display = 'block';
+
+      // 4秒后自动隐藏
+      setTimeout(() => {
+        if (this.elements.largeGridHint) {
+          this.elements.largeGridHint.style.display = 'none';
+        }
+      }, 4000);
+    }
+  }
+
+  // 缩放功能
+  zoomIn() {
+    if (this.zoomState.scale < this.zoomState.maxScale) {
+      this.zoomState.scale = Math.min(
+        this.zoomState.maxScale,
+        this.zoomState.scale + this.zoomState.step
+      );
+      this.applyZoom();
+    }
+  }
+
+  zoomOut() {
+    if (this.zoomState.scale > this.zoomState.minScale) {
+      this.zoomState.scale = Math.max(
+        this.zoomState.minScale,
+        this.zoomState.scale - this.zoomState.step
+      );
+      this.applyZoom();
+    }
+  }
+
+  resetZoom() {
+    this.zoomState.scale = 1;
+    this.applyZoom();
+  }
+
+  applyZoom() {
+    if (this.isLargeGrid && this.elements.nonogramBoard) {
+      this.elements.nonogramBoard.style.transform = `scale(${this.zoomState.scale})`;
+    }
+  }
+
+  // 设置触摸手势
+  setupTouchGestures() {
+    if (!this.elements.boardScrollContainer) return;
+
+    let lastTouchDistance = 0;
+    let isZooming = false;
+
+    this.elements.boardScrollContainer.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        isZooming = true;
+        lastTouchDistance = this.getTouchDistance(e.touches[0], e.touches[1]);
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    this.elements.boardScrollContainer.addEventListener('touchmove', (e) => {
+      if (isZooming && e.touches.length === 2 && this.isLargeGrid) {
+        e.preventDefault();
+
+        const currentDistance = this.getTouchDistance(e.touches[0], e.touches[1]);
+        const distanceRatio = currentDistance / lastTouchDistance;
+
+        if (Math.abs(distanceRatio - 1) > 0.1) { // 防止过于敏感
+          const newScale = this.zoomState.scale * distanceRatio;
+
+          if (newScale >= this.zoomState.minScale && newScale <= this.zoomState.maxScale) {
+            this.zoomState.scale = newScale;
+            this.applyZoom();
+          }
+
+          lastTouchDistance = currentDistance;
+        }
+      }
+    }, { passive: false });
+
+    this.elements.boardScrollContainer.addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) {
+        isZooming = false;
+      }
+    });
+  }
+
+  // 计算两个触摸点之间的距离
+  getTouchDistance(touch1, touch2) {
+    const dx = touch1.clientX - touch2.clientX;
+    const dy = touch1.clientY - touch2.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  // 处理窗口大小变化
+  handleResize() {
+    // 延迟调整，避免频繁重绘
+    clearTimeout(this.resizeTimeout);
+    this.resizeTimeout = setTimeout(() => {
+      this.adjustBoardSize();
+    }, 100);
+  }
+
   // 调整游戏板尺寸
   adjustBoardSize() {
     const board = this.elements.nonogramBoard;
-    const container = board.parentElement;
-    
-    const containerWidth = container.clientWidth - 20;
-    const containerHeight = window.innerHeight * 0.6;
-    
-    const maxSize = Math.min(containerWidth, containerHeight);
-    board.style.width = maxSize + 'px';
-    board.style.height = maxSize + 'px';
-    
-    // 计算格子大小
+    const container = this.elements.boardScrollContainer;
+
+    if (!board || !container) return;
+
     const size = this.currentLevel.size;
-    const cellSize = Math.max(12, Math.floor(maxSize / (size + 8))); // 为线索留出空间
-    
-    // 设置字体大小
-    const fontSize = Math.max(8, Math.floor(cellSize * 0.6));
-    board.style.fontSize = fontSize + 'px';
+
+    if (this.isLargeGrid) {
+      // 大棋盘：使用固定的较大尺寸，允许滚动
+      const cellSize = 24; // 固定格子大小，确保可点击性
+      const totalSize = (size + 8) * cellSize; // 为线索留出空间
+
+      board.style.width = totalSize + 'px';
+      board.style.height = totalSize + 'px';
+      board.style.fontSize = '0.7rem';
+
+      // 应用缩放
+      board.style.transform = `scale(${this.zoomState.scale})`;
+      board.style.transformOrigin = 'center center';
+
+    } else {
+      // 小棋盘：适应容器大小
+      const containerWidth = container.clientWidth - 20;
+      const containerHeight = window.innerHeight * 0.6;
+
+      const maxSize = Math.min(containerWidth, containerHeight);
+      board.style.width = maxSize + 'px';
+      board.style.height = maxSize + 'px';
+
+      // 计算格子大小
+      const cellSize = Math.max(20, Math.floor(maxSize / (size + 8)));
+      const fontSize = Math.max(10, Math.floor(cellSize * 0.6));
+      board.style.fontSize = fontSize + 'px';
+
+      // 重置缩放
+      board.style.transform = 'scale(1)';
+    }
   }
 
   // 处理格子点击
@@ -432,6 +610,7 @@ class NonogramGame {
   restartGame() {
     if (confirm('确定要重新开始这一关吗？')) {
       this.engine.reset();
+      this.resetZoom(); // 重置缩放状态
       this.renderGame();
       this.startTimer();
       this.updateUI();
