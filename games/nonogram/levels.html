@@ -107,8 +107,8 @@
       }
       
       .progress-stats {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        display: flex;
+        justify-content: center;
         gap: 1rem;
         text-align: center;
       }
@@ -280,8 +280,8 @@
 
       .star-display .filled-star {
         color: #ffc107;
-        text-shadow: 0 0 6px rgba(255, 193, 7, 1), 0 0 3px rgba(255, 152, 0, 0.9), 0 0 1px rgba(0,0,0,0.8);
-        filter: drop-shadow(0 0 3px #ff9800) brightness(1.2);
+        text-shadow: 0 0 8px rgba(255, 193, 7, 1), 0 0 4px rgba(255, 152, 0, 1), 0 0 2px rgba(255, 87, 34, 0.8), 0 0 1px rgba(0,0,0,0.9);
+        filter: drop-shadow(0 0 4px #ff9800) brightness(1.3) saturate(1.2);
       }
 
       .star-display .empty-star {
