@@ -188,6 +188,10 @@ class SudokuLevelsPage {
       let gameUrl = `index.html?difficulty=${this.currentDifficulty}&level=${level.level}`;
 
       // 如果存在跨模块认证状态，传递session token到游戏页面
+      console.log('🔍 数独关卡页面token传递检查:');
+      console.log('   - window.mockClerkUser存在:', !!window.mockClerkUser);
+      console.log('   - mockClerkUser.isAuthenticated:', window.mockClerkUser?.isAuthenticated);
+
       if (window.mockClerkUser && window.mockClerkUser.isAuthenticated) {
         // 优先使用保存的session token，fallback到URL参数
         let sessionToken = window.mockClerkUser.originalSessionToken;
@@ -196,9 +200,15 @@ class SudokuLevelsPage {
           sessionToken = urlParams.get('session');
         }
 
+        console.log('   - originalSessionToken:', sessionToken ? `${sessionToken.substring(0, 20)}...` : 'null');
+        console.log('   - 最终gameUrl:', gameUrl);
+
         if (sessionToken) {
           gameUrl += `&session=${encodeURIComponent(sessionToken)}`;
+          console.log('   - 添加token后的gameUrl:', gameUrl);
         }
+      } else {
+        console.log('   - 没有mockClerkUser或未认证，无法传递token');
       }
 
       card.href = gameUrl;

@@ -428,6 +428,37 @@
           }
         }
 
+        // 🔥 更新游戏链接，动态添加或移除session token
+        function updateGameLinks(isLoggedIn) {
+          console.log('🔗 更新游戏链接，用户登录状态:', isLoggedIn);
+
+          const gameCards = document.querySelectorAll('.game-card');
+          gameCards.forEach(card => {
+            const originalHref = card.getAttribute('href');
+            if (!originalHref || originalHref === '#') return;
+
+            // 移除现有的session参数
+            const baseUrl = originalHref.split('?')[0];
+
+            if (isLoggedIn) {
+              // 获取session token
+              const sessionToken = getCachedSessionToken();
+              if (sessionToken) {
+                const newHref = `${baseUrl}?session=${encodeURIComponent(sessionToken)}`;
+                card.setAttribute('href', newHref);
+                console.log(`   - 更新链接: ${baseUrl} -> ${newHref.substring(0, 50)}...`);
+              } else {
+                card.setAttribute('href', baseUrl);
+                console.log(`   - 无token，保持原链接: ${baseUrl}`);
+              }
+            } else {
+              // 未登录，移除session参数
+              card.setAttribute('href', baseUrl);
+              console.log(`   - 移除token，恢复原链接: ${baseUrl}`);
+            }
+          });
+        }
+
         // 更新UI状态
         function updateAuthUI(isSignedIn, user) {
           if (isSignedIn && user) {
@@ -435,6 +466,9 @@
             authStatus.textContent = '已登录';
             authLoginView.style.display = 'none';
             authUserView.style.display = 'block';
+
+            // 🔥 更新游戏链接，添加session token
+            updateGameLinks(true);
 
             // 显示用户头像
             if (user.imageUrl && user.hasImage) {
@@ -474,6 +508,9 @@
             authUserView.style.display = 'none';
 
             console.log('🔓 Games页面用户未登录');
+
+            // 🔥 更新游戏链接，移除session token
+            updateGameLinks(false);
           }
         }
 
