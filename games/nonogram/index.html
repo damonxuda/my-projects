@@ -568,8 +568,30 @@
         border-radius: 6px;
         font-size: 0.8rem;
         z-index: 10;
-        animation: fadeInOut 4s ease-in-out;
+        animation: fadeInOut 6s ease-in-out;
         pointer-events: none;
+      }
+
+      /* 拖拽状态指示器 */
+      .drag-indicator {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(102, 126, 234, 0.9);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        z-index: 20;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .drag-indicator.show {
+        opacity: 1;
       }
 
       @keyframes fadeInOut {
@@ -765,6 +787,11 @@
           <!-- 大棋盘提示 -->
           <div class="large-grid-hint" id="large-grid-hint" style="display: none;">
             👆 可以滚动、双指缩放查看完整棋盘
+          </div>
+
+          <!-- 拖拽状态指示器 -->
+          <div class="drag-indicator" id="drag-indicator" style="display: none;">
+            👌 拖拽模式已启用
           </div>
         </div>
         

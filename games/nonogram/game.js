@@ -27,6 +27,9 @@ class NonogramGame {
     };
     this.isLargeGrid = false;
     this.originalBoardSize = { width: 0, height: 0 };
+    this.isDraggingCell = false;
+    this.cellTouchStartTime = 0;
+    this.longPressTimer = null;
 
     // 等待Clerk初始化完成后再开始游戏初始化
     this.waitForClerkAndInit();
@@ -140,6 +143,7 @@ class NonogramGame {
       navRight: document.getElementById('nav-right'),
       navCenter: document.getElementById('nav-center'),
       touchScrollOverlay: document.getElementById('touch-scroll-overlay'),
+      dragIndicator: document.getElementById('drag-indicator'),
 
       largeGridHint: document.getElementById('large-grid-hint'),
 
@@ -331,16 +335,31 @@ class NonogramGame {
             cell.classList.add('border-bottom');
           }
           
-          // 添加点击事件
+          // 添加点击事件（优化触摸识别）
           cell.addEventListener('click', (e) => {
             e.preventDefault();
             this.handleCellClick(gameRow, gameCol);
           });
-          
-          // 添加触摸支持
-          cell.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            this.handleCellClick(gameRow, gameCol);
+
+          // 添加触摸支持（仅在非拖拽状态下触发）
+          cell.addEventListener('touchend', (e) => {
+            // 只有在没有发生拖拽时才触发点击
+            if (!this.isDraggingCell) {
+              e.preventDefault();
+              this.handleCellClick(gameRow, gameCol);
+            }
+          });
+
+          // 记录触摸开始状态
+          cell.addEventListener('touchstart', () => {
+            this.isDraggingCell = false;
+            this.cellTouchStartTime = Date.now();
+          });
+
+          // 检测是否在拖拽
+          cell.addEventListener('touchmove', () => {
+            // 如果在移动，标记为拖拽状态
+            this.isDraggingCell = true;
           });
           
         } else {
@@ -380,7 +399,7 @@ class NonogramGame {
   showLargeGridHint() {
     if (this.elements.largeGridHint) {
       this.elements.largeGridHint.style.display = 'block';
-      this.elements.largeGridHint.textContent = '👆 可以拖拽、双指缩放，或使用下方方向键滚动';
+      this.elements.largeGridHint.textContent = '👆 轻点下棋，按住或拖动滚动视图，双指缩放';
 
       // 6秒后自动隐藏
       setTimeout(() => {
@@ -388,6 +407,26 @@ class NonogramGame {
           this.elements.largeGridHint.style.display = 'none';
         }
       }, 6000);
+    }
+  }
+
+  // 显示拖拽指示器
+  showDragIndicator() {
+    if (this.elements.dragIndicator) {
+      this.elements.dragIndicator.style.display = 'block';
+      this.elements.dragIndicator.classList.add('show');
+    }
+  }
+
+  // 隐藏拖拽指示器
+  hideDragIndicator() {
+    if (this.elements.dragIndicator) {
+      this.elements.dragIndicator.classList.remove('show');
+      setTimeout(() => {
+        if (this.elements.dragIndicator) {
+          this.elements.dragIndicator.style.display = 'none';
+        }
+      }, 300); // 等待动画完成
     }
   }
 
@@ -449,8 +488,15 @@ class NonogramGame {
     let lastTouchDistance = 0;
     let isZooming = false;
     let isDragging = false;
+    let touchStartX = 0;
+    let touchStartY = 0;
     let lastTouchX = 0;
     let lastTouchY = 0;
+    let hasMoved = false;
+
+    // 手势识别参数
+    const DRAG_THRESHOLD = 15; // 像素，超过这个距离才认为是拖拽
+    const LONG_PRESS_TIME = 150; // 毫秒，超过这个时间的按下才能开始拖拽
 
     // 双指缩放和单指拖拽的统一处理
     this.elements.boardScrollContainer.addEventListener('touchstart', (e) => {
@@ -458,14 +504,31 @@ class NonogramGame {
         // 双指缩放
         isZooming = true;
         isDragging = false;
+        hasMoved = false;
         lastTouchDistance = this.getTouchDistance(e.touches[0], e.touches[1]);
         e.preventDefault();
       } else if (e.touches.length === 1 && this.isLargeGrid) {
-        // 单指拖拽（仅在大棋盘下启用）
-        isDragging = true;
+        // 单指可能的拖拽（需要进一步判断）
         isZooming = false;
-        lastTouchX = e.touches[0].clientX;
-        lastTouchY = e.touches[0].clientY;
+        isDragging = false; // 初始不设为true，等待判断
+        hasMoved = false;
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        lastTouchX = touchStartX;
+        lastTouchY = touchStartY;
+
+        // 设置一个延迟，如果按住一段时间不动就启用拖拽模式
+        this.longPressTimer = setTimeout(() => {
+          if (!hasMoved && !isDragging) {
+            isDragging = true;
+            // 显示拖拽指示器
+            this.showDragIndicator();
+            // 可以给用户一个微妙的触觉反馈（震动）
+            if (navigator.vibrate) {
+              navigator.vibrate(50);
+            }
+          }
+        }, LONG_PRESS_TIME);
       }
     }, { passive: false });
 
@@ -473,6 +536,7 @@ class NonogramGame {
       if (isZooming && e.touches.length === 2 && this.isLargeGrid) {
         // 双指缩放
         e.preventDefault();
+        clearTimeout(this.longPressTimer);
 
         const currentDistance = this.getTouchDistance(e.touches[0], e.touches[1]);
         const distanceRatio = currentDistance / lastTouchDistance;
@@ -487,28 +551,53 @@ class NonogramGame {
 
           lastTouchDistance = currentDistance;
         }
-      } else if (isDragging && e.touches.length === 1 && this.isLargeGrid) {
-        // 单指拖拽滚动
-        e.preventDefault();
+      } else if (e.touches.length === 1 && this.isLargeGrid) {
+        const currentX = e.touches[0].clientX;
+        const currentY = e.touches[0].clientY;
+        const moveDistance = Math.sqrt(
+          Math.pow(currentX - touchStartX, 2) + Math.pow(currentY - touchStartY, 2)
+        );
 
-        const deltaX = lastTouchX - e.touches[0].clientX;
-        const deltaY = lastTouchY - e.touches[0].clientY;
+        // 检查是否超过拖拽阈值
+        if (moveDistance > DRAG_THRESHOLD && !hasMoved) {
+          hasMoved = true;
+          clearTimeout(this.longPressTimer);
+          isDragging = true;
+          // 显示拖拽指示器
+          this.showDragIndicator();
+        }
 
-        const container = this.elements.boardScrollContainer;
-        container.scrollLeft += deltaX;
-        container.scrollTop += deltaY;
+        // 如果已经进入拖拽模式，执行滚动
+        if (isDragging) {
+          e.preventDefault();
 
-        lastTouchX = e.touches[0].clientX;
-        lastTouchY = e.touches[0].clientY;
+          const deltaX = lastTouchX - currentX;
+          const deltaY = lastTouchY - currentY;
+
+          const container = this.elements.boardScrollContainer;
+          container.scrollLeft += deltaX;
+          container.scrollTop += deltaY;
+
+          lastTouchX = currentX;
+          lastTouchY = currentY;
+        }
       }
     }, { passive: false });
 
     this.elements.boardScrollContainer.addEventListener('touchend', (e) => {
+      clearTimeout(this.longPressTimer);
+
       if (e.touches.length < 2) {
         isZooming = false;
       }
       if (e.touches.length === 0) {
-        isDragging = false;
+        // 隐藏拖拽指示器
+        this.hideDragIndicator();
+        // 重置所有状态
+        setTimeout(() => {
+          isDragging = false;
+          hasMoved = false;
+        }, 100); // 稍微延迟重置，避免影响点击事件
       }
     });
   }
