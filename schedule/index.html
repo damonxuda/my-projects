@@ -225,14 +225,11 @@
     <!-- 引入Supabase库 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 
-    <!-- Clerk SDK -->
-    <script crossorigin="anonymous" data-clerk-publishable-key="${CLERK_PUBLISHABLE_KEY}" src="https://clerk.damonxuda.site/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" type="text/javascript"></script>
-
+    <!-- 注意：Schedule模块不直接初始化Clerk，而是从主页缓存获取认证信息 -->
     <!-- 环境变量设置 -->
     <script>
         window.REACT_APP_SUPABASE_URL = "${REACT_APP_SUPABASE_URL}";
         window.REACT_APP_SUPABASE_ANON_KEY = "${REACT_APP_SUPABASE_ANON_KEY}";
-        window.CLERK_PUBLISHABLE_KEY = "${CLERK_PUBLISHABLE_KEY}";
     </script>
 
     <!-- Schedule 模块认证初始化 -->
@@ -275,12 +272,8 @@
                 }
               }
 
-              // 策略3: 如果Clerk已初始化且有用户，获取但不直接使用
-              if (window.Clerk && window.Clerk.user) {
-                console.log('📅 从Clerk获取用户信息');
-                this.userCache = window.Clerk.user;
-                return window.Clerk.user;
-              }
+              // Schedule模块不直接访问Clerk，仅依赖缓存
+              console.log('📅 Schedule模块仅使用缓存认证，不直接访问Clerk');
 
               return null;
             } catch (error) {
@@ -585,32 +578,8 @@
           `;
           document.body.appendChild(loadingDiv);
 
-          // 等待Clerk初始化
-          if (window.Clerk) {
-            try {
-              await window.Clerk.load({
-                domain: window.location.hostname,
-                cookieDomain: window.location.hostname.startsWith('localhost')
-                  ? 'localhost'
-                  : `.${window.location.hostname}`,
-                cookiePath: '/',
-                allowOrigins: [
-                  window.location.origin,
-                  `${window.location.protocol}//${window.location.hostname}`,
-                  `${window.location.protocol}//${window.location.hostname}/schedule`,
-                  `${window.location.protocol}//${window.location.hostname}/quiz`,
-                  `${window.location.protocol}//${window.location.hostname}/admin`,
-                  `${window.location.protocol}//${window.location.hostname}/videos`,
-                  `${window.location.protocol}//${window.location.hostname}/games`
-                ],
-                sessionSyncing: true
-              });
-
-              console.log('✅ Clerk初始化完成');
-            } catch (error) {
-              console.warn('⚠️ Clerk初始化失败，但继续认证检查:', error);
-            }
-          }
+          // Schedule模块不直接初始化Clerk，依赖主页缓存的认证信息
+          console.log('📋 Schedule模块使用缓存认证，不直接初始化Clerk');
 
           // 执行认证检查
           const authResult = await checkAuthentication();
@@ -633,15 +602,8 @@
           initializeAuth();
         }
 
-        // 监听认证状态变化
-        if (window.Clerk) {
-          window.Clerk.addListener(({ user, session }) => {
-            if (!isAuthChecked && (user || session)) {
-              console.log('🔄 检测到认证状态变化，重新检查');
-              checkAuthentication();
-            }
-          });
-        }
+        // Schedule模块不监听Clerk事件，完全依赖缓存认证
+        console.log('📋 Schedule模块认证系统初始化完成，依赖主页缓存');
 
       })();
     </script>
