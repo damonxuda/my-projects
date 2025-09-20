@@ -17,10 +17,15 @@ const UserManagement = () => {
   const [availableModules] = useState(['schedule', 'quiz', 'videos', 'future1', 'future2']);
 
   useEffect(() => {
-    if (isAdmin) {
-      fetchAllUsers();
+    if (isAdmin && isSignedIn) {
+      // 延迟执行，确保认证状态已完全同步
+      const timer = setTimeout(() => {
+        fetchAllUsers();
+      }, 500);
+
+      return () => clearTimeout(timer);
     }
-  }, [isAdmin]);
+  }, [isAdmin, isSignedIn, fetchAllUsers]);
 
   // 获取用户权限信息
   const getUserPermissions = (user) => {
