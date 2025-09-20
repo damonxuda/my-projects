@@ -306,7 +306,11 @@
 
             // 检查管理员权限
             const adminEmails = this.getAdminEmails();
-            const userEmail = user.emailAddresses?.[0]?.emailAddress || user.primaryEmailAddress?.emailAddress;
+            const userEmail = user.emailAddresses?.[0]?.emailAddress ||
+                             user.primaryEmailAddress?.emailAddress ||
+                             user.email ||
+                             user.emailAddress ||
+                             'no-email';
             console.log(`📅 用户邮箱: ${userEmail}, 管理员邮箱列表: ${JSON.stringify(adminEmails)}`);
 
             if (adminEmails.includes(userEmail)) {

@@ -814,11 +814,39 @@ function handleSaveCourse() {
   EditorManager.saveCourse();
 }
 
+// 等待Supabase客户端初始化
+function waitForSupabaseClient() {
+  return new Promise((resolve, reject) => {
+    let attempts = 0;
+    const maxAttempts = 50; // 最多等待5秒
+
+    const checkSupabase = () => {
+      attempts++;
+
+      if (window.supabase && typeof window.supabase.from === 'function') {
+        console.log('✅ Supabase客户端已就绪');
+        resolve();
+      } else if (attempts >= maxAttempts) {
+        console.error('❌ 等待Supabase客户端超时');
+        reject(new Error('Supabase客户端初始化超时'));
+      } else {
+        console.log(`⏳ 等待Supabase客户端初始化... (${attempts}/${maxAttempts})`);
+        setTimeout(checkSupabase, 100);
+      }
+    };
+
+    checkSupabase();
+  });
+}
+
 // 应用初始化
 async function initApp() {
   console.log('🚀 初始化应用 - 使用统一数据模型');
 
   try {
+    // 等待Supabase客户端初始化完成
+    await waitForSupabaseClient();
+
     await ScheduleManager.init();
     UIManager.updateDisplay();
     UIManager.bindEvents();
