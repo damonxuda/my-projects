@@ -7,12 +7,13 @@ import {
   HeadObjectCommand,
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
-// MediaConvert导入暂时禁用
-// import {
-//   MediaConvertClient,
-//   CreateJobCommand,
-//   DescribeEndpointsCommand,
-// } from "@aws-sdk/client-mediaconvert";
+// MediaConvert导入
+import {
+  MediaConvertClient,
+  CreateJobCommand,
+  DescribeEndpointsCommand,
+  GetJobCommand,
+} from "@aws-sdk/client-mediaconvert";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { exec } from "child_process";
 import { promisify } from "util";
@@ -23,10 +24,10 @@ const s3Client = new S3Client({ region: "ap-northeast-1" });
 const VIDEO_BUCKET = process.env.VIDEO_BUCKET_NAME;
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 
-// MediaConvert variables - 暂时禁用
-// let mediaConvertClient = null;
-// const MEDIACONVERT_ROLE_ARN = process.env.MEDIACONVERT_ROLE_ARN || 'arn:aws:iam::730335478220:role/MediaConver-S3-Role';
-// const MEDIACONVERT_QUEUE = process.env.MEDIACONVERT_QUEUE || 'Default';
+// MediaConvert variables
+let mediaConvertClient = null;
+const MEDIACONVERT_ROLE_ARN = process.env.MEDIACONVERT_ROLE_ARN || 'arn:aws:iam::730335478220:role/MediaConvertRole';
+const MEDIACONVERT_QUEUE = process.env.MEDIACONVERT_QUEUE || 'Default';
 const execAsync = promisify(exec);
 
 // Token缓存 - 避免Clerk API速率限制
@@ -40,6 +41,13 @@ export const handler = async (event) => {
 
   try {
     console.log("=== Lambda函数开始执行 ===");
+
+    // 检查是否是S3事件（视频上传自动转码）
+    if (event.Records && event.Records[0]?.eventSource === 'aws:s3') {
+      console.log("🔄 处理S3事件: 新视频上传自动转码");
+      return await handleS3VideoUploadEvent(event);
+    }
+
     console.log("Request path:", event.requestContext.http.path);
     console.log("Request method:", event.requestContext.http.method);
 
@@ -130,6 +138,8 @@ export const handler = async (event) => {
       return await reencodeVideo(videoKey, user, corsHeaders);
     } else if (method === "POST" && path === "/videos/reencode/batch") {
       return await batchReencodeVideos(event, user, corsHeaders);
+    } else if (method === "POST" && path === "/videos/scan-and-convert") {
+      return await scanAndConvertVideos(event, user, corsHeaders);
     }
 
     console.log("路由不匹配");
@@ -1151,10 +1161,40 @@ async function streamToBuffer(stream) {
   return Buffer.concat(chunks);
 }
 
-// MediaConvert客户端初始化（暂时禁用）
+// MediaConvert客户端初始化
 async function initializeMediaConvertClient() {
-  console.log("MediaConvert暂时禁用");
-  return null;
+  if (mediaConvertClient) {
+    return mediaConvertClient;
+  }
+
+  try {
+    console.log("🔧 初始化MediaConvert客户端...");
+
+    // 先获取MediaConvert端点
+    const tempClient = new MediaConvertClient({ region: "ap-northeast-1" });
+    const endpointsCommand = new DescribeEndpointsCommand({});
+    const endpointsResponse = await tempClient.send(endpointsCommand);
+
+    if (!endpointsResponse.Endpoints || endpointsResponse.Endpoints.length === 0) {
+      throw new Error("No MediaConvert endpoints found");
+    }
+
+    const endpoint = endpointsResponse.Endpoints[0].Url;
+    console.log("MediaConvert端点:", endpoint);
+
+    // 使用端点创建真正的客户端
+    mediaConvertClient = new MediaConvertClient({
+      region: "ap-northeast-1",
+      endpoint: endpoint
+    });
+
+    console.log("✅ MediaConvert客户端初始化成功");
+    return mediaConvertClient;
+
+  } catch (error) {
+    console.error("❌ MediaConvert客户端初始化失败:", error);
+    throw error;
+  }
 }
 
 // 使用MediaConvert生成缩略图（策略3: 终极方案）
@@ -1361,6 +1401,158 @@ async function processVideoRecoding(originalVideoKey, recodedVideoKey) {
     } catch (error) {
       console.log("清理临时输出文件失败:", error.message);
     }
+  }
+}
+
+// 处理S3视频上传事件（自动转码）
+async function handleS3VideoUploadEvent(event) {
+  try {
+    console.log("🎬 === S3视频上传事件处理 ===");
+
+    for (const record of event.Records) {
+      const bucket = record.s3.bucket.name;
+      const key = decodeURIComponent(record.s3.object.key.replace(/\+/g, ' '));
+
+      console.log("S3事件详情:");
+      console.log("- Bucket:", bucket);
+      console.log("- Key:", key);
+      console.log("- Event:", record.eventName);
+
+      // 检查是否是视频文件
+      if (!isVideoFile(key)) {
+        console.log("⏭️ 跳过非视频文件:", key);
+        continue;
+      }
+
+      // 检查是否已经是移动端版本
+      if (key.includes('_mobile.')) {
+        console.log("⏭️ 跳过移动端文件:", key);
+        continue;
+      }
+
+      // 检查是否在videos/目录下
+      if (!key.startsWith('videos/')) {
+        console.log("⏭️ 跳过非videos目录文件:", key);
+        continue;
+      }
+
+      console.log("✅ 开始处理视频转码:", key);
+
+      // 启动MediaConvert转码
+      const result = await convertVideoWithMediaConvert(key);
+      console.log("🎉 转码任务提交成功:", result.jobId);
+    }
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        message: "S3 video upload event processed successfully"
+      })
+    };
+
+  } catch (error) {
+    console.error("❌ S3事件处理失败:", error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({
+        error: "Failed to process S3 event",
+        details: error.message
+      })
+    };
+  }
+}
+
+// 使用MediaConvert转码视频
+async function convertVideoWithMediaConvert(videoKey) {
+  try {
+    console.log("🎬 === MediaConvert视频转码 ===");
+    console.log("输入视频:", videoKey);
+
+    // 初始化MediaConvert客户端
+    const client = await initializeMediaConvertClient();
+
+    // 生成输出文件名
+    const pathWithoutExt = videoKey.substring(0, videoKey.lastIndexOf('.'));
+    const extension = videoKey.substring(videoKey.lastIndexOf('.'));
+    const outputKey = `${pathWithoutExt}_mobile${extension}`;
+
+    console.log("输出视频:", outputKey);
+
+    // 创建MediaConvert任务配置
+    const jobSettings = {
+      Role: MEDIACONVERT_ROLE_ARN,
+      Queue: MEDIACONVERT_QUEUE,
+      Settings: {
+        Inputs: [{
+          FileInput: `s3://${VIDEO_BUCKET}/${videoKey}`
+        }],
+        OutputGroups: [{
+          Name: "Mobile_MP4",
+          OutputGroupSettings: {
+            Type: "FILE_GROUP_SETTINGS",
+            FileGroupSettings: {
+              Destination: `s3://${VIDEO_BUCKET}/${pathWithoutExt}_mobile`
+            }
+          },
+          Outputs: [{
+            NameModifier: "",
+            VideoDescription: {
+              Width: 1280,
+              Height: 720,
+              CodecSettings: {
+                Codec: "H_264",
+                H264Settings: {
+                  Profile: "BASELINE",
+                  Level: "H264_LEVEL_3_1",
+                  RateControlMode: "CBR",
+                  Bitrate: 1000000,
+                  QualityTuningLevel: "SINGLE_PASS",
+                  AdaptiveQuantization: "OFF"
+                }
+              }
+            },
+            AudioDescriptions: [{
+              CodecSettings: {
+                Codec: "AAC",
+                AacSettings: {
+                  Bitrate: 128000,
+                  CodingMode: "CODING_MODE_2_0",
+                  SampleRate: 44100
+                }
+              }
+            }],
+            ContainerSettings: {
+              Container: "MP4",
+              Mp4Settings: {
+                FreeSpaceBox: "EXCLUDE",
+                MoovPlacement: "PROGRESSIVE_DOWNLOAD"
+              }
+            }
+          }]
+        }]
+      }
+    };
+
+    console.log("📋 创建MediaConvert任务...");
+
+    // 提交转码任务
+    const createJobCommand = new CreateJobCommand(jobSettings);
+    const response = await client.send(createJobCommand);
+
+    console.log("✅ MediaConvert任务创建成功:");
+    console.log("- Job ID:", response.Job.Id);
+    console.log("- Status:", response.Job.Status);
+
+    return {
+      jobId: response.Job.Id,
+      status: response.Job.Status,
+      inputFile: videoKey,
+      outputFile: outputKey
+    };
+
+  } catch (error) {
+    console.error("❌ MediaConvert转码失败:", error);
+    throw error;
   }
 }
 
@@ -1604,6 +1796,204 @@ async function batchReencodeVideos(event, user, corsHeaders) {
       headers: corsHeaders,
       body: JSON.stringify({
         error: "Failed to batch reencode videos",
+        details: error.message,
+      }),
+    };
+  }
+}
+
+// 扫描现有视频并自动转换需要重编码的文件
+async function scanAndConvertVideos(event, user, corsHeaders) {
+  try {
+    console.log("🔍 开始扫描现有视频并进行转换...");
+
+    const body = event.body ? JSON.parse(event.body) : {};
+    const folderPath = body.folderPath || ""; // 空字符串表示扫描所有文件夹
+    const dryRun = body.dryRun !== false; // 默认为试运行模式
+    const maxFiles = Math.min(body.maxFiles || 20, 50); // 限制最大处理文件数，避免超时
+
+    console.log("扫描参数:", { folderPath, dryRun, maxFiles });
+
+    // 获取用户有权限访问的文件夹
+    const userFolders = await getUserAccessibleFolders(user);
+    console.log("用户可访问文件夹:", userFolders);
+
+    // 列出S3中的所有MP4视频文件
+    const listParams = {
+      Bucket: VIDEO_BUCKET,
+      Prefix: folderPath ? `videos/${folderPath}/` : "videos/",
+      MaxKeys: 1000, // 限制扫描范围
+    };
+
+    console.log("S3查询参数:", listParams);
+    const listCommand = new ListObjectsV2Command(listParams);
+    const response = await s3Client.send(listCommand);
+
+    if (!response.Contents) {
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          message: "没有找到任何视频文件",
+          summary: {
+            totalScanned: 0,
+            needsConversion: 0,
+            hasConversion: 0,
+            dryRun
+          }
+        }),
+      };
+    }
+
+    // 过滤出需要检查的视频文件
+    const videoFiles = response.Contents
+      .filter(obj => {
+        const key = obj.Key;
+        // 只处理.mp4文件，排除_mobile.mp4文件
+        if (!key.endsWith('.mp4') || key.includes('_mobile.mp4')) {
+          return false;
+        }
+
+        // 检查用户权限
+        const videoFolder = key.replace('videos/', '').split('/')[0];
+        return userFolders.includes(videoFolder);
+      })
+      .slice(0, maxFiles); // 限制处理文件数量
+
+    console.log(`找到 ${videoFiles.length} 个待检查的视频文件`);
+
+    const needsConversion = [];
+    const hasConversion = [];
+    const errors = [];
+
+    // 检查每个视频是否已有移动版本
+    for (const file of videoFiles) {
+      try {
+        const originalKey = file.Key;
+        const mobileKey = originalKey.replace('.mp4', '_mobile.mp4');
+
+        // 检查是否已存在移动版本
+        try {
+          await s3Client.send(new HeadObjectCommand({
+            Bucket: VIDEO_BUCKET,
+            Key: mobileKey,
+          }));
+
+          hasConversion.push({
+            originalKey,
+            mobileKey,
+            size: file.Size
+          });
+        } catch (error) {
+          if (error.name === 'NotFound') {
+            needsConversion.push({
+              originalKey,
+              mobileKey,
+              size: file.Size
+            });
+          } else {
+            console.error(`检查移动版本失败 ${originalKey}:`, error);
+            errors.push({
+              originalKey,
+              error: error.message
+            });
+          }
+        }
+      } catch (error) {
+        console.error(`处理文件失败 ${file.Key}:`, error);
+        errors.push({
+          originalKey: file.Key,
+          error: error.message
+        });
+      }
+    }
+
+    const summary = {
+      totalScanned: videoFiles.length,
+      needsConversion: needsConversion.length,
+      hasConversion: hasConversion.length,
+      errors: errors.length,
+      dryRun
+    };
+
+    console.log("扫描结果:", summary);
+
+    // 如果是试运行模式，直接返回结果
+    if (dryRun) {
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          message: `扫描完成：发现 ${needsConversion.length} 个视频需要转换`,
+          summary,
+          needsConversion: needsConversion.slice(0, 10), // 只返回前10个作为预览
+          hasConversion: hasConversion.slice(0, 5), // 只返回前5个作为预览
+          errors: errors.slice(0, 5) // 只返回前5个错误
+        }),
+      };
+    }
+
+    // 实际转换模式：处理需要转换的视频
+    const conversionResults = [];
+    const conversionErrors = [];
+    const maxConcurrentConversions = 3; // 控制并发数量避免超时
+
+    console.log(`开始转换 ${needsConversion.length} 个视频，并发数: ${maxConcurrentConversions}`);
+
+    // 分批处理转换任务
+    for (let i = 0; i < needsConversion.length; i += maxConcurrentConversions) {
+      const batch = needsConversion.slice(i, i + maxConcurrentConversions);
+
+      const batchPromises = batch.map(async (video) => {
+        try {
+          console.log(`🎬 开始转换: ${video.originalKey}`);
+          const result = await convertVideoWithMediaConvert(video.originalKey);
+          conversionResults.push({
+            originalKey: video.originalKey,
+            mobileKey: video.mobileKey,
+            jobId: result.jobId,
+            status: 'submitted'
+          });
+          console.log(`✅ 转换任务提交成功: ${video.originalKey}`);
+        } catch (error) {
+          console.error(`❌ 转换失败 ${video.originalKey}:`, error);
+          conversionErrors.push({
+            originalKey: video.originalKey,
+            error: error.message
+          });
+        }
+      });
+
+      // 等待当前批次完成
+      await Promise.all(batchPromises);
+    }
+
+    const finalSummary = {
+      ...summary,
+      conversionsSubmitted: conversionResults.length,
+      conversionErrors: conversionErrors.length,
+      dryRun: false
+    };
+
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        message: `扫描并转换完成：提交了 ${conversionResults.length} 个转换任务`,
+        summary: finalSummary,
+        conversionResults,
+        conversionErrors: conversionErrors.slice(0, 5),
+        note: "MediaConvert任务已提交，转换过程将在后台进行，预计2-4分钟完成"
+      }),
+    };
+
+  } catch (error) {
+    console.error("扫描和转换失败:", error);
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        error: "Failed to scan and convert videos",
         details: error.message,
       }),
     };

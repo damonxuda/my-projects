@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Youtube, Plus, X, Upload } from "lucide-react";
+import { ArrowLeft, Youtube, Plus, X, Upload, Search, Settings } from "lucide-react";
 import { useAuth } from "../../../auth-clerk/src";
 import VideoPlayer from "./VideoPlayer";
 import FileCard from "./FileCard";
@@ -16,6 +16,11 @@ const VideoLibrary = () => {
   const [showAddYouTube, setShowAddYouTube] = useState(false);
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [isProcessingYouTube, setIsProcessingYouTube] = useState(false);
+
+  // 视频扫描转换相关状态
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanResults, setScanResults] = useState(null);
+  const [showScanModal, setShowScanModal] = useState(false);
 
   const { user, isSignedIn, isAdmin, fetchVideoList, getVideoUrl, getCachedToken, clearTokenCache } =
     useAuth();
@@ -238,6 +243,56 @@ const VideoLibrary = () => {
     } finally {
       setIsProcessingYouTube(false);
     }
+  };
+
+  // 扫描现有视频并转换
+  const handleScanVideos = async (dryRun = true) => {
+    setIsScanning(true);
+    setError("");
+
+    try {
+      const token = await getCachedToken();
+      const response = await fetch(`${API_BASE_URL}/videos/scan-and-convert`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          folderPath: currentPath, // 只扫描当前文件夹
+          dryRun, // 试运行或实际执行
+          maxFiles: 20 // 限制文件数量
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`扫描失败: ${errorText}`);
+      }
+
+      const result = await response.json();
+      setScanResults(result);
+
+      if (dryRun) {
+        setShowScanModal(true);
+      } else {
+        // 实际转换完成，刷新文件列表
+        await loadItems(currentPath);
+        alert(`转换完成！提交了 ${result.summary.conversionsSubmitted} 个转换任务`);
+      }
+
+    } catch (error) {
+      console.error("扫描视频失败:", error);
+      setError(`扫描失败: ${error.message}`);
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  // 确认转换
+  const handleConfirmConvert = async () => {
+    setShowScanModal(false);
+    await handleScanVideos(false); // 实际执行转换
   };
 
   // 处理文件列表，创建文件夹结构（支持YouTube JSON文件）
@@ -505,6 +560,25 @@ const VideoLibrary = () => {
                 <Plus size={16} />
               </button>
 
+              {/* 扫描转换按钮 */}
+              <button
+                onClick={() => handleScanVideos(true)}
+                disabled={isScanning}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isScanning ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>扫描中...</span>
+                  </>
+                ) : (
+                  <>
+                    <Search size={20} />
+                    <span>扫描视频转换</span>
+                  </>
+                )}
+              </button>
+
               {/* 回首页按钮 */}
               <button
                 onClick={() => handleCrossModuleNavigation("/")}
@@ -712,6 +786,109 @@ const VideoLibrary = () => {
           apiUrl={API_BASE_URL}
           onClose={() => setSelectedVideo(null)}
         />
+      )}
+
+      {/* 扫描结果模态框 */}
+      {showScanModal && scanResults && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                  <Settings className="text-blue-600" size={24} />
+                  视频扫描结果
+                </h3>
+                <button
+                  onClick={() => setShowScanModal(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              {/* 扫描统计 */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <h4 className="font-semibold text-blue-800 mb-2">扫描统计</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">扫描的视频数量：</span>
+                    <span className="font-semibold">{scanResults.summary.totalScanned}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">需要转换：</span>
+                    <span className="font-semibold text-orange-600">{scanResults.summary.needsConversion}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">已有移动版本：</span>
+                    <span className="font-semibold text-green-600">{scanResults.summary.hasConversion}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">扫描范围：</span>
+                    <span className="font-semibold">{currentPath || "所有文件夹"}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 需要转换的视频列表 */}
+              {scanResults.needsConversion && scanResults.needsConversion.length > 0 && (
+                <div className="mb-4">
+                  <h4 className="font-semibold text-gray-800 mb-2">需要转换的视频：</h4>
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 max-h-40 overflow-y-auto">
+                    {scanResults.needsConversion.map((video, index) => (
+                      <div key={index} className="text-sm text-gray-700 mb-1">
+                        📹 {video.originalKey.replace('videos/', '')}
+                        <span className="text-gray-500 ml-2">
+                          ({(video.size / 1024 / 1024).toFixed(1)}MB)
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 已有移动版本的视频 */}
+              {scanResults.hasConversion && scanResults.hasConversion.length > 0 && (
+                <div className="mb-4">
+                  <h4 className="font-semibold text-gray-800 mb-2">已有移动版本：</h4>
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 max-h-32 overflow-y-auto">
+                    {scanResults.hasConversion.slice(0, 3).map((video, index) => (
+                      <div key={index} className="text-sm text-gray-700 mb-1">
+                        ✅ {video.originalKey.replace('videos/', '')}
+                      </div>
+                    ))}
+                    {scanResults.hasConversion.length > 3 && (
+                      <div className="text-sm text-gray-500">
+                        ... 还有 {scanResults.hasConversion.length - 3} 个视频
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 操作按钮 */}
+              <div className="flex gap-3 pt-4 border-t">
+                <button
+                  onClick={() => setShowScanModal(false)}
+                  className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  取消
+                </button>
+                {scanResults.summary.needsConversion > 0 && (
+                  <button
+                    onClick={handleConfirmConvert}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    确认转换 {scanResults.summary.needsConversion} 个视频
+                  </button>
+                )}
+              </div>
+
+              <div className="mt-3 text-xs text-gray-500">
+                💡 转换将生成移动端兼容的视频版本（文件名添加_mobile后缀），转换过程约需2-4分钟
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
