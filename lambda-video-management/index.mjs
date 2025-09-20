@@ -233,6 +233,49 @@ async function verifyTokenAndCheckAccess(token) {
   }
 }
 
+// 获取用户有权限访问的文件夹列表
+async function getUserAccessibleFolders(user) {
+  try {
+    // 检查用户是否是管理员
+    const adminEmails = (process.env.ADMIN_EMAILS || "").split(",").map(email => email.trim());
+    const isAdmin = adminEmails.includes(user.emailAddresses?.[0]?.emailAddress);
+
+    // 获取所有文件夹列表
+    const listCommand = new ListObjectsV2Command({
+      Bucket: VIDEO_BUCKET,
+      Prefix: "videos/",
+      Delimiter: "/",
+      MaxKeys: 100
+    });
+
+    const response = await s3Client.send(listCommand);
+    const allFolders = [];
+
+    if (response.CommonPrefixes) {
+      response.CommonPrefixes.forEach(prefix => {
+        const folderName = prefix.Prefix.replace("videos/", "").replace("/", "");
+        if (folderName) {
+          allFolders.push(folderName);
+        }
+      });
+    }
+
+    if (isAdmin) {
+      // 管理员可以访问所有文件夹（包括 Movies）
+      console.log("管理员用户，可访问所有文件夹:", allFolders);
+      return allFolders;
+    } else {
+      // 普通用户可以访问除 Movies 以外的所有文件夹
+      const accessibleFolders = allFolders.filter(folder => folder !== "Movies");
+      console.log("普通用户，可访问的文件夹:", accessibleFolders);
+      return accessibleFolders;
+    }
+  } catch (error) {
+    console.error("获取用户可访问文件夹失败:", error);
+    return []; // 出错时返回空数组，安全起见
+  }
+}
+
 // 提取YouTube视频ID
 function extractVideoId(url) {
   const regex =
@@ -1855,7 +1898,16 @@ async function scanAndConvertVideos(event, user, corsHeaders) {
         }
 
         // 检查用户权限
-        const videoFolder = key.replace('videos/', '').split('/')[0];
+        const relativePath = key.replace('videos/', '');
+        const pathParts = relativePath.split('/');
+
+        // 如果文件直接在 videos/ 根目录下（没有子文件夹）
+        if (pathParts.length === 1) {
+          return true; // 开放给所有有 videos 权限的用户
+        }
+
+        // 如果文件在子文件夹中，检查文件夹权限
+        const videoFolder = pathParts[0];
         return userFolders.includes(videoFolder);
       })
       .slice(0, maxFiles); // 限制处理文件数量
