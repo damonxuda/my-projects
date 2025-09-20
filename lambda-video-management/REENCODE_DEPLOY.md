@@ -8,7 +8,9 @@
 
 ### 后端（Lambda函数）
 
-1. **新增API端点**: `POST /videos/reencode/{videoKey}`
+1. **新增API端点**:
+   - `POST /videos/reencode/{videoKey}` - 单个视频重编码
+   - `POST /videos/reencode/batch` - 批量视频重编码
 2. **编码参数**:
    - 视频编码：H.264 baseline profile level 3.0
    - 音频编码：AAC 44.1kHz 128kbps
@@ -67,6 +69,9 @@ npm run build
 ### 1. 本地测试
 
 ```bash
+# 设置环境变量（可选，如不设置将使用默认URL）
+export REACT_APP_VIDEO_API_URL="https://你的Lambda函数URL"
+
 # 更新test-reencode.js中的token和videoKey
 node test-reencode.js
 ```
@@ -77,6 +82,22 @@ node test-reencode.js
 2. 尝试播放之前出现错误代码4的视频
 3. 确认出现"重编码为移动端格式"按钮
 4. 点击按钮测试重编码功能
+
+### 3. 批量重编码测试
+
+```bash
+# 设置环境变量（可选）
+export REACT_APP_VIDEO_API_URL="https://你的Lambda函数URL"
+
+# 测试批量重编码功能（试运行模式）
+node test-batch-reencode.js
+```
+
+**批量重编码API参数**:
+- `dryRun`: true=试运行模式，false=实际执行
+- `folderPath`: 指定文件夹名称或空字符串表示所有文件夹
+- `maxConcurrent`: 最大并发重编码数量（建议2-3）
+- `forceReencode`: 是否强制重编码已有移动版本的视频
 
 ## 文件命名规则
 
@@ -89,6 +110,10 @@ node test-reencode.js
 2. **存储**: 重编码后的视频会占用额外S3存储空间
 3. **缓存**: 系统会检查是否已有重编码版本，避免重复处理
 4. **权限**: 重编码功能继承原有的文件夹权限控制
+5. **批量处理**:
+   - 建议先使用试运行模式（dryRun: true）了解需要处理的视频数量
+   - 批量重编码会自动限制并发数量避免Lambda超时
+   - 大量视频需要分批处理，API会返回剩余视频信息
 
 ## 故障排除
 

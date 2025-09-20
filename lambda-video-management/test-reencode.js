@@ -2,7 +2,8 @@
 
 // 测试视频重编码API的脚本
 const videoKey = "videos/贾老师初联一轮/第1讲 有理数 例13.mp4"; // 你可以改成其他视频
-const apiUrl = "https://phbhgxbk36dwtku4hq5na7csxa0slnay.lambda-url.ap-northeast-1.on.aws";
+// 使用环境变量，如果没有则使用默认值
+const apiUrl = process.env.REACT_APP_VIDEO_API_URL || "https://phbhgxbk36dwtku4hq5na7csxa0slnay.lambda-url.ap-northeast-1.on.aws";
 
 // 从你的视频播放系统获取token
 // 你需要先在浏览器控制台运行: window.getCachedToken()

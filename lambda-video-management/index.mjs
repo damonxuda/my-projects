@@ -128,6 +128,8 @@ export const handler = async (event) => {
       const rawVideoKey = rawPath.replace("/videos/reencode/", "");
       const videoKey = decodeURIComponent(rawVideoKey);
       return await reencodeVideo(videoKey, user, corsHeaders);
+    } else if (method === "POST" && path === "/videos/reencode/batch") {
+      return await batchReencodeVideos(event, user, corsHeaders);
     }
 
     console.log("路由不匹配");
@@ -1322,10 +1324,10 @@ async function processVideoRecoding(originalVideoKey, recodedVideoKey) {
         Body: recodedBuffer,
         ContentType: "video/mp4",
         Metadata: {
-          "recoded-from": originalVideoKey,
-          "recoded-at": new Date().toISOString(),
-          "mobile-compatible": "true",
-          "codec": "h264-baseline",
+          "recodedfrom": originalVideoKey.replace(/[^a-zA-Z0-9\-_\.\/]/g, '_'),
+          "recodedat": new Date().toISOString().replace(/[^a-zA-Z0-9\-_\.]/g, '_'),
+          "mobilecompatible": "true",
+          "codec": "h264baseline",
           "audio": "aac"
         }
       })
@@ -1359,6 +1361,252 @@ async function processVideoRecoding(originalVideoKey, recodedVideoKey) {
     } catch (error) {
       console.log("清理临时输出文件失败:", error.message);
     }
+  }
+}
+
+// 批量重编码视频功能
+async function batchReencodeVideos(event, user, corsHeaders) {
+  try {
+    console.log("=== 开始批量重编码视频 ===");
+
+    // 解析请求参数
+    let requestBody = {};
+    if (event.body) {
+      try {
+        requestBody = JSON.parse(event.body);
+      } catch (parseError) {
+        console.log("无请求体或解析失败，使用默认参数");
+      }
+    }
+
+    const {
+      folderPath = "", // 指定文件夹路径，空字符串表示所有文件夹
+      forceReencode = false, // 是否强制重编码已有_mobile版本的视频
+      maxConcurrent = 3, // 最大并发重编码数量
+      dryRun = false // 是否只是检测而不实际重编码
+    } = requestBody;
+
+    console.log("批量重编码参数:");
+    console.log("- 文件夹路径:", folderPath || "所有文件夹");
+    console.log("- 强制重编码:", forceReencode);
+    console.log("- 最大并发数:", maxConcurrent);
+    console.log("- 试运行模式:", dryRun);
+
+    // 获取用户可访问的所有视频文件
+    const userEmail = user.emailAddresses?.[0]?.emailAddress;
+    const command = new ListObjectsV2Command({
+      Bucket: VIDEO_BUCKET,
+      Prefix: folderPath ? `videos/${folderPath}` : "videos/",
+    });
+
+    const response = await s3Client.send(command);
+    console.log("S3响应:", response.Contents?.length || 0, "个对象");
+
+    // 过滤出需要重编码的视频文件
+    const videosToRecode = [];
+    const alreadyRecoded = [];
+    const accessDenied = [];
+
+    for (const item of response.Contents || []) {
+      const filename = item.Key.split("/").pop();
+      const fileExtension = filename.toLowerCase();
+
+      // 检查是否是视频文件
+      if (!isVideoFile(filename) || item.Size <= 0) {
+        continue;
+      }
+
+      // 跳过已经是_mobile版本的文件
+      if (filename.includes("_mobile.")) {
+        continue;
+      }
+
+      // 检查文件夹权限
+      const pathParts = item.Key.split("/");
+      if (pathParts.length > 2) {
+        const folderName = pathParts[1];
+        if (!hasAccessToFolder(userEmail, folderName)) {
+          accessDenied.push(item.Key);
+          continue;
+        }
+      }
+
+      // 检查是否已有移动端版本
+      const originalKey = item.Key;
+      const pathWithoutExt = originalKey.substring(0, originalKey.lastIndexOf('.'));
+      const extension = originalKey.substring(originalKey.lastIndexOf('.'));
+      const mobileKey = `${pathWithoutExt}_mobile${extension}`;
+
+      let hasMobileVersion = false;
+      try {
+        await s3Client.send(new GetObjectCommand({
+          Bucket: VIDEO_BUCKET,
+          Key: mobileKey,
+        }));
+        hasMobileVersion = true;
+        alreadyRecoded.push(originalKey);
+      } catch (error) {
+        // 移动端版本不存在，需要重编码
+      }
+
+      if (!hasMobileVersion || forceReencode) {
+        videosToRecode.push({
+          originalKey,
+          mobileKey,
+          size: item.Size,
+          lastModified: item.LastModified
+        });
+      }
+    }
+
+    console.log(`📊 批量重编码统计:`);
+    console.log(`- 需要重编码: ${videosToRecode.length} 个视频`);
+    console.log(`- 已有移动版本: ${alreadyRecoded.length} 个视频`);
+    console.log(`- 权限不足: ${accessDenied.length} 个视频`);
+
+    // 如果是试运行模式，返回统计信息
+    if (dryRun) {
+      return {
+        statusCode: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          dryRun: true,
+          summary: {
+            needsReencoding: videosToRecode.length,
+            alreadyRecoded: alreadyRecoded.length,
+            accessDenied: accessDenied.length,
+            totalScanned: response.Contents?.length || 0
+          },
+          videosToRecode: videosToRecode.map(v => ({
+            path: v.originalKey,
+            size: v.size,
+            lastModified: v.lastModified
+          })),
+          alreadyRecoded,
+          accessDenied
+        }),
+      };
+    }
+
+    // 实际执行批量重编码
+    if (videosToRecode.length === 0) {
+      return {
+        statusCode: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          success: true,
+          message: "没有需要重编码的视频",
+          summary: {
+            needsReencoding: 0,
+            alreadyRecoded: alreadyRecoded.length,
+            accessDenied: accessDenied.length
+          }
+        }),
+      };
+    }
+
+    // 限制Lambda执行时间，批量处理不能超时
+    const maxVideosToProcess = Math.min(videosToRecode.length, maxConcurrent);
+    const videosToProcess = videosToRecode.slice(0, maxVideosToProcess);
+
+    console.log(`🎬 开始重编码 ${videosToProcess.length} 个视频（最大并发: ${maxConcurrent}）`);
+
+    const results = [];
+    const errors = [];
+
+    // 使用Promise.allSettled并发处理，但限制并发数量
+    for (let i = 0; i < videosToProcess.length; i += maxConcurrent) {
+      const batch = videosToProcess.slice(i, i + maxConcurrent);
+      console.log(`处理批次 ${Math.floor(i/maxConcurrent) + 1}: ${batch.length} 个视频`);
+
+      const batchPromises = batch.map(async (video) => {
+        try {
+          console.log(`🔄 重编码: ${video.originalKey}`);
+          const recodedUrl = await processVideoRecoding(video.originalKey, video.mobileKey);
+          return {
+            success: true,
+            originalKey: video.originalKey,
+            mobileKey: video.mobileKey,
+            recodedUrl
+          };
+        } catch (error) {
+          console.error(`❌ 重编码失败: ${video.originalKey}`, error);
+          return {
+            success: false,
+            originalKey: video.originalKey,
+            error: error.message
+          };
+        }
+      });
+
+      const batchResults = await Promise.allSettled(batchPromises);
+
+      batchResults.forEach((result) => {
+        if (result.status === 'fulfilled') {
+          if (result.value.success) {
+            results.push(result.value);
+          } else {
+            errors.push(result.value);
+          }
+        } else {
+          errors.push({
+            success: false,
+            error: result.reason?.message || "未知错误"
+          });
+        }
+      });
+    }
+
+    const successCount = results.length;
+    const errorCount = errors.length;
+    const remainingCount = videosToRecode.length - videosToProcess.length;
+
+    console.log(`✅ 批量重编码完成:`);
+    console.log(`- 成功: ${successCount} 个`);
+    console.log(`- 失败: ${errorCount} 个`);
+    console.log(`- 剩余: ${remainingCount} 个`);
+
+    return {
+      statusCode: 200,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        success: true,
+        message: `批量重编码完成`,
+        summary: {
+          processed: videosToProcess.length,
+          successful: successCount,
+          failed: errorCount,
+          remaining: remainingCount,
+          total: videosToRecode.length
+        },
+        results,
+        errors: errorCount > 0 ? errors : undefined,
+        nextBatch: remainingCount > 0 ? {
+          message: `还有 ${remainingCount} 个视频待处理，请再次调用API继续处理`,
+          remainingVideos: videosToRecode.slice(videosToProcess.length).map(v => v.originalKey)
+        } : undefined
+      }),
+    };
+
+  } catch (error) {
+    console.error("批量重编码失败:", error);
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        error: "Failed to batch reencode videos",
+        details: error.message,
+      }),
+    };
   }
 }
 
