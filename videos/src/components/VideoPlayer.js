@@ -6,6 +6,8 @@ const VideoPlayer = ({ video, apiUrl, onClose }) => {
   const [videoUrl, setVideoUrl] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isRecoding, setIsRecoding] = useState(false);
+  const [recodingProgress, setRecodingProgress] = useState('');
   const { getCachedToken, isSignedIn } = useAuth();
 
   useEffect(() => {
@@ -82,7 +84,60 @@ const VideoPlayer = ({ video, apiUrl, onClose }) => {
   useEffect(() => {
     setVideoUrl('');
     setError('');
+    setIsRecoding(false);
+    setRecodingProgress('');
   }, [video?.key]);
+
+  // 检测移动端设备
+  const isMobile = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  };
+
+  // 重编码视频为移动端兼容格式
+  const reencodeVideoForMobile = async () => {
+    try {
+      setIsRecoding(true);
+      setError('');
+      setRecodingProgress('正在为移动端重新编码视频，请稍候...');
+
+      console.log('🔄 开始重编码视频:', video.key);
+
+      const token = await getCachedToken();
+      const reencodeUrl = `${apiUrl}/videos/reencode/${encodeURIComponent(video.key)}`;
+
+      console.log('📡 重编码请求URL:', reencodeUrl);
+
+      const response = await fetch(reencodeUrl, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`重编码失败: ${response.status} ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ 重编码成功:', result);
+
+      if (result.success && result.recodedUrl) {
+        setVideoUrl(result.recodedUrl);
+        setRecodingProgress(result.cached ?
+          '使用已有的移动端兼容版本' :
+          '重编码完成，正在加载移动端兼容版本...'
+        );
+      } else {
+        throw new Error('重编码响应中缺少视频URL');
+      }
+
+    } catch (err) {
+      console.error('❌ 重编码失败:', err);
+      setError(`重编码失败: ${err.message}`);
+      setRecodingProgress('');
+    } finally {
+      setIsRecoding(false);
+    }
+  };
 
   if (!video) return null;
 
@@ -109,12 +164,33 @@ const VideoPlayer = ({ video, apiUrl, onClose }) => {
         {error && (
           <div className="text-center py-12">
             <p className="text-red-600 mb-4">{error}</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-            >
-              重试
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                onClick={() => window.location.reload()}
+                className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+              >
+                重试
+              </button>
+              {isMobile() && error.includes('格式不兼容') && (
+                <button
+                  onClick={reencodeVideoForMobile}
+                  disabled={isRecoding}
+                  className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-400"
+                >
+                  {isRecoding ? '处理中...' : '重编码为移动端格式'}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {isRecoding && (
+          <div className="text-center py-12">
+            <div className="loading-spinner h-12 w-12 mx-auto"></div>
+            <p className="mt-4 text-blue-600">{recodingProgress}</p>
+            <p className="text-sm text-gray-500 mt-2">
+              重编码可能需要几分钟时间，请保持页面打开
+            </p>
           </div>
         )}
 
@@ -128,7 +204,15 @@ const VideoPlayer = ({ video, apiUrl, onClose }) => {
                 console.error('视频播放错误:', e);
                 console.error('错误代码:', e.target.error?.code);
                 console.error('错误消息:', e.target.error?.message);
-                setError(`视频播放失败 (错误代码: ${e.target.error?.code || 'unknown'})`);
+
+                const errorCode = e.target.error?.code;
+
+                // 如果是移动端且错误代码是4（格式错误），提示重编码
+                if (isMobile() && errorCode === 4) {
+                  setError(`移动端播放格式不兼容 (错误代码: ${errorCode})`);
+                } else {
+                  setError(`视频播放失败 (错误代码: ${errorCode || 'unknown'})`);
+                }
               }}
               onLoadedMetadata={(e) => {
                 console.log('视频元数据加载完成');

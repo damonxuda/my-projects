@@ -123,6 +123,11 @@ export const handler = async (event) => {
     } else if (method === "GET" && path === "/videos/thumbnails/batch") {
       const pathParam = event.queryStringParameters?.path || "";
       return await getBatchThumbnails(pathParam, user, corsHeaders);
+    } else if (method === "POST" && path.startsWith("/videos/reencode/")) {
+      const rawPath = event.rawPath || event.requestContext.http.path;
+      const rawVideoKey = rawPath.replace("/videos/reencode/", "");
+      const videoKey = decodeURIComponent(rawVideoKey);
+      return await reencodeVideo(videoKey, user, corsHeaders);
     }
 
     console.log("路由不匹配");
@@ -1154,8 +1159,206 @@ async function initializeMediaConvertClient() {
 async function generateThumbnailWithMediaConvert(videoPath, thumbnailKey) {
   console.log("🎬 MediaConvert暂时不可用，使用默认缩略图");
   console.log("📹 大文件:", videoPath);
-  
+
   // 暂时返回默认缩略图，避免复杂性导致的不稳定
   return `https://${VIDEO_BUCKET}.s3.ap-northeast-1.amazonaws.com/default-thumbnail.jpg`;
+}
+
+// 重编码视频为移动端兼容格式
+async function reencodeVideo(videoKey, user, corsHeaders) {
+  try {
+    console.log("=== 开始重编码视频 ===");
+    console.log("原视频文件:", videoKey);
+    console.log("用户邮箱:", user.emailAddresses?.[0]?.emailAddress);
+
+    // 检查文件夹权限
+    const pathParts = videoKey.split("/");
+    if (pathParts.length > 2) { // videos/FolderName/file.mp4
+      const folderName = pathParts[1]; // 获取文件夹名称
+      const userEmail = user.emailAddresses?.[0]?.emailAddress;
+
+      if (!hasAccessToFolder(userEmail, folderName)) {
+        console.log(`权限拒绝: 用户 ${userEmail} 无权访问文件夹 ${folderName} 中的视频 ${videoKey}`);
+        return {
+          statusCode: 403,
+          headers: corsHeaders,
+          body: JSON.stringify({
+            error: "Access denied to this folder",
+            details: `You don't have permission to access folder: ${folderName}`,
+          }),
+        };
+      }
+    }
+
+    // 检查原视频文件是否存在
+    const videoExists = await checkVideoExists(videoKey);
+    if (!videoExists) {
+      return {
+        statusCode: 404,
+        headers: corsHeaders,
+        body: JSON.stringify({ error: "Video file not found" }),
+      };
+    }
+
+    // 构建重编码后的文件名
+    const pathWithoutExtension = videoKey.replace(/\.[^.]+$/, '');
+    const recodedVideoKey = `${pathWithoutExtension}_mobile.mp4`;
+
+    console.log("重编码后文件名:", recodedVideoKey);
+
+    // 检查重编码文件是否已存在
+    const recodedExists = await checkVideoExists(recodedVideoKey);
+    if (recodedExists) {
+      console.log("重编码文件已存在，返回现有URL");
+      const recodedUrl = await getSignedUrl(
+        s3Client,
+        new GetObjectCommand({
+          Bucket: VIDEO_BUCKET,
+          Key: recodedVideoKey,
+        }),
+        { expiresIn: 3600 }
+      );
+
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          success: true,
+          recodedUrl,
+          recodedKey: recodedVideoKey,
+          cached: true,
+          message: "Video already recoded for mobile compatibility"
+        }),
+      };
+    }
+
+    // 开始重编码处理
+    console.log("开始重编码处理...");
+    const recodedUrl = await processVideoRecoding(videoKey, recodedVideoKey);
+
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        success: true,
+        recodedUrl,
+        recodedKey: recodedVideoKey,
+        cached: false,
+        message: "Video successfully recoded for mobile compatibility"
+      }),
+    };
+
+  } catch (error) {
+    console.error("视频重编码失败:", error);
+    return {
+      statusCode: 500,
+      headers: corsHeaders,
+      body: JSON.stringify({
+        error: "Failed to reencode video",
+        details: error.message,
+      }),
+    };
+  }
+}
+
+// 处理视频重编码
+async function processVideoRecoding(originalVideoKey, recodedVideoKey) {
+  const tempInputPath = `/tmp/input_video.mp4`;
+  const tempOutputPath = `/tmp/output_video.mp4`;
+
+  try {
+    console.log("🎬 开始视频重编码处理...");
+
+    // 1. 下载原视频文件
+    console.log("步骤1: 下载原视频文件...");
+    const videoData = await s3Client.send(new GetObjectCommand({
+      Bucket: VIDEO_BUCKET,
+      Key: originalVideoKey,
+    }));
+
+    const videoBuffer = await streamToBuffer(videoData.Body);
+    await writeFile(tempInputPath, videoBuffer);
+    console.log("原视频文件下载完成，大小:", videoBuffer.length);
+
+    // 2. 使用ffmpeg重编码为移动端兼容格式
+    console.log("步骤2: FFmpeg重编码...");
+    const ffmpegCommand = [
+      `/opt/bin/ffmpeg`,
+      `-i "${tempInputPath}"`,
+      `-c:v libx264`,                    // H.264视频编码
+      `-profile:v baseline`,             // 基线profile，兼容性最好
+      `-level 3.0`,                      // Level 3.0，移动端支持
+      `-preset fast`,                    // 快速编码预设
+      `-crf 23`,                         // 恒定质量因子，23是较好的平衡点
+      `-maxrate 1000k`,                  // 最大比特率1Mbps
+      `-bufsize 2000k`,                  // 缓冲区大小
+      `-c:a aac`,                        // AAC音频编码
+      `-ar 44100`,                       // 音频采样率44.1kHz
+      `-b:a 128k`,                       // 音频比特率128kbps
+      `-ac 2`,                           // 双声道
+      `-movflags +faststart`,            // 快速启动，适合流媒体
+      `-f mp4`,                          // MP4格式
+      `-y "${tempOutputPath}"`           // 覆盖输出文件
+    ].join(' ');
+
+    console.log("执行FFmpeg重编码命令...");
+    console.log("命令:", ffmpegCommand);
+
+    const { stderr } = await execAsync(ffmpegCommand);
+    console.log("✅ FFmpeg重编码完成");
+    if (stderr) console.log("FFmpeg stderr:", stderr);
+
+    // 3. 读取重编码后的视频
+    console.log("步骤3: 读取重编码后的视频...");
+    const recodedBuffer = await readFile(tempOutputPath);
+    console.log("重编码视频文件大小:", recodedBuffer.length);
+
+    // 4. 上传重编码视频到S3
+    console.log("步骤4: 上传重编码视频到S3...");
+    await s3Client.send(
+      new PutObjectCommand({
+        Bucket: VIDEO_BUCKET,
+        Key: recodedVideoKey,
+        Body: recodedBuffer,
+        ContentType: "video/mp4",
+        Metadata: {
+          "recoded-from": originalVideoKey,
+          "recoded-at": new Date().toISOString(),
+          "mobile-compatible": "true",
+          "codec": "h264-baseline",
+          "audio": "aac"
+        }
+      })
+    );
+
+    // 5. 生成访问URL
+    const recodedUrl = await getSignedUrl(
+      s3Client,
+      new GetObjectCommand({
+        Bucket: VIDEO_BUCKET,
+        Key: recodedVideoKey,
+      }),
+      { expiresIn: 3600 }
+    );
+
+    console.log("视频重编码成功!");
+    return recodedUrl;
+
+  } finally {
+    // 清理临时文件
+    try {
+      await unlink(tempInputPath);
+      console.log("清理临时输入文件");
+    } catch (error) {
+      console.log("清理临时输入文件失败:", error.message);
+    }
+
+    try {
+      await unlink(tempOutputPath);
+      console.log("清理临时输出文件");
+    } catch (error) {
+      console.log("清理临时输出文件失败:", error.message);
+    }
+  }
 }
 
