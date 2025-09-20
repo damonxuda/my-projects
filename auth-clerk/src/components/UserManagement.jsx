@@ -3,8 +3,9 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 
 const UserManagement = () => {
-  const { 
-    isAdmin, 
+  const {
+    isAdmin,
+    isSignedIn,
     users,
     loading,
     fetchAllUsers,
