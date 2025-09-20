@@ -371,7 +371,16 @@
 
               // 初始化Schedule应用
               if (typeof initializeScheduleApp === 'function') {
+                console.log('🚀 开始初始化Schedule应用...');
+                console.log('📊 环境变量检查:', {
+                  SUPABASE_URL: window.REACT_APP_SUPABASE_URL,
+                  SUPABASE_KEY_EXISTS: !!window.REACT_APP_SUPABASE_ANON_KEY,
+                  SUPABASE_CLIENT_EXISTS: !!window.supabase,
+                  APP_CONFIG_EXISTS: !!window.appConfig
+                });
                 initializeScheduleApp();
+              } else {
+                console.error('❌ initializeScheduleApp函数未找到');
               }
 
               return true;
