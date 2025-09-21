@@ -1,7 +1,7 @@
 {
   "name": "video-core-lambda",
   "version": "1.0.0",
-  "description": "Core video management service - handles video listing, URLs, deletion, and thumbnails",
+  "description": "Core video management service - handles video listing, URLs, deletion, and thumbnails. Deployed via GitHub Actions.",
   "main": "index.mjs",
   "type": "module",
   "scripts": {
