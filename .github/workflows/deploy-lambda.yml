@@ -87,8 +87,8 @@ jobs:
         working-directory: ./lambda-video-management/services/video-core
         env:
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
-          ADMIN_EMAILS: "damon.xu@gmail.com"
-          VIDEO_BUCKET_NAME: "damonxuda-video-files"
+          ADMIN_EMAILS: ${{ secrets.ADMIN_EMAILS }}
+          VIDEO_BUCKET_NAME: ${{ secrets.VIDEO_BUCKET_NAME }}
         run: |
           echo "🚀 Deploying video-core-lambda..."
           npm ci
@@ -102,8 +102,8 @@ jobs:
         working-directory: ./lambda-video-management/services/video-processing
         env:
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
-          ADMIN_EMAILS: "damon.xu@gmail.com"
-          VIDEO_BUCKET_NAME: "damonxuda-video-files"
+          ADMIN_EMAILS: ${{ secrets.ADMIN_EMAILS }}
+          VIDEO_BUCKET_NAME: ${{ secrets.VIDEO_BUCKET_NAME }}
           MEDIACONVERT_ROLE_ARN: ${{ secrets.MEDIACONVERT_ROLE_ARN }}
           MEDIACONVERT_QUEUE_ARN: ${{ secrets.MEDIACONVERT_QUEUE_ARN }}
         run: |
@@ -119,8 +119,8 @@ jobs:
         working-directory: ./lambda-video-management/services/youtube
         env:
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
-          ADMIN_EMAILS: "damon.xu@gmail.com"
-          VIDEO_BUCKET_NAME: "damonxuda-video-files"
+          ADMIN_EMAILS: ${{ secrets.ADMIN_EMAILS }}
+          VIDEO_BUCKET_NAME: ${{ secrets.VIDEO_BUCKET_NAME }}
         run: |
           echo "🚀 Deploying youtube-lambda..."
           npm ci
