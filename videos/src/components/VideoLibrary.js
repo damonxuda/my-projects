@@ -596,7 +596,7 @@ const VideoLibrary = () => {
 
       // 获取预签名上传URL
       const token = await getCachedToken();
-      const uploadUrlResponse = await fetch(`${process.env.REACT_APP_VIDEO_CORE_URL}/videos/upload-url`, {
+      const uploadUrlResponse = await fetch(`${process.env.REACT_APP_VIDEO_CORE_API_URL}/videos/upload-url`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
