@@ -1,5 +1,5 @@
-import { verifyTokenAndCheckAccess, isAdmin } from "../shared/auth.mjs";
-import { corsHeaders, createResponse, createErrorResponse, createSuccessResponse } from "../shared/s3-config.mjs";
+import { verifyTokenAndCheckAccess, isAdmin } from "./shared/auth.mjs";
+import { corsHeaders, createResponse, createErrorResponse, createSuccessResponse } from "./shared/s3-config.mjs";
 import { listVideos } from "./lib/video-operations.mjs";
 import { getVideoUrl } from "./lib/video-url.mjs";
 import { deleteVideo } from "./lib/video-delete.mjs";

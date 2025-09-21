@@ -1,7 +1,7 @@
 import { HeadObjectCommand, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { s3Client, VIDEO_BUCKET } from "../../shared/s3-config.mjs";
-import { createSuccessResponse, createErrorResponse } from "../../shared/s3-config.mjs";
+import { s3Client, VIDEO_BUCKET } from "../shared/s3-config.mjs";
+import { createSuccessResponse, createErrorResponse } from "../shared/s3-config.mjs";
 import { spawn } from "child_process";
 import { writeFileSync, readFileSync, unlinkSync, existsSync } from "fs";
 import path from "path";

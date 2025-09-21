@@ -1,5 +1,5 @@
-import { verifyTokenAndCheckAccess, isAdmin } from "../shared/auth.mjs";
-import { createSuccessResponse, createErrorResponse } from "../shared/s3-config.mjs";
+import { verifyTokenAndCheckAccess, isAdmin } from "./shared/auth.mjs";
+import { createSuccessResponse, createErrorResponse } from "./shared/s3-config.mjs";
 // import { downloadYouTubeVideo } from "./lib/youtube-downloader.mjs";
 // import { getVideoInfo } from "./lib/youtube-info.mjs";
 import { listDownloadHistory } from "./lib/download-history.mjs";

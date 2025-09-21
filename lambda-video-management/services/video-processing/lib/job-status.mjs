@@ -1,5 +1,5 @@
 import { MediaConvertClient, GetJobCommand, ListJobsCommand } from "@aws-sdk/client-mediaconvert";
-import { createSuccessResponse, createErrorResponse } from "../../shared/s3-config.mjs";
+import { createSuccessResponse, createErrorResponse } from "../shared/s3-config.mjs";
 
 const mediaConvertClient = new MediaConvertClient({
   region: process.env.AWS_REGION || "ap-northeast-1"

@@ -1,0 +1,13 @@
+# Clerk 认证配置
+REACT_APP_CLERK_PUBLISHABLE_KEY=pk_live_Y2xlcmsuZGFtb254dWRhLnNpdGUk
+
+# 视频 API 配置
+REACT_APP_VIDEO_API_URL=https://phbhgxbk36dwtku4hq5na7csxa0slnay.lambda-url.ap-northeast-1.on.aws
+# 用户管理 API 配置（权限管理Lambda）
+REACT_APP_USER_MANAGEMENT_API_URL=https://ykyc7xcyfmacka6oqeqgfhrtt40xvynm.lambda-url.ap-northeast-1.on.aws
+
+# 可选：环境标识
+NODE_ENV=development
+
+# 可选：构建配置
+GENERATE_SOURCEMAP=false

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 // 测试批量视频重编码API的脚本
-// 使用环境变量，如果没有则使用默认值
-const apiUrl = process.env.REACT_APP_VIDEO_API_URL || "https://phbhgxbk36dwtku4hq5na7csxa0slnay.lambda-url.ap-northeast-1.on.aws";
+// 使用新的视频处理服务URL（微服务架构）
+const apiUrl = process.env.REACT_APP_VIDEO_PROCESSING_API_URL || "https://tgshtgiaemzbmcmzuqzto4gh2a0mbrex.lambda-url.ap-northeast-1.on.aws";
 
 // 从你的视频播放系统获取token
 // 你需要先在浏览器控制台运行: window.getCachedToken()
@@ -12,7 +12,7 @@ async function testBatchReencodeDryRun() {
   try {
     console.log("🔍 测试批量重编码（试运行模式）...");
 
-    const response = await fetch(`${apiUrl}/videos/reencode/batch`, {
+    const response = await fetch(`${apiUrl}/process/batch`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -68,7 +68,7 @@ async function testBatchReencodeSpecificFolder() {
 
     const folderName = "贾老师初联一轮"; // 你可以改成其他文件夹名称
 
-    const response = await fetch(`${apiUrl}/videos/reencode/batch`, {
+    const response = await fetch(`${apiUrl}/process/batch`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -115,7 +115,7 @@ async function testActualBatchReencode() {
   try {
     console.log("🚀 开始实际批量重编码...");
 
-    const response = await fetch(`${apiUrl}/videos/reencode/batch`, {
+    const response = await fetch(`${apiUrl}/process/batch`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -181,7 +181,7 @@ async function main() {
 
   console.log("\n🎉 测试完成！");
   console.log("📋 API用法总结:");
-  console.log("- POST /videos/reencode/batch");
+  console.log("- POST /process/batch");
   console.log("- 参数: { dryRun, folderPath, maxConcurrent, forceReencode }");
   console.log("- dryRun: true=试运行（推荐先执行）, false=实际重编码");
   console.log("- folderPath: 空字符串=所有文件夹, 或指定文件夹名称");

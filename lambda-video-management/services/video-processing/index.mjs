@@ -1,5 +1,5 @@
-import { verifyTokenAndCheckAccess } from "../shared/auth.mjs";
-import { createSuccessResponse, createErrorResponse } from "../shared/s3-config.mjs";
+import { verifyTokenAndCheckAccess } from "./shared/auth.mjs";
+import { createSuccessResponse, createErrorResponse } from "./shared/s3-config.mjs";
 import { processVideo } from "./lib/video-converter.mjs";
 import { checkJobStatus } from "./lib/job-status.mjs";
 import { batchProcessVideos } from "./lib/batch-processor.mjs";

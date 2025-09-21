@@ -1,0 +1,17 @@
+# Clerk 认证配置
+REACT_APP_CLERK_PUBLISHABLE_KEY=pk_live_Y2xlcmsuZGFtb254dWRhLnNpdGUk
+
+# 用户管理 API 配置 (权限管理 Lambda)
+REACT_APP_USER_MANAGEMENT_API_URL=https://ykyc7xcyfmacka6oqeqgfhrtt40xvynm.lambda-url.ap-northeast-1.on.aws
+
+# 视频 API 配置
+REACT_APP_VIDEO_API_URL=https://len2k4bksqc6jqwapucgpczecu0jugyb.lambda-url.ap-northeast-1.on.aws
+
+# 管理员邮箱配置 (支持多个，用逗号分隔)
+REACT_APP_ADMIN_EMAILS=damon.xu@gmail.com
+
+# 可选：环境标识
+NODE_ENV=development
+
+# 可选：构建配置
+GENERATE_SOURCEMAP=false

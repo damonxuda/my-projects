@@ -1,8 +1,8 @@
 import { ListObjectsV2Command } from "@aws-sdk/client-s3";
-import { s3Client, VIDEO_BUCKET } from "../../shared/s3-config.mjs";
-import { createSuccessResponse, createErrorResponse } from "../../shared/s3-config.mjs";
+import { s3Client, VIDEO_BUCKET } from "../shared/s3-config.mjs";
+import { createSuccessResponse, createErrorResponse } from "../shared/s3-config.mjs";
 import { processVideo } from "./video-converter.mjs";
-import { getUserAccessibleFolders } from "../../shared/auth.mjs";
+import { getUserAccessibleFolders } from "../shared/auth.mjs";
 
 export async function batchProcessVideos(event, user) {
   try {
