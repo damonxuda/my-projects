@@ -4,8 +4,6 @@ import {
   Play,
   Youtube,
   ExternalLink,
-  Trash2,
-  MoreVertical,
 } from "lucide-react";
 import VideoThumbnail from "./VideoThumbnail";
 
@@ -17,13 +15,9 @@ const FileCard = ({
   apiUrl,
   getCachedToken,
   clearTokenCache,
-  onDelete,
-  isAdmin = false,
 }) => {
   const [videoUrl, setVideoUrl] = useState(null);
   const [youtubeData, setYoutubeData] = useState(null);
-  const [showMenu, setShowMenu] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const isVideo = item.type === "video";
   const isFolder = item.type === "folder";
   const isYouTube = item.type === "youtube";

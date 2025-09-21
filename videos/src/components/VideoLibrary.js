@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Youtube, Plus, X, Upload, Search, Settings, FolderOpen } from "lucide-react";
+import { ArrowLeft, Youtube, Plus, X, Upload, Search, Settings, FolderOpen, ArrowRight } from "lucide-react";
 import { useAuth } from "../../../auth-clerk/src";
 import VideoPlayer from "./VideoPlayer";
 import FileCard from "./FileCard";
@@ -814,6 +814,49 @@ const VideoLibrary = () => {
     }
   };
 
+  // 删除文件
+  const handleDeleteItem = async (filePath) => {
+    if (!isAdmin) {
+      alert('只有管理员可以删除文件');
+      return;
+    }
+
+    setIsProcessingOperation(true);
+    try {
+      const token = await getCachedToken();
+      const response = await fetch(`${process.env.REACT_APP_VIDEO_CORE_API_URL}/videos/delete`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ filePath })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || '删除失败');
+      }
+
+      const result = await response.json();
+      console.log('✅ 删除成功:', result);
+
+      alert('文件删除成功！');
+      setShowFileManager(false);
+      setSelectedItem(null);
+      setFileOperation(null);
+
+      // 刷新当前目录
+      loadItems(currentPath);
+
+    } catch (error) {
+      console.error('❌ 删除失败:', error);
+      alert(`删除失败: ${error.message}`);
+    } finally {
+      setIsProcessingOperation(false);
+    }
+  };
+
   // 检查是否可以执行操作
   const canExecuteOperation = () => {
     switch (fileOperation) {
@@ -823,6 +866,12 @@ const VideoLibrary = () => {
         return selectedItem && operationData.newName && operationData.newName.trim() !== '' && operationData.newName !== selectedItem.name;
       case 'copy':
         return selectedItem && operationData.targetPath !== undefined;
+      case 'move':
+        return selectedItem && operationData.targetPath !== undefined;
+      case 'upload':
+        return operationData.uploadFile;
+      case 'delete':
+        return selectedItem;
       default:
         return false;
     }
@@ -852,44 +901,14 @@ const VideoLibrary = () => {
                 <Plus size={16} />
               </button>
 
-              {/* 扫描转换按钮 */}
-              <button
-                onClick={() => handleScanVideos(true)}
-                disabled={isScanning}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {isScanning ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>扫描中...</span>
-                  </>
-                ) : (
-                  <>
-                    <Search size={20} />
-                    <span>扫描视频转换</span>
-                  </>
-                )}
-              </button>
-
-              {/* 上传视频按钮 - 仅管理员可见 */}
-              {isAdmin && (
-                <button
-                  onClick={() => setShowUpload(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  <Upload size={20} />
-                  <span>上传视频</span>
-                </button>
-              )}
-
               {/* 文件管理按钮 - 仅管理员可见 */}
               {isAdmin && (
                 <button
                   onClick={() => setShowFileManager(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                   <FolderOpen size={20} />
-                  <span>文件管理</span>
+                  <span>管理视频</span>
                 </button>
               )}
 
@@ -1085,8 +1104,6 @@ const VideoLibrary = () => {
                   apiUrl={VIDEO_CORE_URL}
                   getCachedToken={getCachedToken}
                   clearTokenCache={clearTokenCache}
-                  onDelete={handleDelete}
-                  isAdmin={isAdmin}
                 />
               ))}
             </div>
@@ -1360,10 +1377,21 @@ const VideoLibrary = () => {
                   <p className="text-gray-600 mb-4">选择您想要执行的文件操作：</p>
 
                   <button
+                    onClick={() => setFileOperation('upload')}
+                    className="w-full flex items-center gap-3 p-3 text-left border rounded-lg hover:bg-green-50 hover:border-green-300 transition-colors"
+                  >
+                    <Upload className="text-green-600" size={20} />
+                    <div>
+                      <div className="font-medium text-gray-800">上传视频</div>
+                      <div className="text-sm text-gray-500">上传视频文件到当前目录</div>
+                    </div>
+                  </button>
+
+                  <button
                     onClick={() => setFileOperation('create-folder')}
                     className="w-full flex items-center gap-3 p-3 text-left border rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors"
                   >
-                    <Plus className="text-blue-600" size={20} />
+                    <FolderOpen className="text-blue-600" size={20} />
                     <div>
                       <div className="font-medium text-gray-800">创建文件夹</div>
                       <div className="text-sm text-gray-500">在当前目录创建新文件夹</div>
@@ -1382,13 +1410,35 @@ const VideoLibrary = () => {
                   </button>
 
                   <button
-                    onClick={() => setFileOperation('copy')}
-                    className="w-full flex items-center gap-3 p-3 text-left border rounded-lg hover:bg-green-50 hover:border-green-300 transition-colors"
+                    onClick={() => setFileOperation('move')}
+                    className="w-full flex items-center gap-3 p-3 text-left border rounded-lg hover:bg-purple-50 hover:border-purple-300 transition-colors"
                   >
-                    <Upload className="text-green-600" size={20} />
+                    <ArrowRight className="text-purple-600" size={20} />
+                    <div>
+                      <div className="font-medium text-gray-800">移动文件</div>
+                      <div className="text-sm text-gray-500">将文件移动到其他位置</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setFileOperation('copy')}
+                    className="w-full flex items-center gap-3 p-3 text-left border rounded-lg hover:bg-indigo-50 hover:border-indigo-300 transition-colors"
+                  >
+                    <Plus className="text-indigo-600" size={20} />
                     <div>
                       <div className="font-medium text-gray-800">复制文件</div>
                       <div className="text-sm text-gray-500">复制文件到其他位置</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setFileOperation('delete')}
+                    className="w-full flex items-center gap-3 p-3 text-left border rounded-lg hover:bg-red-50 hover:border-red-300 transition-colors"
+                  >
+                    <X className="text-red-600" size={20} />
+                    <div>
+                      <div className="font-medium text-gray-800">删除文件</div>
+                      <div className="text-sm text-gray-500">选择文件进行删除</div>
                     </div>
                   </button>
                 </div>
@@ -1494,6 +1544,116 @@ const VideoLibrary = () => {
                     </div>
                   )}
 
+                  {fileOperation === 'upload' && (
+                    <div>
+                      <p className="text-sm text-gray-600 mb-3">选择要上传的视频文件：</p>
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                        <input
+                          type="file"
+                          accept=".mp4,.avi,.mov,.mkv,.webm"
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (file) {
+                              setOperationData({...operationData, uploadFile: file});
+                            }
+                          }}
+                          className="hidden"
+                          id="file-upload"
+                        />
+                        <label
+                          htmlFor="file-upload"
+                          className="cursor-pointer flex flex-col items-center gap-2"
+                        >
+                          <Upload className="text-gray-400" size={32} />
+                          <span className="text-sm text-gray-600">
+                            {operationData.uploadFile ? operationData.uploadFile.name : '点击选择文件或拖拽到此处'}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            支持: MP4, AVI, MOV, MKV, WebM (最大2GB)
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  {fileOperation === 'move' && (
+                    <div>
+                      {!selectedItem ? (
+                        <div>
+                          <p className="text-sm text-gray-600 mb-3">选择要移动的文件：</p>
+                          <div className="max-h-60 overflow-y-auto space-y-2">
+                            {items.map((item, index) => (
+                              <button
+                                key={index}
+                                onClick={() => setSelectedItem(item)}
+                                className="w-full text-left p-2 border rounded hover:bg-gray-50 transition-colors"
+                              >
+                                <div className="font-medium">{item.name}</div>
+                                <div className="text-xs text-gray-500">
+                                  {item.type === 'folder' ? '文件夹' : '文件'}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="mb-3">
+                            <span className="text-sm text-gray-600">移动: </span>
+                            <span className="font-medium">{selectedItem.name}</span>
+                          </div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            目标路径 (相对于videos/)
+                          </label>
+                          <input
+                            type="text"
+                            value={operationData.targetPath || currentPath}
+                            onChange={(e) => setOperationData({...operationData, targetPath: e.target.value})}
+                            placeholder="目标文件夹路径"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                          />
+                          <div className="mt-2 text-xs text-gray-500">
+                            文件将移动到: videos/{operationData.targetPath || currentPath}/{selectedItem.name}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {fileOperation === 'delete' && (
+                    <div>
+                      {!selectedItem ? (
+                        <div>
+                          <p className="text-sm text-gray-600 mb-3">选择要删除的文件：</p>
+                          <div className="max-h-60 overflow-y-auto space-y-2">
+                            {items.filter(item => item.type !== 'folder').map((item, index) => (
+                              <button
+                                key={index}
+                                onClick={() => setSelectedItem(item)}
+                                className="w-full text-left p-2 border rounded hover:bg-red-50 transition-colors"
+                              >
+                                <div className="font-medium">{item.name}</div>
+                                <div className="text-xs text-red-500">
+                                  {item.type === 'folder' ? '文件夹' : '文件'}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <span className="text-sm text-red-600">⚠️ 警告: 即将删除文件</span>
+                            <div className="font-medium text-red-800 mt-1">{selectedItem.name}</div>
+                            <div className="text-xs text-red-600 mt-2">
+                              此操作不可撤销，请谨慎操作！
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div className="flex gap-3 pt-4 border-t">
                     <button
                       onClick={() => {
@@ -1519,6 +1679,21 @@ const VideoLibrary = () => {
                           const sourcePath = selectedItem.key || (currentPath ? `videos/${currentPath}/${selectedItem.name}` : `videos/${selectedItem.name}`);
                           const targetPath = operationData.targetPath ? `videos/${operationData.targetPath}/${selectedItem.name}` : `videos/${selectedItem.name}`;
                           await handleCopyItem(sourcePath, targetPath);
+                        } else if (fileOperation === 'move' && selectedItem && operationData.targetPath !== undefined) {
+                          const oldPath = selectedItem.key || (currentPath ? `videos/${currentPath}/${selectedItem.name}` : `videos/${selectedItem.name}`);
+                          const newPath = operationData.targetPath ? `videos/${operationData.targetPath}/${selectedItem.name}` : `videos/${selectedItem.name}`;
+                          await handleRenameItem(oldPath, newPath); // 移动就是重命名到新路径
+                        } else if (fileOperation === 'upload' && operationData.uploadFile) {
+                          // 设置上传状态并执行上传
+                          setSelectedFile(operationData.uploadFile);
+                          setShowUpload(false); // 关闭上传模态框，因为我们在文件管理中
+                          setTimeout(async () => {
+                            await handleVideoUpload();
+                            setShowFileManager(false); // 上传完成后关闭文件管理
+                          }, 100);
+                        } else if (fileOperation === 'delete' && selectedItem) {
+                          const filePath = selectedItem.key || (currentPath ? `videos/${currentPath}/${selectedItem.name}` : `videos/${selectedItem.name}`);
+                          await handleDeleteItem(filePath);
                         }
                       }}
                       disabled={isProcessingOperation || !canExecuteOperation()}
