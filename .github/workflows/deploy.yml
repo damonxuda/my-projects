@@ -167,7 +167,12 @@ jobs:
         working-directory: ./videos
         env:
           REACT_APP_CLERK_PUBLISHABLE_KEY: ${{ secrets.REACT_APP_CLERK_PUBLISHABLE_KEY }}
-          REACT_APP_VIDEO_API_URL: ${{ secrets.REACT_APP_VIDEO_API_URL }}
+          # 微服务架构 - 多个Lambda URL
+          REACT_APP_VIDEO_CORE_API_URL: ${{ secrets.REACT_APP_VIDEO_CORE_API_URL }}
+          REACT_APP_VIDEO_PROCESSING_API_URL: ${{ secrets.REACT_APP_VIDEO_PROCESSING_API_URL }}
+          REACT_APP_YOUTUBE_API_URL: ${{ secrets.REACT_APP_YOUTUBE_API_URL }}
+          # 向后兼容 - 默认使用video-core
+          REACT_APP_VIDEO_API_URL: ${{ secrets.REACT_APP_VIDEO_CORE_API_URL }}
           REACT_APP_USER_MANAGEMENT_API_URL: ${{ secrets.REACT_APP_USER_MANAGEMENT_API_URL }}
           GENERATE_SOURCEMAP: false
         run: |
@@ -206,6 +211,12 @@ jobs:
         run: |
           echo "🔧 Setting environment variables..."
           echo "REACT_APP_CLERK_PUBLISHABLE_KEY=${{ secrets.REACT_APP_CLERK_PUBLISHABLE_KEY }}" >> .env.production
+          # 微服务架构 - 多个Lambda URL
+          echo "REACT_APP_VIDEO_CORE_API_URL=${{ secrets.REACT_APP_VIDEO_CORE_API_URL }}" >> .env.production
+          echo "REACT_APP_VIDEO_PROCESSING_API_URL=${{ secrets.REACT_APP_VIDEO_PROCESSING_API_URL }}" >> .env.production
+          echo "REACT_APP_YOUTUBE_API_URL=${{ secrets.REACT_APP_YOUTUBE_API_URL }}" >> .env.production
+          # 向后兼容 - 默认使用video-core
+          echo "REACT_APP_VIDEO_API_URL=${{ secrets.REACT_APP_VIDEO_CORE_API_URL }}" >> .env.production
           echo "REACT_APP_USER_MANAGEMENT_API_URL=${{ secrets.REACT_APP_USER_MANAGEMENT_API_URL }}" >> .env.production
           echo "REACT_APP_ADMIN_EMAILS=${{ secrets.REACT_APP_ADMIN_EMAILS }}" >> .env.production
           echo "GENERATE_SOURCEMAP=false" >> .env.production
