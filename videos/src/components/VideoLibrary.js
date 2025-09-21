@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Youtube, Plus, X, Upload, Search, Settings } from "lucide-react";
+import { ArrowLeft, Youtube, Plus, X, Upload, Search, Settings, FolderOpen } from "lucide-react";
 import { useAuth } from "../../../auth-clerk/src";
 import VideoPlayer from "./VideoPlayer";
 import FileCard from "./FileCard";
@@ -27,6 +27,13 @@ const VideoLibrary = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+
+  // 文件管理相关状态
+  const [showFileManager, setShowFileManager] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [fileOperation, setFileOperation] = useState(null); // 'rename', 'move', 'copy', 'create-folder'
+  const [operationData, setOperationData] = useState({});
+  const [isProcessingOperation, setIsProcessingOperation] = useState(false);
 
   const { user, isSignedIn, isAdmin, fetchVideoList, getVideoUrl, getCachedToken, clearTokenCache } =
     useAuth();
@@ -681,6 +688,146 @@ const VideoLibrary = () => {
     }
   };
 
+  // 文件管理函数
+  const handleRenameItem = async (oldPath, newPath) => {
+    if (!isAdmin) {
+      alert('只有管理员可以重命名文件');
+      return;
+    }
+
+    setIsProcessingOperation(true);
+    try {
+      const token = await getCachedToken();
+      const response = await fetch(`${process.env.REACT_APP_VIDEO_CORE_API_URL}/videos/rename`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ oldPath, newPath })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || '重命名失败');
+      }
+
+      const result = await response.json();
+      console.log('✅ 重命名成功:', result);
+
+      alert('重命名成功！');
+      setShowFileManager(false);
+      setSelectedItem(null);
+      setFileOperation(null);
+
+      // 刷新当前目录
+      loadItems(currentPath);
+
+    } catch (error) {
+      console.error('❌ 重命名失败:', error);
+      alert(`重命名失败: ${error.message}`);
+    } finally {
+      setIsProcessingOperation(false);
+    }
+  };
+
+  const handleCopyItem = async (sourcePath, targetPath) => {
+    if (!isAdmin) {
+      alert('只有管理员可以复制文件');
+      return;
+    }
+
+    setIsProcessingOperation(true);
+    try {
+      const token = await getCachedToken();
+      const response = await fetch(`${process.env.REACT_APP_VIDEO_CORE_API_URL}/videos/copy`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ sourcePath, targetPath })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || '复制失败');
+      }
+
+      const result = await response.json();
+      console.log('✅ 复制成功:', result);
+
+      alert('复制成功！');
+      setShowFileManager(false);
+      setSelectedItem(null);
+      setFileOperation(null);
+
+      // 刷新当前目录
+      loadItems(currentPath);
+
+    } catch (error) {
+      console.error('❌ 复制失败:', error);
+      alert(`复制失败: ${error.message}`);
+    } finally {
+      setIsProcessingOperation(false);
+    }
+  };
+
+  const handleCreateFolder = async (folderPath) => {
+    if (!isAdmin) {
+      alert('只有管理员可以创建文件夹');
+      return;
+    }
+
+    setIsProcessingOperation(true);
+    try {
+      const token = await getCachedToken();
+      const response = await fetch(`${process.env.REACT_APP_VIDEO_CORE_API_URL}/videos/create-folder`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ folderPath })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || '创建文件夹失败');
+      }
+
+      const result = await response.json();
+      console.log('✅ 创建文件夹成功:', result);
+
+      alert('文件夹创建成功！');
+      setShowFileManager(false);
+      setFileOperation(null);
+
+      // 刷新当前目录
+      loadItems(currentPath);
+
+    } catch (error) {
+      console.error('❌ 创建文件夹失败:', error);
+      alert(`创建文件夹失败: ${error.message}`);
+    } finally {
+      setIsProcessingOperation(false);
+    }
+  };
+
+  // 检查是否可以执行操作
+  const canExecuteOperation = () => {
+    switch (fileOperation) {
+      case 'create-folder':
+        return operationData.folderName && operationData.folderName.trim() !== '';
+      case 'rename':
+        return selectedItem && operationData.newName && operationData.newName.trim() !== '' && operationData.newName !== selectedItem.name;
+      case 'copy':
+        return selectedItem && operationData.targetPath !== undefined;
+      default:
+        return false;
+    }
+  };
+
   // 初始加载
   useEffect(() => {
     if (isSignedIn && user?.id) {
@@ -732,6 +879,17 @@ const VideoLibrary = () => {
                 >
                   <Upload size={20} />
                   <span>上传视频</span>
+                </button>
+              )}
+
+              {/* 文件管理按钮 - 仅管理员可见 */}
+              {isAdmin && (
+                <button
+                  onClick={() => setShowFileManager(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  <FolderOpen size={20} />
+                  <span>文件管理</span>
                 </button>
               )}
 
@@ -1166,6 +1324,208 @@ const VideoLibrary = () => {
 
                   <div className="mt-3 text-xs text-gray-500">
                     💡 上传成功后将自动检查视频编码质量，如有需要会提示优化
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 文件管理模态框 */}
+      {showFileManager && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg max-w-lg w-full mx-4">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                  <FolderOpen className="text-purple-600" size={24} />
+                  文件管理
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowFileManager(false);
+                    setSelectedItem(null);
+                    setFileOperation(null);
+                    setOperationData({});
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              {!fileOperation ? (
+                <div className="space-y-3">
+                  <p className="text-gray-600 mb-4">选择您想要执行的文件操作：</p>
+
+                  <button
+                    onClick={() => setFileOperation('create-folder')}
+                    className="w-full flex items-center gap-3 p-3 text-left border rounded-lg hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                  >
+                    <Plus className="text-blue-600" size={20} />
+                    <div>
+                      <div className="font-medium text-gray-800">创建文件夹</div>
+                      <div className="text-sm text-gray-500">在当前目录创建新文件夹</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setFileOperation('rename')}
+                    className="w-full flex items-center gap-3 p-3 text-left border rounded-lg hover:bg-yellow-50 hover:border-yellow-300 transition-colors"
+                  >
+                    <Settings className="text-yellow-600" size={20} />
+                    <div>
+                      <div className="font-medium text-gray-800">重命名文件</div>
+                      <div className="text-sm text-gray-500">选择文件进行重命名</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setFileOperation('copy')}
+                    className="w-full flex items-center gap-3 p-3 text-left border rounded-lg hover:bg-green-50 hover:border-green-300 transition-colors"
+                  >
+                    <Upload className="text-green-600" size={20} />
+                    <div>
+                      <div className="font-medium text-gray-800">复制文件</div>
+                      <div className="text-sm text-gray-500">复制文件到其他位置</div>
+                    </div>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {fileOperation === 'create-folder' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        文件夹名称
+                      </label>
+                      <input
+                        type="text"
+                        value={operationData.folderName || ''}
+                        onChange={(e) => setOperationData({...operationData, folderName: e.target.value})}
+                        placeholder="输入文件夹名称"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      />
+                      <div className="mt-2 text-xs text-gray-500">
+                        将在路径 videos/{currentPath || ''} 下创建
+                      </div>
+                    </div>
+                  )}
+
+                  {fileOperation === 'rename' && (
+                    <div>
+                      {!selectedItem ? (
+                        <div>
+                          <p className="text-sm text-gray-600 mb-3">选择要重命名的文件：</p>
+                          <div className="max-h-60 overflow-y-auto space-y-2">
+                            {items.map((item, index) => (
+                              <button
+                                key={index}
+                                onClick={() => setSelectedItem(item)}
+                                className="w-full text-left p-2 border rounded hover:bg-gray-50 transition-colors"
+                              >
+                                <div className="font-medium">{item.name}</div>
+                                <div className="text-xs text-gray-500">
+                                  {item.type === 'folder' ? '文件夹' : '文件'}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="mb-3">
+                            <span className="text-sm text-gray-600">重命名: </span>
+                            <span className="font-medium">{selectedItem.name}</span>
+                          </div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            新名称
+                          </label>
+                          <input
+                            type="text"
+                            value={operationData.newName || selectedItem.name}
+                            onChange={(e) => setOperationData({...operationData, newName: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {fileOperation === 'copy' && (
+                    <div>
+                      {!selectedItem ? (
+                        <div>
+                          <p className="text-sm text-gray-600 mb-3">选择要复制的文件：</p>
+                          <div className="max-h-60 overflow-y-auto space-y-2">
+                            {items.filter(item => item.type !== 'folder').map((item, index) => (
+                              <button
+                                key={index}
+                                onClick={() => setSelectedItem(item)}
+                                className="w-full text-left p-2 border rounded hover:bg-gray-50 transition-colors"
+                              >
+                                <div className="font-medium">{item.name}</div>
+                                <div className="text-xs text-gray-500">文件</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="mb-3">
+                            <span className="text-sm text-gray-600">复制: </span>
+                            <span className="font-medium">{selectedItem.name}</span>
+                          </div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            目标路径 (相对于videos/)
+                          </label>
+                          <input
+                            type="text"
+                            value={operationData.targetPath || currentPath}
+                            onChange={(e) => setOperationData({...operationData, targetPath: e.target.value})}
+                            placeholder="目标文件夹路径"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                          />
+                          <div className="mt-2 text-xs text-gray-500">
+                            文件将复制到: videos/{operationData.targetPath || currentPath}/{selectedItem.name}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex gap-3 pt-4 border-t">
+                    <button
+                      onClick={() => {
+                        setFileOperation(null);
+                        setSelectedItem(null);
+                        setOperationData({});
+                      }}
+                      disabled={isProcessingOperation}
+                      className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      返回
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (fileOperation === 'create-folder' && operationData.folderName) {
+                          const folderPath = currentPath ? `${currentPath}/${operationData.folderName}` : operationData.folderName;
+                          await handleCreateFolder(folderPath);
+                        } else if (fileOperation === 'rename' && selectedItem && operationData.newName) {
+                          const oldPath = selectedItem.key || (currentPath ? `videos/${currentPath}/${selectedItem.name}` : `videos/${selectedItem.name}`);
+                          const newPath = currentPath ? `videos/${currentPath}/${operationData.newName}` : `videos/${operationData.newName}`;
+                          await handleRenameItem(oldPath, newPath);
+                        } else if (fileOperation === 'copy' && selectedItem && operationData.targetPath !== undefined) {
+                          const sourcePath = selectedItem.key || (currentPath ? `videos/${currentPath}/${selectedItem.name}` : `videos/${selectedItem.name}`);
+                          const targetPath = operationData.targetPath ? `videos/${operationData.targetPath}/${selectedItem.name}` : `videos/${selectedItem.name}`;
+                          await handleCopyItem(sourcePath, targetPath);
+                        }
+                      }}
+                      disabled={isProcessingOperation || !canExecuteOperation()}
+                      className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isProcessingOperation ? '处理中...' : '确认'}
+                    </button>
                   </div>
                 </div>
               )}
