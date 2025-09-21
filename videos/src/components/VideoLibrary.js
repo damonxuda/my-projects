@@ -928,6 +928,7 @@ const VideoLibrary = () => {
                   getCachedToken={getCachedToken}
                   clearTokenCache={clearTokenCache}
                   onDelete={handleDelete}
+                  isAdmin={isAdmin}
                 />
               ))}
             </div>

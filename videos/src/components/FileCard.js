@@ -18,6 +18,7 @@ const FileCard = ({
   getCachedToken,
   clearTokenCache,
   onDelete,
+  isAdmin = false,
 }) => {
   const [videoUrl, setVideoUrl] = useState(null);
   const [youtubeData, setYoutubeData] = useState(null);
@@ -159,8 +160,8 @@ const FileCard = ({
       className="file-card border border-gray-200 rounded-xl p-4 cursor-pointer bg-white hover:shadow-lg hover:border-gray-300 transition-all duration-200 relative group"
       onClick={handleClick}
     >
-      {/* 删除菜单按钮 - 只对视频和YouTube文件显示 */}
-      {(isVideo || isYouTube) && (
+      {/* 删除菜单按钮 - 只对视频和YouTube文件显示，且仅管理员可见 */}
+      {(isVideo || isYouTube) && isAdmin && (
         <div className="absolute top-2 right-2 z-10">
           <button
             onClick={handleMenuClick}
