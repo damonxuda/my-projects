@@ -23,12 +23,19 @@ export async function handler(event) {
     console.log("Path parts:", pathParts);
 
     // Authentication check for all endpoints
-    const authResult = await verifyTokenAndCheckAccess(event);
-    if (!authResult.success) {
-      return createErrorResponse(401, "Unauthorized", authResult.error);
+    const authHeader = event.headers.authorization || event.headers.Authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      console.log("缺少认证头或格式错误");
+      return createErrorResponse(401, "Missing authorization");
     }
 
-    const user = authResult.user;
+    const token = authHeader.replace("Bearer ", "");
+    const user = await verifyTokenAndCheckAccess(token);
+
+    if (!user) {
+      console.log("用户权限验证失败");
+      return createErrorResponse(403, "Access denied");
+    }
     console.log("Authenticated user:", user.id);
 
     // Route handling

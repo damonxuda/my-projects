@@ -45,10 +45,10 @@ export async function listVideos(user) {
         return userFolders.includes(videoFolder);
       })
       .map(obj => ({
-        key: obj.Key,
-        size: obj.Size,
-        lastModified: obj.LastModified,
-        etag: obj.ETag
+        Key: obj.Key,
+        Size: obj.Size,
+        LastModified: obj.LastModified,
+        ETag: obj.ETag
       }));
 
     console.log("过滤后的文件数量:", allFiles.length);

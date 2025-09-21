@@ -4,6 +4,8 @@ import { listVideos } from "./lib/video-operations.mjs";
 import { getVideoUrl } from "./lib/video-url.mjs";
 import { deleteVideo } from "./lib/video-delete.mjs";
 import { generateThumbnail } from "./lib/thumbnail.mjs";
+import { getBatchThumbnails } from "./lib/batch-thumbnails.mjs";
+import { generateUploadUrl } from "./lib/video-upload.mjs";
 
 export const handler = async (event, context) => {
   console.log("=== Video Core Lambda 开始执行 ===");
@@ -68,8 +70,11 @@ export const handler = async (event, context) => {
       const videoKey = decodeURIComponent(rawVideoKey);
       return await generateThumbnail(videoKey);
     } else if (method === "GET" && path === "/videos/thumbnails/batch") {
-      // 批量缩略图生成 - 暂时返回未实现
-      return createErrorResponse(501, "Batch thumbnail generation not implemented yet");
+      const pathParam = event.queryStringParameters?.path || "";
+      return await getBatchThumbnails(pathParam, user);
+    } else if (method === "POST" && path === "/videos/upload-url") {
+      // 生成预签名上传URL - 仅管理员
+      return await generateUploadUrl(event, user);
     }
 
     console.log("路由不匹配");

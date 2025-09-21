@@ -1,8 +1,8 @@
-import { ClerkExpressWithAuth } from "@clerk/clerk-sdk-node";
+import { clerkClient } from "@clerk/clerk-sdk-node";
 
 // 缓存验证结果，避免重复调用
 const tokenCache = new Map();
-const CACHE_DURATION = 5 * 60 * 1000; // 5分钟
+const CACHE_DURATION = 40 * 1000; // 40秒，与原函数保持一致
 
 export async function verifyTokenAndCheckAccess(token) {
   try {
@@ -15,40 +15,29 @@ export async function verifyTokenAndCheckAccess(token) {
       return cached.user;
     }
 
-    // Clerk token verification
-    const clerkAuth = ClerkExpressWithAuth({
-      secretKey: process.env.CLERK_SECRET_KEY
+    console.log("步骤1: 验证token...");
+    const sessionToken = await Promise.race([
+      clerkClient.verifyToken(token),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Token verification timeout")), 10000)
+      ),
+    ]);
+    console.log("Token验证成功, sessionToken.sub:", sessionToken.sub);
+
+    console.log("步骤2: 获取用户信息...");
+    const user = await Promise.race([
+      clerkClient.users.getUser(sessionToken.sub),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Get user timeout")), 10000)
+      ),
+    ]);
+    console.log("获取用户成功:", {
+      id: user.id,
+      emailAddress: user.emailAddresses?.[0]?.emailAddress,
+      metadataKeys: Object.keys(user.publicMetadata || {}),
     });
 
-    // 解析JWT token
-    const decoded = await clerkAuth.verifyToken(token);
-
-    if (!decoded || !decoded.sub) {
-      console.log("Token解析失败");
-      return null;
-    }
-
-    console.log("Token解析成功，用户ID:", decoded.sub);
-
-    // 获取用户信息
-    const response = await fetch(`https://api.clerk.com/v1/users/${decoded.sub}`, {
-      headers: {
-        Authorization: `Bearer ${process.env.CLERK_SECRET_KEY}`,
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      console.error("获取用户信息失败:", response.status, await response.text());
-      return null;
-    }
-
-    const user = await response.json();
-
-    console.log("获取用户信息成功");
-    console.log("用户邮箱:", user.emailAddresses?.[0]?.emailAddress);
-
-    // 检查用户权限
+    console.log("步骤3: 检查用户权限...");
     const authorizedModules = user.publicMetadata?.authorized_modules || [];
     const status = user.publicMetadata?.status;
 

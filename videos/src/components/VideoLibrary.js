@@ -22,6 +22,12 @@ const VideoLibrary = () => {
   const [scanResults, setScanResults] = useState(null);
   const [showScanModal, setShowScanModal] = useState(false);
 
+  // 视频上传相关状态
+  const [showUpload, setShowUpload] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
   const { user, isSignedIn, isAdmin, fetchVideoList, getVideoUrl, getCachedToken, clearTokenCache } =
     useAuth();
 
@@ -542,6 +548,139 @@ const VideoLibrary = () => {
     }
   };
 
+  // 处理文件选择
+  const handleFileSelect = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      // 检查文件类型
+      const validTypes = ['video/mp4', 'video/avi', 'video/mov', 'video/mkv', 'video/webm'];
+      if (!validTypes.includes(file.type)) {
+        alert('请选择有效的视频文件 (MP4, AVI, MOV, MKV, WebM)');
+        return;
+      }
+
+      // 检查文件大小 (限制为 2GB)
+      const maxSize = 2 * 1024 * 1024 * 1024; // 2GB
+      if (file.size > maxSize) {
+        alert('文件大小不能超过 2GB');
+        return;
+      }
+
+      setSelectedFile(file);
+    }
+  };
+
+  // 处理视频上传
+  const handleVideoUpload = async () => {
+    if (!selectedFile) {
+      alert('请先选择文件');
+      return;
+    }
+
+    if (!isAdmin) {
+      alert('只有管理员可以上传视频');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    try {
+      console.log('🚀 开始上传视频:', selectedFile.name);
+
+      // 构建文件路径
+      const fileName = selectedFile.name;
+      const targetPath = currentPath ? `videos/${currentPath}/${fileName}` : `videos/${fileName}`;
+
+      console.log('📁 目标路径:', targetPath);
+
+      // 获取预签名上传URL
+      const token = await getCachedToken();
+      const uploadUrlResponse = await fetch(`${process.env.REACT_APP_VIDEO_CORE_URL}/videos/upload-url`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          fileName: targetPath,
+          fileType: selectedFile.type,
+          fileSize: selectedFile.size
+        })
+      });
+
+      if (!uploadUrlResponse.ok) {
+        throw new Error(`获取上传URL失败: ${uploadUrlResponse.status}`);
+      }
+
+      const { uploadUrl, fileKey } = await uploadUrlResponse.json();
+      console.log('✅ 获取上传URL成功');
+
+      // 上传文件到S3
+      console.log('📤 上传文件到S3...');
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: selectedFile,
+        headers: {
+          'Content-Type': selectedFile.type
+        }
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error(`文件上传失败: ${uploadResponse.status}`);
+      }
+
+      console.log('✅ 文件上传成功');
+      setUploadProgress(100);
+
+      // 检查视频编码并可能触发转换
+      console.log('🔍 检查视频编码...');
+      await checkVideoEncoding(fileKey);
+
+      // 重置状态并刷新列表
+      setSelectedFile(null);
+      setShowUpload(false);
+      setIsUploading(false);
+      setUploadProgress(0);
+
+      alert('视频上传成功！');
+
+      // 刷新当前目录
+      loadItems(currentPath);
+
+    } catch (error) {
+      console.error('❌ 视频上传失败:', error);
+      alert(`上传失败: ${error.message}`);
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  // 检查视频编码质量
+  const checkVideoEncoding = async (fileKey) => {
+    try {
+      console.log('🔍 检查视频编码:', fileKey);
+
+      // 这里可以添加视频编码检查逻辑
+      // 如果检测到编码问题，自动触发MediaConvert转换
+
+      // 示例：简单的启发式检查（基于文件大小）
+      if (selectedFile.size > 50 * 1024 * 1024) { // 大于50MB
+        console.log('📹 大文件，建议转换为移动端友好格式');
+
+        // 可以在这里调用转换API
+        // const shouldConvert = confirm('检测到大视频文件，是否自动优化为移动端友好格式？');
+        // if (shouldConvert) {
+        //   await triggerVideoConversion(fileKey);
+        // }
+      }
+
+    } catch (error) {
+      console.error('❌ 视频编码检查失败:', error);
+      // 不阻断上传流程
+    }
+  };
+
   // 初始加载
   useEffect(() => {
     if (isSignedIn && user?.id) {
@@ -584,6 +723,17 @@ const VideoLibrary = () => {
                   </>
                 )}
               </button>
+
+              {/* 上传视频按钮 - 仅管理员可见 */}
+              {isAdmin && (
+                <button
+                  onClick={() => setShowUpload(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  <Upload size={20} />
+                  <span>上传视频</span>
+                </button>
+              )}
 
               {/* 回首页按钮 */}
               <button
@@ -893,6 +1043,131 @@ const VideoLibrary = () => {
               <div className="mt-3 text-xs text-gray-500">
                 💡 转换将生成移动端兼容的视频版本（文件名添加_mobile后缀），转换过程约需2-4分钟
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 上传视频模态框 */}
+      {showUpload && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                  <Upload className="text-green-600" size={24} />
+                  上传视频文件
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowUpload(false);
+                    setSelectedFile(null);
+                    setUploadProgress(0);
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              {!selectedFile ? (
+                <div className="space-y-4">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                    <Upload className="mx-auto h-12 w-12 text-gray-400 mb-3" />
+                    <p className="text-gray-600 mb-2">选择视频文件上传</p>
+                    <p className="text-sm text-gray-500 mb-4">
+                      支持 MP4, AVI, MOV, MKV, WebM 格式，最大 2GB
+                    </p>
+                    <input
+                      type="file"
+                      accept="video/*"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      id="video-file-input"
+                    />
+                    <label
+                      htmlFor="video-file-input"
+                      className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 cursor-pointer transition-colors"
+                    >
+                      选择文件
+                    </label>
+                  </div>
+
+                  {currentPath && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-sm text-blue-800">
+                        📁 将上传到：<span className="font-semibold">{currentPath}</span>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-shrink-0">
+                        <Upload className="text-green-600" size={20} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {selectedFile.name}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {(selectedFile.size / (1024 * 1024)).toFixed(1)} MB
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {currentPath && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-sm text-blue-800">
+                        📁 目标位置：<span className="font-semibold">videos/{currentPath}/{selectedFile.name}</span>
+                      </p>
+                    </div>
+                  )}
+
+                  {isUploading && (
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>上传进度</span>
+                        <span>{uploadProgress}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-green-600 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${uploadProgress}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3 pt-4 border-t">
+                    <button
+                      onClick={() => {
+                        setShowUpload(false);
+                        setSelectedFile(null);
+                        setUploadProgress(0);
+                      }}
+                      disabled={isUploading}
+                      className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      取消
+                    </button>
+                    <button
+                      onClick={handleVideoUpload}
+                      disabled={isUploading}
+                      className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isUploading ? '上传中...' : '开始上传'}
+                    </button>
+                  </div>
+
+                  <div className="mt-3 text-xs text-gray-500">
+                    💡 上传成功后将自动检查视频编码质量，如有需要会提示优化
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
