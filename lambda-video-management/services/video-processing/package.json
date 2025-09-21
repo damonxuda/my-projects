@@ -1,0 +1,22 @@
+{
+  "name": "video-processing-lambda",
+  "version": "1.0.0",
+  "description": "Video processing service - handles MediaConvert, re-encoding, and batch operations",
+  "main": "index.mjs",
+  "type": "module",
+  "scripts": {
+    "deploy": "chmod +x deploy.sh && ./deploy.sh",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.400.0",
+    "@aws-sdk/client-mediaconvert": "^3.400.0",
+    "@clerk/clerk-sdk-node": "^4.13.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["lambda", "video", "mediaconvert", "processing", "aws"],
+  "author": "Video Management System",
+  "license": "MIT"
+}

@@ -1,0 +1,22 @@
+{
+  "name": "youtube-lambda",
+  "version": "1.0.0",
+  "description": "YouTube service - handles YouTube video link management and API integration",
+  "main": "index.mjs",
+  "type": "module",
+  "scripts": {
+    "deploy": "chmod +x deploy.sh && ./deploy.sh",
+    "test": "echo \"No tests yet\" && exit 0"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.400.0",
+    "@clerk/clerk-sdk-node": "^4.13.0",
+    "node-fetch": "^3.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": ["lambda", "youtube", "video", "api", "aws"],
+  "author": "Video Management System",
+  "license": "MIT"
+}
