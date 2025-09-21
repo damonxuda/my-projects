@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Play, Download } from 'lucide-react';
 import { useAuth } from '../../../auth-clerk/src';
 
-const VideoPlayer = ({ video, apiUrl, onClose }) => {
+const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
   const [videoUrl, setVideoUrl] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -103,13 +103,19 @@ const VideoPlayer = ({ video, apiUrl, onClose }) => {
       console.log('🔄 开始重编码视频:', video.key);
 
       const token = await getCachedToken();
-      const reencodeUrl = `${apiUrl}/videos/reencode/${encodeURIComponent(video.key)}`;
+      const reencodeUrl = `${processingApiUrl}/process/video`;
 
       console.log('📡 重编码请求URL:', reencodeUrl);
 
       const response = await fetch(reencodeUrl, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` }
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          inputKey: video.key
+        })
       });
 
       if (!response.ok) {

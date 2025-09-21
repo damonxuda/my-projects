@@ -97,7 +97,13 @@ const VideoLibrary = () => {
     handleCrossModuleAuth();
   }, []);
 
-  const API_BASE_URL = process.env.REACT_APP_VIDEO_API_URL;
+  // 微服务架构 - 不同功能使用不同的服务
+  const VIDEO_CORE_URL = process.env.REACT_APP_VIDEO_CORE_API_URL;          // 视频列表、播放、删除
+  const VIDEO_PROCESSING_URL = process.env.REACT_APP_VIDEO_PROCESSING_API_URL; // 视频处理、重编码
+  const YOUTUBE_URL = process.env.REACT_APP_YOUTUBE_API_URL;                // YouTube功能
+
+  // 向后兼容
+  const API_BASE_URL = process.env.REACT_APP_VIDEO_API_URL || VIDEO_CORE_URL;
 
   // 提取YouTube视频ID（用于添加新视频）
   const extractVideoId = (url) => {
@@ -121,7 +127,7 @@ const VideoLibrary = () => {
     try {
 
       const token = await getCachedToken();
-      const response = await fetch(`${API_BASE_URL}/videos/delete`, {
+      const response = await fetch(`${VIDEO_CORE_URL}/videos/delete`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -195,7 +201,7 @@ const VideoLibrary = () => {
 
       // 上传到S3
       const token = await getCachedToken();
-      const response = await fetch(`${API_BASE_URL}/upload-youtube`, {
+      const response = await fetch(`${YOUTUBE_URL}/download`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -252,7 +258,7 @@ const VideoLibrary = () => {
 
     try {
       const token = await getCachedToken();
-      const response = await fetch(`${API_BASE_URL}/videos/scan-and-convert`, {
+      const response = await fetch(`${VIDEO_PROCESSING_URL}/process/batch`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -768,7 +774,7 @@ const VideoLibrary = () => {
                   onFolderClick={navigateToPath}
                   onVideoPlay={handleVideoPlay}
                   getVideoUrl={getVideoUrl}
-                  apiUrl={API_BASE_URL}
+                  apiUrl={VIDEO_CORE_URL}
                   getCachedToken={getCachedToken}
                   clearTokenCache={clearTokenCache}
                   onDelete={handleDelete}
@@ -783,7 +789,8 @@ const VideoLibrary = () => {
       {selectedVideo && (
         <VideoPlayer
           video={selectedVideo}
-          apiUrl={API_BASE_URL}
+          apiUrl={VIDEO_CORE_URL}
+          processingApiUrl={VIDEO_PROCESSING_URL}
           onClose={() => setSelectedVideo(null)}
         />
       )}
