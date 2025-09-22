@@ -112,30 +112,6 @@ const FileCard = ({
     }
   }, [isYouTube, item.name, extractVideoId, getDisplayTitle]);
 
-  // 处理删除
-  const handleDelete = async (e) => {
-    e.stopPropagation();
-
-    if (
-      !window.confirm(
-        `确定要删除 "${isYouTube && youtubeData ? youtubeData.displayName : item.name}" 吗？`
-      )
-    ) {
-      return;
-    }
-
-    setIsDeleting(true);
-    try {
-      await onDelete(item);
-      setShowMenu(false);
-    } catch (error) {
-      alert("删除失败，请重试");
-      console.error("删除文件失败:", error);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
   const handleClick = () => {
     if (isFolder) {
       onFolderClick(item.path);
@@ -144,42 +120,12 @@ const FileCard = ({
     }
   };
 
-  const handleMenuClick = (e) => {
-    e.stopPropagation();
-    setShowMenu(!showMenu);
-  };
-
   return (
     <div
       className="file-card border border-gray-200 rounded-xl p-4 cursor-pointer bg-white hover:shadow-lg hover:border-gray-300 transition-all duration-200 relative group"
       onClick={handleClick}
     >
-      {/* 删除菜单按钮 - 只对视频和YouTube文件显示，且仅管理员可见 */}
-      {(isVideo || isYouTube) && isAdmin && (
-        <div className="absolute top-2 right-2 z-10">
-          <button
-            onClick={handleMenuClick}
-            className="opacity-0 group-hover:opacity-100 transition-opacity bg-white bg-opacity-90 hover:bg-opacity-100 rounded-full p-1 shadow-md"
-            title="更多操作"
-          >
-            <MoreVertical size={16} className="text-gray-600" />
-          </button>
-
-          {/* 下拉菜单 */}
-          {showMenu && (
-            <div className="absolute right-0 top-8 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-24 z-20">
-              <button
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 disabled:opacity-50 flex items-center gap-2"
-              >
-                <Trash2 size={14} />
-                {isDeleting ? "删除中..." : "删除"}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+      {/* 删除功能已移至文件管理下拉菜单 */}
 
       <div className="flex flex-col">
         {/* 缩略图/图标区域 */}
