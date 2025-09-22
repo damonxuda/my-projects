@@ -550,7 +550,10 @@ export const useAuth = () => {
         throw new Error('无法获取认证token');
       }
       
-      const requestUrl = `${FILE_MANAGEMENT_URL}/files/list?path=${encodeURIComponent(path)}`;
+      // 新API使用 /files/list，旧API使用 /videos/list
+      const apiPath = FILE_MANAGEMENT_URL ? '/files/list' : '/videos/list';
+      const apiUrl = FILE_MANAGEMENT_URL || VIDEO_CORE_URL;
+      const requestUrl = `${apiUrl}${apiPath}?path=${encodeURIComponent(path)}`;
       console.log('🔍 fetchVideoList - Request URL:', requestUrl);
       console.log('🔍 fetchVideoList - VIDEO_CORE_URL:', VIDEO_CORE_URL);
       
