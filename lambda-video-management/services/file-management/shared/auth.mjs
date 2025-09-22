@@ -1,4 +1,9 @@
-import { clerkClient } from "@clerk/clerk-sdk-node";
+import { createClerkClient } from '@clerk/backend';
+
+// 创建Clerk客户端实例
+const clerkClient = createClerkClient({
+  secretKey: process.env.CLERK_SECRET_KEY
+});
 
 // 缓存验证结果，避免重复调用
 const tokenCache = new Map();

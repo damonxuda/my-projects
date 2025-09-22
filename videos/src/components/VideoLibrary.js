@@ -32,79 +32,18 @@ const VideoLibrary = () => {
   const [operationData, setOperationData] = useState({});
   const [isProcessingOperation, setIsProcessingOperation] = useState(false);
 
-  const { user, isSignedIn, isAdmin, fetchVideoList, getVideoUrl, getCachedToken, clearTokenCache } =
-    useAuth();
+  const { user, isSignedIn, isAdmin, getToken } = useAuth();
 
-  // 跨模块导航功能
-  const handleCrossModuleNavigation = async (targetUrl) => {
-    if (!isSignedIn) {
-      // 未登录用户直接跳转
-      window.location.href = targetUrl;
-      return;
-    }
-
-    try {
-      // 获取当前session token
-      const token = await getCachedToken();
-      if (token) {
-        // 带token跳转到目标模块
-        const urlWithSession = `${targetUrl}?session=${encodeURIComponent(token)}`;
-        console.log('🚀 Videos跨模块认证跳转:', urlWithSession);
-        window.location.href = urlWithSession;
-      } else {
-        console.warn('⚠️ 无法获取session token，使用普通跳转');
-        window.location.href = targetUrl;
-      }
-    } catch (error) {
-      console.error('❌ 跨模块跳转失败:', error);
-      window.location.href = targetUrl;
-    }
+  // 跨模块导航功能 - 使用Clerk官方SSO机制
+  const handleCrossModuleNavigation = (targetUrl) => {
+    // 直接跳转，卫星应用会自动同步认证状态
+    console.log('🚀 跨模块跳转 (Clerk SSO):', targetUrl);
+    window.location.href = targetUrl;
   };
 
-  // SSO入口：检测跨模块认证token并解析
+  // 卫星应用模式：Clerk会自动处理认证状态同步，无需手动JWT解析
   useEffect(() => {
-    const handleCrossModuleAuth = async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const sessionToken = urlParams.get('session');
-
-      if (sessionToken) {
-        console.log('🔗 Videos检测到跨模块认证token，处理中...');
-
-        try {
-          // 🔥 手动解析JWT token并设置localStorage (Clerk官方推荐的跨应用认证方案)
-          const tokenParts = sessionToken.split('.');
-          if (tokenParts.length === 3) {
-            const payload = JSON.parse(atob(tokenParts[1]));
-            console.log('🔄 Videos: 解析JWT token并设置localStorage');
-
-            const clerkData = {
-              user: {
-                id: payload.sub,
-                emailAddresses: [{ emailAddress: payload.email || 'user@crossmodule.auth' }],
-                firstName: payload.given_name || 'Cross',
-                lastName: payload.family_name || 'Module'
-              },
-              session: { id: payload.sid, status: 'active' }
-            };
-
-            localStorage.setItem('__clerk_environment', JSON.stringify(clerkData));
-            console.log('✅ Videos localStorage设置完成，即将刷新页面');
-
-            setTimeout(() => {
-              window.location.reload();
-            }, 100);
-          }
-        } catch (error) {
-          console.error('❌ Videos JWT解析失败:', error);
-        }
-
-        // 清理URL参数
-        const cleanUrl = window.location.pathname;
-        window.history.replaceState({}, document.title, cleanUrl);
-      }
-    };
-
-    handleCrossModuleAuth();
+    console.log('🛰️ Videos模块运行在卫星模式，等待Clerk自动同步认证状态');
   }, []);
 
   // 5个专门化Lambda函数架构
@@ -141,7 +80,7 @@ const VideoLibrary = () => {
   const handleDelete = async (item) => {
     try {
 
-      const token = await getCachedToken();
+      const token = await getToken();
       const response = await fetch(`${FILE_MANAGEMENT_URL}/files/delete`, {
         method: "DELETE",
         headers: {
@@ -215,7 +154,7 @@ const VideoLibrary = () => {
       const fileName = `${videoInfo.title}.youtube.json`;
 
       // 上传到S3
-      const token = await getCachedToken();
+      const token = await getToken();
       const response = await fetch(`${YOUTUBE_MANAGER_URL}/youtube/download`, {
         method: "POST",
         headers: {
@@ -423,7 +362,7 @@ const VideoLibrary = () => {
     ];
   }, [isAdmin]);
 
-  // 加载视频列表
+  // 加载视频列表 - 简化认证方式
   const loadItems = useCallback(async (path = "") => {
     setLoading(true);
     setError("");
@@ -433,7 +372,42 @@ const VideoLibrary = () => {
         throw new Error("用户未登录");
       }
 
-      const data = await fetchVideoList(path);
+      // 获取认证token
+      const token = await getToken();
+      if (!token) {
+        throw new Error("无法获取认证token");
+      }
+
+      // 直接调用Lambda API
+      const apiPath = '/files/list';
+      const requestUrl = `${FILE_MANAGEMENT_URL}${apiPath}?path=${encodeURIComponent(path)}`;
+
+      console.log('🔍 loadItems - Request URL:', requestUrl);
+
+      const response = await fetch(requestUrl, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ loadItems - Error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+
+      const responseText = await response.text();
+      console.log('📄 loadItems - Raw response (first 200 chars):', responseText.substring(0, 200));
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('❌ loadItems - JSON解析失败:', parseError);
+        throw new Error(`JSON解析失败: ${parseError.message}`);
+      }
+
       const processedItems = processFileList(data, path);
       setItems(processedItems);
     } catch (err) {
@@ -466,7 +440,7 @@ const VideoLibrary = () => {
     } finally {
       setLoading(false);
     }
-  }, [isSignedIn, user, fetchVideoList, processFileList]);
+  }, [isSignedIn, user, getToken, processFileList, isAdmin]);
 
 
   // 导航到指定路径
@@ -568,7 +542,7 @@ const VideoLibrary = () => {
       console.log('📁 目标路径:', targetPath);
 
       // 获取预签名上传URL
-      const token = await getCachedToken();
+      const token = await getToken();
       const uploadUrlResponse = await fetch(`${FILE_MANAGEMENT_URL}/files/upload-url`, {
         method: 'POST',
         headers: {
@@ -663,7 +637,7 @@ const VideoLibrary = () => {
 
     setIsProcessingOperation(true);
     try {
-      const token = await getCachedToken();
+      const token = await getToken();
       const response = await fetch(`${FILE_MANAGEMENT_URL}/files/rename`, {
         method: 'POST',
         headers: {
@@ -705,7 +679,7 @@ const VideoLibrary = () => {
 
     setIsProcessingOperation(true);
     try {
-      const token = await getCachedToken();
+      const token = await getToken();
       const response = await fetch(`${FILE_MANAGEMENT_URL}/files/copy`, {
         method: 'POST',
         headers: {
@@ -747,7 +721,7 @@ const VideoLibrary = () => {
 
     setIsProcessingOperation(true);
     try {
-      const token = await getCachedToken();
+      const token = await getToken();
       const response = await fetch(`${FILE_MANAGEMENT_URL}/files/create-folder`, {
         method: 'POST',
         headers: {
@@ -789,7 +763,7 @@ const VideoLibrary = () => {
 
     setIsProcessingOperation(true);
     try {
-      const token = await getCachedToken();
+      const token = await getToken();
       const response = await fetch(`${FILE_MANAGEMENT_URL}/files/delete`, {
         method: 'DELETE',
         headers: {
@@ -1069,10 +1043,8 @@ const VideoLibrary = () => {
                   item={item}
                   onFolderClick={navigateToPath}
                   onVideoPlay={handleVideoPlay}
-                  getVideoUrl={getVideoUrl}
                   apiUrl={FILE_MANAGEMENT_URL}
-                  getCachedToken={getCachedToken}
-                  clearTokenCache={clearTokenCache}
+                  getToken={getToken}
                 />
               ))}
             </div>

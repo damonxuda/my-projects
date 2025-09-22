@@ -81,7 +81,7 @@ class ThumbnailCache {
   }
 
   // 批量加载缩略图URLs
-  async loadBatchThumbnails(path, apiUrl, getCachedToken) {
+  async loadBatchThumbnails(path, apiUrl, getToken) {
     // 避免重复请求
     const loadingKey = path || 'root';
     if (this.loadingPromises.has(loadingKey)) {
@@ -89,7 +89,7 @@ class ThumbnailCache {
       return await this.loadingPromises.get(loadingKey);
     }
 
-    const loadPromise = this._performBatchLoad(path, apiUrl, getCachedToken);
+    const loadPromise = this._performBatchLoad(path, apiUrl, getToken);
     this.loadingPromises.set(loadingKey, loadPromise);
 
     try {
@@ -103,13 +103,13 @@ class ThumbnailCache {
   }
 
   // 执行批量加载
-  async _performBatchLoad(path, apiUrl, getCachedToken) {
+  async _performBatchLoad(path, apiUrl, getToken) {
     try {
       console.log(`🚀 批量加载缩略图: ${path}`);
       console.log(`📝 API URL: ${apiUrl}`);
       console.log(`📝 获取Token中...`);
       
-      const token = await getCachedToken();
+      const token = await getToken();
       console.log(`📝 Token获取完成: ${token ? '有token' : '无token'}`);
       
       const pathParam = path ? `?path=${encodeURIComponent(path)}` : '';

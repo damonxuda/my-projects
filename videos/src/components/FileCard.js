@@ -11,12 +11,9 @@ const FileCard = ({
   item,
   onFolderClick,
   onVideoPlay,
-  getVideoUrl,
   apiUrl,
-  getCachedToken,
-  clearTokenCache,
+  getToken,
 }) => {
-  const [videoUrl, setVideoUrl] = useState(null);
   const [youtubeData, setYoutubeData] = useState(null);
   const isVideo = item.type === "video";
   const isFolder = item.type === "folder";
@@ -73,20 +70,7 @@ const FileCard = ({
     [extractVideoId]
   );
 
-  // 获取视频URL用于播放
-  useEffect(() => {
-    if (isVideo && getVideoUrl && !videoUrl) {
-      const loadVideoUrl = async () => {
-        try {
-          const url = await getVideoUrl(item.key);
-          setVideoUrl(url);
-        } catch (error) {
-          console.error("❌ 获取视频URL失败:", item.name, error);
-        }
-      };
-      loadVideoUrl();
-    }
-  }, [isVideo, item.key]);
+  // 不再需要预先获取视频URL，播放时再获取
 
 
 
@@ -174,14 +158,12 @@ const FileCard = ({
               </div>
             </div>
           ) : isVideo ? (
-            <VideoThumbnail 
-              videoUrl={videoUrl} 
+            <VideoThumbnail
               alt={item.name}
               fileSize={item.size}
               fileName={item.key}  // 使用完整的S3路径
               apiUrl={apiUrl}
-              getCachedToken={getCachedToken}
-              clearTokenCache={clearTokenCache}
+              getToken={getToken}
             />
           ) : (
             <div className="w-full h-32 bg-gradient-to-br from-gray-400 to-gray-600 rounded-lg flex items-center justify-center">

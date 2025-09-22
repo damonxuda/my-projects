@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Film, Play, HardDrive, Loader } from 'lucide-react';
 import thumbnailCache from '../utils/thumbnailCache';
 
-const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getCachedToken, clearTokenCache }) => {
+const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
   const [thumbnailUrl, setThumbnailUrl] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -51,7 +51,7 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getCachedTo
 
   // 获取缩略图 - 带重试机制
   const fetchThumbnail = useCallback(async (retryCount = 0) => {
-    if (!fileName || !apiUrl || !getCachedToken) {
+    if (!fileName || !apiUrl || !getToken) {
       return;
     }
 
@@ -67,7 +67,7 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getCachedTo
     setError(false);
 
     try {
-      const token = await getCachedToken();
+      const token = await getToken();
       
       const response = await fetch(`${apiUrl}/videos/thumbnail/${encodeURIComponent(fileName)}`, {
         method: 'POST',
@@ -78,12 +78,8 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getCachedTo
       });
 
       if (!response.ok) {
-        // 对于403认证错误，只在第一次重试时清除token缓存
+        // 对于403认证错误，进行重试
         if (response.status === 403 && retryCount < 3) {
-          if (clearTokenCache && retryCount === 0) {
-            console.log(`🔑 ${fileName}: 收到403错误，清除token缓存后重试...`);
-            clearTokenCache();
-          }
           const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
           console.log(`${fileName}: 缩略图请求失败 (${response.status})，${delay}ms后重试 (${retryCount + 1}/3)...`);
           setTimeout(() => fetchThumbnail(retryCount + 1), delay);
@@ -127,7 +123,7 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getCachedTo
     } finally {
       setLoading(false);
     }
-  }, [fileName, apiUrl, getCachedToken, isLargeVideoWithoutThumbnail]);
+  }, [fileName, apiUrl, getToken, isLargeVideoWithoutThumbnail]);
 
   // 从缓存加载缩略图
   const loadThumbnailFromCache = useCallback(async () => {
@@ -159,7 +155,7 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getCachedTo
 
       // 批量加载该文件夹的所有缩略图
       console.log(`🚀 开始批量加载: ${folderPath}`);
-      await thumbnailCache.loadBatchThumbnails(folderPath, apiUrl, getCachedToken);
+      await thumbnailCache.loadBatchThumbnails(folderPath, apiUrl, getToken);
       console.log(`🚀 批量加载完成: ${folderPath}`);
       
       // 3. 批量加载完成后，再次尝试获取缩略图URL
@@ -187,7 +183,7 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getCachedTo
     } finally {
       setLoading(false);
     }
-  }, [fileName, apiUrl, getCachedToken, fetchThumbnail]);
+  }, [fileName, apiUrl, getToken, fetchThumbnail]);
 
   // 尝试直接使用缓存的缩略图URL（避免不必要的Lambda调用）
   const tryDirectThumbnailUrl = useCallback((fileName) => {
@@ -205,7 +201,7 @@ const VideoThumbnail = ({ videoUrl, alt, fileSize, fileName, apiUrl, getCachedTo
   // 组件挂载时使用批量缓存机制加载缩略图
   useEffect(() => {
     console.log(`🟡 VideoThumbnail useEffect 触发 - fileName: ${fileName}`);
-    console.log(`🟡 apiUrl: ${apiUrl}, getCachedToken: ${!!getCachedToken}`);
+    console.log(`🟡 apiUrl: ${apiUrl}, getToken: ${!!getToken}`);
     
     if (!fileName) {
       console.log(`🟡 fileName为空，跳过: ${fileName}`);
