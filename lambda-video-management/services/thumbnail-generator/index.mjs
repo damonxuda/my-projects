@@ -1,15 +1,10 @@
 import { verifyTokenAndCheckAccess, isAdmin } from "./shared/auth.mjs";
 import { corsHeaders, createResponse, createErrorResponse, createSuccessResponse } from "./shared/s3-config.mjs";
-import { listVideos } from "./lib/video-operations.mjs";
-import { getVideoUrl } from "./lib/video-url.mjs";
-import { deleteVideo } from "./lib/video-delete.mjs";
 import { generateThumbnail } from "./lib/thumbnail.mjs";
 import { getBatchThumbnails } from "./lib/batch-thumbnails.mjs";
-import { generateUploadUrl } from "./lib/video-upload.mjs";
-import { renameItem, moveItem, copyItem, createFolder, batchRename } from "./lib/file-operations.mjs";
 
 export const handler = async (event, context) => {
-  console.log("=== Video Core Lambda 开始执行 ===");
+  console.log("=== Thumbnail Generator Lambda 开始执行 ===");
   console.log("Event:", JSON.stringify(event, null, 2));
 
   try {
@@ -30,6 +25,24 @@ export const handler = async (event, context) => {
       return createResponse(200, { message: "CORS preflight" });
     }
 
+    // 自动触发场景（S3事件）
+    if (event.Records && event.Records[0] && event.Records[0].s3) {
+      // S3事件触发的缩略图生成
+      const s3Event = event.Records[0].s3;
+      const videoKey = decodeURIComponent(s3Event.object.key.replace(/\+/g, ' '));
+
+      console.log("S3事件触发缩略图生成:", videoKey);
+
+      // 只处理视频文件
+      if (/\.(mp4|avi|mov|wmv|mkv)$/i.test(videoKey)) {
+        return await generateThumbnail(videoKey);
+      } else {
+        console.log("非视频文件，跳过缩略图生成");
+        return createSuccessResponse({ message: "Non-video file, skipped" });
+      }
+    }
+
+    // 手动API调用场景
     // Token验证
     const authHeader = event.headers.authorization || event.headers.Authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -51,46 +64,14 @@ export const handler = async (event, context) => {
     const path = event.requestContext.http.path || event.rawPath;
     console.log("处理路径:", path, "方法:", method);
 
-    if (method === "GET" && path === "/videos/list") {
-      return await listVideos(user);
-    } else if (method === "GET" && path.startsWith("/videos/url/")) {
+    if (method === "POST" && path.startsWith("/thumbnails/generate/")) {
       const rawPath = event.rawPath || event.requestContext.http.path;
-      const rawVideoKey = rawPath.replace("/videos/url/", "");
-      const videoKey = decodeURIComponent(rawVideoKey);
-      console.log("解码后的videoKey:", videoKey);
-      return await getVideoUrl(videoKey);
-    } else if (method === "DELETE" && path === "/videos/delete") {
-      // 只有管理员可以删除视频
-      if (!isAdmin(user)) {
-        return createErrorResponse(403, "Admin access required");
-      }
-      return await deleteVideo(event, user);
-    } else if (method === "POST" && path.startsWith("/videos/thumbnail/")) {
-      const rawPath = event.rawPath || event.requestContext.http.path;
-      const rawVideoKey = rawPath.replace("/videos/thumbnail/", "");
+      const rawVideoKey = rawPath.replace("/thumbnails/generate/", "");
       const videoKey = decodeURIComponent(rawVideoKey);
       return await generateThumbnail(videoKey);
-    } else if (method === "GET" && path === "/videos/thumbnails/batch") {
+    } else if (method === "GET" && path === "/thumbnails/batch") {
       const pathParam = event.queryStringParameters?.path || "";
       return await getBatchThumbnails(pathParam, user);
-    } else if (method === "POST" && path === "/videos/upload-url") {
-      // 生成预签名上传URL - 仅管理员
-      return await generateUploadUrl(event, user);
-    } else if (method === "POST" && path === "/videos/rename") {
-      // 重命名文件或文件夹 - 仅管理员
-      return await renameItem(event, user);
-    } else if (method === "POST" && path === "/videos/move") {
-      // 移动文件或文件夹 - 仅管理员
-      return await moveItem(event, user);
-    } else if (method === "POST" && path === "/videos/copy") {
-      // 复制文件或文件夹 - 仅管理员
-      return await copyItem(event, user);
-    } else if (method === "POST" && path === "/videos/create-folder") {
-      // 创建文件夹 - 仅管理员
-      return await createFolder(event, user);
-    } else if (method === "POST" && path === "/videos/batch-rename") {
-      // 批量重命名 - 仅管理员
-      return await batchRename(event, user);
     }
 
     console.log("路由不匹配");

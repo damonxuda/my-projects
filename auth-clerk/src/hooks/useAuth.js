@@ -6,7 +6,12 @@ import { useState, useEffect, useCallback } from 'react';
 const LAMBDA_API_URL = process.env.REACT_APP_USER_MANAGEMENT_API_URL;
 
 // ✅ 视频API URL - 微服务架构
-const VIDEO_CORE_URL = process.env.REACT_APP_VIDEO_CORE_API_URL;      // 视频列表、播放功能
+// 5个专门化Lambda函数
+const FILE_MANAGEMENT_URL = process.env.REACT_APP_FILE_MANAGEMENT_API_URL;
+const VIDEO_PLAYER_URL = process.env.REACT_APP_VIDEO_PLAYER_API_URL;
+
+// 向后兼容
+const VIDEO_CORE_URL = FILE_MANAGEMENT_URL || process.env.REACT_APP_VIDEO_CORE_API_URL;
 const VIDEO_API_URL = process.env.REACT_APP_VIDEO_API_URL || VIDEO_CORE_URL; // 向后兼容
 
 export const useAuth = () => {
@@ -545,7 +550,7 @@ export const useAuth = () => {
         throw new Error('无法获取认证token');
       }
       
-      const requestUrl = `${VIDEO_CORE_URL}/videos/list?path=${encodeURIComponent(path)}`;
+      const requestUrl = `${FILE_MANAGEMENT_URL}/files/list?path=${encodeURIComponent(path)}`;
       console.log('🔍 fetchVideoList - Request URL:', requestUrl);
       console.log('🔍 fetchVideoList - VIDEO_CORE_URL:', VIDEO_CORE_URL);
       
@@ -596,7 +601,7 @@ export const useAuth = () => {
       const token = await getCachedToken();
       
       const response = await fetch(
-        `${VIDEO_CORE_URL}/videos/url/${encodeURIComponent(videoKey)}`,
+        `${VIDEO_PLAYER_URL}/play/url/${encodeURIComponent(videoKey)}`,
         {
           headers: { 
             'Content-Type': 'application/json',

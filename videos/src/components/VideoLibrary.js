@@ -17,10 +17,7 @@ const VideoLibrary = () => {
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [isProcessingYouTube, setIsProcessingYouTube] = useState(false);
 
-  // 视频扫描转换相关状态
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanResults, setScanResults] = useState(null);
-  const [showScanModal, setShowScanModal] = useState(false);
+  // 移除手动扫描功能，转为自动触发
 
   // 视频上传相关状态
   const [showUpload, setShowUpload] = useState(false);
@@ -110,13 +107,18 @@ const VideoLibrary = () => {
     handleCrossModuleAuth();
   }, []);
 
-  // 微服务架构 - 不同功能使用不同的服务
-  const VIDEO_CORE_URL = process.env.REACT_APP_VIDEO_CORE_API_URL;          // 视频列表、播放、删除
-  const VIDEO_PROCESSING_URL = process.env.REACT_APP_VIDEO_PROCESSING_API_URL; // 视频处理、重编码
-  const YOUTUBE_URL = process.env.REACT_APP_YOUTUBE_API_URL;                // YouTube功能
+  // 5个专门化Lambda函数架构
+  const FILE_MANAGEMENT_URL = process.env.REACT_APP_FILE_MANAGEMENT_API_URL; // 文件管理
+  const THUMBNAIL_GENERATOR_URL = process.env.REACT_APP_THUMBNAIL_GENERATOR_API_URL; // 缩略图生成
+  const FORMAT_CONVERTER_URL = process.env.REACT_APP_FORMAT_CONVERTER_API_URL; // 格式转换
+  const VIDEO_PLAYER_URL = process.env.REACT_APP_VIDEO_PLAYER_API_URL; // 播放URL生成
+  const YOUTUBE_MANAGER_URL = process.env.REACT_APP_YOUTUBE_MANAGER_API_URL; // YouTube管理
 
-  // 向后兼容
-  const API_BASE_URL = process.env.REACT_APP_VIDEO_API_URL || VIDEO_CORE_URL;
+  // 向后兼容：保持旧的变量名以防部署时环境变量未更新
+  const VIDEO_CORE_URL = FILE_MANAGEMENT_URL || process.env.REACT_APP_VIDEO_CORE_API_URL;
+  const VIDEO_PROCESSING_URL = FORMAT_CONVERTER_URL || process.env.REACT_APP_VIDEO_PROCESSING_API_URL;
+  const YOUTUBE_URL = YOUTUBE_MANAGER_URL || process.env.REACT_APP_YOUTUBE_API_URL;
+  const API_BASE_URL = FILE_MANAGEMENT_URL || process.env.REACT_APP_VIDEO_API_URL || VIDEO_CORE_URL;
 
   // 提取YouTube视频ID（用于添加新视频）
   const extractVideoId = (url) => {
@@ -140,7 +142,7 @@ const VideoLibrary = () => {
     try {
 
       const token = await getCachedToken();
-      const response = await fetch(`${VIDEO_CORE_URL}/videos/delete`, {
+      const response = await fetch(`${FILE_MANAGEMENT_URL}/files/delete`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -214,7 +216,7 @@ const VideoLibrary = () => {
 
       // 上传到S3
       const token = await getCachedToken();
-      const response = await fetch(`${YOUTUBE_URL}/download`, {
+      const response = await fetch(`${YOUTUBE_MANAGER_URL}/youtube/download`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -264,55 +266,7 @@ const VideoLibrary = () => {
     }
   };
 
-  // 扫描现有视频并转换
-  const handleScanVideos = async (dryRun = true) => {
-    setIsScanning(true);
-    setError("");
-
-    try {
-      const token = await getCachedToken();
-      const response = await fetch(`${VIDEO_PROCESSING_URL}/process/batch`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          folderPath: currentPath, // 只扫描当前文件夹
-          dryRun, // 试运行或实际执行
-          maxFiles: 20 // 限制文件数量
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`扫描失败: ${errorText}`);
-      }
-
-      const result = await response.json();
-      setScanResults(result);
-
-      if (dryRun) {
-        setShowScanModal(true);
-      } else {
-        // 实际转换完成，刷新文件列表
-        await loadItems(currentPath);
-        alert(`转换完成！提交了 ${result.summary.conversionsSubmitted} 个转换任务`);
-      }
-
-    } catch (error) {
-      console.error("扫描视频失败:", error);
-      setError(`扫描失败: ${error.message}`);
-    } finally {
-      setIsScanning(false);
-    }
-  };
-
-  // 确认转换
-  const handleConfirmConvert = async () => {
-    setShowScanModal(false);
-    await handleScanVideos(false); // 实际执行转换
-  };
+  // 扫描功能已移除，改为上传时自动触发处理
 
   // 处理文件列表，创建文件夹结构（支持YouTube JSON文件）
   const processFileList = useCallback((files, currentPath) => {
@@ -335,6 +289,12 @@ const VideoLibrary = () => {
         if (currentPath === "" && pathParts.length > 1) {
           // At root level but YouTube file is in a subfolder - should be handled as folder structure
           const folderName = pathParts[0];
+
+          // 隐藏Movies文件夹（仅管理员可见）
+          if (folderName === "Movies" && !isAdmin) {
+            return;
+          }
+
           if (!folders.has(folderName)) {
             folders.set(folderName, {
               key: `videos/${folderName}/`,
@@ -394,6 +354,12 @@ const VideoLibrary = () => {
         if (currentPath === "") {
           // Show folders at root level
           const folderName = pathParts[0];
+
+          // 隐藏Movies文件夹（仅管理员可见）
+          if (folderName === "Movies" && !isAdmin) {
+            return;
+          }
+
           if (!folders.has(folderName)) {
             folders.set(folderName, {
               key: `videos/${folderName}/`,
@@ -455,7 +421,7 @@ const VideoLibrary = () => {
       ...videos.sort((a, b) => a.name.localeCompare(b.name)),
       ...youtubeVideos.sort((a, b) => a.name.localeCompare(b.name)),
     ];
-  }, []);
+  }, [isAdmin]);
 
   // 加载视频列表
   const loadItems = useCallback(async (path = "") => {
@@ -603,7 +569,7 @@ const VideoLibrary = () => {
 
       // 获取预签名上传URL
       const token = await getCachedToken();
-      const uploadUrlResponse = await fetch(`${process.env.REACT_APP_VIDEO_CORE_API_URL}/videos/upload-url`, {
+      const uploadUrlResponse = await fetch(`${FILE_MANAGEMENT_URL}/files/upload-url`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -698,7 +664,7 @@ const VideoLibrary = () => {
     setIsProcessingOperation(true);
     try {
       const token = await getCachedToken();
-      const response = await fetch(`${process.env.REACT_APP_VIDEO_CORE_API_URL}/videos/rename`, {
+      const response = await fetch(`${FILE_MANAGEMENT_URL}/files/rename`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -740,7 +706,7 @@ const VideoLibrary = () => {
     setIsProcessingOperation(true);
     try {
       const token = await getCachedToken();
-      const response = await fetch(`${process.env.REACT_APP_VIDEO_CORE_API_URL}/videos/copy`, {
+      const response = await fetch(`${FILE_MANAGEMENT_URL}/files/copy`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -782,7 +748,7 @@ const VideoLibrary = () => {
     setIsProcessingOperation(true);
     try {
       const token = await getCachedToken();
-      const response = await fetch(`${process.env.REACT_APP_VIDEO_CORE_API_URL}/videos/create-folder`, {
+      const response = await fetch(`${FILE_MANAGEMENT_URL}/files/create-folder`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -824,13 +790,13 @@ const VideoLibrary = () => {
     setIsProcessingOperation(true);
     try {
       const token = await getCachedToken();
-      const response = await fetch(`${process.env.REACT_APP_VIDEO_CORE_API_URL}/videos/delete`, {
+      const response = await fetch(`${FILE_MANAGEMENT_URL}/files/delete`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ filePath })
+        body: JSON.stringify({ key: filePath })
       });
 
       if (!response.ok) {
@@ -892,14 +858,17 @@ const VideoLibrary = () => {
         {!showAddYouTube ? (
           <div className="p-4">
             <div className="flex gap-4">
-              <button
-                onClick={() => setShowAddYouTube(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-              >
-                <Youtube size={20} />
-                <span>添加YouTube视频</span>
-                <Plus size={16} />
-              </button>
+              {/* YouTube添加按钮 - 仅管理员可见 */}
+              {isAdmin && (
+                <button
+                  onClick={() => setShowAddYouTube(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                >
+                  <Youtube size={20} />
+                  <span>添加YouTube视频</span>
+                  <Plus size={16} />
+                </button>
+              )}
 
               {/* 文件管理按钮 - 仅管理员可见 */}
               {isAdmin && (
@@ -1101,7 +1070,7 @@ const VideoLibrary = () => {
                   onFolderClick={navigateToPath}
                   onVideoPlay={handleVideoPlay}
                   getVideoUrl={getVideoUrl}
-                  apiUrl={VIDEO_CORE_URL}
+                  apiUrl={FILE_MANAGEMENT_URL}
                   getCachedToken={getCachedToken}
                   clearTokenCache={clearTokenCache}
                 />
@@ -1115,114 +1084,13 @@ const VideoLibrary = () => {
       {selectedVideo && (
         <VideoPlayer
           video={selectedVideo}
-          apiUrl={VIDEO_CORE_URL}
-          processingApiUrl={VIDEO_PROCESSING_URL}
+          apiUrl={FILE_MANAGEMENT_URL}
+          processingApiUrl={FORMAT_CONVERTER_URL}
           onClose={() => setSelectedVideo(null)}
         />
       )}
 
-      {/* 扫描结果模态框 */}
-      {showScanModal && scanResults && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
-                  <Settings className="text-blue-600" size={24} />
-                  视频扫描结果
-                </h3>
-                <button
-                  onClick={() => setShowScanModal(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-
-              {/* 扫描统计 */}
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                <h4 className="font-semibold text-blue-800 mb-2">扫描统计</h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-600">扫描的视频数量：</span>
-                    <span className="font-semibold">{scanResults.summary.totalScanned}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">需要转换：</span>
-                    <span className="font-semibold text-orange-600">{scanResults.summary.needsConversion}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">已有移动版本：</span>
-                    <span className="font-semibold text-green-600">{scanResults.summary.hasConversion}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">扫描范围：</span>
-                    <span className="font-semibold">{currentPath || "所有文件夹"}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* 需要转换的视频列表 */}
-              {scanResults.needsConversion && scanResults.needsConversion.length > 0 && (
-                <div className="mb-4">
-                  <h4 className="font-semibold text-gray-800 mb-2">需要转换的视频：</h4>
-                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 max-h-40 overflow-y-auto">
-                    {scanResults.needsConversion.map((video, index) => (
-                      <div key={index} className="text-sm text-gray-700 mb-1">
-                        📹 {video.originalKey.replace('videos/', '')}
-                        <span className="text-gray-500 ml-2">
-                          ({(video.size / 1024 / 1024).toFixed(1)}MB)
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 已有移动版本的视频 */}
-              {scanResults.hasConversion && scanResults.hasConversion.length > 0 && (
-                <div className="mb-4">
-                  <h4 className="font-semibold text-gray-800 mb-2">已有移动版本：</h4>
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 max-h-32 overflow-y-auto">
-                    {scanResults.hasConversion.slice(0, 3).map((video, index) => (
-                      <div key={index} className="text-sm text-gray-700 mb-1">
-                        ✅ {video.originalKey.replace('videos/', '')}
-                      </div>
-                    ))}
-                    {scanResults.hasConversion.length > 3 && (
-                      <div className="text-sm text-gray-500">
-                        ... 还有 {scanResults.hasConversion.length - 3} 个视频
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* 操作按钮 */}
-              <div className="flex gap-3 pt-4 border-t">
-                <button
-                  onClick={() => setShowScanModal(false)}
-                  className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                >
-                  取消
-                </button>
-                {scanResults.summary.needsConversion > 0 && (
-                  <button
-                    onClick={handleConfirmConvert}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    确认转换 {scanResults.summary.needsConversion} 个视频
-                  </button>
-                )}
-              </div>
-
-              <div className="mt-3 text-xs text-gray-500">
-                💡 转换将生成移动端兼容的视频版本（文件名添加_mobile后缀），转换过程约需2-4分钟
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 扫描功能已移除，改为上传时自动处理 */}
 
       {/* 上传视频模态框 */}
       {showUpload && (
