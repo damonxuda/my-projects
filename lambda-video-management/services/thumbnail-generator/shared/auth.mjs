@@ -51,9 +51,25 @@ export async function verifyTokenAndCheckAccess(token) {
     console.log("- Token有效且来自Clerk");
     console.log("- Videos模块采用宽松权限策略");
 
+    // 先从Clerk获取完整用户信息，因为JWT中没有email字段
+    console.log("步骤4: 从Clerk获取用户详细信息...");
+    let userEmail = 'user@example.com';
+
+    try {
+      const { createClerkClient } = await import("@clerk/backend");
+      const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
+      const userInfo = await clerkClient.users.getUser(decoded.sub);
+      userEmail = userInfo.emailAddresses?.[0]?.emailAddress || 'user@example.com';
+      console.log("Clerk用户信息获取成功, email:", userEmail);
+    } catch (clerkError) {
+      console.warn("Clerk用户信息获取失败，使用默认email:", clerkError.message);
+      // 回退到默认的管理员邮箱进行测试
+      userEmail = 'damonxuda@gmail.com';
+    }
+
     const mockUser = {
       id: decoded.sub,
-      emailAddresses: [{ emailAddress: decoded.azp || 'user@example.com' }],
+      emailAddresses: [{ emailAddress: userEmail }],
       publicMetadata: {
         authorized_modules: ['videos'],
         status: 'approved'

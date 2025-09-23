@@ -20,32 +20,22 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
       try {
         setLoading(true);
         setError('');
-        console.log('🎬 开始加载视频URL');
-        console.log('📋 video对象:', video);
-        console.log('🌐 apiUrl:', apiUrl);
 
         const token = await getCachedToken();
-        console.log('🎫 获取到token:', token ? '有效' : '无效');
 
         const requestUrl = `${apiUrl}/play/url/${encodeURIComponent(video.key)}`;
-        console.log('📡 完整请求URL:', requestUrl);
-        console.log('🔑 video.key:', video.key);
 
         const response = await fetch(requestUrl, {
           headers: { Authorization: `Bearer ${token}` }
         });
 
-        console.log('📨 响应状态码:', response.status);
-        console.log('📨 响应状态文本:', response.statusText);
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error('❌ 响应错误内容:', errorText);
           throw new Error(`获取视频URL失败: ${response.status} ${response.statusText}`);
         }
 
         const responseText = await response.text();
-        console.log('📄 VideoPlayer - Raw response (first 200 chars):', responseText.substring(0, 200));
 
         // 检查响应是否是HTML而不是JSON
         if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
@@ -57,8 +47,6 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
         try {
           data = JSON.parse(responseText);
         } catch (parseError) {
-          console.error('❌ VideoPlayer - JSON解析失败:', parseError);
-          console.error('❌ VideoPlayer - 原始响应:', responseText);
           throw new Error(`视频URL JSON解析失败: ${parseError.message}. 响应内容: ${responseText.substring(0, 200)}`);
         }
 
@@ -100,12 +88,10 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
       setError('');
       setRecodingProgress('正在为移动端重新编码视频，请稍候...');
 
-      console.log('🔄 开始重编码视频:', video.key);
 
       const token = await getCachedToken();
       const reencodeUrl = `${processingApiUrl}/process/video`;
 
-      console.log('📡 重编码请求URL:', reencodeUrl);
 
       const response = await fetch(reencodeUrl, {
         method: 'POST',
@@ -124,7 +110,6 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
       }
 
       const result = await response.json();
-      console.log('✅ 重编码成功:', result);
 
       if (result.success && result.recodedUrl) {
         setVideoUrl(result.recodedUrl);
@@ -137,7 +122,6 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
       }
 
     } catch (err) {
-      console.error('❌ 重编码失败:', err);
       setError(`重编码失败: ${err.message}`);
       setRecodingProgress('');
     } finally {
@@ -207,10 +191,6 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
               controls
               className="responsive-video"
               onError={(e) => {
-                console.error('视频播放错误:', e);
-                console.error('错误代码:', e.target.error?.code);
-                console.error('错误消息:', e.target.error?.message);
-
                 const errorCode = e.target.error?.code;
 
                 // 如果是移动端且错误代码是4（格式错误），提示重编码
@@ -221,17 +201,11 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
                 }
               }}
               onLoadedMetadata={(e) => {
-                console.log('视频元数据加载完成');
-                console.log('视频时长:', e.target.duration);
-                console.log('视频宽度:', e.target.videoWidth);
-                console.log('视频高度:', e.target.videoHeight);
                 if (e.target.videoWidth === 0 || e.target.videoHeight === 0) {
                   console.warn('⚠️ 检测到可能的纯音频文件或视频流损坏');
                 }
               }}
-              onCanPlay={() => {
-                console.log('✅ 视频可以开始播放');
-              }}
+              onCanPlay={() => {}}
             >
               您的浏览器不支持视频播放
             </video>

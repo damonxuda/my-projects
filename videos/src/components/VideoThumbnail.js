@@ -35,17 +35,17 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
     return filename.split('.').pop().toUpperCase();
   };
 
-  // 检查是否是无缩略图的大视频文件 (>1GB)
+  // 检查是否是无缩略图的大视频文件 (>2GB)
   const isLargeVideoWithoutThumbnail = useCallback((fileName, fileSize) => {
-    // 1GB = 1024 * 1024 * 1024 bytes - 超过1GB的文件跳过缩略图生成
-    const oneGBInBytes = 1024 * 1024 * 1024;
-    
-    // 如果文件大小超过1GB，不生成缩略图
-    if (fileSize && fileSize > oneGBInBytes) {
-      console.log(`跳过大文件 (${formatSize(fileSize)}): ${fileName}`);
+    // 2GB = 2 * 1024 * 1024 * 1024 bytes - 超过2GB的文件跳过缩略图生成
+    // 这样500-1000MB的文件仍可以生成缩略图
+    const twoGBInBytes = 2 * 1024 * 1024 * 1024;
+
+    // 如果文件大小超过2GB，不生成缩略图
+    if (fileSize && fileSize > twoGBInBytes) {
       return true;
     }
-    
+
     return false;
   }, []);
 
@@ -57,7 +57,6 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
 
     // 检查是否是大视频文件，如果是则直接跳过缩略图请求
     if (isLargeVideoWithoutThumbnail(fileName, fileSize)) {
-      console.log(`跳过大视频文件的缩略图请求: ${fileName}`);
       setLoading(false);
       setError(false);
       return;
@@ -81,14 +80,12 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
         // 对于403认证错误，进行重试
         if (response.status === 403 && retryCount < 3) {
           const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
-          console.log(`${fileName}: 缩略图请求失败 (${response.status})，${delay}ms后重试 (${retryCount + 1}/3)...`);
           setTimeout(() => fetchThumbnail(retryCount + 1), delay);
           return;
         }
         // 对于502/503等服务器错误，直接重试但不清除token缓存
         if (response.status >= 500 && retryCount < 3) {
           const delay = Math.min(1000 * Math.pow(2, retryCount), 10000);
-          console.log(`${fileName}: 服务器错误 (${response.status})，${delay}ms后重试 (${retryCount + 1}/3)... (不清除token)`);
           setTimeout(() => fetchThumbnail(retryCount + 1), delay);
           return;
         }
@@ -99,7 +96,6 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
       
       // 检查响应是否是HTML而不是JSON
       if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
-        console.error(`❌ ${fileName} - 缩略图API返回HTML响应:`, responseText.substring(0, 500));
         throw new Error('缩略图服务返回HTML页面而非JSON数据');
       }
       
@@ -107,8 +103,6 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
       try {
         data = JSON.parse(responseText);
       } catch (parseError) {
-        console.error(`❌ ${fileName} - 缩略图JSON解析失败:`, parseError);
-        console.error(`❌ ${fileName} - 原始响应:`, responseText);
         throw new Error(`缩略图JSON解析失败: ${parseError.message}`);
       }
 
@@ -118,7 +112,6 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
         throw new Error('Invalid response from thumbnail API');
       }
     } catch (err) {
-      console.error(`缩略图加载失败 (${fileName}):`, err.message);
       setError(true);
     } finally {
       setLoading(false);
@@ -128,57 +121,40 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
   // 从缓存加载缩略图
   const loadThumbnailFromCache = useCallback(async () => {
     try {
-      console.log(`🔍 开始加载缩略图: ${fileName}`);
-      console.log(`🔍 thumbnailCache对象:`, thumbnailCache);
-      console.log(`🔍 thumbnailCache.getThumbnailUrl存在:`, typeof thumbnailCache.getThumbnailUrl);
-      
       setLoading(true);
       setError(false);
 
       // 1. 先尝试从缓存获取
-      console.log(`🔍 准备调用 thumbnailCache.getThumbnailUrl(${fileName})`);
       const cachedUrl = thumbnailCache.getThumbnailUrl(fileName);
-      console.log(`🔍 getThumbnailUrl返回结果:`, cachedUrl);
       if (cachedUrl) {
-        console.log(`📦 缩略图缓存命中: ${fileName} -> ${cachedUrl}`);
         setThumbnailUrl(cachedUrl);
         setLoading(false);
         return;
       }
 
       // 2. 缓存未命中，需要批量加载该文件夹的缩略图
-      console.log(`❌ 缩略图缓存未命中，开始批量加载: ${fileName}`);
-      
       // 确定文件夹路径
       const pathParts = fileName.split('/');
       const folderPath = pathParts.length > 2 ? pathParts[1] : ''; // videos/Movies/xxx.mp4 -> Movies
 
       // 批量加载该文件夹的所有缩略图
-      console.log(`🚀 开始批量加载: ${folderPath}`);
       await thumbnailCache.loadBatchThumbnails(folderPath, apiUrl, getToken);
-      console.log(`🚀 批量加载完成: ${folderPath}`);
-      
+
       // 3. 批量加载完成后，再次尝试获取缩略图URL
       const batchLoadedUrl = thumbnailCache.getThumbnailUrl(fileName);
-      console.log(`🔍 批量加载后检查缓存: ${fileName} -> ${batchLoadedUrl ? '找到URL' : '未找到URL'}`);
-      
+
       if (batchLoadedUrl) {
-        console.log(`✅ 批量加载成功: ${fileName}`);
         setThumbnailUrl(batchLoadedUrl);
       } else {
-        console.log(`❌ 批量加载后仍无缩略图: ${fileName}，回退到单独生成`);
         // 回退到单独生成，但增加随机延迟避免并发资源耗尽
         const delay = Math.random() * 5000 + 2000; // 2-7秒随机延迟
-        console.log(`⏳ ${fileName}: ${Math.round(delay/1000)}秒后开始生成缩略图`);
         setTimeout(() => {
-          console.log(`🔄 开始为 ${fileName} 生成缩略图`);
           fetchThumbnail();
         }, delay);
         return;
       }
       
     } catch (error) {
-      console.error(`缩略图加载失败 (${fileName}):`, error.message);
       setError(true);
     } finally {
       setLoading(false);
@@ -200,22 +176,16 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
 
   // 组件挂载时使用批量缓存机制加载缩略图
   useEffect(() => {
-    console.log(`🟡 VideoThumbnail useEffect 触发 - fileName: ${fileName}`);
-    console.log(`🟡 apiUrl: ${apiUrl}, getToken: ${!!getToken}`);
-    
     if (!fileName) {
-      console.log(`🟡 fileName为空，跳过: ${fileName}`);
       return;
     }
-    
+
     // 跳过大视频文件
     if (isLargeVideoWithoutThumbnail(fileName, fileSize)) {
-      console.log(`跳过大视频文件的缩略图请求: ${fileName}`);
       setLoading(false);
       return;
     }
 
-    console.log(`🟡 开始调用 loadThumbnailFromCache: ${fileName}`);
     loadThumbnailFromCache();
   }, [fileName, fileSize]); // 只依赖真正的值，不依赖函数
 
@@ -228,11 +198,7 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
             src={thumbnailUrl} 
             alt={fileName || alt}
             className="w-full h-full object-cover"
-            onError={(e) => {
-              console.log('🔴 缩略图img加载失败:', fileName);
-              console.log('🔴 失败的URL:', thumbnailUrl);
-              console.log('🔴 错误事件:', e);
-              console.log('🔴 img元素:', e.target);
+            onError={() => {
               setError(true);
             }}
           />

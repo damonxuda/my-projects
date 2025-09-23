@@ -9,9 +9,15 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.400.0",
-    "@clerk/backend": "^0.23.0"
+    "@clerk/backend": "^0.23.7"
   },
-  "keywords": ["aws", "lambda", "s3", "thumbnail", "ffmpeg"],
+  "keywords": [
+    "aws",
+    "lambda",
+    "s3",
+    "thumbnail",
+    "ffmpeg"
+  ],
   "author": "",
   "license": "ISC"
 }
