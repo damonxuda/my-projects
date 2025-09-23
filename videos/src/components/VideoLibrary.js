@@ -54,13 +54,7 @@ const VideoLibrary = () => {
   const VIDEO_PLAYER_URL = process.env.REACT_APP_VIDEO_PLAYER_API_URL; // 播放URL生成
   const YOUTUBE_MANAGER_URL = process.env.REACT_APP_YOUTUBE_MANAGER_API_URL; // YouTube管理
 
-  // DEBUG: 环境变量调试日志
-  console.log('🔧 环境变量调试:');
-  console.log('📁 FILE_MANAGEMENT_URL:', FILE_MANAGEMENT_URL);
-  console.log('🖼️ THUMBNAIL_GENERATOR_URL:', THUMBNAIL_GENERATOR_URL);
-  console.log('🎬 VIDEO_PLAYER_URL:', VIDEO_PLAYER_URL);
-  console.log('🎵 YOUTUBE_MANAGER_URL:', YOUTUBE_MANAGER_URL);
-  console.log('⚙️ FORMAT_CONVERTER_URL:', FORMAT_CONVERTER_URL);
+  // 环境变量已配置完成，调试日志已清理
 
   // 向后兼容：保持旧的变量名以防部署时环境变量未更新
   const VIDEO_CORE_URL = FILE_MANAGEMENT_URL || process.env.REACT_APP_VIDEO_CORE_API_URL;
@@ -1589,11 +1583,12 @@ const VideoLibrary = () => {
                         } else if (fileOperation === 'upload' && operationData.uploadFiles) {
                           // 设置上传状态并执行上传
                           setSelectedFiles(operationData.uploadFiles);
-                          setShowUpload(false); // 关闭上传模态框，因为我们在文件管理中
-                          setTimeout(async () => {
-                            await handleVideoUpload();
-                            setShowFileManager(false); // 上传完成后关闭文件管理
-                          }, 100);
+                          setShowFileManager(false); // 关闭文件管理模态框
+                          setShowUpload(true); // 显示上传模态框
+                          // 重置上传状态
+                          setIsUploading(false);
+                          setUploadProgress(0);
+                          setCurrentUploadIndex(0);
                         } else if (fileOperation === 'delete' && selectedItem) {
                           const filePath = selectedItem.key || (currentPath ? `videos/${currentPath}/${selectedItem.name}` : `videos/${selectedItem.name}`);
                           await handleDeleteItem(filePath);

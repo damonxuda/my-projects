@@ -24,13 +24,11 @@ class ThumbnailCache {
       if (stored) {
         const data = JSON.parse(stored);
         if (this.isCacheValid(data)) {
-          console.log(`📦 从localStorage加载缓存: ${path}`);
           this.cache.set(path, data);
           return data;
         } else {
           // 过期缓存删除
           localStorage.removeItem(cacheKey);
-          console.log(`🗑️ 删除过期缓存: ${path}`);
         }
       }
     } catch (error) {
@@ -44,7 +42,6 @@ class ThumbnailCache {
     try {
       const cacheKey = this.getCacheKey(path);
       localStorage.setItem(cacheKey, JSON.stringify(data));
-      console.log(`💾 保存缓存到localStorage: ${path}`);
     } catch (error) {
       console.error('保存缓存失败:', error);
     }
@@ -52,31 +49,30 @@ class ThumbnailCache {
 
   // 获取单个视频的缩略图URL
   getThumbnailUrl(videoKey) {
-    console.log(`🔍 getThumbnailUrl调用: ${videoKey}`);
-    
     // 确定文件夹路径
     const pathParts = videoKey.split('/');
     const path = pathParts.length > 2 ? pathParts[1] : ''; // videos/Movies/xxx.mp4 -> Movies
-    console.log(`📁 解析文件夹路径: ${path}`);
 
     // 先检查内存缓存
     let cacheData = this.cache.get(path);
-    console.log(`💭 内存缓存检查: ${cacheData ? '有数据' : '无数据'}`);
-    
+
     // 如果内存中没有，尝试从localStorage加载
     if (!cacheData) {
-      console.log(`💾 尝试从localStorage加载: ${path}`);
       cacheData = this.loadFromStorage(path);
     }
 
     // 如果有有效缓存，直接返回
     if (cacheData && this.isCacheValid(cacheData)) {
       const url = cacheData.thumbnailUrls[videoKey] || null;
-      console.log(`✅ 找到缓存的URL: ${videoKey} -> ${url ? '有URL' : '无URL'}`);
+      // 临时调试：检查缓存数据结构
+      if (!url) {
+        console.log(`DEBUG: 缓存中无URL for ${videoKey}`);
+        console.log('DEBUG: 可用的keys:', Object.keys(cacheData.thumbnailUrls || {}));
+        console.log('DEBUG: 完整缓存数据:', cacheData);
+      }
       return url;
     }
 
-    console.log(`❌ 无有效缓存，需要加载: ${videoKey}`);
     return null; // 需要加载
   }
 
@@ -105,18 +101,9 @@ class ThumbnailCache {
   // 执行批量加载
   async _performBatchLoad(path, apiUrl, getToken) {
     try {
-      console.log(`🚀 批量加载缩略图: ${path}`);
-      console.log(`📝 API URL: ${apiUrl}`);
-      console.log(`📝 获取Token中...`);
-      
       const token = await getToken();
-      console.log(`📝 Token获取完成: ${token ? '有token' : '无token'}`);
-      
       const pathParam = path ? `?path=${encodeURIComponent(path)}` : '';
       const url = `${apiUrl}/thumbnails/batch${pathParam}`;
-      console.log(`📝 完整URL: ${url}`);
-
-      console.log(`📝 发起网络请求...`);
       const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -124,29 +111,31 @@ class ThumbnailCache {
         },
       });
 
-      console.log(`📝 响应状态: ${response.status}`);
       if (!response.ok) {
         const responseText = await response.text();
-        console.error(`❌ 响应内容: ${responseText}`);
         throw new Error(`批量获取缩略图失败: ${response.status} - ${responseText}`);
       }
 
-      console.log(`📝 解析JSON响应...`);
       const data = await response.json();
-      console.log(`📝 响应数据:`, data);
-      
+
+      // 临时调试：检查API响应数据结构
+      console.log(`DEBUG API响应 for path "${path}":`, {
+        success: data.success,
+        count: data.count,
+        thumbnailUrlsKeys: Object.keys(data.thumbnailUrls || {}),
+        sampleData: data
+      });
+
       if (data.success) {
         // 保存到内存和localStorage
         this.cache.set(path, data);
         this.saveToStorage(path, data);
-        
-        console.log(`✅ 批量加载完成: ${path}, 数量: ${data.count}`);
         return data;
       } else {
         throw new Error('批量获取缩略图返回失败状态');
       }
     } catch (error) {
-      console.error(`❌ 批量加载失败: ${path}:`, error);
+      console.error(`批量加载失败 ${path}:`, error);
       throw error;
     }
   }
