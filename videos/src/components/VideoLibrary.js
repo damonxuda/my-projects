@@ -840,7 +840,7 @@ const VideoLibrary = () => {
       case 'move':
         return selectedItem && operationData.targetPath !== undefined;
       case 'upload':
-        return operationData.uploadFile;
+        return operationData.uploadFiles && operationData.uploadFiles.length > 0;
       case 'delete':
         return selectedItem;
       default:
@@ -1466,7 +1466,15 @@ const VideoLibrary = () => {
                           multiple
                           onChange={(e) => {
                             const files = Array.from(e.target.files);
+                            console.log(`DEBUG 文件管理模态框文件选择:`, {
+                              filesLength: files.length,
+                              files: files.map(f => ({ name: f.name, size: f.size, type: f.type }))
+                            });
                             if (files.length > 0) {
+                              console.log(`DEBUG 设置operationData.uploadFiles:`, {
+                                filesLength: files.length,
+                                fileNames: files.map(f => f.name)
+                              });
                               setOperationData({...operationData, uploadFiles: files});
                             }
                           }}
