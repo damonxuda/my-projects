@@ -24,8 +24,10 @@ export async function generateThumbnail(videoKey) {
       throw headError;
     }
 
-    // 生成缩略图key
-    const thumbnailKey = videoKey.replace(/\\.[^/.]+$/, "") + "_thumbnail.jpg";
+    // 生成缩略图key: videos/Movies/xxx.mp4 -> thumbnails/Movies/xxx.jpg
+    const thumbnailKey = videoKey
+      .replace(/^videos\//, 'thumbnails/')  // videos/ -> thumbnails/
+      .replace(/\.[^/.]+$/, '.jpg');        // .mp4 -> .jpg
     console.log("缩略图将保存为:", thumbnailKey);
 
     // 检查缩略图是否已存在
