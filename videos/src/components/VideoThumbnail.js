@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Film, Play, HardDrive, Loader } from 'lucide-react';
 import thumbnailCache from '../utils/thumbnailCache';
+import thumbnailQueue from '../utils/thumbnailQueue';
 
 const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
   const [thumbnailUrl, setThumbnailUrl] = useState(null);
@@ -35,14 +36,14 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
     return filename.split('.').pop().toUpperCase();
   };
 
-  // 检查是否是无缩略图的大视频文件 (>2GB)
+  // 检查是否是无缩略图的大视频文件 (>1GB)
   const isLargeVideoWithoutThumbnail = useCallback((fileName, fileSize) => {
-    // 2GB = 2 * 1024 * 1024 * 1024 bytes - 超过2GB的文件跳过缩略图生成
-    // 这样500-1000MB的文件仍可以生成缩略图
-    const twoGBInBytes = 2 * 1024 * 1024 * 1024;
+    // 1GB = 1024 * 1024 * 1024 bytes - 超过1GB的文件跳过缩略图生成
+    // 因为Lambda内存限制，大文件会导致下载失败
+    const oneGBInBytes = 1024 * 1024 * 1024;
 
-    // 如果文件大小超过2GB，不生成缩略图
-    if (fileSize && fileSize > twoGBInBytes) {
+    // 如果文件大小超过1GB，不生成缩略图
+    if (fileSize && fileSize > oneGBInBytes) {
       return true;
     }
 
@@ -146,11 +147,8 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
       if (batchLoadedUrl) {
         setThumbnailUrl(batchLoadedUrl);
       } else {
-        // 回退到单独生成，但增加随机延迟避免并发资源耗尽
-        const delay = Math.random() * 5000 + 2000; // 2-7秒随机延迟
-        setTimeout(() => {
-          fetchThumbnail();
-        }, delay);
+        // 回退到单独生成，使用队列控制并发
+        thumbnailQueue.add(() => fetchThumbnail());
         return;
       }
       

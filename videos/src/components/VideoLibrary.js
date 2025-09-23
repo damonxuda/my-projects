@@ -21,9 +21,10 @@ const VideoLibrary = () => {
 
   // 视频上传相关状态
   const [showUpload, setShowUpload] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [currentUploadIndex, setCurrentUploadIndex] = useState(0);
 
   // 文件管理相关状态
   const [showFileManager, setShowFileManager] = useState(false);
@@ -505,29 +506,37 @@ const VideoLibrary = () => {
 
   // 处理文件选择
   const handleFileSelect = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      // 检查文件类型
+    const files = Array.from(event.target.files);
+    if (files.length > 0) {
       const validTypes = ['video/mp4', 'video/avi', 'video/mov', 'video/mkv', 'video/webm'];
-      if (!validTypes.includes(file.type)) {
-        alert('请选择有效的视频文件 (MP4, AVI, MOV, MKV, WebM)');
-        return;
-      }
-
-      // 检查文件大小 (限制为 2GB)
       const maxSize = 2 * 1024 * 1024 * 1024; // 2GB
-      if (file.size > maxSize) {
-        alert('文件大小不能超过 2GB');
-        return;
+      const validFiles = [];
+      const invalidFiles = [];
+
+      files.forEach(file => {
+        if (!validTypes.includes(file.type)) {
+          invalidFiles.push(`${file.name} (格式不支持)`);
+        } else if (file.size > maxSize) {
+          invalidFiles.push(`${file.name} (文件过大，超过2GB)`);
+        } else {
+          validFiles.push(file);
+        }
+      });
+
+      if (invalidFiles.length > 0) {
+        alert(`以下文件无法上传：\n${invalidFiles.join('\n')}`);
       }
 
-      setSelectedFile(file);
+      if (validFiles.length > 0) {
+        setSelectedFiles(validFiles);
+        setCurrentUploadIndex(0);
+      }
     }
   };
 
   // 处理视频上传
   const handleVideoUpload = async () => {
-    if (!selectedFile) {
+    if (!selectedFiles || selectedFiles.length === 0) {
       alert('请先选择文件');
       return;
     }
@@ -539,66 +548,76 @@ const VideoLibrary = () => {
 
     setIsUploading(true);
     setUploadProgress(0);
+    setCurrentUploadIndex(0);
 
     try {
-      console.log('🚀 开始上传视频:', selectedFile.name);
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const currentFile = selectedFiles[i];
+        setCurrentUploadIndex(i);
 
-      // 构建文件路径
-      const fileName = selectedFile.name;
-      const targetPath = currentPath ? `videos/${currentPath}/${fileName}` : `videos/${fileName}`;
+        console.log(`🚀 开始上传视频 (${i + 1}/${selectedFiles.length}):`, currentFile.name);
 
-      console.log('📁 目标路径:', targetPath);
+        // 构建文件路径
+        const fileName = currentFile.name;
+        const targetPath = currentPath ? `videos/${currentPath}/${fileName}` : `videos/${fileName}`;
 
-      // 获取预签名上传URL
-      const token = await getToken();
-      const uploadUrlResponse = await fetch(`${FILE_MANAGEMENT_URL}/files/upload-url`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          fileName: targetPath,
-          fileType: selectedFile.type,
-          fileSize: selectedFile.size
-        })
-      });
+        console.log('📁 目标路径:', targetPath);
 
-      if (!uploadUrlResponse.ok) {
-        throw new Error(`获取上传URL失败: ${uploadUrlResponse.status}`);
-      }
+        // 获取预签名上传URL
+        const token = await getToken();
+        const uploadUrlResponse = await fetch(`${FILE_MANAGEMENT_URL}/files/upload-url`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            fileName: targetPath,
+            fileType: currentFile.type,
+            fileSize: currentFile.size
+          })
+        });
 
-      const { uploadUrl, fileKey } = await uploadUrlResponse.json();
-      console.log('✅ 获取上传URL成功');
-
-      // 上传文件到S3
-      console.log('📤 上传文件到S3...');
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'PUT',
-        body: selectedFile,
-        headers: {
-          'Content-Type': selectedFile.type
+        if (!uploadUrlResponse.ok) {
+          throw new Error(`获取上传URL失败: ${uploadUrlResponse.status}`);
         }
-      });
 
-      if (!uploadResponse.ok) {
-        throw new Error(`文件上传失败: ${uploadResponse.status}`);
+        const { uploadUrl, fileKey } = await uploadUrlResponse.json();
+        console.log('✅ 获取上传URL成功');
+
+        // 上传文件到S3
+        console.log('📤 上传文件到S3...');
+        const uploadResponse = await fetch(uploadUrl, {
+          method: 'PUT',
+          body: currentFile,
+          headers: {
+            'Content-Type': currentFile.type
+          }
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error(`文件上传失败: ${uploadResponse.status}`);
+        }
+
+        console.log(`✅ 文件上传成功 (${i + 1}/${selectedFiles.length})`);
+
+        // 更新进度
+        const progress = Math.round(((i + 1) / selectedFiles.length) * 100);
+        setUploadProgress(progress);
+
+        // 检查视频编码并可能触发转换
+        console.log('🔍 检查视频编码...');
+        await checkVideoEncoding(fileKey, currentFile.size);
       }
-
-      console.log('✅ 文件上传成功');
-      setUploadProgress(100);
-
-      // 检查视频编码并可能触发转换
-      console.log('🔍 检查视频编码...');
-      await checkVideoEncoding(fileKey);
 
       // 重置状态并刷新列表
-      setSelectedFile(null);
+      setSelectedFiles([]);
       setShowUpload(false);
       setIsUploading(false);
       setUploadProgress(0);
+      setCurrentUploadIndex(0);
 
-      alert('视频上传成功！');
+      alert(`所有视频上传成功！共上传 ${selectedFiles.length} 个文件`);
 
       // 刷新当前目录
       loadItems(currentPath);
@@ -608,11 +627,12 @@ const VideoLibrary = () => {
       alert(`上传失败: ${error.message}`);
       setIsUploading(false);
       setUploadProgress(0);
+      setCurrentUploadIndex(0);
     }
   };
 
   // 检查视频编码质量
-  const checkVideoEncoding = async (fileKey) => {
+  const checkVideoEncoding = async (fileKey, fileSize) => {
     try {
       console.log('🔍 检查视频编码:', fileKey);
 
@@ -620,7 +640,7 @@ const VideoLibrary = () => {
       // 如果检测到编码问题，自动触发MediaConvert转换
 
       // 示例：简单的启发式检查（基于文件大小）
-      if (selectedFile.size > 50 * 1024 * 1024) { // 大于50MB
+      if (fileSize > 50 * 1024 * 1024) { // 大于50MB
         console.log('📹 大文件，建议转换为移动端友好格式');
 
         // 可以在这里调用转换API
@@ -1086,8 +1106,9 @@ const VideoLibrary = () => {
                 <button
                   onClick={() => {
                     setShowUpload(false);
-                    setSelectedFile(null);
+                    setSelectedFiles([]);
                     setUploadProgress(0);
+                    setCurrentUploadIndex(0);
                   }}
                   className="text-gray-500 hover:text-gray-700"
                 >
@@ -1095,7 +1116,7 @@ const VideoLibrary = () => {
                 </button>
               </div>
 
-              {!selectedFile ? (
+              {selectedFiles.length === 0 ? (
                 <div className="space-y-4">
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                     <Upload className="mx-auto h-12 w-12 text-gray-400 mb-3" />
@@ -1106,6 +1127,7 @@ const VideoLibrary = () => {
                     <input
                       type="file"
                       accept="video/*"
+                      multiple
                       onChange={handleFileSelect}
                       className="hidden"
                       id="video-file-input"
@@ -1129,25 +1151,48 @@ const VideoLibrary = () => {
               ) : (
                 <div className="space-y-4">
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex-shrink-0">
-                        <Upload className="text-green-600" size={20} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {selectedFile.name}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {(selectedFile.size / (1024 * 1024)).toFixed(1)} MB
-                        </p>
-                      </div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-sm font-medium text-gray-900">
+                        已选择 {selectedFiles.length} 个文件
+                      </span>
+                      <button
+                        onClick={() => setSelectedFiles([])}
+                        className="text-sm text-red-600 hover:text-red-700"
+                      >
+                        清空选择
+                      </button>
+                    </div>
+
+                    <div className="space-y-2 max-h-32 overflow-y-auto">
+                      {selectedFiles.map((file, index) => (
+                        <div key={index} className="flex items-center gap-3 p-2 bg-white rounded border">
+                          <Upload className="text-green-600 flex-shrink-0" size={16} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {file.name}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {(file.size / (1024 * 1024)).toFixed(1)} MB
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              const newFiles = selectedFiles.filter((_, i) => i !== index);
+                              setSelectedFiles(newFiles);
+                            }}
+                            className="text-red-500 hover:text-red-700 flex-shrink-0"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   </div>
 
                   {currentPath && (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                       <p className="text-sm text-blue-800">
-                        📁 目标位置：<span className="font-semibold">videos/{currentPath}/{selectedFile.name}</span>
+                        📁 目标位置：<span className="font-semibold">videos/{currentPath}/[{selectedFiles.length}个文件]</span>
                       </p>
                     </div>
                   )}
@@ -1155,9 +1200,16 @@ const VideoLibrary = () => {
                   {isUploading && (
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span>上传进度</span>
+                        <span>
+                          上传进度 ({currentUploadIndex + 1}/{selectedFiles.length})
+                        </span>
                         <span>{uploadProgress}%</span>
                       </div>
+                      {selectedFiles.length > 1 && (
+                        <p className="text-xs text-gray-500">
+                          当前: {selectedFiles[currentUploadIndex]?.name}
+                        </p>
+                      )}
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div
                           className="bg-green-600 h-2 rounded-full transition-all duration-300"
@@ -1171,8 +1223,9 @@ const VideoLibrary = () => {
                     <button
                       onClick={() => {
                         setShowUpload(false);
-                        setSelectedFile(null);
+                        setSelectedFiles([]);
                         setUploadProgress(0);
+                        setCurrentUploadIndex(0);
                       }}
                       disabled={isUploading}
                       className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -1181,10 +1234,10 @@ const VideoLibrary = () => {
                     </button>
                     <button
                       onClick={handleVideoUpload}
-                      disabled={isUploading}
+                      disabled={isUploading || selectedFiles.length === 0}
                       className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      {isUploading ? '上传中...' : '开始上传'}
+                      {isUploading ? `上传中... (${currentUploadIndex + 1}/${selectedFiles.length})` : `开始上传 (${selectedFiles.length}个文件)`}
                     </button>
                   </div>
 
@@ -1400,10 +1453,11 @@ const VideoLibrary = () => {
                         <input
                           type="file"
                           accept=".mp4,.avi,.mov,.mkv,.webm"
+                          multiple
                           onChange={(e) => {
-                            const file = e.target.files[0];
-                            if (file) {
-                              setOperationData({...operationData, uploadFile: file});
+                            const files = Array.from(e.target.files);
+                            if (files.length > 0) {
+                              setOperationData({...operationData, uploadFiles: files});
                             }
                           }}
                           className="hidden"
@@ -1415,7 +1469,7 @@ const VideoLibrary = () => {
                         >
                           <Upload className="text-gray-400" size={32} />
                           <span className="text-sm text-gray-600">
-                            {operationData.uploadFile ? operationData.uploadFile.name : '点击选择文件或拖拽到此处'}
+                            {operationData.uploadFiles && operationData.uploadFiles.length > 0 ? `已选择 ${operationData.uploadFiles.length} 个文件` : '点击选择多个文件或拖拽到此处'}
                           </span>
                           <span className="text-xs text-gray-500">
                             支持: MP4, AVI, MOV, MKV, WebM (最大2GB)
@@ -1532,9 +1586,9 @@ const VideoLibrary = () => {
                           const oldPath = selectedItem.key || (currentPath ? `videos/${currentPath}/${selectedItem.name}` : `videos/${selectedItem.name}`);
                           const newPath = operationData.targetPath ? `videos/${operationData.targetPath}/${selectedItem.name}` : `videos/${selectedItem.name}`;
                           await handleRenameItem(oldPath, newPath); // 移动就是重命名到新路径
-                        } else if (fileOperation === 'upload' && operationData.uploadFile) {
+                        } else if (fileOperation === 'upload' && operationData.uploadFiles) {
                           // 设置上传状态并执行上传
-                          setSelectedFile(operationData.uploadFile);
+                          setSelectedFiles(operationData.uploadFiles);
                           setShowUpload(false); // 关闭上传模态框，因为我们在文件管理中
                           setTimeout(async () => {
                             await handleVideoUpload();
