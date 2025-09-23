@@ -501,6 +501,11 @@ const VideoLibrary = () => {
   // 处理文件选择
   const handleFileSelect = (event) => {
     const files = Array.from(event.target.files);
+    console.log(`DEBUG handleFileSelect 被调用:`, {
+      filesLength: files.length,
+      files: files.map(f => ({ name: f.name, size: f.size, type: f.type }))
+    });
+
     if (files.length > 0) {
       const validTypes = ['video/mp4', 'video/avi', 'video/mov', 'video/mkv', 'video/webm'];
       const maxSize = 2 * 1024 * 1024 * 1024; // 2GB
@@ -522,6 +527,10 @@ const VideoLibrary = () => {
       }
 
       if (validFiles.length > 0) {
+        console.log(`DEBUG 设置选中文件:`, {
+          validFilesLength: validFiles.length,
+          validFiles: validFiles.map(f => f.name)
+        });
         setSelectedFiles(validFiles);
         setCurrentUploadIndex(0);
       }
