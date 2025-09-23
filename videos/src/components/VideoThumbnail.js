@@ -8,6 +8,14 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
+  // DEBUG: 组件渲染调试
+  console.log(`DEBUG VideoThumbnail 组件渲染:`, {
+    fileName,
+    fileSize,
+    apiUrl: !!apiUrl,
+    getToken: !!getToken
+  });
+
   // 根据文件扩展名显示不同的颜色
   const getVideoColor = (filename) => {
     const ext = filename.toLowerCase().split('.').pop();
