@@ -53,6 +53,14 @@ const VideoLibrary = () => {
   const VIDEO_PLAYER_URL = process.env.REACT_APP_VIDEO_PLAYER_API_URL; // 播放URL生成
   const YOUTUBE_MANAGER_URL = process.env.REACT_APP_YOUTUBE_MANAGER_API_URL; // YouTube管理
 
+  // DEBUG: 环境变量调试日志
+  console.log('🔧 环境变量调试:');
+  console.log('📁 FILE_MANAGEMENT_URL:', FILE_MANAGEMENT_URL);
+  console.log('🖼️ THUMBNAIL_GENERATOR_URL:', THUMBNAIL_GENERATOR_URL);
+  console.log('🎬 VIDEO_PLAYER_URL:', VIDEO_PLAYER_URL);
+  console.log('🎵 YOUTUBE_MANAGER_URL:', YOUTUBE_MANAGER_URL);
+  console.log('⚙️ FORMAT_CONVERTER_URL:', FORMAT_CONVERTER_URL);
+
   // 向后兼容：保持旧的变量名以防部署时环境变量未更新
   const VIDEO_CORE_URL = FILE_MANAGEMENT_URL || process.env.REACT_APP_VIDEO_CORE_API_URL;
   const VIDEO_PROCESSING_URL = FORMAT_CONVERTER_URL || process.env.REACT_APP_VIDEO_PROCESSING_API_URL;
@@ -1044,6 +1052,7 @@ const VideoLibrary = () => {
                   onFolderClick={navigateToPath}
                   onVideoPlay={handleVideoPlay}
                   apiUrl={FILE_MANAGEMENT_URL}
+                  thumbnailApiUrl={THUMBNAIL_GENERATOR_URL}
                   getToken={getToken}
                 />
               ))}

@@ -12,6 +12,7 @@ const FileCard = ({
   onFolderClick,
   onVideoPlay,
   apiUrl,
+  thumbnailApiUrl,
   getToken,
 }) => {
   const [youtubeData, setYoutubeData] = useState(null);
@@ -162,7 +163,7 @@ const FileCard = ({
               alt={item.name}
               fileSize={item.size}
               fileName={item.key}  // 使用完整的S3路径
-              apiUrl={apiUrl}
+              apiUrl={thumbnailApiUrl || apiUrl}
               getToken={getToken}
             />
           ) : (

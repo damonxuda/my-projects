@@ -69,7 +69,7 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
     try {
       const token = await getToken();
       
-      const response = await fetch(`${apiUrl}/videos/thumbnail/${encodeURIComponent(fileName)}`, {
+      const response = await fetch(`${apiUrl}/thumbnails/generate/${encodeURIComponent(fileName)}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

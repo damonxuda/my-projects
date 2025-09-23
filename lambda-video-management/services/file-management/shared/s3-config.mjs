@@ -8,11 +8,9 @@ export const s3Client = new S3Client({
 // 环境变量
 export const VIDEO_BUCKET = process.env.VIDEO_BUCKET_NAME || "damonxuda-video-files";
 
-// CORS响应头
+// CORS响应头 - Function URL已配置CORS，这里只保留必要的头
 export const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Content-Type": "application/json",
 };
 
 // 标准响应格式化
@@ -21,7 +19,6 @@ export function createResponse(statusCode, body, additionalHeaders = {}) {
     statusCode,
     headers: {
       ...corsHeaders,
-      "Content-Type": "application/json",
       ...additionalHeaders,
     },
     body: JSON.stringify(body),

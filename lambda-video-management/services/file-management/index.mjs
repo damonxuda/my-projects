@@ -21,14 +21,17 @@ export const handler = async (event, context) => {
       return createErrorResponse(500, "Server configuration error", "Missing VIDEO_BUCKET_NAME");
     }
 
+    // 获取HTTP方法 - 支持Function URL和直接调用
+    const method = event.requestContext?.http?.method || event.httpMethod || "POST";
+
     // OPTIONS预检请求处理
-    const method = event.requestContext.http.method;
     if (method === "OPTIONS") {
       return createResponse(200, { message: "CORS preflight" });
     }
 
-    // Token验证
-    const authHeader = event.headers.authorization || event.headers.Authorization;
+    // Token验证 - 支持Function URL和直接调用
+    const headers = event.headers || {};
+    const authHeader = headers.authorization || headers.Authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       console.log("缺少认证头或格式错误");
       return createErrorResponse(401, "Missing authorization");
@@ -44,8 +47,8 @@ export const handler = async (event, context) => {
 
     console.log("用户验证成功:", user.emailAddresses?.[0]?.emailAddress);
 
-    // 路由处理
-    const path = event.requestContext.http.path || event.rawPath;
+    // 路由处理 - 支持Function URL和直接调用
+    const path = event.requestContext?.http?.path || event.rawPath || event.path || "/";
     console.log("处理路径:", path, "方法:", method);
 
     if (method === "GET" && path === "/files/list") {

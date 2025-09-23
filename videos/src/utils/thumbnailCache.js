@@ -113,7 +113,7 @@ class ThumbnailCache {
       console.log(`📝 Token获取完成: ${token ? '有token' : '无token'}`);
       
       const pathParam = path ? `?path=${encodeURIComponent(path)}` : '';
-      const url = `${apiUrl}/videos/thumbnails/batch${pathParam}`;
+      const url = `${apiUrl}/thumbnails/batch${pathParam}`;
       console.log(`📝 完整URL: ${url}`);
 
       console.log(`📝 发起网络请求...`);

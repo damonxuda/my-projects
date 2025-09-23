@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Environment Variables Debug</title>
+</head>
+<body>
+    <h1>Environment Variables Debug</h1>
+    <script>
+        console.log('Environment Variables:');
+        console.log('REACT_APP_FILE_MANAGEMENT_API_URL:', process.env.REACT_APP_FILE_MANAGEMENT_API_URL);
+        console.log('REACT_APP_THUMBNAIL_GENERATOR_API_URL:', process.env.REACT_APP_THUMBNAIL_GENERATOR_API_URL);
+        console.log('REACT_APP_VIDEO_PLAYER_API_URL:', process.env.REACT_APP_VIDEO_PLAYER_API_URL);
+        console.log('REACT_APP_YOUTUBE_MANAGER_API_URL:', process.env.REACT_APP_YOUTUBE_MANAGER_API_URL);
+        console.log('REACT_APP_FORMAT_CONVERTER_API_URL:', process.env.REACT_APP_FORMAT_CONVERTER_API_URL);
+
+        document.body.innerHTML = `
+            <p>FILE_MANAGEMENT_API_URL: ${process.env.REACT_APP_FILE_MANAGEMENT_API_URL || 'undefined'}</p>
+            <p>THUMBNAIL_GENERATOR_API_URL: ${process.env.REACT_APP_THUMBNAIL_GENERATOR_API_URL || 'undefined'}</p>
+            <p>VIDEO_PLAYER_API_URL: ${process.env.REACT_APP_VIDEO_PLAYER_API_URL || 'undefined'}</p>
+            <p>YOUTUBE_MANAGER_API_URL: ${process.env.REACT_APP_YOUTUBE_MANAGER_API_URL || 'undefined'}</p>
+            <p>FORMAT_CONVERTER_API_URL: ${process.env.REACT_APP_FORMAT_CONVERTER_API_URL || 'undefined'}</p>
+        `;
+    </script>
+</body>
+</html>
