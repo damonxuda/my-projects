@@ -1234,10 +1234,10 @@ const VideoLibrary = () => {
                     </button>
                     <button
                       onClick={handleVideoUpload}
-                      disabled={isUploading || selectedFiles.length === 0 || !isAdmin}
+                      disabled={isUploading || selectedFiles.length === 0}
                       className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
-                      {isUploading ? `上传中... (${currentUploadIndex + 1}/${selectedFiles.length})` : !isAdmin ? '仅管理员可上传' : `开始上传 (${selectedFiles.length}个文件)`}
+                      {isUploading ? `上传中... (${currentUploadIndex + 1}/${selectedFiles.length})` : `开始上传 (${selectedFiles.length}个文件)`}
                     </button>
                   </div>
 
