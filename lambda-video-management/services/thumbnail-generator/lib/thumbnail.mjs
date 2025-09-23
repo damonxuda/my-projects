@@ -56,7 +56,22 @@ export async function generateThumbnail(videoKey) {
       // 缩略图不存在，继续生成
     }
 
-    // 生成视频的预签名URL用于下载
+    // 对于大文件，只下载前50MB用于缩略图生成
+    const maxDownloadSize = 50 * 1024 * 1024; // 50MB
+
+    // 首先获取文件大小
+    const headResult = await s3Client.send(new HeadObjectCommand({
+      Bucket: VIDEO_BUCKET,
+      Key: videoKey,
+    }));
+    const fileSize = headResult.ContentLength;
+    console.log(`视频文件大小: ${fileSize} bytes`);
+
+    // 决定下载大小
+    const downloadSize = Math.min(fileSize, maxDownloadSize);
+    console.log(`将下载前 ${downloadSize} bytes 用于缩略图生成`);
+
+    // 生成视频的预签名URL用于部分下载
     const videoUrl = await getSignedUrl(
       s3Client,
       new GetObjectCommand({ Bucket: VIDEO_BUCKET, Key: videoKey }),
@@ -71,16 +86,21 @@ export async function generateThumbnail(videoKey) {
     const thumbnailPath = path.join(tempDir, `thumbnail_${Date.now()}.jpg`);
 
     try {
-      // 下载视频文件到临时目录
-      console.log("下载视频文件...");
-      const videoResponse = await fetch(videoUrl);
-      if (!videoResponse.ok) {
+      // 下载视频文件的前部分到临时目录
+      console.log("下载视频文件前部分...");
+      const videoResponse = await fetch(videoUrl, {
+        headers: {
+          'Range': `bytes=0-${downloadSize - 1}`
+        }
+      });
+
+      if (!videoResponse.ok && videoResponse.status !== 206) {
         throw new Error(`视频下载失败: ${videoResponse.status}`);
       }
 
       const videoBuffer = await videoResponse.arrayBuffer();
       writeFileSync(videoPath, Buffer.from(videoBuffer));
-      console.log("视频文件下载完成:", videoPath);
+      console.log("视频文件下载完成:", videoPath, `(${videoBuffer.byteLength} bytes)`);
 
       // 使用ffmpeg生成缩略图
       const ffmpegPath = "/opt/bin/ffmpeg";
