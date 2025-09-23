@@ -19,13 +19,7 @@ export const handler = async (event, context) => {
       return createErrorResponse(500, "Server configuration error", "Missing VIDEO_BUCKET_NAME");
     }
 
-    // OPTIONS预检请求处理
-    const method = event.requestContext.http.method;
-    if (method === "OPTIONS") {
-      return createResponse(200, { message: "CORS preflight" });
-    }
-
-    // 自动触发场景（S3事件）
+    // 自动触发场景（S3事件）- 优先检查，避免访问不存在的requestContext
     if (event.Records && event.Records[0] && event.Records[0].s3) {
       // S3事件触发的缩略图生成
       const s3Event = event.Records[0].s3;
@@ -43,6 +37,12 @@ export const handler = async (event, context) => {
     }
 
     // 手动API调用场景
+    // OPTIONS预检请求处理
+    const method = event.requestContext?.http?.method;
+    if (method === "OPTIONS") {
+      return createResponse(200, { message: "CORS preflight" });
+    }
+
     // Token验证
     const authHeader = event.headers.authorization || event.headers.Authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {

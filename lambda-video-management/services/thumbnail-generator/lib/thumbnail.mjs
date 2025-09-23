@@ -58,9 +58,6 @@ export async function generateThumbnail(videoKey) {
       // 缩略图不存在，继续生成
     }
 
-    // 对于大文件，只下载前50MB用于缩略图生成
-    const maxDownloadSize = 50 * 1024 * 1024; // 50MB
-
     // 首先获取文件大小
     const headResult = await s3Client.send(new HeadObjectCommand({
       Bucket: VIDEO_BUCKET,
@@ -68,10 +65,6 @@ export async function generateThumbnail(videoKey) {
     }));
     const fileSize = headResult.ContentLength;
     console.log(`视频文件大小: ${fileSize} bytes`);
-
-    // 决定下载大小
-    const downloadSize = Math.min(fileSize, maxDownloadSize);
-    console.log(`将下载前 ${downloadSize} bytes 用于缩略图生成`);
 
     // 生成视频的预签名URL用于部分下载
     const videoUrl = await getSignedUrl(
@@ -88,21 +81,128 @@ export async function generateThumbnail(videoKey) {
     const thumbnailPath = path.join(tempDir, `thumbnail_${Date.now()}.jpg`);
 
     try {
-      // 下载视频文件的前部分到临时目录
-      console.log("下载视频文件前部分...");
-      const videoResponse = await fetch(videoUrl, {
+      // 智能MOOV atom检测和下载策略
+      console.log("开始智能检测MOOV atom位置...");
+
+      // 第一步：检查MOOV atom是否在文件开头（前8KB）
+      console.log("检查文件开头是否包含MOOV atom...");
+      const headerResponse = await fetch(videoUrl, {
         headers: {
-          'Range': `bytes=0-${downloadSize - 1}`
+          'Range': `bytes=0-8191` // 前8KB
         }
       });
 
-      if (!videoResponse.ok && videoResponse.status !== 206) {
-        throw new Error(`视频下载失败: ${videoResponse.status}`);
+      if (!headerResponse.ok && headerResponse.status !== 206) {
+        throw new Error(`获取文件头部失败: ${headerResponse.status}`);
       }
 
-      const videoBuffer = await videoResponse.arrayBuffer();
-      writeFileSync(videoPath, Buffer.from(videoBuffer));
-      console.log("视频文件下载完成:", videoPath, `(${videoBuffer.byteLength} bytes)`);
+      const headerBuffer = Buffer.from(await headerResponse.arrayBuffer());
+      const hasMoovAtBeginning = headerBuffer.includes(Buffer.from('moov'));
+
+      console.log(`文件头部MOOV检测结果: ${hasMoovAtBeginning ? '找到' : '未找到'}`);
+
+      let downloadStrategy;
+      let videoBuffer;
+
+      if (hasMoovAtBeginning) {
+        // MOOV在开头：只需下载前部分即可
+        const downloadSize = Math.min(fileSize, 5 * 1024 * 1024); // 5MB应该够了
+        console.log(`MOOV在开头，下载前${Math.round(downloadSize/1024/1024)}MB...`);
+
+        const videoResponse = await fetch(videoUrl, {
+          headers: {
+            'Range': `bytes=0-${downloadSize - 1}`
+          }
+        });
+
+        if (!videoResponse.ok && videoResponse.status !== 206) {
+          throw new Error(`视频下载失败: ${videoResponse.status}`);
+        }
+
+        videoBuffer = Buffer.from(await videoResponse.arrayBuffer());
+        downloadStrategy = 'front-only';
+      } else {
+        // MOOV可能在文件末尾：检查末尾8KB
+        console.log("检查文件末尾是否包含MOOV atom...");
+        const tailResponse = await fetch(videoUrl, {
+          headers: {
+            'Range': `bytes=-8192` // 末尾8KB
+          }
+        });
+
+        if (!tailResponse.ok && tailResponse.status !== 206) {
+          throw new Error(`获取文件尾部失败: ${tailResponse.status}`);
+        }
+
+        const tailBuffer = Buffer.from(await tailResponse.arrayBuffer());
+        const hasMoovAtEnd = tailBuffer.includes(Buffer.from('moov'));
+
+        console.log(`文件尾部MOOV检测结果: ${hasMoovAtEnd ? '找到' : '未找到'}`);
+
+        if (hasMoovAtEnd) {
+          // MOOV在末尾：下载前面部分+末尾部分，然后重新组合
+          const frontSize = Math.min(fileSize, 3 * 1024 * 1024); // 前3MB
+          const tailSize = Math.min(fileSize, 2 * 1024 * 1024);  // 末尾2MB
+
+          console.log(`MOOV在末尾，下载前${Math.round(frontSize/1024/1024)}MB + 末尾${Math.round(tailSize/1024/1024)}MB...`);
+
+          // 并行下载前部分和末尾部分
+          const [frontResponse, tailResponse2] = await Promise.all([
+            fetch(videoUrl, {
+              headers: { 'Range': `bytes=0-${frontSize - 1}` }
+            }),
+            fetch(videoUrl, {
+              headers: { 'Range': `bytes=-${tailSize}` }
+            })
+          ]);
+
+          if ((!frontResponse.ok && frontResponse.status !== 206) ||
+              (!tailResponse2.ok && tailResponse2.status !== 206)) {
+            throw new Error('下载前部分或尾部失败');
+          }
+
+          const frontBuffer = Buffer.from(await frontResponse.arrayBuffer());
+          const tailBuffer2 = Buffer.from(await tailResponse2.arrayBuffer());
+
+          // 合并前部分和尾部
+          videoBuffer = Buffer.concat([frontBuffer, tailBuffer2]);
+          downloadStrategy = 'front-and-tail';
+        } else {
+          // 没有找到MOOV atom的处理策略
+          if (fileSize < 50 * 1024 * 1024) {
+            // 小文件（<50MB）：直接下载整个文件
+            console.log(`文件较小(${Math.round(fileSize/1024/1024)}MB)，下载完整文件...`);
+
+            const videoResponse = await fetch(videoUrl);
+            if (!videoResponse.ok) {
+              throw new Error(`完整文件下载失败: ${videoResponse.status}`);
+            }
+
+            videoBuffer = Buffer.from(await videoResponse.arrayBuffer());
+            downloadStrategy = 'complete-small-file';
+          } else {
+            // 大文件：回退到下载更大的前部分
+            const downloadSize = Math.min(fileSize, 10 * 1024 * 1024); // 10MB
+            console.log(`未检测到MOOV位置，回退下载前${Math.round(downloadSize/1024/1024)}MB...`);
+
+            const videoResponse = await fetch(videoUrl, {
+              headers: {
+                'Range': `bytes=0-${downloadSize - 1}`
+              }
+            });
+
+            if (!videoResponse.ok && videoResponse.status !== 206) {
+              throw new Error(`视频下载失败: ${videoResponse.status}`);
+            }
+
+            videoBuffer = Buffer.from(await videoResponse.arrayBuffer());
+            downloadStrategy = 'large-front';
+          }
+        }
+      }
+
+      writeFileSync(videoPath, videoBuffer);
+      console.log(`视频文件下载完成 (${downloadStrategy}):`, videoPath, `(${videoBuffer.byteLength} bytes)`);
 
       // 使用ffmpeg生成缩略图
       const ffmpegPath = "/opt/bin/ffmpeg";
@@ -111,9 +211,12 @@ export async function generateThumbnail(videoKey) {
       await new Promise((resolve, reject) => {
         const ffmpeg = spawn(ffmpegPath, [
           "-i", videoPath,
-          "-vf", "thumbnail,scale=320:240",
+          "-ss", "1",  // 从第1秒开始，跳过可能损坏的开头
+          "-vf", "scale=320:240",  // 移除thumbnail filter，直接缩放
           "-frames:v", "1",
           "-f", "image2",
+          "-threads", "1",  // 限制线程数量减少内存使用
+          "-preset", "ultrafast",  // 最快编码减少内存缓冲
           "-y",
           thumbnailPath
         ]);
