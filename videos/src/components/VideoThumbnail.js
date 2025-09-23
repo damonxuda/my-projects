@@ -190,18 +190,27 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
 
   // 组件挂载时使用批量缓存机制加载缩略图
   useEffect(() => {
+    console.log(`DEBUG VideoThumbnail useEffect 被调用:`, {
+      fileName,
+      fileSize,
+      hasFileName: !!fileName
+    });
+
     if (!fileName) {
+      console.log(`DEBUG VideoThumbnail useEffect: 没有fileName，提前返回`);
       return;
     }
 
     // 跳过大视频文件
     if (isLargeVideoWithoutThumbnail(fileName, fileSize)) {
+      console.log(`DEBUG VideoThumbnail useEffect: 大视频文件，跳过缩略图`);
       setLoading(false);
       return;
     }
 
+    console.log(`DEBUG VideoThumbnail useEffect: 开始调用loadThumbnailFromCache`);
     loadThumbnailFromCache();
-  }, [fileName, fileSize]); // 只依赖真正的值，不依赖函数
+  }, [fileName, fileSize, loadThumbnailFromCache, isLargeVideoWithoutThumbnail]);
 
   return (
     <div className="relative w-full h-32 rounded-lg group cursor-pointer overflow-hidden">
