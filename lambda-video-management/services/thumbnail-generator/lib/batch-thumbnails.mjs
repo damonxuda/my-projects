@@ -41,6 +41,8 @@ export async function getBatchThumbnails(pathParam, user) {
       return createErrorResponse(403, "Access denied to this folder", `You don't have permission to access folder: ${pathParam}`);
     }
 
+    console.log(`权限检查通过，继续处理文件夹: ${pathParam || '根目录'}`);
+
     // 构建S3前缀
     const s3Prefix = pathParam ? `videos/${pathParam}/` : "videos/";
     console.log("S3前缀:", s3Prefix);
