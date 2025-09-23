@@ -80,6 +80,15 @@ class ThumbnailCache {
   async loadBatchThumbnails(path, apiUrl, getToken) {
     // 避免重复请求
     const loadingKey = path || 'root';
+
+    // DEBUG: 批量加载调试信息
+    console.log(`DEBUG 批量加载缩略图开始:`, {
+      path: `"${path}"`,
+      loadingKey,
+      isRootPath: path === '',
+      isEmptyPath: !path
+    });
+
     if (this.loadingPromises.has(loadingKey)) {
       console.log(`⏳ 等待正在进行的请求: ${path}`);
       return await this.loadingPromises.get(loadingKey);
@@ -104,6 +113,15 @@ class ThumbnailCache {
       const token = await getToken();
       const pathParam = path ? `?path=${encodeURIComponent(path)}` : '';
       const url = `${apiUrl}/thumbnails/batch${pathParam}`;
+
+      // DEBUG: API调用信息
+      console.log(`DEBUG API调用详情:`, {
+        path: `"${path}"`,
+        pathParam,
+        url,
+        hasToken: !!token
+      });
+
       const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -113,6 +131,12 @@ class ThumbnailCache {
 
       if (!response.ok) {
         const responseText = await response.text();
+        console.error(`DEBUG API响应错误:`, {
+          status: response.status,
+          statusText: response.statusText,
+          responseText,
+          url
+        });
         throw new Error(`批量获取缩略图失败: ${response.status} - ${responseText}`);
       }
 

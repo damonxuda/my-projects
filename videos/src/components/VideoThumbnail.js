@@ -138,6 +138,14 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
       const pathParts = fileName.split('/');
       const folderPath = pathParts.length > 2 ? pathParts[1] : ''; // videos/Movies/xxx.mp4 -> Movies
 
+      // DEBUG: 路径解析调试信息
+      console.log(`DEBUG VideoThumbnail 路径解析:`, {
+        fileName,
+        pathParts,
+        folderPath: `"${folderPath}"`,
+        isRootDir: folderPath === ''
+      });
+
       // 批量加载该文件夹的所有缩略图
       await thumbnailCache.loadBatchThumbnails(folderPath, apiUrl, getToken);
 
