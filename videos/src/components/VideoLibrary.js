@@ -1065,7 +1065,7 @@ const VideoLibrary = () => {
       {selectedVideo && (
         <VideoPlayer
           video={selectedVideo}
-          apiUrl={FILE_MANAGEMENT_URL}
+          apiUrl={VIDEO_PLAYER_URL}
           processingApiUrl={FORMAT_CONVERTER_URL}
           onClose={() => setSelectedVideo(null)}
         />

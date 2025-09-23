@@ -32,6 +32,7 @@ export async function verifyTokenAndCheckAccess(token) {
     console.log("步骤1: 解码JWT token...");
     const decoded = decodeJWT(token);
     console.log("Token解码成功, sub:", decoded.sub);
+    console.log("JWT完整内容:", JSON.stringify(decoded, null, 2));
 
     // 检查token过期时间
     const now = Math.floor(Date.now() / 1000);

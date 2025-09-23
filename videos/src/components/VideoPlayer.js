@@ -27,7 +27,7 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
         const token = await getCachedToken();
         console.log('🎫 获取到token:', token ? '有效' : '无效');
 
-        const requestUrl = `${apiUrl}/videos/url/${encodeURIComponent(video.key)}`;
+        const requestUrl = `${apiUrl}/play/url/${encodeURIComponent(video.key)}`;
         console.log('📡 完整请求URL:', requestUrl);
         console.log('🔑 video.key:', video.key);
 
