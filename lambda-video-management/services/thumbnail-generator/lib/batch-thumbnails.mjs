@@ -53,18 +53,8 @@ export async function getBatchThumbnails(pathParam, user) {
       Prefix: s3Prefix,
     });
 
-    console.log(`批量获取缩略图 - 列出S3对象: Bucket=${VIDEO_BUCKET}, Prefix=${s3Prefix}`);
-
     const response = await s3Client.send(listCommand);
     console.log("S3响应:", response.Contents?.length || 0, "个对象");
-
-    // 调试：打印前3个文件
-    if (response.Contents && response.Contents.length > 0) {
-      console.log("前3个S3对象:", response.Contents.slice(0, 3).map(item => ({
-        Key: item.Key,
-        Size: item.Size
-      })));
-    }
 
     // 过滤出视频文件，并检查文件夹权限
     const videoFiles = response.Contents?.filter((item) => {
@@ -88,9 +78,6 @@ export async function getBatchThumbnails(pathParam, user) {
     }) || [];
 
     console.log("视频文件:", videoFiles.length, "个");
-    if (videoFiles.length > 0) {
-      console.log("筛选后的视频文件:", videoFiles.slice(0, 3).map(f => f.Key));
-    }
 
     // 为每个视频生成缩略图预签名URL
     const thumbnailUrls = {};
