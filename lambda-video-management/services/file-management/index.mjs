@@ -52,7 +52,11 @@ export const handler = async (event, context) => {
     console.log("处理路径:", path, "方法:", method);
 
     if (method === "GET" && path === "/files/list") {
-      return await listVideos(user);
+      // 获取路径参数
+      const queryParams = event.queryStringParameters || {};
+      const requestedPath = queryParams.path || "";
+      console.log("文件列表请求路径参数:", requestedPath);
+      return await listVideos(user, requestedPath);
     } else if (method === "POST" && path === "/files/upload-url") {
       // 生成预签名上传URL - 仅管理员
       if (!isAdmin(user)) {
