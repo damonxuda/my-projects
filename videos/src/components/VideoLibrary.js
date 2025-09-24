@@ -385,7 +385,6 @@ const VideoLibrary = () => {
       const apiPath = '/files/list';
       const requestUrl = `${FILE_MANAGEMENT_URL}${apiPath}?path=${encodeURIComponent(path)}`;
 
-      console.log('🔍 loadItems - Request URL:', requestUrl);
 
       const response = await fetch(requestUrl, {
         headers: {
@@ -401,7 +400,6 @@ const VideoLibrary = () => {
       }
 
       const responseText = await response.text();
-      console.log('📄 loadItems - Raw response (first 200 chars):', responseText.substring(0, 200));
 
       let data;
       try {
@@ -501,10 +499,6 @@ const VideoLibrary = () => {
   // 处理文件选择
   const handleFileSelect = (event) => {
     const files = Array.from(event.target.files);
-    console.log(`DEBUG handleFileSelect 被调用:`, {
-      filesLength: files.length,
-      files: files.map(f => ({ name: f.name, size: f.size, type: f.type }))
-    });
 
     if (files.length > 0) {
       const validTypes = ['video/mp4', 'video/avi', 'video/mov', 'video/mkv', 'video/webm'];
@@ -527,10 +521,6 @@ const VideoLibrary = () => {
       }
 
       if (validFiles.length > 0) {
-        console.log(`DEBUG 设置选中文件:`, {
-          validFilesLength: validFiles.length,
-          validFiles: validFiles.map(f => f.name)
-        });
         setSelectedFiles(validFiles);
         setCurrentUploadIndex(0);
       }
@@ -1236,14 +1226,7 @@ const VideoLibrary = () => {
                       取消
                     </button>
                     <button
-                      onClick={() => {
-                        console.log('DEBUG 上传按钮点击，状态检查:', {
-                          isUploading,
-                          selectedFilesLength: selectedFiles.length,
-                          isDisabled: isUploading || selectedFiles.length === 0
-                        });
-                        handleVideoUpload();
-                      }}
+                      onClick={handleVideoUpload}
                       disabled={isUploading || selectedFiles.length === 0}
                       className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
@@ -1466,15 +1449,7 @@ const VideoLibrary = () => {
                           multiple
                           onChange={(e) => {
                             const files = Array.from(e.target.files);
-                            console.log(`DEBUG 文件管理模态框文件选择:`, {
-                              filesLength: files.length,
-                              files: files.map(f => ({ name: f.name, size: f.size, type: f.type }))
-                            });
                             if (files.length > 0) {
-                              console.log(`DEBUG 设置operationData.uploadFiles:`, {
-                                filesLength: files.length,
-                                fileNames: files.map(f => f.name)
-                              });
                               setOperationData({...operationData, uploadFiles: files});
                             }
                           }}

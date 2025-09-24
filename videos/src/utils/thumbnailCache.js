@@ -64,12 +64,6 @@ class ThumbnailCache {
     // 如果有有效缓存，直接返回
     if (cacheData && this.isCacheValid(cacheData)) {
       const url = cacheData.thumbnailUrls[videoKey] || null;
-      // 临时调试：检查缓存数据结构
-      if (!url) {
-        console.log(`DEBUG: 缓存中无URL for ${videoKey}`);
-        console.log('DEBUG: 可用的keys:', Object.keys(cacheData.thumbnailUrls || {}));
-        console.log('DEBUG: 完整缓存数据:', cacheData);
-      }
       return url;
     }
 
@@ -81,16 +75,7 @@ class ThumbnailCache {
     // 避免重复请求
     const loadingKey = path || 'root';
 
-    // DEBUG: 批量加载调试信息
-    console.log(`DEBUG 批量加载缩略图开始:`, {
-      path: `"${path}"`,
-      loadingKey,
-      isRootPath: path === '',
-      isEmptyPath: !path
-    });
-
     if (this.loadingPromises.has(loadingKey)) {
-      console.log(`⏳ 等待正在进行的请求: ${path}`);
       return await this.loadingPromises.get(loadingKey);
     }
 
@@ -114,13 +99,6 @@ class ThumbnailCache {
       const pathParam = path ? `?path=${encodeURIComponent(path)}` : '';
       const url = `${apiUrl}/thumbnails/batch${pathParam}`;
 
-      // DEBUG: API调用信息
-      console.log(`DEBUG API调用详情:`, {
-        path: `"${path}"`,
-        pathParam,
-        url,
-        hasToken: !!token
-      });
 
       const response = await fetch(url, {
         headers: {
@@ -131,24 +109,11 @@ class ThumbnailCache {
 
       if (!response.ok) {
         const responseText = await response.text();
-        console.error(`DEBUG API响应错误:`, {
-          status: response.status,
-          statusText: response.statusText,
-          responseText,
-          url
-        });
         throw new Error(`批量获取缩略图失败: ${response.status} - ${responseText}`);
       }
 
       const data = await response.json();
 
-      // 临时调试：检查API响应数据结构
-      console.log(`DEBUG API响应 for path "${path}":`, {
-        success: data.success,
-        count: data.count,
-        thumbnailUrlsKeys: Object.keys(data.thumbnailUrls || {}),
-        sampleData: data
-      });
 
       if (data.success) {
         // 保存到内存和localStorage

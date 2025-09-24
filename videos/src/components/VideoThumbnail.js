@@ -8,13 +8,6 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
-  // DEBUG: 组件渲染调试
-  console.log(`DEBUG VideoThumbnail 组件渲染:`, {
-    fileName,
-    fileSize,
-    apiUrl: !!apiUrl,
-    getToken: !!getToken
-  });
 
   // 根据文件扩展名显示不同的颜色
   const getVideoColor = (filename) => {
@@ -146,13 +139,6 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
       const pathParts = fileName.split('/');
       const folderPath = pathParts.length > 2 ? pathParts[1] : ''; // videos/Movies/xxx.mp4 -> Movies
 
-      // DEBUG: 路径解析调试信息
-      console.log(`DEBUG VideoThumbnail 路径解析:`, {
-        fileName,
-        pathParts,
-        folderPath: `"${folderPath}"`,
-        isRootDir: folderPath === ''
-      });
 
       // 批量加载该文件夹的所有缩略图
       await thumbnailCache.loadBatchThumbnails(folderPath, apiUrl, getToken);
@@ -190,25 +176,16 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
 
   // 组件挂载时使用批量缓存机制加载缩略图
   useEffect(() => {
-    console.log(`DEBUG VideoThumbnail useEffect 被调用:`, {
-      fileName,
-      fileSize,
-      hasFileName: !!fileName
-    });
-
     if (!fileName) {
-      console.log(`DEBUG VideoThumbnail useEffect: 没有fileName，提前返回`);
       return;
     }
 
     // 跳过大视频文件
     if (isLargeVideoWithoutThumbnail(fileName, fileSize)) {
-      console.log(`DEBUG VideoThumbnail useEffect: 大视频文件，跳过缩略图`);
       setLoading(false);
       return;
     }
 
-    console.log(`DEBUG VideoThumbnail useEffect: 开始调用loadThumbnailFromCache`);
     loadThumbnailFromCache();
   }, [fileName, fileSize, loadThumbnailFromCache, isLargeVideoWithoutThumbnail]);
 
