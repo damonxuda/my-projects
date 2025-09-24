@@ -181,22 +181,56 @@ export async function generateThumbnail(videoKey) {
             videoBuffer = Buffer.from(await videoResponse.arrayBuffer());
             downloadStrategy = 'complete-small-file';
           } else {
-            // 大文件：回退到下载更大的前部分
-            const downloadSize = Math.min(fileSize, 10 * 1024 * 1024); // 10MB
-            console.log(`未检测到MOOV位置，回退下载前${Math.round(downloadSize/1024/1024)}MB...`);
+            // 大文件且未检测到MOOV：尝试更智能的策略
+            console.log(`未检测到MOOV位置，尝试多段下载策略...`);
 
-            const videoResponse = await fetch(videoUrl, {
-              headers: {
-                'Range': `bytes=0-${downloadSize - 1}`
+            // 策略1: 下载更大的前端 + 中间段 + 尾端
+            const frontSize = Math.min(fileSize, 15 * 1024 * 1024); // 前15MB
+            const middleSize = Math.min(fileSize, 5 * 1024 * 1024);  // 中间5MB
+            const tailSize = Math.min(fileSize, 5 * 1024 * 1024);    // 末尾5MB
+            const middleStart = Math.floor(fileSize / 2) - Math.floor(middleSize / 2); // 中间位置
+
+            if (fileSize < 100 * 1024 * 1024) {
+              // 小于100MB的文件，直接下载完整文件
+              console.log(`文件适中(${Math.round(fileSize/1024/1024)}MB)，下载完整文件确保MOOV完整...`);
+
+              const videoResponse = await fetch(videoUrl);
+              if (!videoResponse.ok) {
+                throw new Error(`完整文件下载失败: ${videoResponse.status}`);
               }
-            });
 
-            if (!videoResponse.ok && videoResponse.status !== 206) {
-              throw new Error(`视频下载失败: ${videoResponse.status}`);
+              videoBuffer = Buffer.from(await videoResponse.arrayBuffer());
+              downloadStrategy = 'complete-for-moov';
+            } else {
+              // 大文件：三段下载策略
+              console.log(`大文件三段下载: 前${Math.round(frontSize/1024/1024)}MB + 中间${Math.round(middleSize/1024/1024)}MB + 末${Math.round(tailSize/1024/1024)}MB...`);
+
+              const [frontResponse, middleResponse, tailResponse2] = await Promise.all([
+                fetch(videoUrl, {
+                  headers: { 'Range': `bytes=0-${frontSize - 1}` }
+                }),
+                fetch(videoUrl, {
+                  headers: { 'Range': `bytes=${middleStart}-${middleStart + middleSize - 1}` }
+                }),
+                fetch(videoUrl, {
+                  headers: { 'Range': `bytes=-${tailSize}` }
+                })
+              ]);
+
+              if ((!frontResponse.ok && frontResponse.status !== 206) ||
+                  (!middleResponse.ok && middleResponse.status !== 206) ||
+                  (!tailResponse2.ok && tailResponse2.status !== 206)) {
+                throw new Error('三段下载失败');
+              }
+
+              const frontBuffer = Buffer.from(await frontResponse.arrayBuffer());
+              const middleBuffer = Buffer.from(await middleResponse.arrayBuffer());
+              const tailBuffer2 = Buffer.from(await tailResponse2.arrayBuffer());
+
+              // 合并三段数据
+              videoBuffer = Buffer.concat([frontBuffer, middleBuffer, tailBuffer2]);
+              downloadStrategy = 'three-segment';
             }
-
-            videoBuffer = Buffer.from(await videoResponse.arrayBuffer());
-            downloadStrategy = 'large-front';
           }
         }
       }
@@ -217,6 +251,11 @@ export async function generateThumbnail(videoKey) {
           "-f", "image2",
           "-threads", "1",  // 限制线程数量减少内存使用
           "-preset", "ultrafast",  // 最快编码减少内存缓冲
+          "-avoid_negative_ts", "make_zero",  // 处理时间戳问题
+          "-fflags", "+genpts+igndts",  // 忽略损坏的时间戳，生成新的
+          "-analyzeduration", "100M",  // 增加分析时间
+          "-probesize", "100M",  // 增加探测大小
+          "-err_detect", "ignore_err",  // 忽略错误继续处理
           "-y",
           thumbnailPath
         ]);
@@ -262,8 +301,9 @@ export async function generateThumbnail(videoKey) {
         Body: thumbnailBuffer,
         ContentType: "image/jpeg",
         Metadata: {
-          "generated-from": videoKey,
-          "generated-at": new Date().toISOString()
+          "generated-from": encodeURIComponent(videoKey),  // 编码中文文件名
+          "generated-at": new Date().toISOString(),
+          "file-size": fileSize.toString()
         }
       }));
 
