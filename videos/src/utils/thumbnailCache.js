@@ -159,6 +159,27 @@ class ThumbnailCache {
       }
     });
   }
+
+  // 清除所有缓存（用于文件操作后强制刷新）
+  clearAllCache() {
+    // 清除内存缓存
+    this.cache.clear();
+
+    // 清除localStorage中的所有缩略图缓存
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('thumbnails_')) {
+        keys.push(key);
+      }
+    }
+
+    keys.forEach(key => {
+      localStorage.removeItem(key);
+    });
+
+    console.log(`🗑️ 清除所有缩略图缓存: ${keys.length} 个缓存项`);
+  }
 }
 
 // 全局单例
