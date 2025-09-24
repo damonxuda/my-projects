@@ -624,28 +624,81 @@ const VideoLibrary = () => {
     }
   };
 
-  // 检查视频编码质量
+  // 检查视频编码并自动转换
   const checkVideoEncoding = async (fileKey, fileSize) => {
     try {
-      console.log('🔍 检查视频编码:', fileKey);
+      console.log('🔍 开始视频编码兼容性检测:', fileKey);
+      console.log('📊 文件大小:', Math.round(fileSize / 1024 / 1024), 'MB');
 
-      // 这里可以添加视频编码检查逻辑
-      // 如果检测到编码问题，自动触发MediaConvert转换
+      const token = await getToken();
 
-      // 示例：简单的启发式检查（基于文件大小）
-      if (fileSize > 50 * 1024 * 1024) { // 大于50MB
-        console.log('📹 大文件，建议转换为移动端友好格式');
+      // 调用自动分析和转换API
+      const response = await fetch(`${FORMAT_CONVERTER_URL}/convert/auto-analyze/${encodeURIComponent(fileKey)}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          autoConvert: true // 启用自动转换
+        })
+      });
 
-        // 可以在这里调用转换API
-        // const shouldConvert = confirm('检测到大视频文件，是否自动优化为移动端友好格式？');
-        // if (shouldConvert) {
-        //   await triggerVideoConversion(fileKey);
-        // }
+      if (!response.ok) {
+        console.warn('⚠️ 视频兼容性检测失败:', response.status);
+        return; // 不阻断上传流程
       }
+
+      const result = await response.json();
+      console.log('🎯 视频兼容性分析结果:', result);
+
+      const { compatibilityAnalysis, recommendation, autoConversion } = result;
+
+      // 显示分析结果
+      console.log('📋 兼容性评级:', compatibilityAnalysis.estimatedCompatibility);
+      console.log('📱 移动端兼容性:', compatibilityAnalysis.mobileCompatibility);
+      console.log('💻 桌面端兼容性:', compatibilityAnalysis.desktopCompatibility);
+
+      if (recommendation.shouldConvert) {
+        console.log('🔄 建议转换原因:', recommendation.reasons.join(', '));
+      }
+
+      // 检查是否触发了自动转换
+      if (autoConversion.triggered) {
+        if (autoConversion.result?.success) {
+          console.log('✅ 自动转换已启动');
+          console.log('📋 MediaConvert作业ID:', autoConversion.result.jobId);
+
+          // 可选：向用户显示通知
+          const message = `检测到视频兼容性问题，已自动启动优化转换。\n原因: ${recommendation.reasons[0]}\n预计完成时间: ${autoConversion.result.estimatedTime}`;
+
+          // 使用非阻塞的方式显示消息
+          setTimeout(() => {
+            if (confirm(`${message}\n\n点击确定查看转换状态`)) {
+              console.log('📊 转换状态将在后台监控');
+              // 这里可以添加转换状态监控逻辑
+            }
+          }, 1000);
+
+        } else {
+          console.warn('⚠️ 自动转换启动失败:', autoConversion.result?.error);
+        }
+      } else if (compatibilityAnalysis.estimatedCompatibility === 'excellent' || compatibilityAnalysis.estimatedCompatibility === 'good') {
+        console.log('🎉 视频编码兼容性良好，无需转换');
+      }
+
+      // 记录关键指标
+      console.log('📈 分析完成 -', {
+        file: fileKey,
+        compatibility: compatibilityAnalysis.estimatedCompatibility,
+        needsConversion: recommendation.shouldConvert,
+        autoConverted: autoConversion.triggered
+      });
 
     } catch (error) {
       console.error('❌ 视频编码检查失败:', error);
-      // 不阻断上传流程
+      // 不阻断上传流程，但记录错误
+      console.warn('⚠️ 跳过视频兼容性检查，文件已成功上传');
     }
   };
 
