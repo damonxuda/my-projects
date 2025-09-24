@@ -13,7 +13,7 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
   // 本地缓存，避免重复检查mobile版本
   const [mobileVersionCache] = useState(new Map());
 
-  // 快速检查文件是否存在（HEAD请求）
+  // 快速检查文件是否存在（使用GET请求，因为Lambda Function URL不支持HEAD）
   const quickCheckExists = async (videoKey) => {
     // 先查缓存
     if (mobileVersionCache.has(videoKey)) {
@@ -25,17 +25,21 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
       const token = await getCachedToken();
       const checkUrl = `${apiUrl}/play/url/${encodeURIComponent(videoKey)}`;
 
+      // 使用GET请求检查，但不下载内容
       const response = await fetch(checkUrl, {
-        method: 'HEAD',
-        headers: { Authorization: `Bearer ${token}` }
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Range': 'bytes=0-0' // 只请求第一个字节，减少流量
+        }
       });
 
       const exists = response.ok;
       mobileVersionCache.set(videoKey, exists);
-      console.log(`🔍 HEAD检查: ${videoKey} = ${exists}`);
+      console.log(`🔍 文件存在检查: ${videoKey} = ${exists}`);
       return exists;
     } catch (error) {
-      console.log(`❌ HEAD检查失败: ${videoKey}`, error);
+      console.log(`❌ 文件存在检查失败: ${videoKey}`, error);
       mobileVersionCache.set(videoKey, false);
       return false;
     }
