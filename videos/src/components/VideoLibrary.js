@@ -664,7 +664,7 @@ const VideoLibrary = () => {
       }
 
       // 检查是否触发了自动转换
-      if (autoConversion.triggered) {
+      if (autoConversion && autoConversion.triggered) {
         if (autoConversion.result?.success) {
           console.log('✅ 自动转换已启动');
           console.log('📋 MediaConvert作业ID:', autoConversion.result.jobId);
@@ -683,6 +683,21 @@ const VideoLibrary = () => {
         } else {
           console.warn('⚠️ 自动转换启动失败:', autoConversion.result?.error);
         }
+      } else if (recommendation.shouldConvert && compatibilityAnalysis.mobileCompatibility === 'poor') {
+        // 如果没有自动转换但需要转换，提示用户手动转换
+        console.log('⚠️ 检测到移动端兼容性问题，建议手动转换');
+        console.log('💡 提示: 视频在移动设备上可能无法正常播放');
+
+        // 存储需要转换的文件信息，以便用户后续手动触发
+        const videoNeedingConversion = {
+          key: fileKey,
+          reason: recommendation.reasons[0],
+          mobileCompatibility: compatibilityAnalysis.mobileCompatibility
+        };
+
+        // 可以将这个信息存储在组件状态中，用于后续显示提示
+        console.log('📝 已记录需要转换的视频:', videoNeedingConversion);
+
       } else if (compatibilityAnalysis.estimatedCompatibility === 'excellent' || compatibilityAnalysis.estimatedCompatibility === 'good') {
         console.log('🎉 视频编码兼容性良好，无需转换');
       }
