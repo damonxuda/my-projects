@@ -12,3 +12,16 @@ Thumbs.db
 *.log
 lambda-user-management/
 *.zip
+
+# 备份文件
+*.backup
+*.backup-*
+backup-*/
+*.bak
+*.orig
+
+# 临时文件
+*.tmp
+*.temp
+temp/
+tmp/
