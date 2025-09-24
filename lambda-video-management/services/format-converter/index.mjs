@@ -1,8 +1,9 @@
 import { verifyTokenAndCheckAccess, isAdmin } from "./shared/auth.mjs";
 import { corsHeaders, createResponse, createErrorResponse, createSuccessResponse } from "./shared/s3-config.mjs";
-import { processVideo } from "./lib/video-processor.mjs";
+import { processVideo } from "./lib/video-converter.mjs";
 import { checkJobStatus } from "./lib/job-status.mjs";
-import { processBatch } from "./lib/batch-processor.mjs";
+import { batchProcessVideos } from "./lib/batch-processor.mjs";
+import { analyzeVideoCompatibility, analyzeAndAutoConvert } from "./lib/video-analyzer.mjs";
 
 export const handler = async (event, context) => {
   console.log("=== Format Converter Lambda 开始执行 ===");
@@ -20,13 +21,7 @@ export const handler = async (event, context) => {
       return createErrorResponse(500, "Server configuration error", "Missing VIDEO_BUCKET_NAME");
     }
 
-    // OPTIONS预检请求处理
-    const method = event.requestContext.http.method;
-    if (method === "OPTIONS") {
-      return createResponse(200, { message: "CORS preflight" });
-    }
-
-    // 自动触发场景（S3事件）
+    // 自动触发场景（S3事件）- 优先检查以避免访问undefined的requestContext
     if (event.Records && event.Records[0] && event.Records[0].s3) {
       // S3事件触发的格式转换
       const s3Event = event.Records[0].s3;
@@ -41,6 +36,12 @@ export const handler = async (event, context) => {
         console.log("跳过格式转换:", videoKey);
         return createSuccessResponse({ message: "Video conversion skipped" });
       }
+    }
+
+    // OPTIONS预检请求处理 - 仅对HTTP请求
+    const method = event.requestContext?.http?.method;
+    if (method === "OPTIONS") {
+      return createResponse(200, { message: "CORS preflight" });
     }
 
     // MediaConvert状态回调
@@ -80,24 +81,48 @@ export const handler = async (event, context) => {
     console.log("用户验证成功:", user.emailAddresses?.[0]?.emailAddress);
 
     // 路由处理
-    const path = event.requestContext.http.path || event.rawPath;
+    const path = event.requestContext?.http?.path || event.rawPath;
     console.log("处理路径:", path, "方法:", method);
 
     if (method === "POST" && path.startsWith("/convert/process/")) {
-      const rawPath = event.rawPath || event.requestContext.http.path;
+      const rawPath = event.rawPath || event.requestContext?.http?.path;
       const rawVideoKey = rawPath.replace("/convert/process/", "");
       const videoKey = decodeURIComponent(rawVideoKey);
-      return await processVideo(videoKey);
+      return await processVideo(event, user);
     } else if (method === "GET" && path.startsWith("/convert/status/")) {
-      const rawPath = event.rawPath || event.requestContext.http.path;
+      const rawPath = event.rawPath || event.requestContext?.http?.path;
       const jobId = rawPath.replace("/convert/status/", "");
       return await checkJobStatus(jobId);
+    } else if (method === "GET" && path.startsWith("/convert/analyze/")) {
+      const rawPath = event.rawPath || event.requestContext?.http?.path;
+      const rawVideoKey = rawPath.replace("/convert/analyze/", "");
+      const videoKey = decodeURIComponent(rawVideoKey);
+      return await analyzeVideoCompatibility(videoKey);
+    } else if (method === "POST" && path.startsWith("/convert/auto-analyze/")) {
+      const rawPath = event.rawPath || event.requestContext?.http?.path;
+      const rawVideoKey = rawPath.replace("/convert/auto-analyze/", "");
+      const videoKey = decodeURIComponent(rawVideoKey);
+
+      // 从请求体中获取autoConvert参数
+      let autoConvert = true; // 默认启用自动转换
+      if (event.body) {
+        try {
+          const body = JSON.parse(event.body);
+          if (body.autoConvert !== undefined) {
+            autoConvert = body.autoConvert;
+          }
+        } catch (e) {
+          // 如果解析失败，使用默认值
+        }
+      }
+
+      return await analyzeAndAutoConvert(videoKey, autoConvert, user);
     } else if (method === "POST" && path === "/convert/batch") {
       // 批量处理 - 仅管理员
       if (!isAdmin(user)) {
         return createErrorResponse(403, "Admin access required");
       }
-      return await processBatch(event, user);
+      return await batchProcessVideos(event, user);
     }
 
     console.log("路由不匹配");

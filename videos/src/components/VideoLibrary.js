@@ -674,7 +674,7 @@ const VideoLibrary = () => {
 
           // 使用非阻塞的方式显示消息
           setTimeout(() => {
-            if (confirm(`${message}\n\n点击确定查看转换状态`)) {
+            if (window.confirm(`${message}\n\n点击确定查看转换状态`)) {
               console.log('📊 转换状态将在后台监控');
               // 这里可以添加转换状态监控逻辑
             }

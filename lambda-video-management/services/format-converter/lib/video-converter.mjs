@@ -6,18 +6,29 @@ const mediaConvertClient = new MediaConvertClient({
   region: process.env.AWS_REGION || "ap-northeast-1"
 });
 
-export async function processVideo(event, user) {
+export async function processVideo(inputKey, outputPrefix = null, settings = {}, user = null) {
   try {
     console.log("=== 开始视频处理 ===");
 
-    let body;
-    try {
-      body = JSON.parse(event.body);
-    } catch (parseError) {
-      return createErrorResponse(400, "Invalid JSON in request body");
-    }
+    // 支持两种调用方式：
+    // 1. 直接传参：processVideo(videoKey, outputPrefix, settings, user)
+    // 2. 通过event对象：processVideo(event, user) - 向后兼容
+    if (typeof inputKey === 'object' && inputKey.body) {
+      // 兼容旧的调用方式
+      const event = inputKey;
+      user = outputPrefix; // 在这种情况下，第二个参数是user
 
-    const { inputKey, outputPrefix, settings = {} } = body;
+      let body;
+      try {
+        body = JSON.parse(event.body);
+      } catch (parseError) {
+        return createErrorResponse(400, "Invalid JSON in request body");
+      }
+
+      inputKey = body.inputKey;
+      outputPrefix = body.outputPrefix;
+      settings = body.settings || {};
+    }
 
     if (!inputKey) {
       return createErrorResponse(400, "Missing required parameter: inputKey");
@@ -51,7 +62,7 @@ export async function processVideo(event, user) {
       Settings: jobSettings,
       Queue: process.env.MEDIACONVERT_QUEUE_ARN,
       UserMetadata: {
-        userId: user.id,
+        userId: user?.id || "system-auto",
         originalKey: inputKey,
         requestTime: new Date().toISOString()
       }

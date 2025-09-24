@@ -8,6 +8,12 @@ const s3Client = new S3Client({
 
 const BUCKET_NAME = "damonxuda-video-files";
 
+// 判断是否为视频文件
+function isVideoFile(filename) {
+  const videoExtensions = ['.mp4', '.avi', '.mov', '.mkv', '.wmv', '.flv', '.webm', '.m4v'];
+  return videoExtensions.some(ext => filename.toLowerCase().endsWith(ext));
+}
+
 // 重命名文件或文件夹
 export async function renameItem(event, user) {
   try {
@@ -74,13 +80,113 @@ export async function renameItem(event, user) {
       Key: oldPath
     }));
 
-    console.log(`✅ 重命名成功: ${oldPath} -> ${newPath}`);
+    console.log(`✅ 主文件重命名成功: ${oldPath} -> ${newPath}`);
+
+    // 如果是视频文件，同步重命名缩略图
+    let thumbnailRenamed = false;
+    let mobileVersionRenamed = false;
+    let mobileThumbnailRenamed = false;
+
+    const filename = oldPath.split('/').pop();
+    if (isVideoFile(filename)) {
+      // 处理主缩略图: videos/Movies/xxx.mp4 -> thumbnails/Movies/xxx.jpg
+      const oldThumbnailKey = oldPath.replace('videos/', 'thumbnails/').replace(/\.[^.]+$/, '.jpg');
+      const newThumbnailKey = newPath.replace('videos/', 'thumbnails/').replace(/\.[^.]+$/, '.jpg');
+
+      try {
+        // 检查原缩略图是否存在
+        await s3Client.send(new HeadObjectCommand({
+          Bucket: BUCKET_NAME,
+          Key: oldThumbnailKey,
+        }));
+
+        // 复制缩略图到新位置
+        await s3Client.send(new CopyObjectCommand({
+          Bucket: BUCKET_NAME,
+          CopySource: `${BUCKET_NAME}/${encodeURIComponent(oldThumbnailKey)}`,
+          Key: newThumbnailKey,
+          MetadataDirective: "COPY"
+        }));
+
+        // 删除原缩略图
+        await s3Client.send(new DeleteObjectCommand({
+          Bucket: BUCKET_NAME,
+          Key: oldThumbnailKey,
+        }));
+
+        thumbnailRenamed = true;
+        console.log(`✅ 缩略图重命名成功: ${oldThumbnailKey} -> ${newThumbnailKey}`);
+      } catch (thumbnailError) {
+        console.log(`⚠️ 缩略图重命名失败或不存在: ${oldThumbnailKey}`, thumbnailError.message);
+      }
+
+      // 处理移动端版本: xxx.mp4 -> xxx_mobile.mp4
+      if (oldPath.endsWith('.mp4') && !oldPath.includes('_mobile.mp4')) {
+        const oldMobileKey = oldPath.replace('.mp4', '_mobile.mp4');
+        const newMobileKey = newPath.replace('.mp4', '_mobile.mp4');
+
+        try {
+          await s3Client.send(new HeadObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: oldMobileKey,
+          }));
+
+          await s3Client.send(new CopyObjectCommand({
+            Bucket: BUCKET_NAME,
+            CopySource: `${BUCKET_NAME}/${encodeURIComponent(oldMobileKey)}`,
+            Key: newMobileKey,
+            MetadataDirective: "COPY"
+          }));
+
+          await s3Client.send(new DeleteObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: oldMobileKey,
+          }));
+
+          mobileVersionRenamed = true;
+          console.log(`✅ 移动端版本重命名成功: ${oldMobileKey} -> ${newMobileKey}`);
+
+          // 处理移动端缩略图
+          const oldMobileThumbnailKey = oldMobileKey.replace('videos/', 'thumbnails/').replace(/\.[^.]+$/, '.jpg');
+          const newMobileThumbnailKey = newMobileKey.replace('videos/', 'thumbnails/').replace(/\.[^.]+$/, '.jpg');
+
+          try {
+            await s3Client.send(new HeadObjectCommand({
+              Bucket: BUCKET_NAME,
+              Key: oldMobileThumbnailKey,
+            }));
+
+            await s3Client.send(new CopyObjectCommand({
+              Bucket: BUCKET_NAME,
+              CopySource: `${BUCKET_NAME}/${encodeURIComponent(oldMobileThumbnailKey)}`,
+              Key: newMobileThumbnailKey,
+              MetadataDirective: "COPY"
+            }));
+
+            await s3Client.send(new DeleteObjectCommand({
+              Bucket: BUCKET_NAME,
+              Key: oldMobileThumbnailKey,
+            }));
+
+            mobileThumbnailRenamed = true;
+            console.log(`✅ 移动端缩略图重命名成功: ${oldMobileThumbnailKey} -> ${newMobileThumbnailKey}`);
+          } catch (mobileThumbnailError) {
+            console.log(`⚠️ 移动端缩略图重命名失败或不存在: ${oldMobileThumbnailKey}`);
+          }
+        } catch (mobileError) {
+          console.log(`⚠️ 移动端版本重命名失败或不存在: ${oldMobileKey}`, mobileError.message);
+        }
+      }
+    }
 
     return createSuccessResponse({
       success: true,
       message: "文件重命名成功",
       oldPath,
-      newPath
+      newPath,
+      thumbnailRenamed,
+      mobileVersionRenamed,
+      mobileThumbnailRenamed
     });
 
   } catch (error) {
@@ -274,22 +380,85 @@ export async function batchRename(event, user) {
 
     const operations = [];
 
-    // 为每个文件创建重命名操作
+    // 为每个文件创建重命名操作，包括对应的缩略图
     for (const object of listResponse.Contents) {
       const oldKey = object.Key;
       const newKey = oldKey.replace(normalizedOldPrefix, normalizedNewPrefix);
+      const filename = oldKey.split('/').pop();
 
       operations.push({
         oldKey,
         newKey,
-        operation: "rename"
+        operation: "rename",
+        isVideo: isVideoFile(filename)
       });
+
+      // 如果是视频文件，同时添加缩略图重命名操作
+      if (isVideoFile(filename)) {
+        const oldThumbnailKey = oldKey.replace('videos/', 'thumbnails/').replace(/\.[^.]+$/, '.jpg');
+        const newThumbnailKey = newKey.replace('videos/', 'thumbnails/').replace(/\.[^.]+$/, '.jpg');
+
+        operations.push({
+          oldKey: oldThumbnailKey,
+          newKey: newThumbnailKey,
+          operation: "rename-thumbnail",
+          parentVideo: oldKey
+        });
+
+        // 如果是mp4文件，处理移动端版本
+        if (oldKey.endsWith('.mp4') && !oldKey.includes('_mobile.mp4')) {
+          const oldMobileKey = oldKey.replace('.mp4', '_mobile.mp4');
+          const newMobileKey = newKey.replace('.mp4', '_mobile.mp4');
+
+          operations.push({
+            oldKey: oldMobileKey,
+            newKey: newMobileKey,
+            operation: "rename-mobile",
+            parentVideo: oldKey
+          });
+
+          // 移动端缩略图
+          const oldMobileThumbnailKey = oldMobileKey.replace('videos/', 'thumbnails/').replace(/\.[^.]+$/, '.jpg');
+          const newMobileThumbnailKey = newMobileKey.replace('videos/', 'thumbnails/').replace(/\.[^.]+$/, '.jpg');
+
+          operations.push({
+            oldKey: oldMobileThumbnailKey,
+            newKey: newMobileThumbnailKey,
+            operation: "rename-mobile-thumbnail",
+            parentVideo: oldKey
+          });
+        }
+      }
     }
 
     // 执行所有重命名操作
     const results = [];
     for (const op of operations) {
       try {
+        // 对于缩略图和移动端文件，先检查是否存在
+        if (op.operation.includes('thumbnail') || op.operation.includes('mobile')) {
+          try {
+            await s3Client.send(new HeadObjectCommand({
+              Bucket: BUCKET_NAME,
+              Key: op.oldKey
+            }));
+          } catch (headError) {
+            if (headError.name === "NotFound") {
+              results.push({
+                success: true,
+                oldKey: op.oldKey,
+                newKey: op.newKey,
+                operation: op.operation,
+                skipped: true,
+                reason: "文件不存在"
+              });
+              console.log(`⚠️ 跳过不存在的文件: ${op.oldKey}`);
+              continue;
+            }
+            throw headError;
+          }
+        }
+
         // 复制到新位置
         await s3Client.send(new CopyObjectCommand({
           Bucket: BUCKET_NAME,
@@ -307,17 +476,19 @@ export async function batchRename(event, user) {
         results.push({
           success: true,
           oldKey: op.oldKey,
-          newKey: op.newKey
+          newKey: op.newKey,
+          operation: op.operation
         });
 
-        console.log(`✅ 重命名成功: ${op.oldKey} -> ${op.newKey}`);
+        console.log(`✅ ${op.operation} 重命名成功: ${op.oldKey} -> ${op.newKey}`);
 
       } catch (error) {
-        console.error(`❌ 重命名失败: ${op.oldKey}`, error);
+        console.error(`❌ ${op.operation} 重命名失败: ${op.oldKey}`, error);
         results.push({
           success: false,
           oldKey: op.oldKey,
           newKey: op.newKey,
+          operation: op.operation,
           error: error.message
         });
       }
@@ -325,12 +496,24 @@ export async function batchRename(event, user) {
 
     const successCount = results.filter(r => r.success).length;
     const failCount = results.filter(r => !r.success).length;
+    const skippedCount = results.filter(r => r.success && r.skipped).length;
+
+    const videoFiles = results.filter(r => r.operation === 'rename').length;
+    const thumbnails = results.filter(r => r.operation === 'rename-thumbnail' && r.success).length;
+    const mobileVersions = results.filter(r => r.operation === 'rename-mobile' && r.success).length;
+    const mobileThumbnails = results.filter(r => r.operation === 'rename-mobile-thumbnail' && r.success).length;
 
     return createSuccessResponse({
       success: true,
-      message: `批量重命名完成: 成功 ${successCount} 个，失败 ${failCount} 个`,
+      message: `批量重命名完成: 成功 ${successCount} 个，失败 ${failCount} 个，跳过 ${skippedCount} 个`,
       oldPrefix: normalizedOldPrefix,
       newPrefix: normalizedNewPrefix,
+      statistics: {
+        videoFiles,
+        thumbnails,
+        mobileVersions,
+        mobileThumbnails
+      },
       results: results
     });
 

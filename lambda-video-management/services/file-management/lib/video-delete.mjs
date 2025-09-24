@@ -51,19 +51,27 @@ export async function deleteVideo(event, user) {
     console.log("主文件删除成功:", key);
 
     // 尝试删除对应的缩略图 (如果存在)
-    const thumbnailKey = key.replace(/\.[^/.]+$/, "") + "_thumbnail.jpg";
-    try {
-      await s3Client.send(new DeleteObjectCommand({
-        Bucket: VIDEO_BUCKET,
-        Key: thumbnailKey,
-      }));
-      console.log("缩略图删除成功:", thumbnailKey);
-    } catch (thumbnailError) {
-      // 缩略图可能不存在，这是正常的
-      console.log("缩略图删除失败或不存在:", thumbnailKey, thumbnailError.message);
+    // videos/Movies/xxx.mp4 -> thumbnails/Movies/xxx.jpg
+    let thumbnailDeleted = false;
+    if (key.startsWith('videos/') && /\.(mp4|avi|mov|wmv|mkv)$/i.test(key)) {
+      const relativePath = key.replace('videos/', '');
+      const thumbnailKey = `thumbnails/${relativePath.replace(/\.[^.]+$/, '.jpg')}`;
+
+      try {
+        await s3Client.send(new DeleteObjectCommand({
+          Bucket: VIDEO_BUCKET,
+          Key: thumbnailKey,
+        }));
+        console.log("缩略图删除成功:", thumbnailKey);
+        thumbnailDeleted = true;
+      } catch (thumbnailError) {
+        // 缩略图可能不存在，这是正常的
+        console.log("缩略图删除失败或不存在:", thumbnailKey, thumbnailError.message);
+      }
     }
 
-    // 如果是视频文件，还要尝试删除移动端版本
+    // 如果是视频文件，还要尝试删除移动端版本和对应的移动端缩略图
+    let mobileVersionDeleted = false;
     if (key.endsWith('.mp4') && !key.includes('_mobile.mp4')) {
       const mobileKey = key.replace('.mp4', '_mobile.mp4');
       try {
@@ -72,6 +80,20 @@ export async function deleteVideo(event, user) {
           Key: mobileKey,
         }));
         console.log("移动端版本删除成功:", mobileKey);
+        mobileVersionDeleted = true;
+
+        // 删除移动端缩略图
+        const relativePath = mobileKey.replace('videos/', '');
+        const mobileThumbnailKey = `thumbnails/${relativePath.replace(/\.[^.]+$/, '.jpg')}`;
+        try {
+          await s3Client.send(new DeleteObjectCommand({
+            Bucket: VIDEO_BUCKET,
+            Key: mobileThumbnailKey,
+          }));
+          console.log("移动端缩略图删除成功:", mobileThumbnailKey);
+        } catch (mobileThumbnailError) {
+          console.log("移动端缩略图删除失败或不存在:", mobileThumbnailKey);
+        }
       } catch (mobileError) {
         console.log("移动端版本删除失败或不存在:", mobileKey, mobileError.message);
       }
@@ -80,8 +102,8 @@ export async function deleteVideo(event, user) {
     return createSuccessResponse({
       message: "File deleted successfully",
       deletedKey: key,
-      thumbnailDeleted: true,
-      mobileVersionDeleted: key.endsWith('.mp4') && !key.includes('_mobile.mp4')
+      thumbnailDeleted,
+      mobileVersionDeleted
     });
 
   } catch (error) {
