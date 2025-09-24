@@ -53,6 +53,8 @@ class ThumbnailCache {
     const pathParts = videoKey.split('/');
     const path = pathParts.length > 2 ? pathParts[1] : ''; // videos/Movies/xxx.mp4 -> Movies
 
+    console.log(`[ThumbnailCache] getThumbnailUrl - videoKey: ${videoKey}, path: ${path}`);
+
     // 先检查内存缓存
     let cacheData = this.cache.get(path);
 
@@ -64,9 +66,18 @@ class ThumbnailCache {
     // 如果有有效缓存，直接返回
     if (cacheData && this.isCacheValid(cacheData)) {
       const url = cacheData.thumbnailUrls[videoKey] || null;
+
+      if (!url) {
+        console.log(`[ThumbnailCache] 缓存命中但没有URL - videoKey: ${videoKey}`);
+        console.log(`[ThumbnailCache] 缓存中的所有键:`, Object.keys(cacheData.thumbnailUrls || {}).slice(0, 3));
+      } else {
+        console.log(`[ThumbnailCache] 缓存命中并找到URL`);
+      }
+
       return url;
     }
 
+    console.log(`[ThumbnailCache] 缓存未命中或已过期 - path: ${path}`);
     return null; // 需要加载
   }
 
