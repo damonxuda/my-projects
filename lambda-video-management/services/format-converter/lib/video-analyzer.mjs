@@ -430,6 +430,18 @@ export async function analyzeAndAutoConvert(videoKey, autoConvert = true, user =
           settings.quality = "standard";
         }
 
+        // 传递原视频的真实参数给转换器
+        const videoMetadata = analysisResult.h264Analysis || {};
+        settings.originalVideo = {
+          duration: videoMetadata.duration || 300,
+          width: videoMetadata.width || 1280,
+          height: videoMetadata.height || 720,
+          bitRate: videoMetadata.bitRate || 800000,
+          fileSize: analysisResult.fileInfo.size
+        };
+
+        console.log('📊 使用原视频参数:', settings.originalVideo);
+
         // 触发转换
         const conversionResponse = await processVideo(
           videoKey,

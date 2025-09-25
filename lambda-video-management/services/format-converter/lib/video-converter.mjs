@@ -193,12 +193,22 @@ async function buildJobSettings(inputKey, outputPrefix, settings) {
 
   // 如果启用移动端版本，添加移动端输出组
   if (optimizedSettings.enableMobile) {
-    // 智能计算mobile版本的码率（估算原码率并降低60%）
-    const estimatedDurationSec = 300; // 假设5分钟，实际会根据视频调整
-    const estimatedOriginalBitrate = (fileSize * 8) / estimatedDurationSec; // 估算原码率
-    const mobileBitrate = Math.min(400000, Math.max(200000, estimatedOriginalBitrate * 0.6));
+    // 使用MOOV atom中的真实参数
+    const originalVideo = optimizedSettings.originalVideo || {};
+    const realDuration = originalVideo.duration || 300;
+    const realBitrate = originalVideo.bitRate || ((fileSize * 8) / realDuration);
+    const realWidth = originalVideo.width || 1280;
+    const realHeight = originalVideo.height || 720;
 
-    console.log(`📱 智能调整mobile码率: ${Math.round(estimatedOriginalBitrate/1000)}kbps → ${Math.round(mobileBitrate/1000)}kbps`);
+    // 智能计算mobile版本参数
+    const mobileBitrate = Math.min(400000, Math.max(200000, realBitrate * 0.6));
+    const mobileWidth = Math.min(640, realWidth * 0.75);  // 75%分辨率
+    const mobileHeight = Math.min(480, realHeight * 0.75);
+
+    console.log(`📱 基于真实参数调整mobile版本:`);
+    console.log(`   时长: ${Math.round(realDuration/60)}分钟 (真实数据)`);
+    console.log(`   码率: ${Math.round(realBitrate/1000)}kbps → ${Math.round(mobileBitrate/1000)}kbps`);
+    console.log(`   分辨率: ${realWidth}x${realHeight} → ${Math.round(mobileWidth)}x${Math.round(mobileHeight)}`);
     const mobileOutputGroup = {
       Name: "Mobile Output",
       Destination: outputS3Prefix,
@@ -265,8 +275,8 @@ async function buildJobSettings(inputKey, outputPrefix, settings) {
           DropFrameTimecode: "ENABLED",
           RespondToAfd: "NONE",
           ColorMetadata: "INSERT",
-          Width: 640,
-          Height: 480
+          Width: Math.round(mobileWidth),
+          Height: Math.round(mobileHeight)
         },
         AudioDescriptions: [{
           AudioTypeControl: "FOLLOW_INPUT",
