@@ -1,7 +1,41 @@
 import { verifyTokenAndCheckAccess, isAdmin } from "./shared/auth.mjs";
 import { corsHeaders, createResponse, createErrorResponse, createSuccessResponse } from "./shared/s3-config.mjs";
 import { generateThumbnail } from "./lib/thumbnail.mjs";
+import { generateSmartThumbnail } from "./lib/smart-thumbnail.mjs";
 import { getBatchThumbnails } from "./lib/batch-thumbnails.mjs";
+import { HeadObjectCommand } from "@aws-sdk/client-s3";
+import { s3Client, VIDEO_BUCKET } from "./shared/s3-config.mjs";
+
+/**
+ * 智能选择缩略图生成算法
+ */
+async function generateThumbnailSmart(videoKey) {
+  try {
+    // 获取文件大小
+    const headResult = await s3Client.send(new HeadObjectCommand({
+      Bucket: VIDEO_BUCKET,
+      Key: videoKey,
+    }));
+    const fileSize = headResult.ContentLength;
+    const fileSizeMB = fileSize / (1024 * 1024);
+
+    console.log(`📊 文件大小: ${fileSizeMB.toFixed(1)}MB`);
+
+    // 对于超过500MB的文件，使用新的智能算法
+    if (fileSizeMB > 500) {
+      console.log('🚀 使用智能MOOV-based算法（大文件优化）');
+      return await generateSmartThumbnail(videoKey);
+    } else {
+      console.log('📷 使用传统算法（小文件）');
+      return await generateThumbnail(videoKey);
+    }
+  } catch (error) {
+    console.error('智能缩略图选择失败:', error);
+    // 降级到智能算法
+    console.log('🔄 降级使用智能算法');
+    return await generateSmartThumbnail(videoKey);
+  }
+}
 
 export const handler = async (event, context) => {
   console.log("=== Thumbnail Generator Lambda 开始执行 ===");
@@ -29,7 +63,7 @@ export const handler = async (event, context) => {
 
       // 只处理视频文件
       if (/\.(mp4|avi|mov|wmv|mkv)$/i.test(videoKey)) {
-        return await generateThumbnail(videoKey);
+        return await generateThumbnailSmart(videoKey);
       } else {
         console.log("非视频文件，跳过缩略图生成");
         return createSuccessResponse({ message: "Non-video file, skipped" });
@@ -68,7 +102,7 @@ export const handler = async (event, context) => {
       const rawPath = event.rawPath || event.requestContext.http.path;
       const rawVideoKey = rawPath.replace("/thumbnails/generate/", "");
       const videoKey = decodeURIComponent(rawVideoKey);
-      return await generateThumbnail(videoKey);
+      return await generateThumbnailSmart(videoKey);
     } else if (method === "GET" && path === "/thumbnails/batch") {
       const pathParam = event.queryStringParameters?.path || "";
       return await getBatchThumbnails(pathParam, user);
