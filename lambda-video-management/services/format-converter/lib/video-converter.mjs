@@ -285,7 +285,7 @@ async function buildJobSettings(inputKey, outputPrefix, settings) {
             Codec: "AAC",
             AacSettings: {
               AudioDescriptionBroadcasterMix: "NORMAL",
-              Bitrate: 48000, // 降低音频码率到48kbps
+              Bitrate: 64000, // 最小有效码率64kbps (AAC LC要求)
               RateControlMode: "CBR",
               CodecProfile: "LC",
               CodingMode: "CODING_MODE_2_0",
