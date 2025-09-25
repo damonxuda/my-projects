@@ -172,7 +172,10 @@ async function buildJobSettings(inputKey, outputPrefix, settings) {
     }]
   };
 
-  jobSettings.OutputGroups.push(mainOutputGroup);
+  // 添加主输出组（除非明确跳过）
+  if (!optimizedSettings.skipMainOutput) {
+    jobSettings.OutputGroups.push(mainOutputGroup);
+  }
 
   // 如果启用移动端版本，添加移动端输出组
   if (optimizedSettings.enableMobile) {

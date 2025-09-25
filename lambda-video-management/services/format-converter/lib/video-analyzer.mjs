@@ -405,12 +405,19 @@ export async function analyzeAndAutoConvert(videoKey, autoConvert = true, user =
       console.log("🔧 调试信息: autoConvert =", autoConvert, ", shouldConvert =", recommendation.shouldConvert);
 
       try {
+        // 检查是否是MOOV atom问题
+        const isMoovIssue = recommendation.reasons.some(reason =>
+          reason.includes("MOOV") || reason.includes("mdat")
+        );
+
         // 构建转换配置
         const settings = {
           quality: "standard",
           format: "mp4",
           resolution: "720p",
-          enableMobile: true
+          enableMobile: true,
+          // 如果是MOOV问题，只生成mobile版本，否则生成两个版本
+          skipMainOutput: isMoovIssue
         };
 
         // 根据文件大小调整设置
