@@ -93,6 +93,20 @@ export async function processVideo(inputKey, outputPrefix = null, settings = {},
 async function buildJobSettings(inputKey, outputPrefix, settings) {
   const inputS3Url = `s3://${VIDEO_BUCKET}/${inputKey}`;
 
+  // 获取文件信息用于智能参数调整
+  let fileSize = 0;
+  try {
+    const { HeadObjectCommand } = await import("@aws-sdk/client-s3");
+    const headResult = await s3Client.send(new HeadObjectCommand({
+      Bucket: VIDEO_BUCKET,
+      Key: inputKey
+    }));
+    fileSize = headResult.ContentLength;
+    console.log(`📊 文件大小: ${Math.round(fileSize/1024/1024)}MB`);
+  } catch (error) {
+    console.warn('无法获取文件大小，使用默认参数');
+  }
+
   // 智能构建输出路径：输出到与输入文件相同的目录
   let outputS3Prefix;
   if (outputPrefix === "videos" || !outputPrefix) {
@@ -179,6 +193,12 @@ async function buildJobSettings(inputKey, outputPrefix, settings) {
 
   // 如果启用移动端版本，添加移动端输出组
   if (optimizedSettings.enableMobile) {
+    // 智能计算mobile版本的码率（估算原码率并降低60%）
+    const estimatedDurationSec = 300; // 假设5分钟，实际会根据视频调整
+    const estimatedOriginalBitrate = (fileSize * 8) / estimatedDurationSec; // 估算原码率
+    const mobileBitrate = Math.min(400000, Math.max(200000, estimatedOriginalBitrate * 0.6));
+
+    console.log(`📱 智能调整mobile码率: ${Math.round(estimatedOriginalBitrate/1000)}kbps → ${Math.round(mobileBitrate/1000)}kbps`);
     const mobileOutputGroup = {
       Name: "Mobile Output",
       Destination: outputS3Prefix,
@@ -219,7 +239,7 @@ async function buildJobSettings(inputKey, outputPrefix, settings) {
               TemporalAdaptiveQuantization: "ENABLED",
               FlickerAdaptiveQuantization: "DISABLED",
               EntropyEncoding: "CABAC",
-              Bitrate: 800000,
+              Bitrate: mobileBitrate, // 智能调整的码率
               FramerateControl: "SPECIFIED",
               RateControlMode: "CBR",
               CodecProfile: "MAIN",
@@ -236,7 +256,7 @@ async function buildJobSettings(inputKey, outputPrefix, settings) {
               ParControl: "INITIALIZE_FROM_SOURCE",
               NumberBFramesBetweenReferenceFrames: 2,
               RepeatPps: "DISABLED",
-              FramerateNumerator: 30,
+              FramerateNumerator: 24, // 降低帧率到24fps
               FramerateDenominator: 1,
               DynamicSubGop: "STATIC"
             }
@@ -255,7 +275,7 @@ async function buildJobSettings(inputKey, outputPrefix, settings) {
             Codec: "AAC",
             AacSettings: {
               AudioDescriptionBroadcasterMix: "NORMAL",
-              Bitrate: 64000,
+              Bitrate: 48000, // 降低音频码率到48kbps
               RateControlMode: "CBR",
               CodecProfile: "LC",
               CodingMode: "CODING_MODE_2_0",
