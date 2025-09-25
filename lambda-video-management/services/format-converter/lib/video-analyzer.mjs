@@ -386,10 +386,13 @@ export async function analyzeAndAutoConvert(videoKey, autoConvert = true, user =
     console.log("视频文件:", videoKey, "自动转换:", autoConvert);
 
     // 首先进行兼容性分析
-    const analysisResult = await analyzeVideoCompatibility(videoKey);
+    const analysisResponse = await analyzeVideoCompatibility(videoKey);
+
+    // analyzeVideoCompatibility返回的是Lambda响应格式，需要解析body
+    const analysisResult = JSON.parse(analysisResponse.body);
 
     if (!analysisResult.success) {
-      return analysisResult;
+      return analysisResponse;
     }
 
     const { recommendation } = analysisResult;
