@@ -83,7 +83,26 @@ export const handler = async (event, context) => {
 
     // 路由处理
     const path = event.requestContext?.http?.path || event.rawPath;
-    console.log("处理路径:", path, "方法:", method);
+    console.log("🔧 路由调试:");
+    console.log("  event.requestContext?.http?.path:", event.requestContext?.http?.path);
+    console.log("  event.rawPath:", event.rawPath);
+    console.log("  最终使用的path:", path);
+    console.log("  path长度:", path ? path.length : 'null');
+    console.log("  方法:", method);
+
+    // 检查路径字符
+    if (path) {
+      console.log("  路径字符分析:");
+      for (let i = 0; i < Math.min(path.length, 50); i++) {
+        const char = path[i];
+        const code = char.charCodeAt(0);
+        if (code !== 32 && (code < 33 || code > 126)) {
+          console.log(`    位置${i}: "${char}" (ASCII: ${code}) ⚠️ 异常字符`);
+        } else if (char === ' ') {
+          console.log(`    位置${i}: 空格 (ASCII: 32) ⚠️`);
+        }
+      }
+    }
 
     if (method === "POST" && path.startsWith("/convert/process/")) {
       const rawPath = event.rawPath || event.requestContext?.http?.path;
@@ -99,10 +118,26 @@ export const handler = async (event, context) => {
       const rawVideoKey = rawPath.replace("/convert/analyze/", "");
       const videoKey = decodeURIComponent(rawVideoKey);
       return await analyzeVideoCompatibility(videoKey);
-    } else if (method === "POST" && path.startsWith("/convert/auto-analyze/")) {
+    } else if (method === "POST" && (path.startsWith("/convert/auto-analyze/") || path.includes("auto-analyze"))) {
+      console.log("🎯 匹配到auto-analyze路由");
       const rawPath = event.rawPath || event.requestContext?.http?.path;
-      const rawVideoKey = rawPath.replace("/convert/auto-analyze/", "");
+      console.log("  rawPath:", rawPath);
+
+      // 更鲁棒的路径解析，处理可能的编码问题
+      let rawVideoKey = "";
+      if (rawPath.startsWith("/convert/auto-analyze/")) {
+        rawVideoKey = rawPath.replace("/convert/auto-analyze/", "");
+      } else {
+        // 备用解析方法，找到auto-analyze后面的部分
+        const autoAnalyzeIndex = rawPath.indexOf("auto-analyze/");
+        if (autoAnalyzeIndex !== -1) {
+          rawVideoKey = rawPath.substring(autoAnalyzeIndex + "auto-analyze/".length);
+        }
+      }
+
+      console.log("  提取的rawVideoKey:", rawVideoKey);
       const videoKey = decodeURIComponent(rawVideoKey);
+      console.log("  解码后的videoKey:", videoKey);
 
       // 从请求体中获取autoConvert参数
       let autoConvert = true; // 默认启用自动转换

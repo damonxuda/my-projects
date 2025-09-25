@@ -650,81 +650,36 @@ const VideoLibrary = () => {
       }
 
       const result = await response.json();
-      console.log('🎯 视频兼容性分析结果:', result);
-
       const { compatibilityAnalysis, recommendation, autoConversion = {} } = result;
 
-      // 显示分析结果
-      console.log('📋 兼容性评级:', compatibilityAnalysis.estimatedCompatibility);
-      console.log('📱 移动端兼容性:', compatibilityAnalysis.mobileCompatibility);
-      console.log('💻 桌面端兼容性:', compatibilityAnalysis.desktopCompatibility);
+      // 关键判断：系统建议转换吗？
+      const needsConversion = recommendation.shouldConvert;
+      // 关键判断：系统触发自动转换了吗？
+      const autoConversionTriggered = autoConversion?.triggered;
 
-      if (recommendation.shouldConvert) {
-        console.log('🔄 建议转换原因:', recommendation.reasons.join(', '));
-      }
-
-      // 检查是否触发了自动转换
-      if (autoConversion?.triggered) {
-        if (autoConversion.result?.success) {
-          console.log('✅ 自动转换已启动');
-          console.log('📋 MediaConvert作业ID:', autoConversion.result.jobId);
-
-          // 可选：向用户显示通知
-          const message = `检测到视频兼容性问题，已自动启动优化转换。\n原因: ${recommendation.reasons[0]}\n预计完成时间: ${autoConversion.result.estimatedTime}`;
-
-          // 使用非阻塞的方式显示消息
-          setTimeout(() => {
-            if (window.confirm(`${message}\n\n点击确定查看转换状态`)) {
-              console.log('📊 转换状态将在后台监控');
-              // 这里可以添加转换状态监控逻辑
-            }
-          }, 1000);
-
-        } else {
-          console.warn('⚠️ 自动转换启动失败:', autoConversion.result?.error);
-        }
-      } else if (recommendation.shouldConvert) {
-        // 如果没有自动转换但检测到需要转换，提示用户
-        console.log('⚠️ 检测到兼容性问题，但自动转换未触发');
-        console.log('💡 移动端兼容性:', compatibilityAnalysis.mobileCompatibility);
-        console.log('📋 建议转换原因:', recommendation.reasons.join(', '));
-        console.log('🐛 这是一个BUG：建议转换但系统未自动执行转换');
-
-        // 存储需要转换的文件信息，以便用户后续手动触发
-        const videoNeedingConversion = {
-          key: fileKey,
-          reasons: recommendation.reasons,
-          mobileCompatibility: compatibilityAnalysis.mobileCompatibility,
-          needsAutoConversion: true
-        };
-
-        console.log('📝 已记录需要转换的视频:', videoNeedingConversion);
-        console.log('🔄 系统应该自动生成mobile版本，但转换逻辑有问题');
-
-        // 如果是移动端兼容性问题，可以考虑提示用户
-        if (compatibilityAnalysis.mobileCompatibility !== 'excellent') {
-          console.log('📱 移动端播放提示: 该视频需要mobile版本但未自动生成');
-        }
-
-      } else if (!recommendation.shouldConvert) {
-        console.log('🎉 视频编码兼容性良好，无需转换');
-      } else {
-        // 这种情况理论上不应该发生，记录以便调试
-        console.log('⚠️ 异常状态：建议转换但未触发自动转换');
-        console.log('🔍 调试信息:', {
-          shouldConvert: recommendation.shouldConvert,
-          autoConverted: autoConversion?.triggered || false,
-          compatibility: compatibilityAnalysis.estimatedCompatibility
-        });
-      }
-
-      // 记录关键指标
-      console.log('📈 分析完成 -', {
-        file: fileKey,
-        compatibility: compatibilityAnalysis.estimatedCompatibility,
-        needsConversion: recommendation.shouldConvert,
-        autoConverted: autoConversion?.triggered || false
+      console.log('🔍 分析结果:', {
+        needsConversion,
+        autoConversionTriggered,
+        reasons: needsConversion ? recommendation.reasons : []
       });
+
+      // 核心逻辑判断
+      if (autoConversionTriggered) {
+        // 场景1：自动转换已触发
+        if (autoConversion.result?.success) {
+          console.log('✅ 自动转换成功启动，作业ID:', autoConversion.result.jobId);
+        } else {
+          console.error('❌ 自动转换启动失败:', autoConversion.result?.error);
+        }
+      } else if (needsConversion) {
+        // 场景2：需要转换但未触发（这是BUG）
+        console.error('🐛 BUG：需要转换但未自动触发！');
+        console.error('   原因:', recommendation.reasons);
+        console.error('   这表明后端analyzeAndAutoConvert函数有问题');
+      } else {
+        // 场景3：不需要转换
+        console.log('✅ 视频兼容性良好，无需转换');
+      }
 
     } catch (error) {
       console.error('❌ 视频编码检查失败:', error);
