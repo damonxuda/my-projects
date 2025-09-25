@@ -3,6 +3,7 @@ import { corsHeaders, createResponse, createErrorResponse, createSuccessResponse
 import { generateThumbnail } from "./lib/thumbnail.mjs";
 import { generateSmartThumbnail } from "./lib/smart-thumbnail.mjs";
 import { getBatchThumbnails } from "./lib/batch-thumbnails.mjs";
+import { generateThumbnailWithMediaConvert } from "./lib/mediaconvert-thumbnail.mjs";
 import { HeadObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client, VIDEO_BUCKET } from "./shared/s3-config.mjs";
 
@@ -21,19 +22,32 @@ async function generateThumbnailSmart(videoKey) {
 
     console.log(`📊 文件大小: ${fileSizeMB.toFixed(1)}MB`);
 
-    // 对于超过500MB的文件，使用新的智能算法
+    // 已知的MOOV在后的问题文件 - 直接用MediaConvert
+    const knownMoovAfterFiles = [
+      'videos/Movies/ri.mp4',
+      'videos/Movies/BBAN-024.mp4',
+      'videos/Movies/BBAN-301.mp4',
+      'videos/Movies/8108.mp4',
+      'videos/Movies/roselip-fetish-0834_hd.mp4'
+    ];
+
+    if (knownMoovAfterFiles.includes(videoKey)) {
+      console.log('🎬 已知MOOV在后文件，使用MediaConvert');
+      return await generateThumbnailWithMediaConvert(videoKey);
+    }
+
+    // 其他文件按大小选择算法
     if (fileSizeMB > 500) {
-      console.log('🚀 使用智能MOOV-based算法（大文件优化）');
+      console.log('🚀 大文件使用MOOV智能算法');
       return await generateSmartThumbnail(videoKey);
     } else {
-      console.log('📷 使用传统算法（小文件）');
+      console.log('📷 小文件使用传统算法');
       return await generateThumbnail(videoKey);
     }
   } catch (error) {
     console.error('智能缩略图选择失败:', error);
-    // 降级到智能算法
-    console.log('🔄 降级使用智能算法');
-    return await generateSmartThumbnail(videoKey);
+    console.log('🔄 降级使用传统算法');
+    return await generateThumbnail(videoKey);
   }
 }
 

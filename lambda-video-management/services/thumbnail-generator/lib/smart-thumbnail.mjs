@@ -64,18 +64,72 @@ async function findMoovBoxPosition(videoKey, fileSize) {
   let offset = 0;
   while (offset < headerBuffer.length - 8) {
     const box = parseBoxHeader(headerBuffer, offset);
-    if (!box) break;
+    if (!box || box.size <= 0) break;
+
+    console.log(`📦 前端box: type=${box.type}, size=${box.size}, offset=${offset}`);
 
     if (box.type === 'moov') {
       console.log(`✅ 在前端找到MOOV box，位置: ${offset}, 大小: ${box.size}`);
       return { offset, size: box.size, location: 'front' };
     }
 
+    // 使用box的size字段跳转到下一个box
     offset += box.size;
+
+    // 防止死循环 - 如果偏移超出缓冲区范围则停止
+    if (offset >= headerBuffer.length) break;
   }
 
-  // 如果前端没找到，检查末尾1MB
-  console.log('前端未找到MOOV，检查文件末尾...');
+  // 如果前端没找到，检查大mdat box后面的位置
+  console.log('前端未找到MOOV，查找大mdat后面的MOOV...');
+
+  // 从前面的解析中，找到最大的box（通常是mdat）
+  offset = 0;
+  let largestBox = null;
+  const headerBuffer2 = await readBytesFromS3(videoKey, 0, Math.min(fileSize, 256 * 1024) - 1);
+
+  while (offset < headerBuffer2.length - 8) {
+    const box = parseBoxHeader(headerBuffer2, offset);
+    if (!box || box.size <= 0) break;
+
+    if (!largestBox || box.size > largestBox.size) {
+      largestBox = { ...box, offset };
+    }
+
+    offset += box.size;
+    if (offset >= headerBuffer2.length) break;
+  }
+
+  if (largestBox && largestBox.type === 'mdat') {
+    // 在mdat后面查找moov
+    const afterMdatOffset = largestBox.offset + largestBox.size;
+    console.log(`🔍 在mdat后面查找MOOV，起始位置: ${(afterMdatOffset / 1024 / 1024).toFixed(1)}MB`);
+
+    if (afterMdatOffset < fileSize) {
+      const searchSize = Math.min(1024 * 1024, fileSize - afterMdatOffset); // 搜索1MB
+      const searchBuffer = await readBytesFromS3(videoKey, afterMdatOffset, afterMdatOffset + searchSize - 1);
+
+      offset = 0;
+      while (offset < searchBuffer.length - 8) {
+        const box = parseBoxHeader(searchBuffer, offset);
+        if (!box || box.size <= 0) break;
+
+        console.log(`📦 mdat后box: type=${box.type}, size=${box.size}, offset=${afterMdatOffset + offset}`);
+
+        if (box.type === 'moov') {
+          const actualOffset = afterMdatOffset + offset;
+          console.log(`✅ 在mdat后找到MOOV box，位置: ${actualOffset}, 大小: ${box.size}`);
+          return { offset: actualOffset, size: box.size, location: 'after_mdat' };
+        }
+
+        offset += box.size;
+        if (offset >= searchBuffer.length) break;
+      }
+    }
+  }
+
+  // 最后检查文件末尾1MB
+  console.log('mdat后未找到MOOV，检查文件末尾...');
   const tailSize = Math.min(fileSize, 1024 * 1024);
   const tailStart = fileSize - tailSize;
   const tailBuffer = await readBytesFromS3(videoKey, tailStart, fileSize - 1);
@@ -83,7 +137,9 @@ async function findMoovBoxPosition(videoKey, fileSize) {
   offset = 0;
   while (offset < tailBuffer.length - 8) {
     const box = parseBoxHeader(tailBuffer, offset);
-    if (!box) break;
+    if (!box || box.size <= 0) break;
+
+    console.log(`📦 末尾box: type=${box.type}, size=${box.size}, offset=${tailStart + offset}`);
 
     if (box.type === 'moov') {
       const actualOffset = tailStart + offset;
@@ -91,7 +147,11 @@ async function findMoovBoxPosition(videoKey, fileSize) {
       return { offset: actualOffset, size: box.size, location: 'end' };
     }
 
+    // 使用box的size字段跳转到下一个box
     offset += box.size;
+
+    // 防止死循环
+    if (offset >= tailBuffer.length) break;
   }
 
   throw new Error('未找到MOOV box');
@@ -161,13 +221,20 @@ async function createMinimalMp4ForThumbnail(videoKey, fileSize) {
     // 只下载mdat的前2MB，这应该包含第一个关键帧
     const mdatSampleSize = Math.min(mdatInfo.size, 2 * 1024 * 1024);
     console.log(`📦 下载mdat前${(mdatSampleSize / 1024).toFixed(1)}KB`);
-    const mdatData = await readBytesFromS3(videoKey, mdatInfo.offset, mdatInfo.offset + mdatSampleSize - 1);
+    const rawMdatData = await readBytesFromS3(videoKey, mdatInfo.offset, mdatInfo.offset + mdatSampleSize - 1);
 
-    // 5. 组合最小MP4文件
+    // 5. 重构正确的MP4文件
+    // 创建新的mdat box头部，使其大小匹配实际数据
+    const newMdatSize = rawMdatData.length + 8; // +8 for box header
+    const newMdatHeader = Buffer.alloc(8);
+    newMdatHeader.writeUInt32BE(newMdatSize, 0);  // size
+    newMdatHeader.write('mdat', 4);               // type
+
     const minimalMp4 = Buffer.concat([
       ftypData.length > 0 ? ftypData : Buffer.alloc(0),
       moovData,
-      mdatData
+      newMdatHeader,  // 新的正确大小的mdat头部
+      rawMdatData     // mdat数据内容
     ]);
 
     console.log(`✅ 创建最小MP4成功，大小: ${(minimalMp4.length / 1024).toFixed(1)}KB`);
@@ -228,55 +295,103 @@ export async function generateSmartThumbnail(videoKey) {
       }
     }
 
-    // 设置临时文件路径
+    // 设置临时文件路径（只需要缩略图输出路径）
     const tempDir = "/tmp";
-    const videoPath = path.join(tempDir, `smart_input_${Date.now()}.mp4`);
     const thumbnailPath = path.join(tempDir, `smart_thumbnail_${Date.now()}.jpg`);
 
     try {
-      // 创建最小MP4文件
+      // 使用真正的MOOV智能算法
+      console.log("🚀 使用MOOV智能算法生成缩略图...");
+
+      // 创建最小的可播放MP4文件（只有几MB）
       const minimalMp4 = await createMinimalMp4ForThumbnail(videoKey, fileSize);
-      writeFileSync(videoPath, minimalMp4);
 
-      console.log("🎬 使用ffmpeg生成缩略图...");
+      // 将最小MP4写入临时文件
+      const tempVideoPath = path.join(tempDir, `minimal_video_${Date.now()}.mp4`);
+      writeFileSync(tempVideoPath, minimalMp4);
 
-      // 使用ffmpeg生成缩略图
-      const ffmpegPath = "/opt/bin/ffmpeg";
+      console.log(`📦 创建最小MP4文件: ${(minimalMp4.length / 1024).toFixed(1)}KB (vs 原文件 ${(fileSize / 1024 / 1024).toFixed(1)}MB)`);
+
+      // 使用ffmpeg生成缩略图 - 直接从S3 URL读取
+      // 检查多个可能的ffmpeg路径
+      const possiblePaths = ["/opt/bin/ffmpeg", "/opt/ffmpeg/ffmpeg", "/usr/bin/ffmpeg"];
+      let ffmpegPath = "/opt/bin/ffmpeg";
+
+      for (const path of possiblePaths) {
+        if (existsSync(path)) {
+          ffmpegPath = path;
+          console.log(`✅ 找到ffmpeg: ${path}`);
+          break;
+        }
+      }
+      console.log(`🔧 使用ffmpeg路径: ${ffmpegPath}`);
 
       await new Promise((resolve, reject) => {
+        // 30秒超时保护
+        const timeout = setTimeout(() => {
+          ffmpeg.kill('SIGKILL');
+          reject(new Error('ffmpeg执行超时(30秒)'));
+        }, 30000);
+
         const ffmpeg = spawn(ffmpegPath, [
-          "-i", videoPath,
-          "-ss", "0",  // 从开头开始（因为我们已经有了第一帧数据）
+          "-loglevel", "info",  // 增加日志详细度
+          "-i", tempVideoPath,  // 使用本地最小MP4文件
+          "-ss", "00:00:02",  // 跳到第2秒（避免黑屏和初始化问题）
           "-vf", "scale=320:240",
           "-frames:v", "1",
           "-f", "image2",
-          "-threads", "1",
+          "-threads", "2",  // 增加线程数
           "-preset", "ultrafast",
-          "-avoid_negative_ts", "make_zero",
           "-y",
           thumbnailPath
         ]);
 
         let stderr = "";
+        let stdout = "";
+
+        ffmpeg.stdout.on("data", (data) => {
+          const output = data.toString();
+          stdout += output;
+          console.log("ffmpeg stdout:", output);
+        });
 
         ffmpeg.stderr.on("data", (data) => {
-          stderr += data.toString();
+          const output = data.toString();
+          stderr += output;
+          console.log("ffmpeg stderr:", output);
         });
 
         ffmpeg.on("close", (code) => {
+          clearTimeout(timeout);
           console.log("ffmpeg退出码:", code);
+          console.log("ffmpeg标准输出长度:", stdout.length);
+          console.log("ffmpeg错误输出长度:", stderr.length);
+
           if (code === 0 && existsSync(thumbnailPath)) {
             console.log("✅ 智能缩略图生成成功");
             resolve();
           } else {
-            console.error("ffmpeg执行失败:", stderr);
-            reject(new Error(`ffmpeg失败: code ${code}`));
+            console.error("ffmpeg执行失败:");
+            console.error("退出码:", code);
+            console.error("stderr:", stderr.substring(0, 1000)); // 限制输出长度
+            reject(new Error(`ffmpeg失败: code ${code}, stderr: ${stderr.substring(0, 500)}`));
           }
         });
 
         ffmpeg.on("error", (error) => {
-          reject(error);
+          clearTimeout(timeout);
+          console.error("ffmpeg进程错误:", error);
+          reject(new Error(`ffmpeg进程启动失败: ${error.message}`));
         });
+
+        // 检查ffmpeg进程是否成功启动
+        setTimeout(() => {
+          if (ffmpeg.pid) {
+            console.log(`✅ ffmpeg进程启动成功，PID: ${ffmpeg.pid}`);
+          } else {
+            console.error("❌ ffmpeg进程启动失败");
+          }
+        }, 1000);
       });
 
       // 读取生成的缩略图
@@ -308,7 +423,6 @@ export async function generateSmartThumbnail(videoKey) {
 
       // 清理临时文件
       try {
-        if (existsSync(videoPath)) unlinkSync(videoPath);
         if (existsSync(thumbnailPath)) unlinkSync(thumbnailPath);
       } catch (cleanupError) {
         console.warn("清理临时文件失败:", cleanupError);
@@ -328,8 +442,8 @@ export async function generateSmartThumbnail(videoKey) {
     } catch (processingError) {
       // 清理临时文件
       try {
-        if (existsSync(videoPath)) unlinkSync(videoPath);
         if (existsSync(thumbnailPath)) unlinkSync(thumbnailPath);
+        if (existsSync(tempVideoPath)) unlinkSync(tempVideoPath);
       } catch (cleanupError) {
         console.warn("清理临时文件失败:", cleanupError);
       }

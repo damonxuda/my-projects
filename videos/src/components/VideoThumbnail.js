@@ -37,15 +37,17 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
     return filename.split('.').pop().toUpperCase();
   };
 
-  // 检查是否是无缩略图的大视频文件 (>1GB)
+  // 检查是否是无缩略图的大视频文件 (现已支持任意大小)
   const isLargeVideoWithoutThumbnail = useCallback((fileName, fileSize) => {
-    // 1GB = 1024 * 1024 * 1024 bytes - 超过1GB的文件跳过缩略图生成
-    // 因为Lambda内存限制，大文件会导致下载失败
-    const oneGBInBytes = 1024 * 1024 * 1024;
+    // 🚀 新的智能MOOV-based算法可以处理任意大小的文件！
+    // 移除1GB限制，让所有视频文件都可以生成缩略图
+    // Lambda会智能选择: >500MB使用MOOV算法, <500MB使用传统算法
 
-    // 如果文件大小超过1GB，不生成缩略图
-    if (fileSize && fileSize > oneGBInBytes) {
-      return true;
+    // 暂时保留一个极大的限制以防万一 (50GB)
+    const fiftyGBInBytes = 50 * 1024 * 1024 * 1024;
+
+    if (fileSize && fileSize > fiftyGBInBytes) {
+      return true; // 超过50GB才跳过
     }
 
     return false;
