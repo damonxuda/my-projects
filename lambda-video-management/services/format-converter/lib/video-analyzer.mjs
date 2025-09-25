@@ -424,12 +424,15 @@ export async function analyzeAndAutoConvert(videoKey, autoConvert = true, user =
         }
 
         // 触发转换
-        conversionResult = await processVideo(
+        const conversionResponse = await processVideo(
           videoKey,
           "videos", // 输出目录保持在videos文件夹下，使用替换策略
           settings,
           user
         );
+
+        // processVideo返回的是Lambda响应格式，需要解析body
+        conversionResult = JSON.parse(conversionResponse.body);
 
         console.log("✅ 自动转换已启动:", conversionResult.jobId);
 
