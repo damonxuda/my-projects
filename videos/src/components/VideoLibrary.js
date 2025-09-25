@@ -652,7 +652,7 @@ const VideoLibrary = () => {
       const result = await response.json();
       console.log('🎯 视频兼容性分析结果:', result);
 
-      const { compatibilityAnalysis, recommendation, autoConversion } = result;
+      const { compatibilityAnalysis, recommendation, autoConversion = {} } = result;
 
       // 显示分析结果
       console.log('📋 兼容性评级:', compatibilityAnalysis.estimatedCompatibility);
@@ -664,7 +664,7 @@ const VideoLibrary = () => {
       }
 
       // 检查是否触发了自动转换
-      if (autoConversion && autoConversion.triggered) {
+      if (autoConversion?.triggered) {
         if (autoConversion.result?.success) {
           console.log('✅ 自动转换已启动');
           console.log('📋 MediaConvert作业ID:', autoConversion.result.jobId);
@@ -707,7 +707,7 @@ const VideoLibrary = () => {
         file: fileKey,
         compatibility: compatibilityAnalysis.estimatedCompatibility,
         needsConversion: recommendation.shouldConvert,
-        autoConverted: autoConversion.triggered
+        autoConverted: autoConversion?.triggered || false
       });
 
     } catch (error) {

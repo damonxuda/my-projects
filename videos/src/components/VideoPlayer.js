@@ -8,6 +8,7 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
   const [error, setError] = useState('');
   const [isRecoding, setIsRecoding] = useState(false);
   const [recodingProgress, setRecodingProgress] = useState('');
+  const [currentPlayingKey, setCurrentPlayingKey] = useState(''); // 追踪当前正在播放的文件
   const { getCachedToken, isSignedIn } = useAuth();
 
   // 本地缓存，避免重复检查mobile版本
@@ -75,6 +76,7 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
         // 效率优先选择视频版本
         const videoKeyToLoad = selectVideoVersion(video.key);
         console.log(`🎯 智能选择播放版本: ${videoKeyToLoad}`);
+        setCurrentPlayingKey(videoKeyToLoad); // 记录当前播放的文件
 
         const token = await getCachedToken();
         const requestUrl = `${apiUrl}/play/url/${encodeURIComponent(videoKeyToLoad)}`;
@@ -121,12 +123,13 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
     }
   }, [video?.key, isSignedIn, apiUrl]);
 
-  // 当video改变时重置videoUrl
+  // 当video改变时重置所有状态
   useEffect(() => {
     setVideoUrl('');
     setError('');
     setIsRecoding(false);
     setRecodingProgress('');
+    setCurrentPlayingKey(''); // 重置当前播放的文件
   }, [video?.key]);
 
   // 检测移动端设备
@@ -324,7 +327,7 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
               className="responsive-video"
               onError={async (e) => {
                 const errorCode = e.target.error?.code;
-                console.log(`❌ 视频播放错误: 代码=${errorCode}, 当前播放: ${video.key}`);
+                console.log(`❌ 视频播放错误: 代码=${errorCode}, 当前播放: ${currentPlayingKey || video.key}`);
 
                 // 效率优先的智能错误恢复逻辑
                 if (errorCode === 4) {
@@ -332,7 +335,7 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
                   const mobileKey = video.key.replace('.mp4', '_mobile.mp4');
 
                   // 如果当前播放的已经是mobile版本，说明mobile版本也有问题
-                  if (video.key.includes('_mobile.mp4')) {
+                  if (currentPlayingKey.includes('_mobile.mp4')) {
                     setError(`优化版本播放失败 (错误代码: ${errorCode})`);
                     return;
                   }
@@ -355,6 +358,7 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
                         const data = await response.json();
                         if (data.url) {
                           console.log('🎯 自动切换到mobile版本成功');
+                          setCurrentPlayingKey(mobileKey); // 更新当前播放的文件
                           setVideoUrl(data.url);
                           return;
                         }
