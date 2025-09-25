@@ -61,7 +61,7 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
     return originalKey;
   };
 
-  // 智能播放逻辑 - 第一阶段实现
+  // 智能播放逻辑 - 增强版实现
   useEffect(() => {
     const smartLoadVideoUrl = async () => {
       // 防止重复请求：如果已经有URL且是相同视频，直接返回
@@ -73,14 +73,54 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
         setLoading(true);
         setError('');
 
-        // 效率优先选择视频版本
-        const videoKeyToLoad = selectVideoVersion(video.key);
-        console.log(`🎯 智能选择播放版本: ${videoKeyToLoad}`);
-        setCurrentPlayingKey(videoKeyToLoad); // 记录当前播放的文件
-
         const token = await getCachedToken();
-        const requestUrl = `${apiUrl}/play/url/${encodeURIComponent(videoKeyToLoad)}`;
 
+        // 对于原文件，尝试使用智能端点获取全面信息
+        if (!video.key.includes('_mobile.mp4')) {
+          console.log('🧠 尝试智能分析端点');
+          try {
+            const smartUrl = `${apiUrl}/play/smart/${encodeURIComponent(video.key)}`;
+            const smartResponse = await fetch(smartUrl, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (smartResponse.ok) {
+              const smartData = await smartResponse.json();
+              console.log('🎯 智能分析结果:', smartData);
+
+              // 根据分析结果选择播放策略
+              const recommendation = smartData.recommendation;
+              let selectedUrl = smartData.original.url;
+              let selectedKey = smartData.original.key;
+
+              // 如果是移动端且建议使用mobile版本
+              if (isMobile() && recommendation.strategy === 'mobile_preferred' && smartData.mobile.exists) {
+                selectedUrl = smartData.mobile.url;
+                selectedKey = smartData.mobile.key;
+                console.log('📱 移动端优先选择mobile版本');
+              } else {
+                console.log('💻 选择原文件播放');
+              }
+
+              setCurrentPlayingKey(selectedKey);
+              setVideoUrl(selectedUrl);
+
+              // 将智能分析数据存储起来，以便错误处理时使用
+              window._videoSmartData = smartData;
+              return;
+            }
+          } catch (smartError) {
+            console.log('⚠️  智能端点失败，回退到标准方式:', smartError.message);
+          }
+        }
+
+        // 回退到标准播放逻辑
+        console.log('🔄 使用标准播放逻辑');
+        const videoKeyToLoad = selectVideoVersion(video.key);
+        console.log(`🎯 标准选择播放版本: ${videoKeyToLoad}`);
+        setCurrentPlayingKey(videoKeyToLoad);
+
+        const requestUrl = `${apiUrl}/play/url/${encodeURIComponent(videoKeyToLoad)}`;
         const response = await fetch(requestUrl, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -329,9 +369,9 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
                 const errorCode = e.target.error?.code;
                 console.log(`❌ 视频播放错误: 代码=${errorCode}, 当前播放: ${currentPlayingKey || video.key}`);
 
-                // 效率优先的智能错误恢复逻辑
+                // 智能错误恢复逻辑
                 if (errorCode === 4) {
-                  // H.264编码不兼容，尝试寻找mobile版本作为fallback
+                  // H.264编码不兼容，尝试使用fallback策略
                   const mobileKey = video.key.replace('.mp4', '_mobile.mp4');
 
                   // 如果当前播放的已经是mobile版本，说明mobile版本也有问题
@@ -340,11 +380,28 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
                     return;
                   }
 
-                  console.log('🚨 播放失败，检查mobile版本是否存在...');
-                  // 检查是否已有mobile版本
+                  console.log('🚨 播放失败，尝试智能fallback...');
+
+                  // 优先使用智能分析数据（如果可用）
+                  const smartData = window._videoSmartData;
+                  if (smartData && smartData.mobile.exists) {
+                    console.log('💡 使用智能分析数据进行快速fallback');
+                    try {
+                      setLoading(true);
+                      setError('');
+                      console.log('🎯 快速切换到mobile版本');
+                      setCurrentPlayingKey(smartData.mobile.key);
+                      setVideoUrl(smartData.mobile.url);
+                      return;
+                    } catch (quickSwitchError) {
+                      console.error('❌ 快速切换失败:', quickSwitchError);
+                      setLoading(false);
+                    }
+                  }
+
+                  // 回退到传统检查方式
                   if (await quickCheckExists(mobileKey)) {
                     console.log('✅ 找到mobile版本，自动切换播放');
-                    // 找到mobile版本，自动加载
                     try {
                       setLoading(true);
                       setError('');
@@ -358,7 +415,7 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
                         const data = await response.json();
                         if (data.url) {
                           console.log('🎯 自动切换到mobile版本成功');
-                          setCurrentPlayingKey(mobileKey); // 更新当前播放的文件
+                          setCurrentPlayingKey(mobileKey);
                           setVideoUrl(data.url);
                           return;
                         }

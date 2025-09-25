@@ -2,14 +2,314 @@ import { HeadObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client, VIDEO_BUCKET } from "../shared/s3-config.mjs";
 import { createSuccessResponse, createErrorResponse } from "../shared/s3-config.mjs";
 import { processVideo } from "./video-converter.mjs";
+import { spawn } from 'child_process';
+import { promisify } from 'util';
+
+/**
+ * 尝试分析本地视频文件
+ */
+async function tryAnalyzeFile(filePath, result) {
+  try {
+    // 使用ffprobe检测本地文件
+    const ffprobeCommand = [
+      '-v', 'error',
+      '-select_streams', 'v:0',
+      '-show_entries', 'stream=profile,level,width,height,codec_name',
+      '-of', 'json',
+      filePath
+    ];
+
+    console.log(`🔧 执行ffprobe命令: ffprobe ${ffprobeCommand.join(' ')}`);
+
+    // Lambda层中的ffprobe路径
+    const ffprobePath = process.env.AWS_LAMBDA_FUNCTION_NAME ? '/opt/bin/ffprobe' : 'ffprobe';
+
+    const ffprobeProcess = spawn(ffprobePath, ffprobeCommand);
+    let stdout = '';
+    let stderr = '';
+
+    ffprobeProcess.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+
+    ffprobeProcess.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+
+    // 等待进程完成，添加10秒超时
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        ffprobeProcess.kill();
+        reject(new Error(`ffprobe超时 (10秒)`));
+      }, 10000);
+
+      ffprobeProcess.on('close', (code) => {
+        clearTimeout(timeout);
+        if (code === 0) {
+          resolve();
+        } else {
+          reject(new Error(`ffprobe退出码: ${code}, stderr: ${stderr}`));
+        }
+      });
+
+      ffprobeProcess.on('error', (error) => {
+        clearTimeout(timeout);
+        reject(new Error(`ffprobe执行失败: ${error.message}`));
+      });
+    });
+
+    // 解析ffprobe输出
+    const probeData = JSON.parse(stdout);
+    if (probeData.streams && probeData.streams.length > 0) {
+      const videoStream = probeData.streams[0];
+
+      result.profile = videoStream.profile || null;
+      result.level = videoStream.level || null;
+      result.width = videoStream.width || null;
+      result.height = videoStream.height || null;
+      result.detected = true;
+
+      console.log(`✅ ffprobe检测完成:`, {
+        profile: result.profile,
+        level: result.level,
+        resolution: `${result.width}x${result.height}`,
+        codec: videoStream.codec_name
+      });
+
+      return true; // 分析成功
+    }
+
+    return false; // 没有找到视频流
+  } catch (error) {
+    console.log(`ffprobe分析失败: ${error.message}`);
+    return false; // 分析失败
+  }
+}
+
+/**
+ * 使用ffprobe检测H.264编码参数
+ * 返回profile和level信息，这是移动端兼容性的关键因素
+ */
+async function detectH264ProfileLevel(videoKey) {
+  console.log(`🔬 开始ffprobe检测H.264参数: ${videoKey}`);
+
+  // 首先尝试使用智能MP4 box解析器
+  try {
+    // 获取文件大小
+    const { HeadObjectCommand } = await import("@aws-sdk/client-s3");
+    const headInfo = await s3Client.send(new HeadObjectCommand({
+      Bucket: VIDEO_BUCKET,
+      Key: videoKey,
+    }));
+    const fileSize = headInfo.ContentLength;
+
+    // 使用智能解析器精确查找并分析MOOV box
+    const { smartDetectH264Profile } = await import("./mp4-box-parser.mjs");
+    const smartResult = await smartDetectH264Profile(videoKey, fileSize);
+
+    if (smartResult.detected) {
+      console.log(`✅ 智能解析成功: Profile=${smartResult.profile}, Level=${smartResult.level}`);
+      return smartResult;
+    }
+
+    console.log(`⚠️ 智能解析未能检测到H264信息，尝试传统方法`);
+  } catch (smartError) {
+    console.log(`⚠️ 智能解析失败: ${smartError.message}，回退到传统方法`);
+  }
+
+  // 如果智能解析失败，回退到原来的方法
+  const result = {
+    profile: null,
+    level: null,
+    width: null,
+    height: null,
+    detected: false,
+    error: null
+  };
+
+  try {
+    // 由于Lambda层ffprobe不支持HTTPS，下载文件头部到临时目录进行分析
+    const { GetObjectCommand } = await import("@aws-sdk/client-s3");
+    const fs = await import('fs');
+    const path = await import('path');
+
+    // 创建临时文件路径
+    const tempFileName = `video_${Date.now()}.mp4`;
+    const tempFilePath = path.join('/tmp', tempFileName);
+
+    console.log(`📁 回退方案：下载视频文件头部到临时目录: ${tempFilePath}`);
+
+    // 智能下载策略：先尝试文件头部，失败则尝试文件尾部
+    let downloadSuccess = false;
+
+    // 策略1：下载文件头部1MB
+    try {
+      console.log(`📁 策略1: 下载文件头部1MB`);
+      const headCommand = new GetObjectCommand({
+        Bucket: VIDEO_BUCKET,
+        Key: videoKey,
+        Range: "bytes=0-1048575" // 1MB
+      });
+
+      const headResponse = await s3Client.send(headCommand);
+      const headChunks = [];
+      for await (const chunk of headResponse.Body) {
+        headChunks.push(chunk);
+      }
+      const headBuffer = Buffer.concat(headChunks);
+
+      fs.writeFileSync(tempFilePath, headBuffer);
+      console.log(`✅ 头部下载完成，文件大小: ${headBuffer.length} bytes`);
+
+      downloadSuccess = await tryAnalyzeFile(tempFilePath, result);
+      if (downloadSuccess) {
+        console.log(`🎯 文件头部分析成功`);
+      }
+    } catch (headError) {
+      console.log(`⚠️ 文件头部分析失败: ${headError.message}`);
+    }
+
+    // 策略2：如果头部失败且包含"moov atom not found"，尝试文件尾部
+    if (!downloadSuccess) {
+      console.log(`📁 策略2: 下载文件尾部1MB`);
+
+      // 先获取文件大小
+      const { HeadObjectCommand } = await import("@aws-sdk/client-s3");
+      const headInfo = await s3Client.send(new HeadObjectCommand({
+        Bucket: VIDEO_BUCKET,
+        Key: videoKey,
+      }));
+
+      const fileSize = headInfo.ContentLength;
+      const tailStart = Math.max(0, fileSize - 1048576); // 最后1MB
+
+      try {
+        const tailCommand = new GetObjectCommand({
+          Bucket: VIDEO_BUCKET,
+          Key: videoKey,
+          Range: `bytes=${tailStart}-${fileSize - 1}`
+        });
+
+        const tailResponse = await s3Client.send(tailCommand);
+        const tailChunks = [];
+        for await (const chunk of tailResponse.Body) {
+          tailChunks.push(chunk);
+        }
+        const tailBuffer = Buffer.concat(tailChunks);
+
+        // 创建一个新的临时文件用于尾部分析
+        const tempTailPath = tempFilePath.replace('.mp4', '_tail.mp4');
+        fs.writeFileSync(tempTailPath, tailBuffer);
+        console.log(`✅ 尾部下载完成，文件大小: ${tailBuffer.length} bytes`);
+
+        downloadSuccess = await tryAnalyzeFile(tempTailPath, result);
+
+        // 清理尾部临时文件
+        try {
+          if (fs.existsSync(tempTailPath)) {
+            fs.unlinkSync(tempTailPath);
+            console.log(`🗑️ 清理尾部临时文件: ${tempTailPath}`);
+          }
+        } catch (cleanupError) {
+          console.log(`⚠️ 清理尾部临时文件失败: ${cleanupError.message}`);
+        }
+
+        if (downloadSuccess) {
+          console.log(`🎯 文件尾部分析成功`);
+        }
+      } catch (tailError) {
+        console.log(`❌ 文件尾部分析失败: ${tailError.message}`);
+      }
+    }
+
+    if (!downloadSuccess) {
+      console.log(`❌ 头部和尾部分析都失败，无法获取视频流信息`);
+    }
+
+    return result;
+
+  } catch (error) {
+    console.error('❌ ffprobe检测失败:', error);
+    result.error = error.message;
+    return result;
+  } finally {
+    // 清理临时文件
+    try {
+      if (typeof tempFilePath !== 'undefined') {
+        const fs = require('fs');
+        if (fs.existsSync(tempFilePath)) {
+          fs.unlinkSync(tempFilePath);
+          console.log(`🗑️ 清理临时文件: ${tempFilePath}`);
+        }
+      }
+    } catch (cleanupError) {
+      console.log(`⚠️ 清理临时文件失败: ${cleanupError.message}`);
+    }
+  }
+}
+
+/**
+ * 基于MOOV位置判断移动端兼容性
+ * 关键发现：MOOV必须在mdat之前，否则Safari移动端无法播放
+ */
+function assessMobileCompatibilityFromH264(profileLevelData) {
+  if (!profileLevelData.detected) {
+    return {
+      compatible: 'unknown',
+      reason: 'ffprobe检测失败',
+      needsMobile: true,
+      needsFaststart: true
+    };
+  }
+
+  // 关键判断：MOOV位置决定移动端兼容性
+  const isMobileCompatible = profileLevelData.isMobileCompatible;
+  const moovPosition = profileLevelData.moovPosition;
+
+  if (isMobileCompatible && moovPosition === 'before_mdat') {
+    return {
+      compatible: 'excellent',
+      reason: 'MOOV atom在mdat之前，Safari移动端完全兼容',
+      needsMobile: false,
+      needsFaststart: false
+    };
+  } else if (moovPosition === 'after_mdat') {
+    return {
+      compatible: 'poor',
+      reason: 'MOOV atom在mdat之后，Safari移动端无法流式播放',
+      needsMobile: true,
+      needsFaststart: true
+    };
+  }
+
+  // 如果MOOV位置信息不可用，使用传统的profile/level判断作为fallback
+  const { profile, level } = profileLevelData;
+
+  if (profile === 'Baseline' || profile === 'Constrained Baseline') {
+    return {
+      compatible: 'good',
+      reason: 'Baseline profile通常移动端兼容，但建议使用faststart优化',
+      needsMobile: false,
+      needsFaststart: true
+    };
+  }
+
+  // 其他情况，安全起见建议生成mobile版本
+  return {
+    compatible: 'unknown',
+    reason: 'MOOV位置信息不可用，基于安全考虑建议生成mobile版本',
+    needsMobile: true,
+    needsFaststart: true
+  };
+}
 
 /**
  * 分析视频文件的编码兼容性
  * 主要检查以下几个关键因素：
- * 1. H.264编码配置（Profile、Level）
- * 2. MOOV atom位置
- * 3. 帧率和分辨率
- * 4. 音频编码格式
+ * 1. H.264编码配置（Profile、Level）- 决定是否需要mobile版本
+ * 2. MOOV atom位置 - 影响播放体验
+ * 3. 帧率和分辨率 - 影响性能
+ * 4. 音频编码格式 - 影响兼容性
  */
 
 export async function analyzeVideoCompatibility(videoKey) {
@@ -99,6 +399,7 @@ export async function analyzeAndAutoConvert(videoKey, autoConvert = true, user =
     if (autoConvert && recommendation.shouldConvert) {
       console.log("🔄 触发自动视频转换...");
       console.log("转换原因:", recommendation.reasons);
+      console.log("🔧 调试信息: autoConvert =", autoConvert, ", shouldConvert =", recommendation.shouldConvert);
 
       try {
         // 构建转换配置
@@ -131,6 +432,7 @@ export async function analyzeAndAutoConvert(videoKey, autoConvert = true, user =
 
       } catch (conversionError) {
         console.error("❌ 自动转换启动失败:", conversionError);
+        console.error("❌ 详细错误:", conversionError.stack);
         // 不阻断主流程，返回分析结果但标记转换失败
         conversionResult = {
           success: false,
@@ -140,10 +442,12 @@ export async function analyzeAndAutoConvert(videoKey, autoConvert = true, user =
       }
     } else {
       console.log("🎯 视频兼容性良好，无需转换");
+      console.log("🔧 调试信息: autoConvert =", autoConvert, ", shouldConvert =", recommendation.shouldConvert);
     }
 
     // 返回综合结果
-    return createSuccessResponse({
+    console.log("🔧 构建最终响应 - autoConvert:", autoConvert, "shouldConvert:", recommendation.shouldConvert);
+    const finalResponse = createSuccessResponse({
       ...analysisResult,
       autoConversion: {
         enabled: autoConvert,
@@ -151,6 +455,9 @@ export async function analyzeAndAutoConvert(videoKey, autoConvert = true, user =
         result: conversionResult
       }
     });
+
+    console.log("📤 最终响应autoConversion字段:", finalResponse.data?.autoConversion || finalResponse.autoConversion);
+    return finalResponse;
 
   } catch (error) {
     console.error("自动视频分析和转换失败:", error);
@@ -170,13 +477,45 @@ async function performDetailedAnalysis(videoKey, fileSize, fileExtension) {
     strengths: [],
     mobileCompatibility: "unknown",
     desktopCompatibility: "unknown",
-    moovAtomAnalysis: null
+    moovAtomAnalysis: null,
+    h264Analysis: null // 新增H.264分析结果
   };
 
   try {
-    // 分析MOOV atom位置 - 这是移动端兼容性的关键因素
-    const moovAnalysis = await analyzeMoovAtomPosition(videoKey, fileSize);
-    analysis.moovAtomAnalysis = moovAnalysis;
+    // 第一步：使用ffprobe检测H.264编码参数 - 这是移动端兼容性的最关键因素
+    const h264Analysis = await detectH264ProfileLevel(videoKey);
+    analysis.h264Analysis = h264Analysis;
+
+    // 基于H.264参数判断移动端兼容性
+    const mobileCompatibilityAssessment = assessMobileCompatibilityFromH264(h264Analysis);
+    analysis.mobileCompatibility = mobileCompatibilityAssessment.compatible;
+
+    // 将兼容性判断结果添加到h264Analysis中，传递给前端
+    if (h264Analysis) {
+      h264Analysis.needsMobile = mobileCompatibilityAssessment.needsMobile;
+      h264Analysis.needsFaststart = mobileCompatibilityAssessment.needsFaststart;
+      h264Analysis.compatibilityReason = mobileCompatibilityAssessment.reason;
+    }
+
+    if (mobileCompatibilityAssessment.needsMobile) {
+      analysis.issues.push(mobileCompatibilityAssessment.reason);
+    } else {
+      analysis.strengths.push(mobileCompatibilityAssessment.reason);
+    }
+
+    // 第二步：使用智能检测的MOOV位置结果
+    if (h264Analysis && h264Analysis.moovPosition) {
+      analysis.moovAtomAnalysis = {
+        moovAtBeginning: h264Analysis.moovPosition === 'before_mdat',
+        moovAtEnd: h264Analysis.moovPosition === 'after_mdat',
+        isFastStart: h264Analysis.moovPosition === 'before_mdat'
+      };
+      console.log(`使用智能检测的MOOV位置: ${h264Analysis.moovPosition}`);
+    } else {
+      // 如果智能检测没有MOOV信息，使用传统方法作为fallback
+      const moovAnalysis = await analyzeMoovAtomPosition(videoKey, fileSize);
+      analysis.moovAtomAnalysis = moovAnalysis;
+    }
 
     // 基于文件大小进行启发式分析
     if (fileSize > 500 * 1024 * 1024) { // > 500MB
@@ -195,16 +534,16 @@ async function performDetailedAnalysis(videoKey, fileSize, fileExtension) {
       analysis.desktopCompatibility = "excellent";
       analysis.strengths.push("MP4格式，广泛兼容");
 
-      // MOOV atom位置检查
-      if (moovAnalysis.moovAtBeginning) {
-        analysis.mobileCompatibility = analysis.mobileCompatibility === "poor" ? "moderate" : "excellent";
+      // MOOV atom位置检查（现在基于智能检测结果）
+      if (analysis.moovAtomAnalysis?.moovAtBeginning) {
+        // MOOV在开头的情况已经在mobileCompatibilityAssessment中处理
         analysis.strengths.push("MOOV atom在文件开头，支持流式播放");
-      } else if (moovAnalysis.moovAtEnd) {
+      } else if (analysis.moovAtomAnalysis?.moovAtEnd) {
+        // MOOV在末尾的情况已经在mobileCompatibilityAssessment中处理
         analysis.issues.push("MOOV atom在文件末尾，移动端可能需要完整下载后才能播放");
-        analysis.mobileCompatibility = "moderate";
       } else {
+        // 位置不明确的情况已经在mobileCompatibilityAssessment中处理
         analysis.issues.push("未检测到MOOV atom或位置不明确");
-        analysis.mobileCompatibility = "poor";
       }
     } else {
       // 非MP4格式通常需要转换
@@ -336,7 +675,26 @@ function generateRecommendation(analysis, fileSize) {
     estimatedImprovements: []
   };
 
-  // 基于兼容性分析给出建议
+  // 第一优先级：基于H.264 Profile/Level决定是否需要mobile版本
+  if (analysis.h264Analysis?.detected) {
+    const h264Compatibility = assessMobileCompatibilityFromH264(analysis.h264Analysis);
+
+    if (h264Compatibility.needsMobile) {
+      recommendation.shouldConvert = true;
+      recommendation.priority = "critical";
+      recommendation.reasons.push(`H.264 ${h264Compatibility.reason}`);
+      recommendation.suggestedActions.push("生成移动端兼容版本");
+      recommendation.estimatedImprovements.push("确保移动端设备可以正常播放");
+    }
+  } else {
+    // ffprobe检测失败时，安全起见默认生成mobile版本
+    recommendation.shouldConvert = true;
+    recommendation.priority = "medium";
+    recommendation.reasons.push("无法检测H.264编码参数，建议生成移动端版本以确保兼容性");
+    recommendation.suggestedActions.push("生成移动端兼容版本");
+  }
+
+  // 第二优先级：基于兼容性分析给出播放体验优化建议
   if (analysis.estimatedCompatibility === "poor") {
     recommendation.shouldConvert = true;
     recommendation.priority = "high";

@@ -27,11 +27,12 @@ export const handler = async (event, context) => {
       const s3Event = event.Records[0].s3;
       const videoKey = decodeURIComponent(s3Event.object.key.replace(/\+/g, ' '));
 
-      console.log("S3事件触发格式转换:", videoKey);
+      console.log("S3事件触发智能分析和转换:", videoKey);
 
       // 只处理视频文件，且不是已经转换过的移动版本
       if (/\.(mp4|avi|mov|wmv|mkv)$/i.test(videoKey) && !videoKey.includes('_mobile.')) {
-        return await processVideo(videoKey);
+        // 使用新的智能分析和自动转换逻辑，基于MOOV位置判断是否需要生成mobile版本
+        return await analyzeAndAutoConvert(videoKey, true, null);
       } else {
         console.log("跳过格式转换:", videoKey);
         return createSuccessResponse({ message: "Video conversion skipped" });

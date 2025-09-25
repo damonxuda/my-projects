@@ -1,6 +1,6 @@
 import { verifyTokenAndCheckAccess, isAdmin } from "./shared/auth.mjs";
 import { corsHeaders, createResponse, createErrorResponse, createSuccessResponse } from "./shared/s3-config.mjs";
-import { getVideoUrl } from "./lib/video-url.mjs";
+import { getVideoUrl, getSmartVideoUrl } from "./lib/video-url.mjs";
 
 export const handler = async (event, context) => {
   console.log("=== Video Player Lambda 开始执行 ===");
@@ -51,6 +51,13 @@ export const handler = async (event, context) => {
       const videoKey = decodeURIComponent(rawVideoKey);
       console.log("解码后的videoKey:", videoKey);
       return await getVideoUrl(videoKey);
+    } else if (method === "GET" && path.startsWith("/play/smart/")) {
+      // 智能播放URL生成 - 包含兼容性分析和mobile版本信息
+      const rawPath = event.rawPath || event.requestContext.http.path;
+      const rawVideoKey = rawPath.replace("/play/smart/", "");
+      const videoKey = decodeURIComponent(rawVideoKey);
+      console.log("智能播放分析 - 解码后的videoKey:", videoKey);
+      return await getSmartVideoUrl(videoKey, token);
     }
 
     console.log("路由不匹配");

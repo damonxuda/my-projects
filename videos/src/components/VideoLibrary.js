@@ -683,23 +683,39 @@ const VideoLibrary = () => {
         } else {
           console.warn('⚠️ 自动转换启动失败:', autoConversion.result?.error);
         }
-      } else if (recommendation.shouldConvert && compatibilityAnalysis.mobileCompatibility === 'poor') {
-        // 如果没有自动转换但需要转换，提示用户手动转换
-        console.log('⚠️ 检测到移动端兼容性问题，建议手动转换');
-        console.log('💡 提示: 视频在移动设备上可能无法正常播放');
+      } else if (recommendation.shouldConvert) {
+        // 如果没有自动转换但检测到需要转换，提示用户
+        console.log('⚠️ 检测到兼容性问题，但自动转换未触发');
+        console.log('💡 移动端兼容性:', compatibilityAnalysis.mobileCompatibility);
+        console.log('📋 建议转换原因:', recommendation.reasons.join(', '));
+        console.log('🐛 这是一个BUG：建议转换但系统未自动执行转换');
 
         // 存储需要转换的文件信息，以便用户后续手动触发
         const videoNeedingConversion = {
           key: fileKey,
-          reason: recommendation.reasons[0],
-          mobileCompatibility: compatibilityAnalysis.mobileCompatibility
+          reasons: recommendation.reasons,
+          mobileCompatibility: compatibilityAnalysis.mobileCompatibility,
+          needsAutoConversion: true
         };
 
-        // 可以将这个信息存储在组件状态中，用于后续显示提示
         console.log('📝 已记录需要转换的视频:', videoNeedingConversion);
+        console.log('🔄 系统应该自动生成mobile版本，但转换逻辑有问题');
 
-      } else if (compatibilityAnalysis.estimatedCompatibility === 'excellent' || compatibilityAnalysis.estimatedCompatibility === 'good') {
+        // 如果是移动端兼容性问题，可以考虑提示用户
+        if (compatibilityAnalysis.mobileCompatibility !== 'excellent') {
+          console.log('📱 移动端播放提示: 该视频需要mobile版本但未自动生成');
+        }
+
+      } else if (!recommendation.shouldConvert) {
         console.log('🎉 视频编码兼容性良好，无需转换');
+      } else {
+        // 这种情况理论上不应该发生，记录以便调试
+        console.log('⚠️ 异常状态：建议转换但未触发自动转换');
+        console.log('🔍 调试信息:', {
+          shouldConvert: recommendation.shouldConvert,
+          autoConverted: autoConversion?.triggered || false,
+          compatibility: compatibilityAnalysis.estimatedCompatibility
+        });
       }
 
       // 记录关键指标
