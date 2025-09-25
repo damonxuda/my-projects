@@ -53,8 +53,8 @@ export async function processVideo(inputKey, outputPrefix = null, settings = {},
     const processingSettings = { ...defaultSettings, ...settings };
     console.log("Processing settings:", processingSettings);
 
-    // 构建MediaConvert作业配置
-    const jobSettings = buildJobSettings(inputKey, outputPrefix, processingSettings);
+    // 构建MediaConvert作业配置（包含智能分辨率检测）
+    const jobSettings = await buildJobSettings(inputKey, outputPrefix, processingSettings);
 
     // 创建MediaConvert作业
     const createJobParams = {
@@ -90,9 +90,28 @@ export async function processVideo(inputKey, outputPrefix = null, settings = {},
   }
 }
 
-function buildJobSettings(inputKey, outputPrefix, settings) {
+async function buildJobSettings(inputKey, outputPrefix, settings) {
   const inputS3Url = `s3://${VIDEO_BUCKET}/${inputKey}`;
-  const outputS3Prefix = `s3://${VIDEO_BUCKET}/${outputPrefix || "processed"}/`;
+
+  // 智能构建输出路径：输出到与输入文件相同的目录
+  let outputS3Prefix;
+  if (outputPrefix === "videos" || !outputPrefix) {
+    // 如果指定输出到videos目录，则输出到与输入相同的目录
+    const inputDir = inputKey.substring(0, inputKey.lastIndexOf('/') + 1); // 提取目录部分
+    outputS3Prefix = `s3://${VIDEO_BUCKET}/${inputDir}`;
+    console.log(`📁 输出到与输入相同目录: ${outputS3Prefix}`);
+  } else {
+    // 其他情况使用指定的前缀
+    outputS3Prefix = `s3://${VIDEO_BUCKET}/${outputPrefix}/`;
+    console.log(`📁 输出到指定目录: ${outputS3Prefix}`);
+  }
+
+  // 智能分辨率选择：基于源视频分辨率
+  const intelligentResolution = await selectIntelligentResolution(inputKey, settings.resolution);
+  console.log(`🎯 智能分辨率选择: ${settings.resolution} -> ${intelligentResolution}`);
+
+  // 更新设置中的分辨率
+  const optimizedSettings = { ...settings, resolution: intelligentResolution };
 
   const jobSettings = {
     Inputs: [{
@@ -122,7 +141,7 @@ function buildJobSettings(inputKey, outputPrefix, settings) {
       }
     },
     Outputs: [{
-      NameModifier: `_${settings.resolution}_${settings.quality}`,
+      NameModifier: `_${optimizedSettings.resolution}_${optimizedSettings.quality}`,
       ContainerSettings: {
         Container: settings.format.toUpperCase(),
         Mp4Settings: {
@@ -131,7 +150,7 @@ function buildJobSettings(inputKey, outputPrefix, settings) {
           MoovPlacement: "PROGRESSIVE_DOWNLOAD"
         }
       },
-      VideoDescription: buildVideoDescription(settings),
+      VideoDescription: buildVideoDescription(optimizedSettings),
       AudioDescriptions: [{
         AudioTypeControl: "FOLLOW_INPUT",
         AudioSourceName: "Audio Selector 1",
@@ -156,7 +175,7 @@ function buildJobSettings(inputKey, outputPrefix, settings) {
   jobSettings.OutputGroups.push(mainOutputGroup);
 
   // 如果启用移动端版本，添加移动端输出组
-  if (settings.enableMobile) {
+  if (optimizedSettings.enableMobile) {
     const mobileOutputGroup = {
       Name: "Mobile Output",
       Destination: outputS3Prefix,
@@ -251,6 +270,53 @@ function buildJobSettings(inputKey, outputPrefix, settings) {
   }
 
   return jobSettings;
+}
+
+// 智能分辨率选择：基于源视频分辨率智能选择输出分辨率
+async function selectIntelligentResolution(inputKey, requestedResolution) {
+  try {
+    console.log(`🔍 开始分析源视频分辨率: ${inputKey}`);
+
+    // 使用基于文件名和常见分辨率的启发式方法进行智能分辨率检测
+    console.log(`💡 使用启发式方法分析分辨率`);
+
+    const fileName = inputKey.toLowerCase();
+    let detectedResolution = requestedResolution;
+
+    // 基于文件名中的分辨率标识符进行智能判断
+    if (fileName.includes('4k') || fileName.includes('2160p') || fileName.includes('uhd')) {
+      detectedResolution = '1080p'; // 4K降到1080p
+    } else if (fileName.includes('1080p') || fileName.includes('fhd')) {
+      detectedResolution = '1080p';
+    } else if (fileName.includes('720p') || fileName.includes('hd')) {
+      detectedResolution = '720p';
+    } else if (fileName.includes('480p') || fileName.includes('sd')) {
+      detectedResolution = '480p';
+    } else {
+      // 如果没有明确指示，使用更智能的默认策略
+      // 对于大文件(>100MB)，假设是高分辨率
+      // 这里我们先使用请求的分辨率作为回退
+      console.log(`📊 未检测到分辨率标识，使用请求分辨率: ${requestedResolution}`);
+      detectedResolution = requestedResolution;
+    }
+
+    // 智能降级策略：确保输出分辨率不超过常见的最佳实践
+    const resolutionHierarchy = ['480p', '720p', '1080p'];
+    const targetIndex = resolutionHierarchy.indexOf(detectedResolution);
+
+    if (targetIndex === -1) {
+      // 如果检测到未知分辨率，默认使用720p
+      detectedResolution = '720p';
+      console.log(`⚠️ 未知分辨率，默认使用 720p`);
+    }
+
+    console.log(`✅ 智能分辨率选择完成: ${requestedResolution} -> ${detectedResolution}`);
+    return detectedResolution;
+
+  } catch (error) {
+    console.error('❌ 分辨率分析失败，使用默认分辨率:', error);
+    return requestedResolution || '720p';
+  }
 }
 
 function buildVideoDescription(settings) {

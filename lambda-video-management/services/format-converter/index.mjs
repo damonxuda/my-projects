@@ -123,6 +123,22 @@ export const handler = async (event, context) => {
         return createErrorResponse(403, "Admin access required");
       }
       return await batchProcessVideos(event, user);
+    } else if (method === "POST" && path === "/test/path-debug") {
+      // 临时调试端点
+      const body = JSON.parse(event.body || '{}');
+      const inputKey = body.inputKey || 'videos/贾老师初联一轮/第2讲 绝对值 例17.mp4';
+      const outputPrefix = body.outputPrefix || 'videos';
+
+      const inputDir = inputKey.substring(0, inputKey.lastIndexOf('/') + 1);
+      const outputS3Prefix = `s3://${process.env.VIDEO_BUCKET_NAME || "damonxuda-video-files"}/${inputDir}`;
+
+      return createSuccessResponse({
+        inputKey,
+        outputPrefix,
+        inputDir,
+        outputS3Prefix,
+        logic: outputPrefix === "videos" || !outputPrefix ? "same-directory" : "specified-prefix"
+      });
     }
 
     console.log("路由不匹配");

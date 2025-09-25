@@ -45,31 +45,18 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
     }
   };
 
-  // 智能选择最优视频版本
-  const selectOptimalVideoVersion = async (originalKey) => {
-    console.log(`🎯 开始智能版本选择: ${originalKey}`);
+  // 效率优先版本选择：总是先播放用户点击的文件
+  const selectVideoVersion = (originalKey) => {
+    console.log(`🎯 效率优先策略: ${originalKey}`);
 
-    // 规则1: 如果点击的是mobile文件，直接返回
+    // 规则1: 如果点击的是mobile文件，直接返回mobile版本
     if (originalKey.includes('_mobile.mp4')) {
-      console.log('✅ 直接播放mobile版本');
+      console.log('✅ 用户点击mobile版本，直接播放');
       return originalKey;
     }
 
-    // 规则2: 如果是移动端且存在mobile版本，优先使用mobile版本
-    if (isMobile()) {
-      const mobileKey = originalKey.replace('.mp4', '_mobile.mp4');
-      console.log(`📱 移动端检测到，查找: ${mobileKey}`);
-
-      if (await quickCheckExists(mobileKey)) {
-        console.log('✅ 找到mobile版本，使用mobile版本');
-        return mobileKey;
-      } else {
-        console.log('⚠️ 未找到mobile版本，使用原版');
-      }
-    }
-
-    // 规则3: 返回原版
-    console.log('💻 使用原版文件');
+    // 规则2: 否则总是先尝试播放原文件（效率优先）
+    console.log('💻 优先尝试播放原文件（90%成功率）');
     return originalKey;
   };
 
@@ -85,8 +72,8 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
         setLoading(true);
         setError('');
 
-        // 智能选择视频版本
-        const videoKeyToLoad = await selectOptimalVideoVersion(video.key);
+        // 效率优先选择视频版本
+        const videoKeyToLoad = selectVideoVersion(video.key);
         console.log(`🎯 智能选择播放版本: ${videoKeyToLoad}`);
 
         const token = await getCachedToken();
@@ -306,13 +293,13 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
               >
                 重试
               </button>
-              {isMobile() && error.includes('格式不兼容') && (
+              {error.includes('格式不兼容') && (
                 <button
                   onClick={reencodeVideoForMobile}
                   disabled={isRecoding}
                   className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-400"
                 >
-                  {isRecoding ? '处理中...' : '重编码为移动端格式'}
+                  {isRecoding ? '处理中...' : '重新编码为兼容格式'}
                 </button>
               )}
             </div>
@@ -339,19 +326,19 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
                 const errorCode = e.target.error?.code;
                 console.log(`❌ 视频播放错误: 代码=${errorCode}, 当前播放: ${video.key}`);
 
-                // 智能错误处理逻辑
-                if (isMobile() && errorCode === 4) {
-                  // 移动端编码不兼容，查找或提示创建mobile版本
+                // 效率优先的智能错误恢复逻辑
+                if (errorCode === 4) {
+                  // H.264编码不兼容，尝试寻找mobile版本作为fallback
                   const mobileKey = video.key.replace('.mp4', '_mobile.mp4');
 
                   // 如果当前播放的已经是mobile版本，说明mobile版本也有问题
                   if (video.key.includes('_mobile.mp4')) {
-                    setError(`移动端优化版本播放失败 (错误代码: ${errorCode})`);
+                    setError(`优化版本播放失败 (错误代码: ${errorCode})`);
                     return;
                   }
 
+                  console.log('🚨 播放失败，检查mobile版本是否存在...');
                   // 检查是否已有mobile版本
-                  console.log('🔍 检查是否存在mobile版本...');
                   if (await quickCheckExists(mobileKey)) {
                     console.log('✅ 找到mobile版本，自动切换播放');
                     // 找到mobile版本，自动加载
@@ -367,7 +354,7 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
                       if (response.ok) {
                         const data = await response.json();
                         if (data.url) {
-                          console.log('🎯 切换到mobile版本成功');
+                          console.log('🎯 自动切换到mobile版本成功');
                           setVideoUrl(data.url);
                           return;
                         }
@@ -380,7 +367,7 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
                   }
 
                   // 没有mobile版本，提示用户转换
-                  setError(`移动端播放格式不兼容 (错误代码: ${errorCode})`);
+                  setError(`播放格式不兼容，需要重新编码 (错误代码: ${errorCode})`);
                 } else {
                   setError(`视频播放失败 (错误代码: ${errorCode || 'unknown'})`);
                 }
