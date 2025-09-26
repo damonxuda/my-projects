@@ -73,8 +73,12 @@ class ThumbnailCache {
 
     // 如果有有效缓存，直接返回
     if (cacheData && this.isCacheValid(cacheData)) {
+      console.log('找到有效缓存，文件夹:', path, '缓存的文件数量:', Object.keys(cacheData.thumbnailUrls || {}).length);
       const url = cacheData.thumbnailUrls[videoKey] || null;
+      console.log('缓存查找结果:', videoKey, '→', url ? 'URL找到' : 'URL不存在');
       return url;
+    } else {
+      console.log('无有效缓存，文件夹:', path, '缓存数据:', cacheData ? '数据存在但无效' : '无数据');
     }
 
     return null; // 需要加载
@@ -109,6 +113,7 @@ class ThumbnailCache {
       const pathParam = path ? `?path=${encodeURIComponent(path)}` : '';
       const url = `${apiUrl}/thumbnails/batch${pathParam}`;
 
+      console.log('开始批量加载缩略图，文件夹:', path, 'URL:', url);
 
       const response = await fetch(url, {
         headers: {
@@ -126,6 +131,9 @@ class ThumbnailCache {
 
 
       if (data.success) {
+        console.log('批量加载成功，文件夹:', path, '获得缩略图数量:', Object.keys(data.thumbnailUrls || {}).length);
+        console.log('缩略图数据示例:', Object.keys(data.thumbnailUrls || {}).slice(0, 3));
+
         // 保存到内存和localStorage
         this.cache.set(path, data);
         this.saveToStorage(path, data);
