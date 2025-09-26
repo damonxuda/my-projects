@@ -49,9 +49,19 @@ class ThumbnailCache {
 
   // 获取单个视频的缩略图URL
   getThumbnailUrl(videoKey) {
-    // 确定文件夹路径
+    // 确定文件夹路径 - 与VideoThumbnail.js保持一致
     const pathParts = videoKey.split('/');
-    const path = pathParts.length > 2 ? pathParts[1] : ''; // videos/Movies/xxx.mp4 -> Movies
+    let path = '';
+    if (pathParts.length > 2) {
+      // videos/Movies/xxx.mp4 -> Movies
+      // videos/贾老师初联一轮/xxx.mp4 -> 贾老师初联一轮
+      path = pathParts[1];
+    } else if (pathParts.length === 2) {
+      // videos/Fish20250908.mp4 -> '' (根目录)
+      path = '';
+    }
+
+    console.log('缓存查询路径:', path, '原文件名:', videoKey);
 
     // 先检查内存缓存
     let cacheData = this.cache.get(path);
