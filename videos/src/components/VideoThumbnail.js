@@ -147,8 +147,10 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
       const batchLoadedUrl = thumbnailCache.getThumbnailUrl(fileName);
 
       if (batchLoadedUrl) {
+        console.log('设置缩略图URL:', fileName, '→', batchLoadedUrl.substring(0, 100) + '...');
         setThumbnailUrl(batchLoadedUrl);
       } else {
+        console.log('批量加载后仍未找到URL:', fileName);
         // 回退到单独生成，使用队列控制并发
         thumbnailQueue.add(() => fetchThumbnail());
         return;
@@ -198,7 +200,9 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
             src={thumbnailUrl} 
             alt={fileName || alt}
             className="w-full h-full object-cover"
-            onError={() => {
+            onError={(e) => {
+              console.error('图片加载失败:', fileName, '错误:', e.target.src);
+              console.error('错误详情:', e.type, e.target.naturalWidth, e.target.naturalHeight);
               setError(true);
             }}
           />
