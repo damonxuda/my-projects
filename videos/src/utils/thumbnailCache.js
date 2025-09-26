@@ -198,6 +198,48 @@ class ThumbnailCache {
 
     console.log(`🗑️ 清除所有缩略图缓存: ${keys.length} 个缓存项`);
   }
+
+  // 清除过期的缓存（URL过期检查）
+  clearExpiredThumbnailCache() {
+    const expiredKeys = [];
+
+    // 清除内存中的过期缓存
+    for (const [path, data] of this.cache.entries()) {
+      if (!this.isCacheValid(data)) {
+        this.cache.delete(path);
+        expiredKeys.push(`memory:${path}`);
+      }
+    }
+
+    // 清除localStorage中的过期缓存
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('thumbnails_')) {
+        keys.push(key);
+      }
+    }
+
+    keys.forEach(key => {
+      try {
+        const data = JSON.parse(localStorage.getItem(key));
+        if (!this.isCacheValid(data)) {
+          localStorage.removeItem(key);
+          expiredKeys.push(`localStorage:${key}`);
+        }
+      } catch (error) {
+        localStorage.removeItem(key);
+        expiredKeys.push(`localStorage:${key}(corrupt)`);
+      }
+    });
+
+    if (expiredKeys.length > 0) {
+      console.log(`🗑️ 清除过期缓略图缓存: ${expiredKeys.length} 个缓存项`);
+      console.log('过期缓存详情:', expiredKeys);
+    }
+
+    return expiredKeys.length;
+  }
 }
 
 // 全局单例
@@ -205,5 +247,6 @@ const thumbnailCache = new ThumbnailCache();
 
 // 页面加载时清理过期缓存
 thumbnailCache.cleanupExpiredCache();
+thumbnailCache.clearExpiredThumbnailCache();
 
 export default thumbnailCache;
