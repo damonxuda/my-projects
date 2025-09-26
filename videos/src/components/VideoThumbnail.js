@@ -128,8 +128,17 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
       // 2. 缓存未命中，需要批量加载该文件夹的缩略图
       // 确定文件夹路径
       const pathParts = fileName.split('/');
-      const folderPath = pathParts.length > 2 ? pathParts[1] : ''; // videos/Movies/xxx.mp4 -> Movies
+      let folderPath = '';
+      if (pathParts.length > 2) {
+        // videos/Movies/xxx.mp4 -> Movies
+        // videos/贾老师初联一轮/xxx.mp4 -> 贾老师初联一轮
+        folderPath = pathParts[1];
+      } else if (pathParts.length === 2) {
+        // videos/Fish20250908.mp4 -> '' (根目录)
+        folderPath = '';
+      }
 
+      console.log('批量加载文件夹:', folderPath, '原文件名:', fileName);
 
       // 批量加载该文件夹的所有缩略图
       await thumbnailCache.loadBatchThumbnails(folderPath, apiUrl, getToken);
