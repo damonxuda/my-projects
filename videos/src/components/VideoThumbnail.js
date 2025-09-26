@@ -37,15 +37,13 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
     return filename.split('.').pop().toUpperCase();
   };
 
-  // 检查是否是无缩略图的大视频文件 (现已支持任意大小)
+  // 检查是否是无缩略图的大视频文件 (>1GB限制)
   const isLargeVideoWithoutThumbnail = useCallback((fileName, fileSize) => {
-    // 🚀 智能算法组合可以处理任意大小的文件！
-    // - 已知MOOV在后文件: MediaConvert生成缩略图
-    // - 大文件(>500MB): MOOV智能算法
-    // - 小文件(<500MB): 传统ffmpeg算法
-    // 完全移除文件大小限制
+    if (!fileSize) return false;
 
-    return false; // 所有视频文件都尝试生成缩略图
+    // 超过1GB的视频文件不生成缩略图
+    const oneTB = 1024 * 1024 * 1024; // 1GB in bytes
+    return fileSize > oneTB;
   }, []);
 
   // 获取缩略图 - 带重试机制
