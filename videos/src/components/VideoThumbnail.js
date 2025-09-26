@@ -37,13 +37,9 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
     return filename.split('.').pop().toUpperCase();
   };
 
-  // 检查是否是无缩略图的大视频文件 (>1GB限制)
+  // 检查是否是无缩略图的大视频文件 (暂时移除限制测试)
   const isLargeVideoWithoutThumbnail = useCallback((fileName, fileSize) => {
-    if (!fileSize) return false;
-
-    // 超过1GB的视频文件不生成缩略图
-    const oneTB = 1024 * 1024 * 1024; // 1GB in bytes
-    return fileSize > oneTB;
+    return false; // 暂时移除1GB限制，测试缩略图显示
   }, []);
 
   // 获取缩略图 - 带重试机制
