@@ -61,7 +61,7 @@ const VideoOperationModals = ({
     try {
       const token = await getToken();
 
-      // 逐个移动文件，因为Lambda只有单个移动端点
+      // 逐个移动文件，因为Lambda只有单个移动端点 - Force deployment
       for (const item of items) {
         const response = await fetch(`${apiUrl}/files/move`, {
           method: 'POST',
