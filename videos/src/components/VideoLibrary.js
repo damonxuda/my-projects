@@ -1409,8 +1409,8 @@ const VideoLibrary = () => {
                   >
                     <Settings className="text-yellow-600" size={20} />
                     <div>
-                      <div className="font-medium text-gray-800">重命名文件</div>
-                      <div className="text-sm text-gray-500">选择文件进行重命名</div>
+                      <div className="font-medium text-gray-800">重命名文件/文件夹</div>
+                      <div className="text-sm text-gray-500">选择文件或文件夹进行重命名</div>
                     </div>
                   </button>
 
@@ -1420,8 +1420,8 @@ const VideoLibrary = () => {
                   >
                     <ArrowRight className="text-purple-600" size={20} />
                     <div>
-                      <div className="font-medium text-gray-800">移动文件</div>
-                      <div className="text-sm text-gray-500">将文件移动到其他位置</div>
+                      <div className="font-medium text-gray-800">移动文件/文件夹</div>
+                      <div className="text-sm text-gray-500">将文件或文件夹移动到其他位置</div>
                     </div>
                   </button>
 
@@ -1431,8 +1431,8 @@ const VideoLibrary = () => {
                   >
                     <ArrowRight className="text-orange-600" size={20} />
                     <div>
-                      <div className="font-medium text-gray-800">批量移动文件</div>
-                      <div className="text-sm text-gray-500">选择多个文件进行批量移动</div>
+                      <div className="font-medium text-gray-800">批量移动文件/文件夹</div>
+                      <div className="text-sm text-gray-500">选择多个文件或文件夹进行批量移动</div>
                     </div>
                   </button>
 
@@ -1442,8 +1442,8 @@ const VideoLibrary = () => {
                   >
                     <Plus className="text-indigo-600" size={20} />
                     <div>
-                      <div className="font-medium text-gray-800">复制文件</div>
-                      <div className="text-sm text-gray-500">复制文件到其他位置</div>
+                      <div className="font-medium text-gray-800">复制文件/文件夹</div>
+                      <div className="text-sm text-gray-500">复制文件或文件夹到其他位置</div>
                     </div>
                   </button>
 
@@ -1453,8 +1453,8 @@ const VideoLibrary = () => {
                   >
                     <X className="text-red-600" size={20} />
                     <div>
-                      <div className="font-medium text-gray-800">删除文件</div>
-                      <div className="text-sm text-gray-500">选择文件进行删除</div>
+                      <div className="font-medium text-gray-800">删除文件/文件夹</div>
+                      <div className="text-sm text-gray-500">选择文件或文件夹进行删除</div>
                     </div>
                   </button>
                 </div>
@@ -1522,16 +1522,18 @@ const VideoLibrary = () => {
                     <div>
                       {!selectedItem ? (
                         <div>
-                          <p className="text-sm text-gray-600 mb-3">选择要复制的文件：</p>
+                          <p className="text-sm text-gray-600 mb-3">选择要复制的文件或文件夹：</p>
                           <div className="max-h-60 overflow-y-auto space-y-2">
-                            {items.filter(item => item.type !== 'folder').map((item, index) => (
+                            {items.map((item, index) => (
                               <button
                                 key={index}
                                 onClick={() => setSelectedItem(item)}
                                 className="w-full text-left p-2 border rounded hover:bg-gray-50 transition-colors"
                               >
                                 <div className="font-medium">{item.name}</div>
-                                <div className="text-xs text-gray-500">文件</div>
+                                <div className="text-xs text-gray-500">
+                                  {item.type === 'folder' ? '文件夹' : '文件'}
+                                </div>
                               </button>
                             ))}
                           </div>
@@ -1640,9 +1642,9 @@ const VideoLibrary = () => {
                   {fileOperation === 'batch-move' && (
                     <div>
                       <div className="mb-3">
-                        <p className="text-sm text-gray-600 mb-3">选择要批量移动的文件：</p>
+                        <p className="text-sm text-gray-600 mb-3">选择要批量移动的文件或文件夹：</p>
                         <div className="max-h-60 overflow-y-auto space-y-2">
-                          {items.filter(item => item.type !== 'folder').map((item, index) => (
+                          {items.map((item, index) => (
                             <label key={index} className="flex items-center gap-3 p-2 border rounded hover:bg-gray-50 transition-colors cursor-pointer">
                               <input
                                 type="checkbox"
@@ -1658,7 +1660,9 @@ const VideoLibrary = () => {
                               />
                               <div className="flex-1">
                                 <div className="font-medium">{item.name}</div>
-                                <div className="text-xs text-gray-500">文件</div>
+                                <div className="text-xs text-gray-500">
+                                  {item.type === 'folder' ? '文件夹' : '文件'}
+                                </div>
                               </div>
                             </label>
                           ))}
@@ -1697,9 +1701,9 @@ const VideoLibrary = () => {
                     <div>
                       {!selectedItem ? (
                         <div>
-                          <p className="text-sm text-gray-600 mb-3">选择要删除的文件：</p>
+                          <p className="text-sm text-gray-600 mb-3">选择要删除的文件或文件夹：</p>
                           <div className="max-h-60 overflow-y-auto space-y-2">
-                            {items.filter(item => item.type !== 'folder').map((item, index) => (
+                            {items.map((item, index) => (
                               <button
                                 key={index}
                                 onClick={() => setSelectedItem(item)}
