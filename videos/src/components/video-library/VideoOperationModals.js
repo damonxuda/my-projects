@@ -49,7 +49,7 @@ const VideoOperationModals = ({
       resetOperationState();
     } catch (error) {
       console.error('创建文件夹失败:', error);
-      alert(`创建文件夹失败: ${error.message}`);
+      window.alert(`创建文件夹失败: ${error.message}`);
     } finally {
       setIsProcessingOperation(false);
     }
@@ -82,7 +82,7 @@ const VideoOperationModals = ({
       resetOperationState();
     } catch (error) {
       console.error('批量移动失败:', error);
-      alert(`批量移动失败: ${error.message}`);
+      window.alert(`批量移动失败: ${error.message}`);
     } finally {
       setIsProcessingOperation(false);
     }
@@ -115,7 +115,7 @@ const VideoOperationModals = ({
       resetOperationState();
     } catch (error) {
       console.error('批量复制失败:', error);
-      alert(`批量复制失败: ${error.message}`);
+      window.alert(`批量复制失败: ${error.message}`);
     } finally {
       setIsProcessingOperation(false);
     }
@@ -147,7 +147,7 @@ const VideoOperationModals = ({
       resetOperationState();
     } catch (error) {
       console.error('批量删除失败:', error);
-      alert(`批量删除失败: ${error.message}`);
+      window.alert(`批量删除失败: ${error.message}`);
     } finally {
       setIsProcessingOperation(false);
     }
@@ -494,11 +494,11 @@ const VideoOperationModals = ({
                     } else if (fileOperation === 'copy' && selectedItems.length > 0) {
                       await handleBatchCopyItems(selectedItems, operationData.targetFolder || '');
                     } else if (fileOperation === 'delete' && selectedItems.length > 0) {
-                      if (confirm(`确定要删除选中的 ${selectedItems.length} 个项目吗？此操作不可恢复。`)) {
+                      if (window.confirm(`确定要删除选中的 ${selectedItems.length} 个项目吗？此操作不可恢复。`)) {
                         await handleBatchDeleteItems(selectedItems);
                       }
                     } else if (fileOperation === 'upload' && operationData.uploadFiles) {
-                      alert('上传功能需要与VideoUpload组件集成');
+                      window.alert('上传功能需要与VideoUpload组件集成');
                     }
                   }}
                   disabled={isProcessingOperation || !canExecuteOperation()}
