@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Youtube, Plus, X, Upload, Search, Settings, FolderOpen, ArrowRight } from "lucide-react";
+import { ArrowLeft, Youtube, Plus, X, Upload, Search, Settings, FolderOpen, ArrowRight, Copy, Trash2 } from "lucide-react";
 import { useAuth } from "../../../auth-clerk/src";
 import VideoPlayer from "./VideoPlayer";
 import FileCard from "./FileCard";
@@ -852,6 +852,104 @@ const VideoLibrary = () => {
     }
   };
 
+  // 批量复制文件
+  const handleBatchCopyItems = async (files, targetFolder) => {
+    if (!isAdmin) {
+      alert('只有管理员可以复制文件');
+      return;
+    }
+
+    setIsProcessingOperation(true);
+    try {
+      const token = await getToken();
+      const response = await fetch(`${FILE_MANAGEMENT_URL}/files/copy`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          files: files.map(item => item.key || item.Key),
+          targetFolder: targetFolder
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || '批量复制失败');
+      }
+
+      const result = await response.json();
+
+      alert(`批量复制成功！已复制 ${files.length} 个文件`);
+      setShowFileManager(false);
+      setSelectedItems([]);
+      setFileOperation(null);
+
+      // 刷新当前目录
+      loadItems(currentPath);
+
+    } catch (error) {
+      console.error('❌ 批量复制失败:', error);
+      alert(`批量复制失败: ${error.message}`);
+    } finally {
+      setIsProcessingOperation(false);
+    }
+  };
+
+  // 批量删除文件
+  const handleBatchDeleteItems = async (files) => {
+    if (!isAdmin) {
+      alert('只有管理员可以删除文件');
+      return;
+    }
+
+    // 确认删除
+    const confirmDelete = window.confirm(
+      `确定要删除选中的 ${files.length} 个文件吗？\n\n⚠️ 此操作不可恢复！\n\n文件列表：\n${files.map(f => f.name).join('\n')}`
+    );
+
+    if (!confirmDelete) {
+      return;
+    }
+
+    setIsProcessingOperation(true);
+    try {
+      const token = await getToken();
+      const response = await fetch(`${FILE_MANAGEMENT_URL}/files/batch-delete`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          files: files.map(item => item.key || item.Key)
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || '批量删除失败');
+      }
+
+      const result = await response.json();
+
+      alert(`批量删除成功！已删除 ${files.length} 个文件`);
+      setShowFileManager(false);
+      setSelectedItems([]);
+      setFileOperation(null);
+
+      // 刷新当前目录
+      loadItems(currentPath);
+
+    } catch (error) {
+      console.error('❌ 批量删除失败:', error);
+      alert(`批量删除失败: ${error.message}`);
+    } finally {
+      setIsProcessingOperation(false);
+    }
+  };
+
   // 检查是否可以执行操作
   const canExecuteOperation = () => {
     switch (fileOperation) {
@@ -865,6 +963,10 @@ const VideoLibrary = () => {
         return selectedItem && operationData.targetPath !== undefined;
       case 'batch-move':
         return selectedItems && selectedItems.length > 0 && operationData.targetFolder !== undefined;
+      case 'batch-copy':
+        return selectedItems && selectedItems.length > 0 && operationData.targetFolder !== undefined;
+      case 'batch-delete':
+        return selectedItems && selectedItems.length > 0;
       case 'upload':
         return operationData.uploadFiles && operationData.uploadFiles.length > 0;
       case 'delete':
@@ -1089,7 +1191,7 @@ const VideoLibrary = () => {
                   thumbnailApiUrl={THUMBNAIL_GENERATOR_URL}
                   getToken={getToken}
                   // 多选相关props
-                  isMultiSelectMode={fileOperation === 'batch-move'}
+                  isMultiSelectMode={['batch-move', 'batch-copy', 'batch-delete'].includes(fileOperation)}
                   isSelected={selectedItems.some(selected => selected.key === item.key)}
                   onSelectionChange={(selected) => {
                     if (selected) {
@@ -1359,6 +1461,28 @@ const VideoLibrary = () => {
                   </button>
 
                   <button
+                    onClick={() => setFileOperation('batch-copy')}
+                    className="w-full flex items-center gap-3 p-3 text-left border rounded-lg hover:bg-indigo-50 hover:border-indigo-300 transition-colors"
+                  >
+                    <Copy className="text-indigo-600" size={20} />
+                    <div>
+                      <div className="font-medium text-gray-800">批量复制文件/文件夹</div>
+                      <div className="text-sm text-gray-500">选择多个文件或文件夹进行批量复制</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setFileOperation('batch-delete')}
+                    className="w-full flex items-center gap-3 p-3 text-left border rounded-lg hover:bg-red-50 hover:border-red-300 transition-colors"
+                  >
+                    <Trash2 className="text-red-600" size={20} />
+                    <div>
+                      <div className="font-medium text-gray-800">批量删除文件/文件夹</div>
+                      <div className="text-sm text-gray-500">选择多个文件或文件夹进行批量删除</div>
+                    </div>
+                  </button>
+
+                  <button
                     onClick={() => setFileOperation('copy')}
                     className="w-full flex items-center gap-3 p-3 text-left border rounded-lg hover:bg-indigo-50 hover:border-indigo-300 transition-colors"
                   >
@@ -1619,6 +1743,104 @@ const VideoLibrary = () => {
                     </div>
                   )}
 
+                  {fileOperation === 'batch-copy' && (
+                    <div>
+                      <div className="mb-3">
+                        <p className="text-sm text-gray-600 mb-3">选择要批量复制的文件或文件夹：</p>
+                        <div className="max-h-60 overflow-y-auto space-y-2">
+                          {items.map((item, index) => (
+                            <label key={index} className="flex items-center gap-3 p-2 border rounded hover:bg-gray-50 transition-colors cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={selectedItems.some(selected => selected.key === item.key)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedItems([...selectedItems, item]);
+                                  } else {
+                                    setSelectedItems(selectedItems.filter(selected => selected.key !== item.key));
+                                  }
+                                }}
+                                className="rounded text-indigo-600"
+                              />
+                              <div className="flex-1">
+                                <div className="font-medium">{item.name}</div>
+                                <div className="text-xs text-gray-500">
+                                  {item.type === 'folder' ? '文件夹' : '文件'}
+                                </div>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+
+                        {selectedItems.length > 0 && (
+                          <div className="mt-3 p-2 bg-indigo-50 border border-indigo-200 rounded">
+                            <p className="text-sm text-indigo-800">
+                              已选择 {selectedItems.length} 个文件
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {selectedItems.length > 0 && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            目标文件夹
+                          </label>
+                          <input
+                            type="text"
+                            value={operationData.targetFolder || ''}
+                            onChange={(e) => setOperationData({...operationData, targetFolder: e.target.value})}
+                            placeholder="输入目标文件夹名称（如：贾老师初联一轮/第1讲）"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                          />
+                          <div className="mt-2 text-xs text-gray-500">
+                            文件将复制到: videos/{operationData.targetFolder || '根目录'}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {fileOperation === 'batch-delete' && (
+                    <div>
+                      <div className="mb-3">
+                        <p className="text-sm text-gray-600 mb-3">选择要批量删除的文件或文件夹：</p>
+                        <div className="max-h-60 overflow-y-auto space-y-2">
+                          {items.map((item, index) => (
+                            <label key={index} className="flex items-center gap-3 p-2 border rounded hover:bg-gray-50 transition-colors cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={selectedItems.some(selected => selected.key === item.key)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedItems([...selectedItems, item]);
+                                  } else {
+                                    setSelectedItems(selectedItems.filter(selected => selected.key !== item.key));
+                                  }
+                                }}
+                                className="rounded text-red-600"
+                              />
+                              <div className="flex-1">
+                                <div className="font-medium">{item.name}</div>
+                                <div className="text-xs text-gray-500">
+                                  {item.type === 'folder' ? '文件夹' : '文件'}
+                                </div>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+
+                        {selectedItems.length > 0 && (
+                          <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded">
+                            <p className="text-sm text-red-800">
+                              已选择 {selectedItems.length} 个文件 - ⚠️ 删除操作不可恢复
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {fileOperation === 'delete' && (
                     <div>
                       {!selectedItem ? (
@@ -1685,6 +1907,10 @@ const VideoLibrary = () => {
                           await handleRenameItem(oldPath, newPath); // 移动就是重命名到新路径
                         } else if (fileOperation === 'batch-move' && selectedItems.length > 0 && operationData.targetFolder !== undefined) {
                           await handleBatchMoveItems(selectedItems, operationData.targetFolder);
+                        } else if (fileOperation === 'batch-copy' && selectedItems.length > 0 && operationData.targetFolder !== undefined) {
+                          await handleBatchCopyItems(selectedItems, operationData.targetFolder);
+                        } else if (fileOperation === 'batch-delete' && selectedItems.length > 0) {
+                          await handleBatchDeleteItems(selectedItems);
                         } else if (fileOperation === 'upload' && operationData.uploadFiles) {
                           // 设置上传状态并执行上传
                           setSelectedFiles(operationData.uploadFiles);
