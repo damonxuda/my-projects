@@ -43,7 +43,7 @@ const YouTubeManagerModal = ({
 
   // 删除YouTube文件
   const deleteYouTubeFile = async (file) => {
-    if (!confirm(`确定要删除 ${file.name} 吗？`)) return;
+    if (!window.confirm(`确定要删除 ${file.name} 吗？`)) return;
 
     setDeleting(file.key);
     try {
