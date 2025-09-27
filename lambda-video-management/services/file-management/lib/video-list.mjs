@@ -133,13 +133,38 @@ export async function listVideos(user, requestedPath = "") {
       }
     });
 
-    // 合并文件夹和文件列表
+    // 计算每个文件夹的文件数量
+    const folderCounts = new Map();
+
+    // 统计每个文件夹中的文件数量
+    files.forEach(file => {
+      const relativePath = file.Key.replace("videos/", "");
+      const pathParts = relativePath.split("/");
+
+      if (requestedPath) {
+        // 在子目录中，统计直接子文件夹的文件数量
+        if (pathParts.length > requestedPath.split("/").length + 1) {
+          const subFolderIndex = requestedPath.split("/").length;
+          const subFolderName = pathParts[subFolderIndex];
+          folderCounts.set(subFolderName, (folderCounts.get(subFolderName) || 0) + 1);
+        }
+      } else {
+        // 在根目录中，统计顶级文件夹的文件数量
+        if (pathParts.length > 1) {
+          const topFolderName = pathParts[0];
+          folderCounts.set(topFolderName, (folderCounts.get(topFolderName) || 0) + 1);
+        }
+      }
+    });
+
+    // 合并文件夹和文件列表，包含正确的文件计数
     const folderList = Array.from(folders).map(folderName => ({
       Key: requestedPath ? `videos/${requestedPath}/${folderName}/` : `videos/${folderName}/`,
       Size: 0,
       LastModified: new Date(),
       Type: "folder",
-      Name: folderName
+      Name: folderName,
+      Count: folderCounts.get(folderName) || 0
     }));
 
     const allItems = [...folderList, ...files];
