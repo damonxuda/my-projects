@@ -78,6 +78,29 @@ class ThumbnailCache {
       console.log('找到有效缓存，文件夹:', path, '缓存的文件数量:', Object.keys(cacheData.thumbnailUrls || {}).length);
       const url = cacheData.thumbnailUrls[videoKey] || null;
       console.log('缓存查找结果:', videoKey, '→', url ? 'URL找到' : 'URL不存在');
+
+      // 移动端额外验证：检查URL格式和有效性
+      if (url && /Mobi|Android/i.test(navigator.userAgent)) {
+        console.log('移动端验证URL:', url.substring(0, 100) + '...');
+
+        // 检查URL是否包含正确的签名参数
+        try {
+          const urlObj = new URL(url);
+          const hasSignature = urlObj.searchParams.has('X-Amz-Signature');
+          const hasExpires = urlObj.searchParams.has('X-Amz-Expires');
+          const expires = urlObj.searchParams.get('X-Amz-Date');
+
+          console.log('移动端URL验证结果:', {
+            hasSignature,
+            hasExpires,
+            expires,
+            domain: urlObj.hostname
+          });
+        } catch (e) {
+          console.error('移动端URL解析失败:', e);
+        }
+      }
+
       return url;
     } else {
       console.log('无有效缓存，文件夹:', path, '缓存数据:', cacheData ? '数据存在但无效' : '无数据');
@@ -246,6 +269,11 @@ class ThumbnailCache {
 
 // 全局单例
 const thumbnailCache = new ThumbnailCache();
+
+// 暴露到window对象便于移动端调试
+if (typeof window !== 'undefined') {
+  window.thumbnailCache = thumbnailCache;
+}
 
 // 页面加载时清理过期缓存
 thumbnailCache.cleanupExpiredCache();

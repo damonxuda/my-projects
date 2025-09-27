@@ -1,6 +1,6 @@
 import { ClerkAuthProvider, useAuth, ModuleAccessGuard, UserProfile } from '../../auth-clerk/src';
 import React from 'react';
-import VideoLibrary from './components/VideoLibrary';
+import VideoLibrary from './components/video-library';
 import { User } from 'lucide-react';
 import './App.css';
 

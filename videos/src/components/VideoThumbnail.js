@@ -2,6 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Film, Play, HardDrive, Loader } from 'lucide-react';
 import thumbnailCache from '../utils/thumbnailCache';
 import thumbnailQueue from '../utils/thumbnailQueue';
+import mobileCompatibility from '../utils/mobileCompatibility';
+import mobileDebugger from '../utils/mobileDebug';
+import mobileNetworkHelper from '../utils/mobileNetworkHelper';
 
 const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
   const [thumbnailUrl, setThumbnailUrl] = useState(null);
@@ -148,7 +151,38 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
 
       if (batchLoadedUrl) {
         console.log('设置缩略图URL:', fileName, '→', batchLoadedUrl.substring(0, 100) + '...');
-        setThumbnailUrl(batchLoadedUrl);
+
+        // 移动端额外验证URL可用性
+        if (mobileCompatibility.isMobileDevice()) {
+          console.log('🔍 移动端验证缩略图URL:', fileName);
+
+          mobileCompatibility.validateThumbnailUrl(batchLoadedUrl, fileName)
+            .then(validation => {
+              if (validation.valid) {
+                console.log('✅ 移动端URL验证通过:', validation.reason);
+                setThumbnailUrl(batchLoadedUrl);
+              } else {
+                console.error('❌ 移动端URL验证失败:', validation.reason);
+                mobileCompatibility.logMobileIssue('thumbnail_url_validation_failed', {
+                  fileName,
+                  url: batchLoadedUrl.substring(0, 100),
+                  reason: validation.reason,
+                  details: validation.details
+                });
+
+                // 验证失败，回退到单独生成
+                thumbnailQueue.add(() => fetchThumbnail());
+              }
+            })
+            .catch(error => {
+              console.error('移动端URL验证出错:', error);
+              // 出错时仍然使用URL，但记录问题
+              setThumbnailUrl(batchLoadedUrl);
+            });
+        } else {
+          // 桌面端直接使用
+          setThumbnailUrl(batchLoadedUrl);
+        }
       } else {
         console.log('批量加载后仍未找到URL:', fileName);
         // 回退到单独生成，使用队列控制并发
@@ -201,9 +235,45 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
             alt={fileName || alt}
             className="w-full h-full object-cover"
             onError={(e) => {
-              console.error('图片加载失败:', fileName, '错误:', e.target.src);
+              console.error('图片加载失败:', fileName);
+              console.error('URL:', e.target.src);
               console.error('错误详情:', e.type, e.target.naturalWidth, e.target.naturalHeight);
-              setError(true);
+
+              // 移动端使用智能重试机制
+              if (mobileNetworkHelper.isMobile && e.target.src) {
+                console.error('📱 移动端图片加载失败，启动智能重试...');
+                console.error('📶 当前网络状态:', mobileNetworkHelper.getStats());
+
+                // 使用智能重试加载
+                mobileNetworkHelper.loadImageWithRetry(e.target.src, fileName)
+                  .then(result => {
+                    console.log('🎉 智能重试成功:', fileName, result);
+                    // 不设置error状态，让图片继续显示
+                    // 可以选择性地重新设置src触发重新加载
+                    e.target.src = result.url;
+                  })
+                  .catch(retryError => {
+                    console.error('💔 智能重试最终失败:', fileName, retryError.message);
+
+                    // 执行详细诊断
+                    if (mobileDebugger.isMobile) {
+                      console.error('🔍 启动详细诊断...');
+                      mobileDebugger.testThumbnailUrl(e.target.src, fileName)
+                        .then(result => {
+                          console.error('📊 诊断结果:', result);
+                        })
+                        .catch(debugError => {
+                          console.error('🚨 诊断失败:', debugError);
+                        });
+                    }
+
+                    setError(true);
+                  });
+              } else {
+                // 桌面端或非移动端的传统处理
+                console.error('🖥️ 桌面端加载失败');
+                setError(true);
+              }
             }}
           />
           
