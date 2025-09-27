@@ -14,6 +14,10 @@ const FileCard = ({
   apiUrl,
   thumbnailApiUrl,
   getToken,
+  // 多选相关props
+  isMultiSelectMode = false,
+  isSelected = false,
+  onSelectionChange,
 }) => {
   const [youtubeData, setYoutubeData] = useState(null);
   const isVideo = item.type === "video";
@@ -97,7 +101,16 @@ const FileCard = ({
     }
   }, [isYouTube, item.name, extractVideoId, getDisplayTitle]);
 
-  const handleClick = () => {
+  const handleClick = (e) => {
+    // 如果是多选模式，处理选择逻辑
+    if (isMultiSelectMode && onSelectionChange) {
+      e.preventDefault();
+      e.stopPropagation();
+      onSelectionChange(!isSelected);
+      return;
+    }
+
+    // 普通模式下的点击逻辑
     if (isFolder) {
       onFolderClick(item.path);
     } else if (isVideo || isYouTube) {
@@ -107,7 +120,11 @@ const FileCard = ({
 
   return (
     <div
-      className="file-card border border-gray-200 rounded-xl p-4 cursor-pointer bg-white hover:shadow-lg hover:border-gray-300 transition-all duration-200 relative group"
+      className={`file-card border rounded-xl p-4 cursor-pointer bg-white hover:shadow-lg transition-all duration-200 relative group ${
+        isMultiSelectMode && isSelected
+          ? 'border-blue-500 bg-blue-50 shadow-md'
+          : 'border-gray-200 hover:border-gray-300'
+      }`}
       onClick={handleClick}
     >
       {/* 删除功能已移至文件管理下拉菜单 */}
@@ -115,6 +132,22 @@ const FileCard = ({
       <div className="flex flex-col">
         {/* 缩略图/图标区域 */}
         <div className="mb-3 relative">
+          {/* 多选模式复选框 */}
+          {isMultiSelectMode && (
+            <div className="absolute top-2 right-2 z-10">
+              <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
+                isSelected
+                  ? 'bg-blue-500 border-blue-500'
+                  : 'bg-white border-gray-300'
+              }`}>
+                {isSelected && (
+                  <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                  </svg>
+                )}
+              </div>
+            </div>
+          )}
           {isFolder ? (
             <div className="w-full h-32 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg flex items-center justify-center">
               <Folder className="text-white" size={48} />

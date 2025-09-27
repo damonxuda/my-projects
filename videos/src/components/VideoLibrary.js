@@ -1088,6 +1088,16 @@ const VideoLibrary = () => {
                   apiUrl={FILE_MANAGEMENT_URL}
                   thumbnailApiUrl={THUMBNAIL_GENERATOR_URL}
                   getToken={getToken}
+                  // 多选相关props
+                  isMultiSelectMode={fileOperation === 'batch-move'}
+                  isSelected={selectedItems.some(selected => selected.key === item.key)}
+                  onSelectionChange={(selected) => {
+                    if (selected) {
+                      setSelectedItems([...selectedItems, item]);
+                    } else {
+                      setSelectedItems(selectedItems.filter(selected => selected.key !== item.key));
+                    }
+                  }}
                 />
               ))}
             </div>
