@@ -71,7 +71,7 @@ const YouTubeManager = ({
         body: JSON.stringify({
           fileName: fileName,
           content: jsonContent,
-          path: "YouTube/",
+          path: "videos/YouTube/",
         }),
       });
 
