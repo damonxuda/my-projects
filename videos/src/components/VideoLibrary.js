@@ -30,7 +30,7 @@ const VideoLibrary = () => {
   const [showFileManager, setShowFileManager] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedItems, setSelectedItems] = useState([]); // 多选文件
-  const [fileOperation, setFileOperation] = useState(null); // 'rename', 'move', 'copy', 'create-folder', 'batch-move'
+  const [fileOperation, setFileOperation] = useState(null); // 'rename', 'move', 'copy', 'delete', 'create-folder', 'upload'
   const [operationData, setOperationData] = useState({});
   const [isProcessingOperation, setIsProcessingOperation] = useState(false);
 
@@ -74,47 +74,6 @@ const VideoLibrary = () => {
     };
   };
 
-  // 删除文件
-  const handleDelete = async (item) => {
-    try {
-
-      const token = await getToken();
-      const response = await fetch(`${FILE_MANAGEMENT_URL}/files/delete`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          key: item.key,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        try {
-          const errorData = JSON.parse(errorText);
-          throw new Error(errorData.details || `删除失败: ${response.status}`);
-        } catch (parseError) {
-          console.error('删除API错误响应解析失败:', parseError);
-          throw new Error(`删除失败: ${response.status} - ${errorText}`);
-        }
-      }
-
-      const responseText = await response.text();
-      try {
-        JSON.parse(responseText); // 验证响应是有效的JSON
-      } catch (parseError) {
-        console.warn('删除API响应不是有效JSON，但操作可能已成功:', responseText);
-      }
-
-      // 刷新当前文件夹
-      await loadItems(currentPath);
-    } catch (error) {
-      console.error("删除文件失败:", error);
-      throw error;
-    }
-  };
 
   // 处理添加YouTube视频
   const handleAddYouTube = async () => {
@@ -765,47 +724,6 @@ const VideoLibrary = () => {
     }
   };
 
-  // 删除文件
-  const handleDeleteItem = async (filePath) => {
-    if (!isAdmin) {
-      alert('只有管理员可以删除文件');
-      return;
-    }
-
-    setIsProcessingOperation(true);
-    try {
-      const token = await getToken();
-      const response = await fetch(`${FILE_MANAGEMENT_URL}/files/delete`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ key: filePath })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || '删除失败');
-      }
-
-      const result = await response.json();
-
-      alert('文件删除成功！');
-      setShowFileManager(false);
-      setSelectedItem(null);
-      setFileOperation(null);
-
-      // 刷新当前目录
-      loadItems(currentPath);
-
-    } catch (error) {
-      console.error('❌ 删除失败:', error);
-      alert(`删除失败: ${error.message}`);
-    } finally {
-      setIsProcessingOperation(false);
-    }
-  };
 
   // 辅助函数：自动扩展选择以包含mobile版本
   const expandSelectionWithMobile = (files) => {
@@ -1522,27 +1440,6 @@ const VideoLibrary = () => {
                     </div>
                   </button>
 
-                  <button
-                    onClick={() => setFileOperation('copy')}
-                    className="w-full flex items-center gap-3 p-3 text-left border rounded-lg hover:bg-indigo-50 hover:border-indigo-300 transition-colors"
-                  >
-                    <Plus className="text-indigo-600" size={20} />
-                    <div>
-                      <div className="font-medium text-gray-800">复制文件/文件夹</div>
-                      <div className="text-sm text-gray-500">复制文件或文件夹到其他位置</div>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => setFileOperation('delete')}
-                    className="w-full flex items-center gap-3 p-3 text-left border rounded-lg hover:bg-red-50 hover:border-red-300 transition-colors"
-                  >
-                    <X className="text-red-600" size={20} />
-                    <div>
-                      <div className="font-medium text-gray-800">删除文件/文件夹</div>
-                      <div className="text-sm text-gray-500">选择文件或文件夹进行删除</div>
-                    </div>
-                  </button>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -1606,187 +1503,8 @@ const VideoLibrary = () => {
 
                   {fileOperation === 'copy' && (
                     <div>
-                      {!selectedItem ? (
-                        <div>
-                          <p className="text-sm text-gray-600 mb-3">选择要复制的文件或文件夹：</p>
-                          <div className="max-h-60 overflow-y-auto space-y-2">
-                            {items.map((item, index) => (
-                              <button
-                                key={index}
-                                onClick={() => setSelectedItem(item)}
-                                className="w-full text-left p-2 border rounded hover:bg-gray-50 transition-colors"
-                              >
-                                <div className="font-medium">{item.name}</div>
-                                <div className="text-xs text-gray-500">
-                                  {item.type === 'folder' ? '文件夹' : '文件'}
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <div>
-                          <div className="mb-3">
-                            <span className="text-sm text-gray-600">复制: </span>
-                            <span className="font-medium">{selectedItem.name}</span>
-                          </div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            目标路径 (相对于videos/)
-                          </label>
-                          <input
-                            type="text"
-                            value={operationData.targetPath || currentPath}
-                            onChange={(e) => setOperationData({...operationData, targetPath: e.target.value})}
-                            placeholder="目标文件夹路径"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                          />
-                          <div className="mt-2 text-xs text-gray-500">
-                            文件将复制到: videos/{operationData.targetPath || currentPath}/
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {fileOperation === 'upload' && (
-                    <div>
-                      <p className="text-sm text-gray-600 mb-3">选择要上传的视频文件：</p>
-                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                        <input
-                          type="file"
-                          accept=".mp4,.avi,.mov,.mkv,.webm"
-                          multiple
-                          onChange={(e) => {
-                            const files = Array.from(e.target.files);
-                            if (files.length > 0) {
-                              setOperationData({...operationData, uploadFiles: files});
-                            }
-                          }}
-                          className="hidden"
-                          id="file-upload"
-                        />
-                        <label
-                          htmlFor="file-upload"
-                          className="cursor-pointer flex flex-col items-center gap-2"
-                        >
-                          <Upload className="text-gray-400" size={32} />
-                          <span className="text-sm text-gray-600">
-                            {operationData.uploadFiles && operationData.uploadFiles.length > 0 ? `已选择 ${operationData.uploadFiles.length} 个文件` : '点击选择多个文件或拖拽到此处'}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            支持: MP4, AVI, MOV, MKV, WebM (最大2GB)
-                          </span>
-                        </label>
-                      </div>
-                    </div>
-                  )}
-
-                  {fileOperation === 'move' && (
-                    <div>
-                      {!selectedItem ? (
-                        <div>
-                          <p className="text-sm text-gray-600 mb-3">选择要移动的文件：</p>
-                          <div className="max-h-60 overflow-y-auto space-y-2">
-                            {items.map((item, index) => (
-                              <button
-                                key={index}
-                                onClick={() => setSelectedItem(item)}
-                                className="w-full text-left p-2 border rounded hover:bg-gray-50 transition-colors"
-                              >
-                                <div className="font-medium">{item.name}</div>
-                                <div className="text-xs text-gray-500">
-                                  {item.type === 'folder' ? '文件夹' : '文件'}
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <div>
-                          <div className="mb-3">
-                            <span className="text-sm text-gray-600">移动: </span>
-                            <span className="font-medium">{selectedItem.name}</span>
-                          </div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            目标路径 (相对于videos/)
-                          </label>
-                          <input
-                            type="text"
-                            value={operationData.targetPath || currentPath}
-                            onChange={(e) => setOperationData({...operationData, targetPath: e.target.value})}
-                            placeholder="目标文件夹路径"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                          />
-                          <div className="mt-2 text-xs text-gray-500">
-                            文件将移动到: videos/{operationData.targetPath || currentPath}/
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {fileOperation === 'batch-move' && (
-                    <div>
                       <div className="mb-3">
-                        <p className="text-sm text-gray-600 mb-3">选择要批量移动的文件或文件夹：</p>
-                        <div className="max-h-60 overflow-y-auto space-y-2">
-                          {items.map((item, index) => (
-                            <label key={index} className="flex items-center gap-3 p-2 border rounded hover:bg-gray-50 transition-colors cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={selectedItems.some(selected => selected.key === item.key)}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setSelectedItems([...selectedItems, item]);
-                                  } else {
-                                    setSelectedItems(selectedItems.filter(selected => selected.key !== item.key));
-                                  }
-                                }}
-                                className="rounded text-orange-600"
-                              />
-                              <div className="flex-1">
-                                <div className="font-medium">{item.name}</div>
-                                <div className="text-xs text-gray-500">
-                                  {item.type === 'folder' ? '文件夹' : '文件'}
-                                </div>
-                              </div>
-                            </label>
-                          ))}
-                        </div>
-
-                        {selectedItems.length > 0 && (
-                          <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded">
-                            <p className="text-sm text-orange-800">
-                              已选择 {selectedItems.length} 个文件
-                            </p>
-                          </div>
-                        )}
-                      </div>
-
-                      {selectedItems.length > 0 && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            目标文件夹
-                          </label>
-                          <input
-                            type="text"
-                            value={operationData.targetFolder || ''}
-                            onChange={(e) => setOperationData({...operationData, targetFolder: e.target.value})}
-                            placeholder="输入目标文件夹名称（如：贾老师初联一轮/第1讲）"
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                          />
-                          <div className="mt-2 text-xs text-gray-500">
-                            文件将移动到: videos/{operationData.targetFolder || '根目录'}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {fileOperation === 'batch-copy' && (
-                    <div>
-                      <div className="mb-3">
-                        <p className="text-sm text-gray-600 mb-3">选择要批量复制的文件或文件夹：</p>
+                        <p className="text-sm text-gray-600 mb-3">选择要复制的文件或文件夹：</p>
                         <div className="max-h-60 overflow-y-auto space-y-2">
                           {items.map((item, index) => (
                             <label key={index} className="flex items-center gap-3 p-2 border rounded hover:bg-gray-50 transition-colors cursor-pointer">
@@ -1841,10 +1559,104 @@ const VideoLibrary = () => {
                     </div>
                   )}
 
-                  {fileOperation === 'batch-delete' && (
+                  {fileOperation === 'upload' && (
+                    <div>
+                      <p className="text-sm text-gray-600 mb-3">选择要上传的视频文件：</p>
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                        <input
+                          type="file"
+                          accept=".mp4,.avi,.mov,.mkv,.webm"
+                          multiple
+                          onChange={(e) => {
+                            const files = Array.from(e.target.files);
+                            if (files.length > 0) {
+                              setOperationData({...operationData, uploadFiles: files});
+                            }
+                          }}
+                          className="hidden"
+                          id="file-upload"
+                        />
+                        <label
+                          htmlFor="file-upload"
+                          className="cursor-pointer flex flex-col items-center gap-2"
+                        >
+                          <Upload className="text-gray-400" size={32} />
+                          <span className="text-sm text-gray-600">
+                            {operationData.uploadFiles && operationData.uploadFiles.length > 0 ? `已选择 ${operationData.uploadFiles.length} 个文件` : '点击选择多个文件或拖拽到此处'}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            支持: MP4, AVI, MOV, MKV, WebM (最大2GB)
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+
+                  {fileOperation === 'move' && (
                     <div>
                       <div className="mb-3">
-                        <p className="text-sm text-gray-600 mb-3">选择要批量删除的文件或文件夹：</p>
+                        <p className="text-sm text-gray-600 mb-3">选择要移动的文件或文件夹：</p>
+                        <div className="max-h-60 overflow-y-auto space-y-2">
+                          {items.map((item, index) => (
+                            <label key={index} className="flex items-center gap-3 p-2 border rounded hover:bg-gray-50 transition-colors cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={selectedItems.some(selected => selected.key === item.key)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedItems([...selectedItems, item]);
+                                  } else {
+                                    setSelectedItems(selectedItems.filter(selected => selected.key !== item.key));
+                                  }
+                                }}
+                                className="rounded text-orange-600"
+                              />
+                              <div className="flex-1">
+                                <div className="font-medium">{item.name}</div>
+                                <div className="text-xs text-gray-500">
+                                  {item.type === 'folder' ? '文件夹' : '文件'}
+                                </div>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+
+                        {selectedItems.length > 0 && (
+                          <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded">
+                            <p className="text-sm text-orange-800">
+                              已选择 {selectedItems.length} 个文件
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {selectedItems.length > 0 && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            目标文件夹
+                          </label>
+                          <input
+                            type="text"
+                            value={operationData.targetFolder || ''}
+                            onChange={(e) => setOperationData({...operationData, targetFolder: e.target.value})}
+                            placeholder="输入目标文件夹名称（如：贾老师初联一轮/第1讲）"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                          />
+                          <div className="mt-2 text-xs text-gray-500">
+                            文件将移动到: videos/{operationData.targetFolder || '根目录'}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+
+
+
+                  {fileOperation === 'delete' && (
+                    <div>
+                      <div className="mb-3">
+                        <p className="text-sm text-gray-600 mb-3">选择要删除的文件或文件夹：</p>
                         <div className="max-h-60 overflow-y-auto space-y-2">
                           {items.map((item, index) => (
                             <label key={index} className="flex items-center gap-3 p-2 border rounded hover:bg-gray-50 transition-colors cursor-pointer">
@@ -1878,40 +1690,6 @@ const VideoLibrary = () => {
                           </div>
                         )}
                       </div>
-                    </div>
-                  )}
-
-                  {fileOperation === 'delete' && (
-                    <div>
-                      {!selectedItem ? (
-                        <div>
-                          <p className="text-sm text-gray-600 mb-3">选择要删除的文件或文件夹：</p>
-                          <div className="max-h-60 overflow-y-auto space-y-2">
-                            {items.map((item, index) => (
-                              <button
-                                key={index}
-                                onClick={() => setSelectedItem(item)}
-                                className="w-full text-left p-2 border rounded hover:bg-red-50 transition-colors"
-                              >
-                                <div className="font-medium">{item.name}</div>
-                                <div className="text-xs text-red-500">
-                                  {item.type === 'folder' ? '文件夹' : '文件'}
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <div>
-                          <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                            <span className="text-sm text-red-600">⚠️ 警告: 即将删除文件</span>
-                            <div className="font-medium text-red-800 mt-1">{selectedItem.name}</div>
-                            <div className="text-xs text-red-600 mt-2">
-                              此操作不可撤销，请谨慎操作！
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   )}
 
