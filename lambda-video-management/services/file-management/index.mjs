@@ -99,6 +99,49 @@ export const handler = async (event, context) => {
         return createErrorResponse(403, "Admin access required");
       }
       return await batchRename(event, user);
+    } else if (method === "DELETE" && path === "/files/batch-delete") {
+      // 批量删除 - 仅管理员
+      if (!isAdmin(user)) {
+        return createErrorResponse(403, "Admin access required");
+      }
+      // 解析请求体
+      const { files } = JSON.parse(event.body);
+      if (!files || !Array.isArray(files)) {
+        return createErrorResponse(400, "缺少文件列表参数");
+      }
+
+      console.log(`📦 批量删除 ${files.length} 个文件`);
+      const results = [];
+
+      for (const filePath of files) {
+        try {
+          // 调用单个删除函数
+          const deleteResult = await deleteVideo({
+            body: JSON.stringify({ key: filePath })
+          }, user);
+
+          results.push({
+            file: filePath,
+            success: deleteResult.statusCode === 200,
+            error: deleteResult.statusCode !== 200 ? JSON.parse(deleteResult.body).message : null
+          });
+        } catch (error) {
+          results.push({
+            file: filePath,
+            success: false,
+            error: error.message
+          });
+        }
+      }
+
+      const successCount = results.filter(r => r.success).length;
+      const failedCount = results.filter(r => !r.success).length;
+
+      return createSuccessResponse({
+        success: true,
+        message: `批量删除完成: 成功 ${successCount} 个，失败 ${failedCount} 个`,
+        results: results
+      });
     }
 
     console.log("路由不匹配");

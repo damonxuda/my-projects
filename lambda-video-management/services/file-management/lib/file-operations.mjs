@@ -267,14 +267,69 @@ export async function moveItem(event, user) {
   }
 }
 
-// 复制文件或文件夹
+// 复制文件或文件夹（支持批量复制）
 export async function copyItem(event, user) {
   try {
     if (!isAdmin(user)) {
       return createErrorResponse(403, "只有管理员可以复制文件");
     }
 
-    const { sourcePath, targetPath } = JSON.parse(event.body);
+    const body = JSON.parse(event.body);
+
+    // 支持单个文件复制和批量复制
+    if (body.files && Array.isArray(body.files)) {
+      // 批量复制
+      const { files, targetFolder } = body;
+
+      if (!targetFolder) {
+        return createErrorResponse(400, "缺少目标文件夹参数");
+      }
+
+      console.log(`📦 批量复制 ${files.length} 个文件到: ${targetFolder}`);
+
+      const results = [];
+
+      for (const filePath of files) {
+        try {
+          const fileName = filePath.split('/').pop();
+          const targetPath = `videos/${targetFolder}/${fileName}`;
+
+          // 递归调用自己实现单文件复制
+          const copyResult = await copyItem({
+            body: JSON.stringify({
+              sourcePath: filePath,
+              targetPath: targetPath
+            })
+          }, user);
+
+          results.push({
+            file: filePath,
+            success: copyResult.statusCode === 200,
+            targetPath: targetPath,
+            error: copyResult.statusCode !== 200 ? JSON.parse(copyResult.body).message : null
+          });
+
+        } catch (error) {
+          results.push({
+            file: filePath,
+            success: false,
+            error: error.message
+          });
+        }
+      }
+
+      const successCount = results.filter(r => r.success).length;
+      const failedCount = results.filter(r => !r.success).length;
+
+      return createSuccessResponse({
+        success: true,
+        message: `批量复制完成: 成功 ${successCount} 个，失败 ${failedCount} 个`,
+        results: results
+      });
+    }
+
+    // 单个文件复制逻辑
+    const { sourcePath, targetPath } = body;
 
     if (!sourcePath || !targetPath) {
       return createErrorResponse(400, "缺少必要参数：sourcePath 和 targetPath");
@@ -329,11 +384,92 @@ export async function copyItem(event, user) {
 
     console.log(`✅ 复制成功: ${sourcePath} -> ${targetPath}`);
 
+    // 如果是视频文件，同时复制缩略图
+    let thumbnailCopied = false;
+    let smartThumbnailCopied = false;
+    const filename = sourcePath.split('/').pop();
+    if (isVideoFile(filename)) {
+      try {
+        // 处理主缩略图: videos/Movies/xxx.mp4 -> thumbnails/Movies/xxx.jpg
+        const sourceThumbnailKey = sourcePath.replace('videos/', 'thumbnails/').replace(/\.[^.]+$/, '.jpg');
+        const targetThumbnailKey = targetPath.replace('videos/', 'thumbnails/').replace(/\.[^.]+$/, '.jpg');
+
+        console.log(`🖼️ 尝试复制缩略图: ${sourceThumbnailKey} -> ${targetThumbnailKey}`);
+
+        // 检查源缩略图是否存在
+        try {
+          await s3Client.send(new HeadObjectCommand({
+            Bucket: BUCKET_NAME,
+            Key: sourceThumbnailKey
+          }));
+
+          // 复制缩略图
+          await s3Client.send(new CopyObjectCommand({
+            Bucket: BUCKET_NAME,
+            CopySource: `${BUCKET_NAME}/${encodeURIComponent(sourceThumbnailKey)}`,
+            Key: targetThumbnailKey,
+            MetadataDirective: "COPY"
+          }));
+
+          thumbnailCopied = true;
+          console.log(`✅ 缩略图复制成功: ${sourceThumbnailKey} -> ${targetThumbnailKey}`);
+        } catch (thumbError) {
+          if (thumbError.name === "NotFound") {
+            console.log(`ℹ️ 源缩略图不存在，跳过: ${sourceThumbnailKey}`);
+          } else {
+            console.error(`⚠️ 缩略图复制失败: ${thumbError.message}`);
+          }
+        }
+
+        // 处理Smart Frame缩略图文件夹: thumbnails/Movies/xxx/ -> thumbnails/Movies/xxx/
+        const sourceSmartThumbnailPrefix = sourcePath.replace('videos/', 'thumbnails/').replace(/\.[^.]+$/, '/');
+        const targetSmartThumbnailPrefix = targetPath.replace('videos/', 'thumbnails/').replace(/\.[^.]+$/, '/');
+
+        console.log(`🖼️ 尝试复制Smart Frame缩略图: ${sourceSmartThumbnailPrefix} -> ${targetSmartThumbnailPrefix}`);
+
+        // 检查Smart Frame缩略图文件夹是否存在
+        try {
+          const smartFrameList = await s3Client.send(new ListObjectsV2Command({
+            Bucket: BUCKET_NAME,
+            Prefix: sourceSmartThumbnailPrefix,
+            MaxKeys: 1000
+          }));
+
+          if (smartFrameList.Contents && smartFrameList.Contents.length > 0) {
+            // 复制所有Smart Frame缩略图文件
+            for (const obj of smartFrameList.Contents) {
+              const sourceKey = obj.Key;
+              const targetKey = sourceKey.replace(sourceSmartThumbnailPrefix, targetSmartThumbnailPrefix);
+
+              await s3Client.send(new CopyObjectCommand({
+                Bucket: BUCKET_NAME,
+                CopySource: `${BUCKET_NAME}/${encodeURIComponent(sourceKey)}`,
+                Key: targetKey,
+                MetadataDirective: "COPY"
+              }));
+            }
+
+            smartThumbnailCopied = true;
+            console.log(`✅ Smart Frame缩略图复制成功: ${smartFrameList.Contents.length} 个文件`);
+          } else {
+            console.log(`ℹ️ 源Smart Frame缩略图不存在，跳过: ${sourceSmartThumbnailPrefix}`);
+          }
+        } catch (smartError) {
+          console.error(`⚠️ Smart Frame缩略图复制失败: ${smartError.message}`);
+        }
+
+      } catch (error) {
+        console.error(`⚠️ 缩略图复制过程出错: ${error.message}`);
+      }
+    }
+
     return createSuccessResponse({
       success: true,
       message: "文件复制成功",
       sourcePath,
-      targetPath
+      targetPath,
+      thumbnailCopied,
+      smartThumbnailCopied
     });
 
   } catch (error) {

@@ -807,12 +807,61 @@ const VideoLibrary = () => {
     }
   };
 
+  // 辅助函数：自动扩展选择以包含mobile版本
+  const expandSelectionWithMobile = (files) => {
+    const expandedMap = new Map();
+
+    // 先添加所有已选择的文件
+    files.forEach(item => {
+      const key = item.key || item.Key;
+      expandedMap.set(key, item);
+    });
+
+    // 查找并添加对应的mobile版本或原文件
+    files.forEach(item => {
+      const key = item.key || item.Key;
+
+      // 只处理mp4视频文件
+      if (key && key.endsWith('.mp4')) {
+        if (key.includes('_mobile.mp4')) {
+          // 如果选中了mobile版本，查找原文件
+          const originalKey = key.replace('_mobile.mp4', '.mp4');
+          // 在当前文件列表中查找原文件
+          const originalFile = [...itemsToDisplay, ...items].find(f =>
+            (f.key || f.Key) === originalKey
+          );
+          if (originalFile && !expandedMap.has(originalKey)) {
+            expandedMap.set(originalKey, originalFile);
+            console.log(`自动添加原文件: ${originalKey}`);
+          }
+        } else {
+          // 如果选中了原文件，查找mobile版本
+          const mobileKey = key.replace('.mp4', '_mobile.mp4');
+          // 在当前文件列表中查找mobile文件
+          const mobileFile = [...itemsToDisplay, ...items].find(f =>
+            (f.key || f.Key) === mobileKey
+          );
+          if (mobileFile && !expandedMap.has(mobileKey)) {
+            expandedMap.set(mobileKey, mobileFile);
+            console.log(`自动添加mobile版本: ${mobileKey}`);
+          }
+        }
+      }
+    });
+
+    return Array.from(expandedMap.values());
+  };
+
   // 批量移动文件
   const handleBatchMoveItems = async (files, targetFolder) => {
     if (!isAdmin) {
       alert('只有管理员可以移动文件');
       return;
     }
+
+    // 自动扩展选择以包含mobile版本
+    const expandedFiles = expandSelectionWithMobile(files);
+    console.log(`原选择 ${files.length} 个文件，扩展后 ${expandedFiles.length} 个文件`);
 
     setIsProcessingOperation(true);
     try {
@@ -824,7 +873,7 @@ const VideoLibrary = () => {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          files: files.map(item => item.key || item.Key),
+          files: expandedFiles.map(item => item.key || item.Key),
           targetFolder: targetFolder
         })
       });
@@ -836,7 +885,7 @@ const VideoLibrary = () => {
 
       const result = await response.json();
 
-      alert(`批量移动成功！已移动 ${files.length} 个文件`);
+      alert(`批量移动成功！已移动 ${expandedFiles.length} 个文件`);
       setShowFileManager(false);
       setSelectedItems([]);
       setFileOperation(null);
@@ -859,6 +908,10 @@ const VideoLibrary = () => {
       return;
     }
 
+    // 自动扩展选择以包含mobile版本
+    const expandedFiles = expandSelectionWithMobile(files);
+    console.log(`原选择 ${files.length} 个文件，扩展后 ${expandedFiles.length} 个文件`);
+
     setIsProcessingOperation(true);
     try {
       const token = await getToken();
@@ -869,7 +922,7 @@ const VideoLibrary = () => {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          files: files.map(item => item.key || item.Key),
+          files: expandedFiles.map(item => item.key || item.Key),
           targetFolder: targetFolder
         })
       });
@@ -881,7 +934,7 @@ const VideoLibrary = () => {
 
       const result = await response.json();
 
-      alert(`批量复制成功！已复制 ${files.length} 个文件`);
+      alert(`批量复制成功！已复制 ${expandedFiles.length} 个文件`);
       setShowFileManager(false);
       setSelectedItems([]);
       setFileOperation(null);
@@ -904,9 +957,13 @@ const VideoLibrary = () => {
       return;
     }
 
+    // 自动扩展选择以包含mobile版本
+    const expandedFiles = expandSelectionWithMobile(files);
+    console.log(`原选择 ${files.length} 个文件，扩展后 ${expandedFiles.length} 个文件`);
+
     // 确认删除
     const confirmDelete = window.confirm(
-      `确定要删除选中的 ${files.length} 个文件吗？\n\n⚠️ 此操作不可恢复！\n\n文件列表：\n${files.map(f => f.name).join('\n')}`
+      `确定要删除选中的 ${expandedFiles.length} 个文件吗？\n\n⚠️ 此操作不可恢复！\n\n文件列表：\n${expandedFiles.map(f => f.name).join('\n')}`
     );
 
     if (!confirmDelete) {
@@ -923,7 +980,7 @@ const VideoLibrary = () => {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          files: files.map(item => item.key || item.Key)
+          files: expandedFiles.map(item => item.key || item.Key)
         })
       });
 
@@ -934,7 +991,7 @@ const VideoLibrary = () => {
 
       const result = await response.json();
 
-      alert(`批量删除成功！已删除 ${files.length} 个文件`);
+      alert(`批量删除成功！已删除 ${expandedFiles.length} 个文件`);
       setShowFileManager(false);
       setSelectedItems([]);
       setFileOperation(null);
@@ -957,20 +1014,14 @@ const VideoLibrary = () => {
         return operationData.folderName && operationData.folderName.trim() !== '';
       case 'rename':
         return selectedItem && operationData.newName && operationData.newName.trim() !== '' && operationData.newName !== selectedItem.name;
-      case 'copy':
-        return selectedItem && operationData.targetPath !== undefined;
       case 'move':
-        return selectedItem && operationData.targetPath !== undefined;
-      case 'batch-move':
         return selectedItems && selectedItems.length > 0 && operationData.targetFolder !== undefined;
-      case 'batch-copy':
+      case 'copy':
         return selectedItems && selectedItems.length > 0 && operationData.targetFolder !== undefined;
-      case 'batch-delete':
+      case 'delete':
         return selectedItems && selectedItems.length > 0;
       case 'upload':
         return operationData.uploadFiles && operationData.uploadFiles.length > 0;
-      case 'delete':
-        return selectedItem;
       default:
         return false;
     }
@@ -1191,7 +1242,7 @@ const VideoLibrary = () => {
                   thumbnailApiUrl={THUMBNAIL_GENERATOR_URL}
                   getToken={getToken}
                   // 多选相关props
-                  isMultiSelectMode={['batch-move', 'batch-copy', 'batch-delete'].includes(fileOperation)}
+                  isMultiSelectMode={['move', 'copy', 'delete'].includes(fileOperation)}
                   isSelected={selectedItems.some(selected => selected.key === item.key)}
                   onSelectionChange={(selected) => {
                     if (selected) {
@@ -1445,40 +1496,29 @@ const VideoLibrary = () => {
                     <ArrowRight className="text-purple-600" size={20} />
                     <div>
                       <div className="font-medium text-gray-800">移动文件/文件夹</div>
-                      <div className="text-sm text-gray-500">将文件或文件夹移动到其他位置</div>
+                      <div className="text-sm text-gray-500">选择一个或多个文件/文件夹移动到其他位置</div>
                     </div>
                   </button>
 
                   <button
-                    onClick={() => setFileOperation('batch-move')}
-                    className="w-full flex items-center gap-3 p-3 text-left border rounded-lg hover:bg-orange-50 hover:border-orange-300 transition-colors"
-                  >
-                    <ArrowRight className="text-orange-600" size={20} />
-                    <div>
-                      <div className="font-medium text-gray-800">批量移动文件/文件夹</div>
-                      <div className="text-sm text-gray-500">选择多个文件或文件夹进行批量移动</div>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => setFileOperation('batch-copy')}
+                    onClick={() => setFileOperation('copy')}
                     className="w-full flex items-center gap-3 p-3 text-left border rounded-lg hover:bg-indigo-50 hover:border-indigo-300 transition-colors"
                   >
                     <Copy className="text-indigo-600" size={20} />
                     <div>
-                      <div className="font-medium text-gray-800">批量复制文件/文件夹</div>
-                      <div className="text-sm text-gray-500">选择多个文件或文件夹进行批量复制</div>
+                      <div className="font-medium text-gray-800">复制文件/文件夹</div>
+                      <div className="text-sm text-gray-500">选择一个或多个文件/文件夹进行复制</div>
                     </div>
                   </button>
 
                   <button
-                    onClick={() => setFileOperation('batch-delete')}
+                    onClick={() => setFileOperation('delete')}
                     className="w-full flex items-center gap-3 p-3 text-left border rounded-lg hover:bg-red-50 hover:border-red-300 transition-colors"
                   >
                     <Trash2 className="text-red-600" size={20} />
                     <div>
-                      <div className="font-medium text-gray-800">批量删除文件/文件夹</div>
-                      <div className="text-sm text-gray-500">选择多个文件或文件夹进行批量删除</div>
+                      <div className="font-medium text-gray-800">删除文件/文件夹</div>
+                      <div className="text-sm text-gray-500">选择一个或多个文件/文件夹进行删除</div>
                     </div>
                   </button>
 
@@ -1897,19 +1937,11 @@ const VideoLibrary = () => {
                           const oldPath = selectedItem.key || (currentPath ? `videos/${currentPath}/${selectedItem.name}` : `videos/${selectedItem.name}`);
                           const newPath = currentPath ? `videos/${currentPath}/${operationData.newName}` : `videos/${operationData.newName}`;
                           await handleRenameItem(oldPath, newPath);
-                        } else if (fileOperation === 'copy' && selectedItem && operationData.targetPath !== undefined) {
-                          const sourcePath = selectedItem.key || (currentPath ? `videos/${currentPath}/${selectedItem.name}` : `videos/${selectedItem.name}`);
-                          const targetPath = operationData.targetPath ? `videos/${operationData.targetPath}/${selectedItem.name}` : `videos/${selectedItem.name}`;
-                          await handleCopyItem(sourcePath, targetPath);
-                        } else if (fileOperation === 'move' && selectedItem && operationData.targetPath !== undefined) {
-                          const oldPath = selectedItem.key || (currentPath ? `videos/${currentPath}/${selectedItem.name}` : `videos/${selectedItem.name}`);
-                          const newPath = operationData.targetPath ? `videos/${operationData.targetPath}/${selectedItem.name}` : `videos/${selectedItem.name}`;
-                          await handleRenameItem(oldPath, newPath); // 移动就是重命名到新路径
-                        } else if (fileOperation === 'batch-move' && selectedItems.length > 0 && operationData.targetFolder !== undefined) {
+                        } else if (fileOperation === 'move' && selectedItems.length > 0 && operationData.targetFolder !== undefined) {
                           await handleBatchMoveItems(selectedItems, operationData.targetFolder);
-                        } else if (fileOperation === 'batch-copy' && selectedItems.length > 0 && operationData.targetFolder !== undefined) {
+                        } else if (fileOperation === 'copy' && selectedItems.length > 0 && operationData.targetFolder !== undefined) {
                           await handleBatchCopyItems(selectedItems, operationData.targetFolder);
-                        } else if (fileOperation === 'batch-delete' && selectedItems.length > 0) {
+                        } else if (fileOperation === 'delete' && selectedItems.length > 0) {
                           await handleBatchDeleteItems(selectedItems);
                         } else if (fileOperation === 'upload' && operationData.uploadFiles) {
                           // 设置上传状态并执行上传
@@ -1920,10 +1952,6 @@ const VideoLibrary = () => {
                           setIsUploading(false);
                           setUploadProgress(0);
                           setCurrentUploadIndex(0);
-                        } else if (fileOperation === 'delete' && selectedItem) {
-                          const filePath = selectedItem.key || (currentPath ? `videos/${currentPath}/${selectedItem.name}` : `videos/${selectedItem.name}`);
-                          await handleDeleteItem(filePath);
-                        }
                       }}
                       disabled={isProcessingOperation || !canExecuteOperation()}
                       className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"

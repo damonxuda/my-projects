@@ -1,4 +1,4 @@
-import { DeleteObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
+import { DeleteObjectCommand, HeadObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 import { s3Client, VIDEO_BUCKET } from "../shared/s3-config.mjs";
 import { createSuccessResponse, createErrorResponse } from "../shared/s3-config.mjs";
 
@@ -53,10 +53,12 @@ export async function deleteVideo(event, user) {
     // 尝试删除对应的缩略图 (如果存在)
     // videos/Movies/xxx.mp4 -> thumbnails/Movies/xxx.jpg
     let thumbnailDeleted = false;
+    let smartThumbnailsDeleted = 0;
     if (key.startsWith('videos/') && /\.(mp4|avi|mov|wmv|mkv)$/i.test(key)) {
       const relativePath = key.replace('videos/', '');
       const thumbnailKey = `thumbnails/${relativePath.replace(/\.[^.]+$/, '.jpg')}`;
 
+      // 删除主缩略图
       try {
         await s3Client.send(new DeleteObjectCommand({
           Bucket: VIDEO_BUCKET,
@@ -67,6 +69,39 @@ export async function deleteVideo(event, user) {
       } catch (thumbnailError) {
         // 缩略图可能不存在，这是正常的
         console.log("缩略图删除失败或不存在:", thumbnailKey, thumbnailError.message);
+      }
+
+      // 删除Smart Frame缩略图文件夹: thumbnails/Movies/xxx/
+      const smartThumbnailPrefix = `thumbnails/${relativePath.replace(/\.[^.]+$/, '/')}`;
+      try {
+        console.log("🖼️ 尝试删除Smart Frame缩略图:", smartThumbnailPrefix);
+
+        // 列出所有Smart Frame缩略图文件
+        const smartFrameList = await s3Client.send(new ListObjectsV2Command({
+          Bucket: VIDEO_BUCKET,
+          Prefix: smartThumbnailPrefix,
+          MaxKeys: 1000
+        }));
+
+        if (smartFrameList.Contents && smartFrameList.Contents.length > 0) {
+          // 删除所有Smart Frame缩略图文件
+          for (const obj of smartFrameList.Contents) {
+            try {
+              await s3Client.send(new DeleteObjectCommand({
+                Bucket: VIDEO_BUCKET,
+                Key: obj.Key,
+              }));
+              smartThumbnailsDeleted++;
+            } catch (deleteError) {
+              console.error(`⚠️ 删除Smart Frame缩略图失败: ${obj.Key}`, deleteError.message);
+            }
+          }
+          console.log(`✅ Smart Frame缩略图删除成功: ${smartThumbnailsDeleted} 个文件`);
+        } else {
+          console.log(`ℹ️ Smart Frame缩略图不存在，跳过: ${smartThumbnailPrefix}`);
+        }
+      } catch (smartError) {
+        console.error(`⚠️ Smart Frame缩略图删除失败: ${smartError.message}`);
       }
     }
 
@@ -103,6 +138,7 @@ export async function deleteVideo(event, user) {
       message: "File deleted successfully",
       deletedKey: key,
       thumbnailDeleted,
+      smartThumbnailsDeleted,
       mobileVersionDeleted
     });
 
