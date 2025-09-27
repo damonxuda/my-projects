@@ -389,6 +389,7 @@ const VideoLibrary = () => {
 
   // 加载视频列表 - 简化认证方式
   const loadItems = useCallback(async (path = "") => {
+    console.log("🔍 loadItems 开始执行，路径:", path);
     setLoading(true);
     setError("");
 
@@ -407,6 +408,8 @@ const VideoLibrary = () => {
       const apiPath = '/files/list';
       const requestUrl = `${FILE_MANAGEMENT_URL}${apiPath}?path=${encodeURIComponent(path)}`;
 
+      console.log("🌐 发送API请求:", requestUrl);
+      console.log("🔑 Token:", token ? "已获取" : "未获取");
 
       const response = await fetch(requestUrl, {
         headers: {
@@ -431,7 +434,11 @@ const VideoLibrary = () => {
         throw new Error(`JSON解析失败: ${parseError.message}`);
       }
 
+      console.log("📦 API响应数据:", data);
+      console.log("📦 数据长度:", Array.isArray(data) ? data.length : "非数组");
+
       const processedItems = processFileList(data, path);
+      console.log("🔄 处理后的项目:", processedItems);
       setItems(processedItems);
     } catch (err) {
       console.error("VideoLibrary: 加载失败:", err);

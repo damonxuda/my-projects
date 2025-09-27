@@ -101,14 +101,14 @@ export async function getBatchThumbnails(pathParam, user) {
 
         // 只有大于300字节的文件才认为是有效缩略图
         if (fileSize > 300) {
-          // 生成24小时有效期的预签名URL
+          // 生成6小时有效期的预签名URL（避免Lambda临时凭证过期）
           const signedUrl = await getSignedUrl(
             s3Client,
             new GetObjectCommand({
               Bucket: VIDEO_BUCKET,
               Key: thumbnailKey,
             }),
-            { expiresIn: 24 * 60 * 60 } // 24小时
+            { expiresIn: 6 * 60 * 60 } // 6小时
           );
 
           thumbnailUrls[videoKey] = signedUrl;
@@ -136,7 +136,7 @@ export async function getBatchThumbnails(pathParam, user) {
       path: pathParam,
       thumbnailUrls,
       count: Object.keys(thumbnailUrls).length,
-      expiresAt: Date.now() + (24 * 60 * 60 * 1000), // 24小时后过期
+      expiresAt: Date.now() + (6 * 60 * 60 * 1000), // 6小时后过期
     });
 
   } catch (error) {

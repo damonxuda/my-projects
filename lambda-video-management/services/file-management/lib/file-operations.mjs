@@ -1,4 +1,4 @@
-import { S3Client, CopyObjectCommand, DeleteObjectCommand, HeadObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
+import { S3Client, CopyObjectCommand, DeleteObjectCommand, HeadObjectCommand, ListObjectsV2Command, PutObjectCommand } from "@aws-sdk/client-s3";
 import { createSuccessResponse, createErrorResponse } from "../shared/s3-config.mjs";
 import { isAdmin } from "../shared/auth.mjs";
 
@@ -195,9 +195,76 @@ export async function renameItem(event, user) {
   }
 }
 
-// 移动文件（与重命名相同，但语义不同）
+// 移动文件（支持批量移动）
 export async function moveItem(event, user) {
-  return await renameItem(event, user);
+  try {
+    if (!isAdmin(user)) {
+      return createErrorResponse(403, "只有管理员可以移动文件");
+    }
+
+    const body = JSON.parse(event.body);
+
+    // 支持单个文件移动和批量移动
+    if (body.files && Array.isArray(body.files)) {
+      // 批量移动
+      const { files, targetFolder } = body;
+
+      if (!targetFolder) {
+        return createErrorResponse(400, "缺少目标文件夹参数");
+      }
+
+      console.log(`📦 批量移动 ${files.length} 个文件到: ${targetFolder}`);
+
+      const results = [];
+
+      for (const filePath of files) {
+        try {
+          const fileName = filePath.split('/').pop();
+          const newPath = `videos/${targetFolder}/${fileName}`;
+
+          // 调用重命名函数实现移动
+          const moveResult = await renameItem({
+            body: JSON.stringify({
+              oldPath: filePath,
+              newPath: newPath
+            })
+          }, user);
+
+          results.push({
+            file: filePath,
+            success: moveResult.statusCode === 200,
+            newPath: newPath,
+            error: moveResult.statusCode !== 200 ? JSON.parse(moveResult.body).message : null
+          });
+
+        } catch (error) {
+          results.push({
+            file: filePath,
+            success: false,
+            error: error.message
+          });
+        }
+      }
+
+      const successCount = results.filter(r => r.success).length;
+      const failedCount = results.length - successCount;
+
+      return createSuccessResponse({
+        success: true,
+        message: `批量移动完成: ${successCount} 成功, ${failedCount} 失败`,
+        results: results,
+        targetFolder: targetFolder
+      });
+
+    } else {
+      // 单个文件移动，直接调用重命名
+      return await renameItem(event, user);
+    }
+
+  } catch (error) {
+    console.error("❌ 移动操作失败:", error);
+    return createErrorResponse(500, "移动操作失败", error.message);
+  }
 }
 
 // 复制文件或文件夹
@@ -318,12 +385,12 @@ export async function createFolder(event, user) {
     // 创建空的占位符文件来表示文件夹
     const placeholderKey = normalizedPath + ".folder_placeholder";
 
-    // 上传空的占位符对象
-    await s3Client.send(new CopyObjectCommand({
+    // 直接创建空的占位符对象
+    await s3Client.send(new PutObjectCommand({
       Bucket: BUCKET_NAME,
-      CopySource: `${BUCKET_NAME}/videos/.folder_placeholder`, // 假设根目录有占位符
       Key: placeholderKey,
-      MetadataDirective: "REPLACE",
+      Body: "", // 空文件内容
+      ContentType: "text/plain",
       Metadata: {
         "folder-created": new Date().toISOString(),
         "created-by": user.id || "unknown"
