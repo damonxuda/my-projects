@@ -17,8 +17,6 @@ export class MobileCompatibilityChecker {
       return { valid: true, reason: 'Desktop or no URL' };
     }
 
-    console.log(`🔍 移动端验证缩略图URL: ${fileName}`);
-    console.log(`URL: ${url.substring(0, 100)}...`);
 
     try {
       // 1. 基本URL格式检查
@@ -79,8 +77,6 @@ export class MobileCompatibilityChecker {
 
       clearTimeout(timeoutId);
 
-      console.log(`移动端HEAD请求结果: ${response.status} ${response.statusText}`);
-      console.log('Response headers:', [...response.headers.entries()]);
 
       if (response.ok) {
         const contentType = response.headers.get('content-type');
@@ -210,7 +206,6 @@ export class MobileCompatibilityChecker {
   clearMobileIssueLog() {
     try {
       localStorage.removeItem('mobile_issues');
-      console.log('移动端问题日志已清除');
     } catch (e) {
       console.warn('无法清除移动端问题日志:', e);
     }

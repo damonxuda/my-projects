@@ -63,7 +63,6 @@ class ThumbnailCache {
       path = '';
     }
 
-    console.log('缓存查询路径:', path, '原文件名:', videoKey);
 
     // 先检查内存缓存
     let cacheData = this.cache.get(path);
@@ -75,13 +74,10 @@ class ThumbnailCache {
 
     // 如果有有效缓存，直接返回
     if (cacheData && this.isCacheValid(cacheData)) {
-      console.log('找到有效缓存，文件夹:', path, '缓存的文件数量:', Object.keys(cacheData.thumbnailUrls || {}).length);
       const url = cacheData.thumbnailUrls[videoKey] || null;
-      console.log('缓存查找结果:', videoKey, '→', url ? 'URL找到' : 'URL不存在');
 
       // 移动端额外验证：检查URL格式和有效性
       if (url && /Mobi|Android/i.test(navigator.userAgent)) {
-        console.log('移动端验证URL:', url.substring(0, 100) + '...');
 
         // 检查URL是否包含正确的签名参数
         try {
@@ -90,12 +86,6 @@ class ThumbnailCache {
           const hasExpires = urlObj.searchParams.has('X-Amz-Expires');
           const expires = urlObj.searchParams.get('X-Amz-Date');
 
-          console.log('移动端URL验证结果:', {
-            hasSignature,
-            hasExpires,
-            expires,
-            domain: urlObj.hostname
-          });
         } catch (e) {
           console.error('移动端URL解析失败:', e);
         }
@@ -103,7 +93,6 @@ class ThumbnailCache {
 
       return url;
     } else {
-      console.log('无有效缓存，文件夹:', path, '缓存数据:', cacheData ? '数据存在但无效' : '无数据');
     }
 
     return null; // 需要加载
@@ -156,8 +145,6 @@ class ThumbnailCache {
 
 
       if (data.success) {
-        console.log('批量加载成功，文件夹:', path, '获得缩略图数量:', Object.keys(data.thumbnailUrls || {}).length);
-        console.log('缩略图数据示例:', Object.keys(data.thumbnailUrls || {}).slice(0, 3));
 
         // 保存到内存和localStorage
         this.cache.set(path, data);
@@ -177,7 +164,6 @@ class ThumbnailCache {
     const cacheKey = this.getCacheKey(path);
     this.cache.delete(path);
     localStorage.removeItem(cacheKey);
-    console.log(`🗑️ 清除缓存: ${path}`);
   }
 
   // 清除所有过期缓存
@@ -221,7 +207,6 @@ class ThumbnailCache {
       localStorage.removeItem(key);
     });
 
-    console.log(`🗑️ 清除所有缩略图缓存: ${keys.length} 个缓存项`);
   }
 
   // 清除过期的缓存（URL过期检查）
@@ -283,7 +268,6 @@ thumbnailCache.clearExpiredThumbnailCache();
 // TODO: 2024年10月后可以删除这段临时代码
 const now = new Date();
 if (now < new Date('2024-10-01')) {
-  console.log('🔄 一次性清除旧缓存以迁移到6小时有效期');
   thumbnailCache.clearAllCache();
 }
 

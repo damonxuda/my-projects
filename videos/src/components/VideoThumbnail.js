@@ -141,7 +141,6 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
         folderPath = '';
       }
 
-      console.log('批量加载文件夹:', folderPath, '原文件名:', fileName);
 
       // 批量加载该文件夹的所有缩略图
       await thumbnailCache.loadBatchThumbnails(folderPath, apiUrl, getToken);
@@ -150,16 +149,13 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
       const batchLoadedUrl = thumbnailCache.getThumbnailUrl(fileName);
 
       if (batchLoadedUrl) {
-        console.log('设置缩略图URL:', fileName, '→', batchLoadedUrl.substring(0, 100) + '...');
 
         // 移动端额外验证URL可用性
         if (mobileCompatibility.isMobileDevice()) {
-          console.log('🔍 移动端验证缩略图URL:', fileName);
 
           mobileCompatibility.validateThumbnailUrl(batchLoadedUrl, fileName)
             .then(validation => {
               if (validation.valid) {
-                console.log('✅ 移动端URL验证通过:', validation.reason);
                 setThumbnailUrl(batchLoadedUrl);
               } else {
                 console.error('❌ 移动端URL验证失败:', validation.reason);
@@ -184,7 +180,6 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
           setThumbnailUrl(batchLoadedUrl);
         }
       } else {
-        console.log('批量加载后仍未找到URL:', fileName);
         // 回退到单独生成，使用队列控制并发
         thumbnailQueue.add(() => fetchThumbnail());
         return;
@@ -247,20 +242,16 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
                 // 使用智能重试加载
                 mobileNetworkHelper.loadImageWithRetry(e.target.src, fileName)
                   .then(result => {
-                    console.log('🎉 智能重试成功:', fileName, result);
                     // 不设置error状态，让图片继续显示
                     // 可以选择性地重新设置src触发重新加载
                     e.target.src = result.url;
                   })
                   .catch(retryError => {
-                    console.error('💔 智能重试最终失败:', fileName, retryError.message);
 
                     // 执行详细诊断
                     if (mobileDebugger.isMobile) {
-                      console.error('🔍 启动详细诊断...');
                       mobileDebugger.testThumbnailUrl(e.target.src, fileName)
                         .then(result => {
-                          console.error('📊 诊断结果:', result);
                         })
                         .catch(debugError => {
                           console.error('🚨 诊断失败:', debugError);
