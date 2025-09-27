@@ -200,9 +200,6 @@ const FileCard = ({
             </div>
           )}
 
-          {isFolder && (
-            <p className="text-xs text-gray-600">{item.count || 0} 项内容</p>
-          )}
         </div>
       </div>
     </div>

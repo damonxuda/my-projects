@@ -39,14 +39,8 @@ const VideoLibrary = () => {
   // 跨模块导航功能 - 使用Clerk官方SSO机制
   const handleCrossModuleNavigation = (targetUrl) => {
     // 直接跳转，卫星应用会自动同步认证状态
-    console.log('🚀 跨模块跳转 (Clerk SSO):', targetUrl);
     window.location.href = targetUrl;
   };
-
-  // 卫星应用模式：Clerk会自动处理认证状态同步，无需手动JWT解析
-  useEffect(() => {
-    console.log('🛰️ Videos模块运行在卫星模式，等待Clerk自动同步认证状态');
-  }, []);
 
   // 5个专门化Lambda函数架构
   const FILE_MANAGEMENT_URL = process.env.REACT_APP_FILE_MANAGEMENT_API_URL; // 文件管理
@@ -234,13 +228,12 @@ const VideoLibrary = () => {
             return;
           }
 
-          // 处理后端返回的文件夹，初始计数为0
+          // 处理后端返回的文件夹
           folders.set(folderName, {
             key: file.Key,
             name: folderName,
             type: "folder",
             path: currentPath ? `${currentPath}/${folderName}` : folderName,
-            count: 0, // 初始化为0，后续计算
           });
         }
         return;
@@ -299,24 +292,14 @@ const VideoLibrary = () => {
             return;
           }
 
-          // 为文件夹创建或增加计数
+          // 为文件夹创建条目
           if (!folders.has(folderName)) {
             folders.set(folderName, {
               key: `videos/${folderName}/`,
               name: folderName,
               type: "folder",
               path: folderName,
-              count: 0,
             });
-          }
-
-          // 只计算直接子项（文件 + 子文件夹）
-          const pathAfterFolder = relativePath.substring(folderName.length + 1);
-          const remainingParts = pathAfterFolder.split("/");
-
-          if (remainingParts.length === 1) {
-            // 直接在该文件夹下的文件
-            folders.get(folderName).count++;
           }
         }
       } else {
@@ -355,23 +338,6 @@ const VideoLibrary = () => {
       }
     });
 
-    // 为当前路径下的后端文件夹添加子文件夹计数
-    // 这解决了第1讲文件夹显示0个项目的问题
-    if (currentPath !== "") {
-      folders.forEach((folder) => {
-        // 检查是否有直接子文件夹（由后端文件夹类型识别）
-        const subfolderCount = Array.from(folders.values()).filter(
-          f => f.path.startsWith(currentPath + "/") &&
-               f.path.split("/").length === currentPath.split("/").length + 1
-        ).length;
-
-        if (subfolderCount > 0) {
-          folder.count += subfolderCount;
-        }
-      });
-    }
-
-    console.log("📊 最终文件夹计数:", Array.from(folders.values()).map(f => `${f.name}: ${f.count}`));
 
     return [
       ...Array.from(folders.values()),
@@ -382,7 +348,6 @@ const VideoLibrary = () => {
 
   // 加载视频列表 - 简化认证方式
   const loadItems = useCallback(async (path = "") => {
-    console.log("🔍 loadItems 开始执行，路径:", path);
     setLoading(true);
     setError("");
 
@@ -401,8 +366,6 @@ const VideoLibrary = () => {
       const apiPath = '/files/list';
       const requestUrl = `${FILE_MANAGEMENT_URL}${apiPath}?path=${encodeURIComponent(path)}`;
 
-      console.log("🌐 发送API请求:", requestUrl);
-      console.log("🔑 Token:", token ? "已获取" : "未获取");
 
       const response = await fetch(requestUrl, {
         headers: {
@@ -427,19 +390,13 @@ const VideoLibrary = () => {
         throw new Error(`JSON解析失败: ${parseError.message}`);
       }
 
-      console.log("📦 API响应数据:", data);
-      console.log("📦 数据长度:", Array.isArray(data) ? data.length : "非数组");
-
       const processedItems = processFileList(data, path);
-      console.log("🔄 处理后的项目:", processedItems);
-      console.log("📁 文件夹统计详情:", processedItems.filter(item => item.type === 'folder').map(f => ({name: f.name, count: f.count})));
       setItems(processedItems);
     } catch (err) {
       console.error("VideoLibrary: 加载失败:", err);
 
       // 🔥 管理员降级处理：如果是403错误且用户是管理员，显示备用内容
       if (err.message.includes('403') && isAdmin) {
-        console.log("🔧 管理员降级模式：API暂时不可用");
         setError("");
         setItems([
           {
@@ -571,13 +528,11 @@ const VideoLibrary = () => {
         const currentFile = selectedFiles[i];
         setCurrentUploadIndex(i);
 
-        console.log(`🚀 开始上传视频 (${i + 1}/${selectedFiles.length}):`, currentFile.name);
 
         // 构建文件路径
         const fileName = currentFile.name;
         const targetPath = currentPath ? `videos/${currentPath}/${fileName}` : `videos/${fileName}`;
 
-        console.log('📁 目标路径:', targetPath);
 
         // 获取预签名上传URL
         const token = await getToken();
@@ -599,10 +554,7 @@ const VideoLibrary = () => {
         }
 
         const { uploadUrl, fileKey } = await uploadUrlResponse.json();
-        console.log('✅ 获取上传URL成功');
-
         // 上传文件到S3
-        console.log('📤 上传文件到S3...');
         const uploadResponse = await fetch(uploadUrl, {
           method: 'PUT',
           body: currentFile,
@@ -615,14 +567,12 @@ const VideoLibrary = () => {
           throw new Error(`文件上传失败: ${uploadResponse.status}`);
         }
 
-        console.log(`✅ 文件上传成功 (${i + 1}/${selectedFiles.length})`);
 
         // 更新进度
         const progress = Math.round(((i + 1) / selectedFiles.length) * 100);
         setUploadProgress(progress);
 
         // 检查视频编码并可能触发转换
-        console.log('🔍 检查视频编码...');
         await checkVideoEncoding(fileKey, currentFile.size);
       }
 
@@ -650,8 +600,6 @@ const VideoLibrary = () => {
   // 检查视频编码并自动转换
   const checkVideoEncoding = async (fileKey, fileSize) => {
     try {
-      console.log('🔍 开始视频编码兼容性检测:', fileKey);
-      console.log('📊 文件大小:', Math.round(fileSize / 1024 / 1024), 'MB');
 
       const token = await getToken();
 
@@ -680,28 +628,11 @@ const VideoLibrary = () => {
       // 关键判断：系统触发自动转换了吗？
       const autoConversionTriggered = autoConversion?.triggered;
 
-      console.log('🔍 分析结果:', {
-        needsConversion,
-        autoConversionTriggered,
-        reasons: needsConversion ? recommendation.reasons : []
-      });
-
-      // 核心逻辑判断
-      if (autoConversionTriggered) {
-        // 场景1：自动转换已触发
-        if (autoConversion.result?.success) {
-          console.log('✅ 自动转换成功启动，作业ID:', autoConversion.result.jobId);
-        } else {
-          console.error('❌ 自动转换启动失败:', autoConversion.result?.error);
-        }
-      } else if (needsConversion) {
-        // 场景2：需要转换但未触发（这是BUG）
-        console.error('🐛 BUG：需要转换但未自动触发！');
-        console.error('   原因:', recommendation.reasons);
-        console.error('   这表明后端analyzeAndAutoConvert函数有问题');
-      } else {
-        // 场景3：不需要转换
-        console.log('✅ 视频兼容性良好，无需转换');
+      // 静默处理转换结果，只记录错误
+      if (autoConversionTriggered && !autoConversion.result?.success) {
+        console.error('❌ 自动转换启动失败:', autoConversion.result?.error);
+      } else if (needsConversion && !autoConversionTriggered) {
+        console.error('🐛 需要转换但未自动触发，原因:', recommendation.reasons);
       }
 
     } catch (error) {
@@ -736,7 +667,6 @@ const VideoLibrary = () => {
       }
 
       const result = await response.json();
-      console.log('✅ 重命名成功:', result);
 
       alert('重命名成功！');
       setShowFileManager(false);
@@ -778,7 +708,6 @@ const VideoLibrary = () => {
       }
 
       const result = await response.json();
-      console.log('✅ 复制成功:', result);
 
       alert('复制成功！');
       setShowFileManager(false);
@@ -820,7 +749,6 @@ const VideoLibrary = () => {
       }
 
       const result = await response.json();
-      console.log('✅ 创建文件夹成功:', result);
 
       alert('文件夹创建成功！');
       setShowFileManager(false);
@@ -862,7 +790,6 @@ const VideoLibrary = () => {
       }
 
       const result = await response.json();
-      console.log('✅ 删除成功:', result);
 
       alert('文件删除成功！');
       setShowFileManager(false);
@@ -908,7 +835,6 @@ const VideoLibrary = () => {
       }
 
       const result = await response.json();
-      console.log('✅ 批量移动成功:', result);
 
       alert(`批量移动成功！已移动 ${files.length} 个文件`);
       setShowFileManager(false);
@@ -1147,21 +1073,6 @@ const VideoLibrary = () => {
                 <div className="text-sm text-gray-600">
                   <span className="font-medium text-gray-900">当前位置:</span>{" "}
                   {currentPath || "根目录"}
-                </div>
-                <div className="text-sm text-gray-600">
-                  找到{" "}
-                  <span className="font-medium text-blue-600">
-                    {items.filter((i) => i.type === "folder").length}
-                  </span>{" "}
-                  个文件夹，
-                  <span className="font-medium text-green-600">
-                    {items.filter((i) => i.type === "video").length}
-                  </span>{" "}
-                  个本地视频，
-                  <span className="font-medium text-red-600">
-                    {items.filter((i) => i.type === "youtube").length}
-                  </span>{" "}
-                  个YouTube视频
                 </div>
               </div>
             </div>
