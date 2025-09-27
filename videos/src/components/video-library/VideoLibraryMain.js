@@ -351,16 +351,6 @@ const VideoLibraryMain = () => {
             getToken={getToken}
           />
 
-          {/* 文件操作组件 */}
-          <FileOperations
-            selectedItems={selectedItems}
-            currentPath={currentPath}
-            items={items}
-            onOperationComplete={refreshItems}
-            onClearSelection={clearSelection}
-            apiUrl={FILE_MANAGEMENT_URL}
-            getToken={getToken}
-          />
         </div>
       </div>
 
@@ -394,6 +384,7 @@ const VideoLibraryMain = () => {
         operationData={operationData}
         isProcessingOperation={isProcessingOperation}
         currentPath={currentPath}
+        items={items}
         onOperationComplete={refreshItems}
         setFileOperation={setFileOperation}
         setOperationData={setOperationData}
