@@ -29,7 +29,8 @@ const VideoLibrary = () => {
   // 文件管理相关状态
   const [showFileManager, setShowFileManager] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [fileOperation, setFileOperation] = useState(null); // 'rename', 'move', 'copy', 'create-folder'
+  const [selectedItems, setSelectedItems] = useState([]); // 多选文件
+  const [fileOperation, setFileOperation] = useState(null); // 'rename', 'move', 'copy', 'create-folder', 'batch-move'
   const [operationData, setOperationData] = useState({});
   const [isProcessingOperation, setIsProcessingOperation] = useState(false);
 
@@ -220,6 +221,27 @@ const VideoLibrary = () => {
     files.forEach((file) => {
       // Skip the root "videos/" entry
       if (file.Key === "videos/") return;
+
+      // 处理后端返回的文件夹类型
+      if (file.Type === "folder") {
+        // 后端已经处理好的文件夹，直接使用
+        const folderName = file.Name;
+        if (folderName) {
+          // 隐藏Movies文件夹（仅管理员可见）
+          if (folderName === "Movies" && !isAdmin) {
+            return;
+          }
+
+          folders.set(folderName, {
+            key: file.Key,
+            name: folderName,
+            type: "folder",
+            path: currentPath ? `${currentPath}/${folderName}` : folderName,
+            count: 0,
+          });
+        }
+        return;
+      }
 
       // Remove "videos/" prefix for processing
       const relativePath = file.Key.replace("videos/", "");
@@ -857,6 +879,52 @@ const VideoLibrary = () => {
     }
   };
 
+  // 批量移动文件
+  const handleBatchMoveItems = async (files, targetFolder) => {
+    if (!isAdmin) {
+      alert('只有管理员可以移动文件');
+      return;
+    }
+
+    setIsProcessingOperation(true);
+    try {
+      const token = await getToken();
+      const response = await fetch(`${FILE_MANAGEMENT_URL}/files/move`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          files: files.map(item => item.key || item.Key),
+          targetFolder: targetFolder
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || '批量移动失败');
+      }
+
+      const result = await response.json();
+      console.log('✅ 批量移动成功:', result);
+
+      alert(`批量移动成功！已移动 ${files.length} 个文件`);
+      setShowFileManager(false);
+      setSelectedItems([]);
+      setFileOperation(null);
+
+      // 刷新当前目录
+      loadItems(currentPath);
+
+    } catch (error) {
+      console.error('❌ 批量移动失败:', error);
+      alert(`批量移动失败: ${error.message}`);
+    } finally {
+      setIsProcessingOperation(false);
+    }
+  };
+
   // 检查是否可以执行操作
   const canExecuteOperation = () => {
     switch (fileOperation) {
@@ -868,6 +936,8 @@ const VideoLibrary = () => {
         return selectedItem && operationData.targetPath !== undefined;
       case 'move':
         return selectedItem && operationData.targetPath !== undefined;
+      case 'batch-move':
+        return selectedItems && selectedItems.length > 0 && operationData.targetFolder !== undefined;
       case 'upload':
         return operationData.uploadFiles && operationData.uploadFiles.length > 0;
       case 'delete':
@@ -1297,6 +1367,7 @@ const VideoLibrary = () => {
                   onClick={() => {
                     setShowFileManager(false);
                     setSelectedItem(null);
+                    setSelectedItems([]);
                     setFileOperation(null);
                     setOperationData({});
                   }}
@@ -1351,6 +1422,17 @@ const VideoLibrary = () => {
                     <div>
                       <div className="font-medium text-gray-800">移动文件</div>
                       <div className="text-sm text-gray-500">将文件移动到其他位置</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setFileOperation('batch-move')}
+                    className="w-full flex items-center gap-3 p-3 text-left border rounded-lg hover:bg-orange-50 hover:border-orange-300 transition-colors"
+                  >
+                    <ArrowRight className="text-orange-600" size={20} />
+                    <div>
+                      <div className="font-medium text-gray-800">批量移动文件</div>
+                      <div className="text-sm text-gray-500">选择多个文件进行批量移动</div>
                     </div>
                   </button>
 
@@ -1555,6 +1637,62 @@ const VideoLibrary = () => {
                     </div>
                   )}
 
+                  {fileOperation === 'batch-move' && (
+                    <div>
+                      <div className="mb-3">
+                        <p className="text-sm text-gray-600 mb-3">选择要批量移动的文件：</p>
+                        <div className="max-h-60 overflow-y-auto space-y-2">
+                          {items.filter(item => item.type !== 'folder').map((item, index) => (
+                            <label key={index} className="flex items-center gap-3 p-2 border rounded hover:bg-gray-50 transition-colors cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={selectedItems.some(selected => selected.key === item.key)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedItems([...selectedItems, item]);
+                                  } else {
+                                    setSelectedItems(selectedItems.filter(selected => selected.key !== item.key));
+                                  }
+                                }}
+                                className="rounded text-orange-600"
+                              />
+                              <div className="flex-1">
+                                <div className="font-medium">{item.name}</div>
+                                <div className="text-xs text-gray-500">文件</div>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+
+                        {selectedItems.length > 0 && (
+                          <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded">
+                            <p className="text-sm text-orange-800">
+                              已选择 {selectedItems.length} 个文件
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      {selectedItems.length > 0 && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            目标文件夹
+                          </label>
+                          <input
+                            type="text"
+                            value={operationData.targetFolder || ''}
+                            onChange={(e) => setOperationData({...operationData, targetFolder: e.target.value})}
+                            placeholder="输入目标文件夹名称（如：贾老师初联一轮/第1讲）"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                          />
+                          <div className="mt-2 text-xs text-gray-500">
+                            文件将移动到: videos/{operationData.targetFolder || '根目录'}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {fileOperation === 'delete' && (
                     <div>
                       {!selectedItem ? (
@@ -1594,6 +1732,7 @@ const VideoLibrary = () => {
                       onClick={() => {
                         setFileOperation(null);
                         setSelectedItem(null);
+                        setSelectedItems([]);
                         setOperationData({});
                       }}
                       disabled={isProcessingOperation}
@@ -1618,6 +1757,8 @@ const VideoLibrary = () => {
                           const oldPath = selectedItem.key || (currentPath ? `videos/${currentPath}/${selectedItem.name}` : `videos/${selectedItem.name}`);
                           const newPath = operationData.targetPath ? `videos/${operationData.targetPath}/${selectedItem.name}` : `videos/${selectedItem.name}`;
                           await handleRenameItem(oldPath, newPath); // 移动就是重命名到新路径
+                        } else if (fileOperation === 'batch-move' && selectedItems.length > 0 && operationData.targetFolder !== undefined) {
+                          await handleBatchMoveItems(selectedItems, operationData.targetFolder);
                         } else if (fileOperation === 'upload' && operationData.uploadFiles) {
                           // 设置上传状态并执行上传
                           setSelectedFiles(operationData.uploadFiles);
