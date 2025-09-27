@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../../../../auth-clerk/src";
 import VideoFileList from './VideoFileList';
 import FileOperations from './FileOperations';
 import VideoUpload from './VideoUpload';
