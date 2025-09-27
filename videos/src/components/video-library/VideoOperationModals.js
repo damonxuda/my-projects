@@ -126,23 +126,26 @@ const VideoOperationModals = ({
   };
 
   const handleBatchDeleteItems = async (items) => {
-    console.log('🔧 API修复版本 2024-09-27: 使用正确的files参数格式进行批量删除');
+    console.log('🔧 API修复版本 2024-09-27: 使用个体/files/delete调用，不使用batch-delete端点');
     setIsProcessingOperation(true);
     try {
       const token = await getToken();
-      const response = await fetch(`${apiUrl}/files/batch-delete`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          files: items.map(item => item.key || item.Key)
-        }),
-      });
+      // 逐个删除文件，因为Lambda只有单个删除端点 - 保持与move/copy操作一致
+      for (const item of items) {
+        const response = await fetch(`${apiUrl}/files/delete`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            filePath: item.key || item.Key
+          }),
+        });
 
-      if (!response.ok) {
-        throw new Error(`批量删除失败: ${response.status}`);
+        if (!response.ok) {
+          throw new Error(`删除文件 ${item.name} 失败: ${response.status}`);
+        }
       }
 
       onOperationComplete();
