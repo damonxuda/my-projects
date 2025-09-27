@@ -827,7 +827,7 @@ const VideoLibrary = () => {
           // 如果选中了mobile版本，查找原文件
           const originalKey = key.replace('_mobile.mp4', '.mp4');
           // 在当前文件列表中查找原文件
-          const originalFile = [...itemsToDisplay, ...items].find(f =>
+          const originalFile = items.find(f =>
             (f.key || f.Key) === originalKey
           );
           if (originalFile && !expandedMap.has(originalKey)) {
@@ -838,7 +838,7 @@ const VideoLibrary = () => {
           // 如果选中了原文件，查找mobile版本
           const mobileKey = key.replace('.mp4', '_mobile.mp4');
           // 在当前文件列表中查找mobile文件
-          const mobileFile = [...itemsToDisplay, ...items].find(f =>
+          const mobileFile = items.find(f =>
             (f.key || f.Key) === mobileKey
           );
           if (mobileFile && !expandedMap.has(mobileKey)) {
@@ -1952,6 +1952,7 @@ const VideoLibrary = () => {
                           setIsUploading(false);
                           setUploadProgress(0);
                           setCurrentUploadIndex(0);
+                        }
                       }}
                       disabled={isProcessingOperation || !canExecuteOperation()}
                       className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
