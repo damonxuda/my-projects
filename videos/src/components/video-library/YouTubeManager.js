@@ -12,15 +12,86 @@ const YouTubeManager = ({
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleAddYouTube = async () => {
-    if (!youtubeUrl.trim()) return;
+    if (!youtubeUrl.trim()) {
+      alert("请输入YouTube链接");
+      return;
+    }
+
+    // 提取YouTube视频ID
+    const extractVideoId = (url) => {
+      const regex = /(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/;
+      const match = url.match(regex);
+      return match ? match[1] : null;
+    };
+
+    const videoId = extractVideoId(youtubeUrl);
+    if (!videoId) {
+      alert("请输入有效的YouTube链接\n例如: https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+      return;
+    }
 
     setIsProcessing(true);
-    // TODO: 实现YouTube下载逻辑
-    setTimeout(() => {
-      setIsProcessing(false);
+    try {
+      // 获取视频信息
+      const response = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(youtubeUrl)}&format=json`);
+      if (!response.ok) {
+        throw new Error("无法获取YouTube视频信息");
+      }
+
+      const videoInfo = await response.json();
+
+      // 准备JSON数据
+      const jsonContent = JSON.stringify({
+        videoId: videoId,
+        title: videoInfo.title,
+        author_name: videoInfo.author_name,
+        thumbnail_url: videoInfo.thumbnail_url,
+        html: videoInfo.html,
+        url: youtubeUrl,
+        created_at: new Date().toISOString()
+      }, null, 2);
+
+      // 生成文件名
+      const fileName = `${videoInfo.title}_[${videoId}].youtube.json`;
+
+      // 获取上传URL
+      const token = await getToken();
+      if (!token) {
+        throw new Error("无法获取认证token");
+      }
+
+      // 使用FILE_MANAGEMENT_API上传
+      const FILE_MANAGEMENT_URL = process.env.REACT_APP_FILE_MANAGEMENT_API_URL;
+      const uploadResponse = await fetch(`${FILE_MANAGEMENT_URL}/files/upload-url`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          fileName: fileName,
+          content: jsonContent,
+          path: "YouTube/",
+        }),
+      });
+
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        throw new Error(`YouTube视频上传失败: ${uploadResponse.status} - ${errorText.substring(0, 200)}`);
+      }
+
+      // 成功
+      setYoutubeUrl("");
+      alert("YouTube视频添加成功！");
       onComplete();
       onClose();
-    }, 3000);
+
+    } catch (error) {
+      console.error("添加YouTube视频失败:", error);
+      alert("添加失败，请重试: " + error.message);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (!show) return null;

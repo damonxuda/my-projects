@@ -90,7 +90,8 @@ export async function listVideos(user, requestedPath = "") {
           if (remainingParts.length === 1) {
             const fileName = remainingParts[0];
             const isVideo = /\.(mp4|avi|mov|wmv|mkv)$/i.test(fileName);
-            if (isVideo) {
+            const isYouTube = fileName.endsWith('.youtube.json');
+            if (isVideo || isYouTube) {
               files.push({
                 Key: obj.Key,
                 Size: obj.Size,
@@ -106,29 +107,39 @@ export async function listVideos(user, requestedPath = "") {
 
       // 如果请求根目录，检查文件权限
       if (pathParts.length === 1) {
-        files.push({
-          Key: obj.Key,
-          Size: obj.Size,
-          LastModified: obj.LastModified,
-          ETag: obj.ETag,
-          Type: "file"
-        });
+        const fileName = pathParts[0];
+        const isVideo = /\.(mp4|avi|mov|wmv|mkv)$/i.test(fileName);
+        const isYouTube = fileName.endsWith('.youtube.json');
+        if (isVideo || isYouTube) {
+          files.push({
+            Key: obj.Key,
+            Size: obj.Size,
+            LastModified: obj.LastModified,
+            ETag: obj.ETag,
+            Type: "file"
+          });
+        }
         return;
       }
 
       // 如果文件在子文件夹中，检查文件夹权限
       const videoFolder = pathParts[0];
       if (userFolders.includes(videoFolder)) {
-        files.push({
-          Key: obj.Key,
-          Size: obj.Size,
-          LastModified: obj.LastModified,
-          ETag: obj.ETag,
-          Type: "file"
-        });
-        // 同时记录文件夹
-        if (!requestedPath) {
-          folders.add(videoFolder);
+        const fileName = pathParts[pathParts.length - 1];
+        const isVideo = /\.(mp4|avi|mov|wmv|mkv)$/i.test(fileName);
+        const isYouTube = fileName.endsWith('.youtube.json');
+        if (isVideo || isYouTube) {
+          files.push({
+            Key: obj.Key,
+            Size: obj.Size,
+            LastModified: obj.LastModified,
+            ETag: obj.ETag,
+            Type: "file"
+          });
+          // 同时记录文件夹
+          if (!requestedPath) {
+            folders.add(videoFolder);
+          }
         }
       }
     });
