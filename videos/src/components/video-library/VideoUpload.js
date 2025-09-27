@@ -38,16 +38,12 @@ const VideoUpload = ({
   const checkVideoEncoding = async (fileKey, fileSize) => {
     try {
       const token = await getToken();
-      const response = await fetch(`${formatConverterUrl}/video/check-encoding`, {
+      const response = await fetch(`${formatConverterUrl}/convert/auto-analyze/${encodeURIComponent(fileKey)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          fileName: fileKey,
-          fileSize: fileSize
-        })
+        }
       });
 
       if (!response.ok) {

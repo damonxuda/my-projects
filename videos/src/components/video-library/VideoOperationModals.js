@@ -60,23 +60,24 @@ const VideoOperationModals = ({
     setIsProcessingOperation(true);
     try {
       const token = await getToken();
-      const response = await fetch(`${apiUrl}/files/batch-move`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          items: items.map(item => ({
-            key: item.key || item.Key,
-            name: item.name
-          })),
-          targetFolder
-        }),
-      });
 
-      if (!response.ok) {
-        throw new Error(`批量移动失败: ${response.status}`);
+      // 逐个移动文件，因为Lambda只有单个移动端点
+      for (const item of items) {
+        const response = await fetch(`${apiUrl}/files/move`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            oldPath: item.key || item.Key,
+            newPath: targetFolder ? `videos/${targetFolder}/${item.name}` : `videos/${item.name}`
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`移动文件 ${item.name} 失败: ${response.status}`);
+        }
       }
 
       onOperationComplete();
@@ -93,23 +94,24 @@ const VideoOperationModals = ({
     setIsProcessingOperation(true);
     try {
       const token = await getToken();
-      const response = await fetch(`${apiUrl}/files/batch-copy`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          items: items.map(item => ({
-            key: item.key || item.Key,
-            name: item.name
-          })),
-          targetFolder
-        }),
-      });
 
-      if (!response.ok) {
-        throw new Error(`批量复制失败: ${response.status}`);
+      // 逐个复制文件，因为Lambda只有单个复制端点
+      for (const item of items) {
+        const response = await fetch(`${apiUrl}/files/copy`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            sourcePath: item.key || item.Key,
+            targetPath: targetFolder ? `videos/${targetFolder}/${item.name}` : `videos/${item.name}`
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`复制文件 ${item.name} 失败: ${response.status}`);
+        }
       }
 
       onOperationComplete();
@@ -127,7 +129,7 @@ const VideoOperationModals = ({
     try {
       const token = await getToken();
       const response = await fetch(`${apiUrl}/files/batch-delete`, {
-        method: 'POST',
+        method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

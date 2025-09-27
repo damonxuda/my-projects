@@ -41,8 +41,7 @@ function getUnifiedClerkConfig(publishableKey) {
     // satellite模式会导致认证隔离，这里使用标准同域名配置
     signInUrl: '/',
     signUpUrl: '/',
-    afterSignInUrl: window.location.pathname,
-    afterSignUpUrl: window.location.pathname
+    fallbackRedirectUrl: window.location.pathname
   };
 }
 
