@@ -139,7 +139,7 @@ const VideoOperationModals = ({
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            filePath: item.key || item.Key
+            key: item.key || item.Key
           }),
         });
 
