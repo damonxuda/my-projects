@@ -57,6 +57,7 @@ const VideoOperationModals = ({
   };
 
   const handleBatchMoveItems = async (items, targetFolder) => {
+    console.log('🔧 API修复版本 2024-09-27: 使用个体/files/move调用，不使用batch-move端点');
     setIsProcessingOperation(true);
     try {
       const token = await getToken();
