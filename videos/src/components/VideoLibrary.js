@@ -217,6 +217,9 @@ const VideoLibrary = () => {
     const videos = [];
     const youtubeVideos = [];
 
+    // 用于统计每个文件夹的文件数量
+    const folderCounts = new Map();
+
 
     files.forEach((file) => {
       // Skip the root "videos/" entry
@@ -237,7 +240,7 @@ const VideoLibrary = () => {
             name: folderName,
             type: "folder",
             path: currentPath ? `${currentPath}/${folderName}` : folderName,
-            count: 0,
+            count: folderCounts.get(folderName) || 0,
           });
         }
         return;
@@ -258,6 +261,9 @@ const VideoLibrary = () => {
           if (folderName === "Movies" && !isAdmin) {
             return;
           }
+
+          // 更新文件夹计数
+          folderCounts.set(folderName, (folderCounts.get(folderName) || 0) + 1);
 
           if (!folders.has(folderName)) {
             folders.set(folderName, {
@@ -324,6 +330,9 @@ const VideoLibrary = () => {
             return;
           }
 
+          // 更新文件夹计数
+          folderCounts.set(folderName, (folderCounts.get(folderName) || 0) + 1);
+
           if (!folders.has(folderName)) {
             folders.set(folderName, {
               key: `videos/${folderName}/`,
@@ -379,6 +388,10 @@ const VideoLibrary = () => {
       }
     });
 
+    // 更新文件夹的最终计数
+    folders.forEach((folder, folderName) => {
+      folder.count = folderCounts.get(folderName) || 0;
+    });
 
     return [
       ...Array.from(folders.values()),
@@ -1562,7 +1575,7 @@ const VideoLibrary = () => {
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                           />
                           <div className="mt-2 text-xs text-gray-500">
-                            文件将复制到: videos/{operationData.targetPath || currentPath}/{selectedItem.name}
+                            文件将复制到: videos/{operationData.targetPath || currentPath}/
                           </div>
                         </div>
                       )}
@@ -1639,7 +1652,7 @@ const VideoLibrary = () => {
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
                           />
                           <div className="mt-2 text-xs text-gray-500">
-                            文件将移动到: videos/{operationData.targetPath || currentPath}/{selectedItem.name}
+                            文件将移动到: videos/{operationData.targetPath || currentPath}/
                           </div>
                         </div>
                       )}
