@@ -235,16 +235,14 @@ const VideoLibrary = () => {
             return;
           }
 
-          // 只有在根目录时才处理文件夹（避免重复）
-          if (!currentPath) {
-            folders.set(folderName, {
-              key: file.Key,
-              name: folderName,
-              type: "folder",
-              path: folderName,
-              count: 0, // 会在后续文件处理时更新
-            });
-          }
+          // 处理后端返回的文件夹，无论在哪个目录层级
+          folders.set(folderName, {
+            key: file.Key,
+            name: folderName,
+            type: "folder",
+            path: currentPath ? `${currentPath}/${folderName}` : folderName,
+            count: 0, // 会在后续文件处理时更新
+          });
         }
         return;
       }
