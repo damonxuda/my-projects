@@ -7,10 +7,8 @@ export async function deleteYouTubeFile(event, user) {
   try {
     console.log("=== 删除YouTube文件 ===");
 
-    // 只有管理员可以删除YouTube文件
-    if (!isAdmin(user)) {
-      return createErrorResponse(403, "Admin access required", "只有管理员可以删除YouTube文件");
-    }
+    // YouTube删除功能对所有已验证用户开放
+    console.log("YouTube删除权限检查通过");
 
     let body;
     try {

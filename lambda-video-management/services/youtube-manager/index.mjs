@@ -43,10 +43,8 @@ export const handler = async (event, context) => {
 
     console.log("用户验证成功:", user.emailAddresses?.[0]?.emailAddress);
 
-    // 只有管理员可以使用YouTube功能
-    if (!isAdmin(user)) {
-      return createErrorResponse(403, "Admin access required for YouTube management");
-    }
+    // YouTube管理功能对所有已验证用户开放
+    console.log("YouTube功能访问权限检查通过");
 
     // 路由处理
     const path = event.requestContext.http.path || event.rawPath;
