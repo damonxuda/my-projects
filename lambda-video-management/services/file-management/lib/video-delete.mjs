@@ -105,8 +105,8 @@ export async function deleteVideo(event, user) {
       }
     }
 
-    // 如果是视频文件，还要尝试删除移动端版本和对应的移动端缩略图
-    let mobileVersionDeleted = false;
+    // 如果是视频文件，还要尝试删除关联的移动端版本和对应的移动端缩略图
+    let assocMobileVersionDeleted = false;
     if (key.endsWith('.mp4') && !key.includes('_mobile.mp4')) {
       const mobileKey = key.replace('.mp4', '_mobile.mp4');
       try {
@@ -115,7 +115,7 @@ export async function deleteVideo(event, user) {
           Key: mobileKey,
         }));
         console.log("移动端版本删除成功:", mobileKey);
-        mobileVersionDeleted = true;
+        assocMobileVersionDeleted = true;
 
         // 删除移动端缩略图
         const relativePath = mobileKey.replace('videos/', '');
@@ -139,7 +139,7 @@ export async function deleteVideo(event, user) {
       deletedKey: key,
       thumbnailDeleted,
       smartThumbnailsDeleted,
-      mobileVersionDeleted
+      assocMobileVersionDeleted
     });
 
   } catch (error) {
