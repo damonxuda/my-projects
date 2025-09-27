@@ -61,7 +61,7 @@ const VideoLibraryMain = () => {
 
   // 加载文件列表
   const loadItems = useCallback(async (path = "") => {
-    if (!isSignedIn || !FILE_MANAGEMENT_URL) {
+    if (!isSignedIn || !user || !FILE_MANAGEMENT_URL) {
       return;
     }
 
@@ -69,7 +69,15 @@ const VideoLibraryMain = () => {
     setError("");
 
     try {
+      if (!isSignedIn || !user) {
+        throw new Error("用户未登录");
+      }
+
       const token = await getToken();
+      if (!token) {
+        throw new Error("无法获取认证token");
+      }
+
       const apiPath = '/files/list';
       const requestUrl = `${FILE_MANAGEMENT_URL}${apiPath}?path=${encodeURIComponent(path)}`;
 
@@ -81,7 +89,9 @@ const VideoLibraryMain = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('❌ loadItems - Error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
 
       const data = await response.json();
@@ -100,7 +110,7 @@ const VideoLibraryMain = () => {
     } finally {
       setLoading(false);
     }
-  }, [isSignedIn, FILE_MANAGEMENT_URL, getToken, processFileList]);
+  }, [isSignedIn, user, FILE_MANAGEMENT_URL, getToken, processFileList]);
 
   // 路径导航
   const navigateToPath = (path) => {
