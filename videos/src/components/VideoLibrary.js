@@ -225,9 +225,9 @@ const VideoLibrary = () => {
       // 隐藏 .folder_placeholder 文件，用户不应该看到它们
       if (file.Key && file.Key.endsWith("/.folder_placeholder")) return;
 
-      // 处理后端返回的文件夹类型
+      // 处理后端返回的文件夹类型 - 但不设置计数，让后续的文件处理逻辑来计算
       if (file.Type === "folder") {
-        // 后端已经处理好的文件夹，直接使用
+        // 后端已经处理好的文件夹，暂时记录但不设置计数
         const folderName = file.Name;
         if (folderName) {
           // 隐藏Movies文件夹（仅管理员可见）
@@ -235,13 +235,16 @@ const VideoLibrary = () => {
             return;
           }
 
-          folders.set(folderName, {
-            key: file.Key,
-            name: folderName,
-            type: "folder",
-            path: currentPath ? `${currentPath}/${folderName}` : folderName,
-            count: 0,
-          });
+          // 只有在根目录时才处理文件夹（避免重复）
+          if (!currentPath) {
+            folders.set(folderName, {
+              key: file.Key,
+              name: folderName,
+              type: "folder",
+              path: folderName,
+              count: 0, // 会在后续文件处理时更新
+            });
+          }
         }
         return;
       }
@@ -338,6 +341,7 @@ const VideoLibrary = () => {
               count: 0,
             });
           }
+          console.log(`📊 文件夹计数更新: ${folderName} -> ${folders.get(folderName).count + 1}`);
           folders.get(folderName).count++;
         } else {
           // Show files in current directory - 检查文件是否在当前路径下
@@ -444,6 +448,7 @@ const VideoLibrary = () => {
 
       const processedItems = processFileList(data, path);
       console.log("🔄 处理后的项目:", processedItems);
+      console.log("📁 文件夹统计详情:", processedItems.filter(item => item.type === 'folder').map(f => ({name: f.name, count: f.count})));
       setItems(processedItems);
     } catch (err) {
       console.error("VideoLibrary: 加载失败:", err);
