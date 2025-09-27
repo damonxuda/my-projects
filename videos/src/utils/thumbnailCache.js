@@ -249,4 +249,8 @@ const thumbnailCache = new ThumbnailCache();
 thumbnailCache.cleanupExpiredCache();
 thumbnailCache.clearExpiredThumbnailCache();
 
+// 临时措施：清除NCE-II目录的缓存以获取新的6小时URL
+console.log('🔄 清除NCE-II缓存以获取新的6小时有效期URL');
+thumbnailCache.clearCache('NCE-II');
+
 export default thumbnailCache;
