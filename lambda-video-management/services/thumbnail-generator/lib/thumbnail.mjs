@@ -40,8 +40,16 @@ export async function generateThumbnail(videoKey) {
       console.log("缩略图已存在，返回现有的");
       const thumbnailUrl = await getSignedUrl(
         s3Client,
-        new GetObjectCommand({ Bucket: VIDEO_BUCKET, Key: thumbnailKey }),
-        { expiresIn: 3600 }
+        new GetObjectCommand({
+          Bucket: VIDEO_BUCKET,
+          Key: thumbnailKey,
+          ResponseCacheControl: 'max-age=3600, must-revalidate',
+          ResponseContentType: 'image/jpeg'
+        }),
+        {
+          expiresIn: 6 * 60 * 60, // 改为6小时保持一致
+          signableHeaders: new Set(['host', 'x-amz-date'])
+        }
       );
 
       return createSuccessResponse({
@@ -238,8 +246,33 @@ export async function generateThumbnail(videoKey) {
       writeFileSync(videoPath, videoBuffer);
       console.log(`视频文件下载完成 (${downloadStrategy}):`, videoPath, `(${videoBuffer.byteLength} bytes)`);
 
-      // 使用ffmpeg生成缩略图
-      const ffmpegPath = "/opt/bin/ffmpeg";
+      // 使用ffmpeg生成缩略图 - 支持新旧ffmpeg层
+      let ffmpegPath;
+      const possiblePaths = [
+        "/opt/ffmpeg-layer/bin/ffmpeg", // 实际新层路径 (FFmpeg 7.x for Node.js 20.x)
+        "/opt/ffmpeg/bin/ffmpeg",  // 新层路径备用
+        "/opt/bin/ffmpeg",         // 旧层路径
+        "/usr/local/bin/ffmpeg",   // 备用路径
+        "/var/runtime/ffmpeg"      // 另一个可能路径
+      ];
+
+      // 查找可用的ffmpeg路径
+      for (const path of possiblePaths) {
+        try {
+          if (existsSync(path)) {
+            ffmpegPath = path;
+            console.log(`找到ffmpeg: ${ffmpegPath}`);
+            break;
+          }
+        } catch (e) {
+          // 继续尝试下一个路径
+        }
+      }
+
+      if (!ffmpegPath) {
+        throw new Error("未找到ffmpeg可执行文件，检查的路径: " + possiblePaths.join(", "));
+      }
+
       console.log("执行ffmpeg命令...");
 
       await new Promise((resolve, reject) => {
@@ -312,8 +345,16 @@ export async function generateThumbnail(videoKey) {
       // 生成缩略图的预签名URL
       const thumbnailUrl = await getSignedUrl(
         s3Client,
-        new GetObjectCommand({ Bucket: VIDEO_BUCKET, Key: thumbnailKey }),
-        { expiresIn: 3600 }
+        new GetObjectCommand({
+          Bucket: VIDEO_BUCKET,
+          Key: thumbnailKey,
+          ResponseCacheControl: 'max-age=3600, must-revalidate',
+          ResponseContentType: 'image/jpeg'
+        }),
+        {
+          expiresIn: 6 * 60 * 60, // 改为6小时保持一致
+          signableHeaders: new Set(['host', 'x-amz-date'])
+        }
       );
 
       // 清理临时文件

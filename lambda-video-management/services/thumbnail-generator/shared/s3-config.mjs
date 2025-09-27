@@ -8,9 +8,14 @@ export const s3Client = new S3Client({
 // 环境变量
 export const VIDEO_BUCKET = process.env.VIDEO_BUCKET_NAME || "damonxuda-video-files";
 
-// CORS响应头 - 移除，使用Lambda Function URL的CORS配置
+// CORS响应头 - 移动端兼容性增强
 export const corsHeaders = {
-  // 已由Lambda Function URL处理CORS
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Amz-Date, X-Amz-Security-Token',
+  'Access-Control-Expose-Headers': 'Content-Length, Date, ETag',
+  'Access-Control-Max-Age': '86400',
+  'Vary': 'Origin, Access-Control-Request-Method, Access-Control-Request-Headers'
 };
 
 // 标准响应格式化
