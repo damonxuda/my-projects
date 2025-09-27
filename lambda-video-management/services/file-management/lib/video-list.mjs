@@ -31,47 +31,110 @@ export async function listVideos(user, requestedPath = "") {
 
     // 权限检查：如果请求特定文件夹，先检查用户是否有权限访问
     if (requestedPath) {
-      if (!userFolders.includes(requestedPath)) {
-        console.log(`用户无权访问文件夹: ${requestedPath}`);
+      // 获取顶级文件夹名称（第一级路径）
+      const topLevelFolder = requestedPath.split('/')[0];
+
+      if (!userFolders.includes(topLevelFolder)) {
+        console.log(`用户无权访问顶级文件夹: ${topLevelFolder} (请求路径: ${requestedPath})`);
         return createErrorResponse(403, "Access denied to this folder");
       }
     }
 
-    // 过滤用户有权限访问的文件
-    const allFiles = response.Contents
-      .filter(obj => {
-        const key = obj.Key;
+    // 分离文件和文件夹
+    const files = [];
+    const folders = new Set();
 
-        // 跳过文件夹标记
-        if (key.endsWith("/")) return false;
+    response.Contents.forEach(obj => {
+      const key = obj.Key;
 
-        const relativePath = key.replace("videos/", "");
-        const pathParts = relativePath.split("/");
+      // 跳过根videos/目录标记
+      if (key === "videos/" || key.endsWith("/")) return;
 
-        // 如果请求特定路径，只返回该路径下的文件
-        if (requestedPath) {
-          return pathParts.length > 1 && pathParts[0] === requestedPath;
+      const relativePath = key.replace("videos/", "");
+      const pathParts = relativePath.split("/");
+
+      // 处理占位符文件 - 识别为文件夹
+      if (key.endsWith(".folder_placeholder")) {
+        const folderPath = key.replace("/.folder_placeholder", "").replace("videos/", "");
+        if (folderPath) {
+          const folderParts = folderPath.split("/");
+          // 如果请求特定路径，只显示该路径下的直接子文件夹
+          if (requestedPath) {
+            if (folderParts.length === requestedPath.split("/").length + 1 &&
+                folderPath.startsWith(requestedPath + "/")) {
+              const folderName = folderParts[folderParts.length - 1];
+              if (userFolders.includes(folderParts[0])) {
+                folders.add(folderName);
+              }
+            }
+          } else {
+            // 根目录，只显示顶级文件夹
+            if (folderParts.length === 1 && userFolders.includes(folderParts[0])) {
+              folders.add(folderParts[0]);
+            }
+          }
         }
+        return;
+      }
 
-        // 如果请求根目录，检查文件权限
-        if (pathParts.length === 1) {
-          return true; // 根目录文件对所有用户开放
+      // 处理普通文件
+      // 如果请求特定路径，只返回该路径下的文件
+      if (requestedPath) {
+        if (pathParts.length > 1 && pathParts[0] === requestedPath) {
+          files.push({
+            Key: obj.Key,
+            Size: obj.Size,
+            LastModified: obj.LastModified,
+            ETag: obj.ETag,
+            Type: "file"
+          });
         }
+        return;
+      }
 
-        // 如果文件在子文件夹中，检查文件夹权限
-        const videoFolder = pathParts[0];
-        return userFolders.includes(videoFolder);
-      })
-      .map(obj => ({
-        Key: obj.Key,
-        Size: obj.Size,
-        LastModified: obj.LastModified,
-        ETag: obj.ETag
-      }));
+      // 如果请求根目录，检查文件权限
+      if (pathParts.length === 1) {
+        files.push({
+          Key: obj.Key,
+          Size: obj.Size,
+          LastModified: obj.LastModified,
+          ETag: obj.ETag,
+          Type: "file"
+        });
+        return;
+      }
 
-    console.log("过滤后的文件数量:", allFiles.length);
+      // 如果文件在子文件夹中，检查文件夹权限
+      const videoFolder = pathParts[0];
+      if (userFolders.includes(videoFolder)) {
+        files.push({
+          Key: obj.Key,
+          Size: obj.Size,
+          LastModified: obj.LastModified,
+          ETag: obj.ETag,
+          Type: "file"
+        });
+        // 同时记录文件夹
+        if (!requestedPath) {
+          folders.add(videoFolder);
+        }
+      }
+    });
 
-    return createSuccessResponse(allFiles);
+    // 合并文件夹和文件列表
+    const folderList = Array.from(folders).map(folderName => ({
+      Key: requestedPath ? `videos/${requestedPath}/${folderName}/` : `videos/${folderName}/`,
+      Size: 0,
+      LastModified: new Date(),
+      Type: "folder",
+      Name: folderName
+    }));
+
+    const allItems = [...folderList, ...files];
+
+    console.log("过滤后的项目数量:", allItems.length, "文件夹:", folderList.length, "文件:", files.length);
+
+    return createSuccessResponse(allItems);
 
   } catch (error) {
     console.error("获取视频列表失败:", error);
