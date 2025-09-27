@@ -312,17 +312,9 @@ const VideoLibraryMain = () => {
                   添加 YouTube
                 </button>
               )}
-              {isAdmin && (
-                <button
-                  onClick={() => setShowUpload(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
-                >
-                  上传视频
-                </button>
-              )}
               <button
                 onClick={() => setShowFileManager(true)}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
               >
                 文件管理
               </button>

@@ -102,7 +102,13 @@ const FileCard = ({
   }, [isYouTube, item.name, extractVideoId, getDisplayTitle]);
 
   const handleClick = (e) => {
-    // 如果是多选模式，处理选择逻辑
+    // 文件夹总是直接进入，不受多选模式影响
+    if (isFolder) {
+      onFolderClick(item.path);
+      return;
+    }
+
+    // 如果是多选模式且不是文件夹，处理选择逻辑
     if (isMultiSelectMode && onSelectionChange) {
       e.preventDefault();
       e.stopPropagation();
@@ -110,10 +116,8 @@ const FileCard = ({
       return;
     }
 
-    // 普通模式下的点击逻辑
-    if (isFolder) {
-      onFolderClick(item.path);
-    } else if (isVideo || isYouTube) {
+    // 普通模式下的视频文件点击逻辑
+    if (isVideo || isYouTube) {
       onVideoPlay(item);
     }
   };
@@ -121,7 +125,7 @@ const FileCard = ({
   return (
     <div
       className={`file-card border rounded-xl p-4 cursor-pointer bg-white hover:shadow-lg transition-all duration-200 relative group ${
-        isMultiSelectMode && isSelected
+        isMultiSelectMode && isSelected && !isFolder
           ? 'border-blue-500 bg-blue-50 shadow-md'
           : 'border-gray-200 hover:border-gray-300'
       }`}
@@ -132,8 +136,8 @@ const FileCard = ({
       <div className="flex flex-col">
         {/* 缩略图/图标区域 */}
         <div className="mb-3 relative">
-          {/* 多选模式复选框 */}
-          {isMultiSelectMode && (
+          {/* 多选模式复选框 - 文件夹不显示复选框 */}
+          {isMultiSelectMode && !isFolder && (
             <div className="absolute top-2 right-2 z-10">
               <div className={`w-6 h-6 rounded border-2 flex items-center justify-center ${
                 isSelected
