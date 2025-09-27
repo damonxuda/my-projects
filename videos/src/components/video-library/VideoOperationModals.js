@@ -14,7 +14,8 @@ const VideoOperationModals = ({
   setOperationData,
   setIsProcessingOperation,
   apiUrl,
-  getToken
+  getToken,
+  onUploadTrigger
 }) => {
   const [selectedItems, setSelectedItems] = useState([]);
 
@@ -498,7 +499,11 @@ const VideoOperationModals = ({
                         await handleBatchDeleteItems(selectedItems);
                       }
                     } else if (fileOperation === 'upload' && operationData.uploadFiles) {
-                      window.alert('上传功能需要与VideoUpload组件集成');
+                      // 触发上传流程 - 关闭当前模态框并打开VideoUpload组件
+                      if (onUploadTrigger) {
+                        onUploadTrigger(operationData.uploadFiles);
+                        resetOperationState();
+                      }
                     }
                   }}
                   disabled={isProcessingOperation || !canExecuteOperation()}

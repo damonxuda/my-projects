@@ -19,6 +19,12 @@ const VideoLibraryMain = () => {
   const [showAddYouTube, setShowAddYouTube] = useState(false);
   const [showFileManager, setShowFileManager] = useState(false);
 
+  // 上传相关状态
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [currentUploadIndex, setCurrentUploadIndex] = useState(0);
+
   // 文件操作状态
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedItems, setSelectedItems] = useState([]);
@@ -277,6 +283,17 @@ const VideoLibraryMain = () => {
     clearSelection();
   };
 
+  // 处理上传触发
+  const handleUploadTrigger = (files) => {
+    setSelectedFiles(files);
+    setShowFileManager(false); // 关闭文件管理模态框
+    setShowUpload(true); // 显示上传模态框
+    // 重置上传状态
+    setIsUploading(false);
+    setUploadProgress(0);
+    setCurrentUploadIndex(0);
+  };
+
   // 初始加载
   useEffect(() => {
     if (isSignedIn) {
@@ -362,6 +379,14 @@ const VideoLibraryMain = () => {
         apiUrl={FILE_MANAGEMENT_URL}
         formatConverterUrl={FORMAT_CONVERTER_URL}
         getToken={getToken}
+        selectedFiles={selectedFiles}
+        setSelectedFiles={setSelectedFiles}
+        isUploading={isUploading}
+        setIsUploading={setIsUploading}
+        uploadProgress={uploadProgress}
+        setUploadProgress={setUploadProgress}
+        currentUploadIndex={currentUploadIndex}
+        setCurrentUploadIndex={setCurrentUploadIndex}
       />
 
       {/* 文件管理操作弹窗 */}
@@ -379,6 +404,7 @@ const VideoLibraryMain = () => {
         setIsProcessingOperation={setIsProcessingOperation}
         apiUrl={FILE_MANAGEMENT_URL}
         getToken={getToken}
+        onUploadTrigger={handleUploadTrigger}
       />
 
       {/* 视频播放器 */}
