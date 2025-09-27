@@ -1,8 +1,8 @@
 import { verifyTokenAndCheckAccess, isAdmin } from "./shared/auth.mjs";
 import { corsHeaders, createResponse, createErrorResponse, createSuccessResponse } from "./shared/s3-config.mjs";
-import { listDownloadHistory } from "./lib/download-history.mjs";
-// import { downloadYouTubeVideo } from "./lib/youtube-downloader.mjs";
-// import { getVideoInfo } from "./lib/youtube-info.mjs";
+import { listYouTubeFiles } from "./lib/youtube-list.mjs";
+import { addYouTubeFile } from "./lib/youtube-add.mjs";
+import { deleteYouTubeFile } from "./lib/youtube-delete.mjs";
 
 export const handler = async (event, context) => {
   console.log("=== YouTube Manager Lambda 开始执行 ===");
@@ -52,41 +52,15 @@ export const handler = async (event, context) => {
     const path = event.requestContext.http.path || event.rawPath;
     console.log("处理路径:", path, "方法:", method);
 
-    if (method === "POST" && path === "/youtube/download") {
-      // 下载YouTube视频 - 暂时禁用
-      return createErrorResponse(501, "Not Implemented", "YouTube download feature temporarily disabled");
-    } else if (method === "GET" && path === "/youtube/info") {
-      // 获取YouTube视频信息 - 暂时禁用
-      return createErrorResponse(501, "Not Implemented", "YouTube info feature temporarily disabled");
-    } else if (method === "GET" && path === "/youtube/history") {
-      // 列出下载历史
-      return await listDownloadHistory(event, user);
+    if (method === "GET" && path === "/youtube/list") {
+      // 列出YouTube文件
+      return await listYouTubeFiles(event, user);
+    } else if (method === "POST" && path === "/youtube/add") {
+      // 添加YouTube文件
+      return await addYouTubeFile(event, user);
     } else if (method === "DELETE" && path === "/youtube/delete") {
-      // 删除YouTube文件 - 使用通用删除逻辑
-      const { key } = JSON.parse(event.body);
-
-      if (!key || !key.endsWith('.youtube.json')) {
-        return createErrorResponse(400, "Invalid YouTube file path");
-      }
-
-      // 使用文件管理函数的删除逻辑
-      const deleteEvent = {
-        body: JSON.stringify({ key })
-      };
-
-      // 这里可以直接调用S3删除操作
-      const { DeleteObjectCommand } = await import("@aws-sdk/client-s3");
-      const { s3Client, VIDEO_BUCKET } = await import("./shared/s3-config.mjs");
-
-      await s3Client.send(new DeleteObjectCommand({
-        Bucket: VIDEO_BUCKET,
-        Key: key,
-      }));
-
-      return createSuccessResponse({
-        message: "YouTube file deleted successfully",
-        deletedKey: key
-      });
+      // 删除YouTube文件
+      return await deleteYouTubeFile(event, user);
     }
 
     console.log("路由不匹配");

@@ -90,8 +90,7 @@ export async function listVideos(user, requestedPath = "") {
           if (remainingParts.length === 1) {
             const fileName = remainingParts[0];
             const isVideo = /\.(mp4|avi|mov|wmv|mkv)$/i.test(fileName);
-            const isYouTube = fileName.endsWith('.youtube.json');
-            if (isVideo || isYouTube) {
+            if (isVideo) {
               files.push({
                 Key: obj.Key,
                 Size: obj.Size,
@@ -109,8 +108,7 @@ export async function listVideos(user, requestedPath = "") {
       if (pathParts.length === 1) {
         const fileName = pathParts[0];
         const isVideo = /\.(mp4|avi|mov|wmv|mkv)$/i.test(fileName);
-        const isYouTube = fileName.endsWith('.youtube.json');
-        if (isVideo || isYouTube) {
+        if (isVideo) {
           files.push({
             Key: obj.Key,
             Size: obj.Size,
@@ -127,8 +125,7 @@ export async function listVideos(user, requestedPath = "") {
       if (userFolders.includes(videoFolder)) {
         const fileName = pathParts[pathParts.length - 1];
         const isVideo = /\.(mp4|avi|mov|wmv|mkv)$/i.test(fileName);
-        const isYouTube = fileName.endsWith('.youtube.json');
-        if (isVideo || isYouTube) {
+        if (isVideo) {
           files.push({
             Key: obj.Key,
             Size: obj.Size,

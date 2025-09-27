@@ -51,18 +51,19 @@ const YouTubeManager = ({
         created_at: new Date().toISOString()
       }, null, 2);
 
-      // 生成文件名
-      const fileName = `${videoInfo.title}_[${videoId}].youtube.json`;
+      // 生成文件名 - 清理文件名中的特殊字符
+      const safeTitle = videoInfo.title.replace(/[\/\\:*?"<>|]/g, '_');
+      const fileName = `${safeTitle}_[${videoId}].youtube.json`;
 
-      // 获取上传URL
+      // 获取认证token
       const token = await getToken();
       if (!token) {
         throw new Error("无法获取认证token");
       }
 
-      // 使用FILE_MANAGEMENT_API上传
-      const FILE_MANAGEMENT_URL = process.env.REACT_APP_FILE_MANAGEMENT_API_URL;
-      const uploadResponse = await fetch(`${FILE_MANAGEMENT_URL}/files/upload-url`, {
+      // 使用YOUTUBE_MANAGER_API添加YouTube文件
+      const YOUTUBE_MANAGER_URL = process.env.REACT_APP_YOUTUBE_MANAGER_API_URL;
+      const uploadResponse = await fetch(`${YOUTUBE_MANAGER_URL}/youtube/add`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -70,14 +71,13 @@ const YouTubeManager = ({
         },
         body: JSON.stringify({
           fileName: fileName,
-          content: jsonContent,
-          path: "videos/YouTube/",
+          content: jsonContent
         }),
       });
 
       if (!uploadResponse.ok) {
         const errorText = await uploadResponse.text();
-        throw new Error(`YouTube视频上传失败: ${uploadResponse.status} - ${errorText.substring(0, 200)}`);
+        throw new Error(`YouTube文件添加失败: ${uploadResponse.status} - ${errorText.substring(0, 200)}`);
       }
 
       // 成功

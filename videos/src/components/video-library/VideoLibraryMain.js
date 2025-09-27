@@ -3,7 +3,7 @@ import { useAuth } from "../../../../auth-clerk/src";
 import VideoFileList from './VideoFileList';
 import FileOperations from './FileOperations';
 import VideoUpload from './VideoUpload';
-import YouTubeManager from './YouTubeManager';
+import YouTubeManagerModal from './YouTubeManagerModal';
 import VideoOperationModals from './VideoOperationModals';
 import VideoPlayer from '../VideoPlayer';
 
@@ -17,7 +17,7 @@ const VideoLibraryMain = () => {
 
   // UI控制状态
   const [showUpload, setShowUpload] = useState(false);
-  const [showAddYouTube, setShowAddYouTube] = useState(false);
+  const [showYouTubeManager, setShowYouTubeManager] = useState(false);
   const [showFileManager, setShowFileManager] = useState(false);
 
   // 上传相关状态
@@ -233,7 +233,40 @@ const VideoLibraryMain = () => {
         throw new Error(`JSON解析失败: ${parseError.message}`);
       }
 
+      // 如果是YouTube文件夹，额外获取YouTube文件列表
+      let youtubeFiles = [];
+      if (path === 'YouTube' && YOUTUBE_MANAGER_URL) {
+        try {
+          const youtubeResponse = await fetch(`${YOUTUBE_MANAGER_URL}/youtube/list`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (youtubeResponse.ok) {
+            const youtubeData = await youtubeResponse.json();
+            // 转换YouTube文件格式以匹配前端期望的格式
+            youtubeFiles = youtubeData.map(file => ({
+              ...file,
+              type: 'youtube',
+              Key: file.key,
+              name: file.name,
+              path: 'YouTube'
+            }));
+          }
+        } catch (youtubeError) {
+          console.warn('获取YouTube文件列表失败:', youtubeError);
+        }
+      }
+
       const processedItems = processFileList(data, path);
+
+      // 合并YouTube文件到处理后的列表中
+      if (youtubeFiles.length > 0) {
+        processedItems.push(...youtubeFiles);
+      }
+
       setItems(processedItems);
       setCurrentPath(path);
     } catch (err) {
@@ -324,17 +357,17 @@ const VideoLibraryMain = () => {
             <div className="flex space-x-4">
               {isAdmin && (
                 <button
-                  onClick={() => setShowAddYouTube(true)}
+                  onClick={() => setShowYouTubeManager(true)}
                   className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md"
                 >
-                  添加 YouTube
+                  YouTube 管理
                 </button>
               )}
               <button
                 onClick={() => setShowFileManager(true)}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
               >
-                文件管理
+                视频文件管理
               </button>
             </div>
           </div>
@@ -363,12 +396,12 @@ const VideoLibraryMain = () => {
       </div>
 
       {/* YouTube管理器 */}
-      <YouTubeManager
-        show={showAddYouTube}
-        onClose={() => setShowAddYouTube(false)}
+      <YouTubeManagerModal
+        show={showYouTubeManager}
+        onClose={() => setShowYouTubeManager(false)}
         onComplete={refreshItems}
-        apiUrl={YOUTUBE_MANAGER_URL}
         getToken={getToken}
+        currentPath={currentPath}
       />
 
       {/* 视频上传 */}

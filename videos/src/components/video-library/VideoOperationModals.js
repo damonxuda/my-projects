@@ -19,6 +19,19 @@ const VideoOperationModals = ({
 }) => {
   const [selectedItems, setSelectedItems] = useState([]);
 
+  // 过滤只显示视频文件（排除YouTube文件）
+  const getVideoOnlyItems = (items) => {
+    return items.filter(item => {
+      // 排除YouTube文件
+      if (item.type === 'youtube' ||
+          (item.key && item.key.includes('/YouTube/') && item.key.endsWith('.youtube.json'))) {
+        return false;
+      }
+      // 保留视频文件和文件夹
+      return true;
+    });
+  };
+
   // 重置选择状态
   useEffect(() => {
     if (!show || !fileOperation) {
@@ -132,16 +145,37 @@ const VideoOperationModals = ({
       const token = await getToken();
       // 逐个删除文件，因为Lambda只有单个删除端点 - 保持与move/copy操作一致
       for (const item of items) {
-        const response = await fetch(`${apiUrl}/files/delete`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            key: item.key || item.Key
-          }),
-        });
+        // 判断是否是YouTube文件
+        const isYouTubeFile = item.type === 'youtube' ||
+          (item.key && item.key.includes('/YouTube/') && item.key.endsWith('.youtube.json'));
+
+        let response;
+        if (isYouTubeFile) {
+          // YouTube文件使用YOUTUBE_MANAGER_API
+          const YOUTUBE_MANAGER_URL = process.env.REACT_APP_YOUTUBE_MANAGER_API_URL;
+          response = await fetch(`${YOUTUBE_MANAGER_URL}/youtube/delete`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              key: item.key || item.Key
+            }),
+          });
+        } else {
+          // 普通视频文件使用FILE_MANAGEMENT_API
+          response = await fetch(`${apiUrl}/files/delete`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              key: item.key || item.Key
+            }),
+          });
+        }
 
         if (!response.ok) {
           throw new Error(`删除文件 ${item.name} 失败: ${response.status}`);
@@ -320,7 +354,7 @@ const VideoOperationModals = ({
                   <div className="mb-3">
                     <p className="text-sm text-gray-600 mb-3">选择要移动的文件或文件夹：</p>
                     <div className="max-h-60 overflow-y-auto space-y-2 border rounded-lg p-2">
-                      {items.map((item, index) => (
+                      {getVideoOnlyItems(items).map((item, index) => (
                         <label key={index} className="flex items-center gap-3 p-2 border rounded hover:bg-gray-50 transition-colors cursor-pointer">
                           <input
                             type="checkbox"
@@ -380,7 +414,7 @@ const VideoOperationModals = ({
                   <div className="mb-3">
                     <p className="text-sm text-gray-600 mb-3">选择要复制的文件或文件夹：</p>
                     <div className="max-h-60 overflow-y-auto space-y-2 border rounded-lg p-2">
-                      {items.map((item, index) => (
+                      {getVideoOnlyItems(items).map((item, index) => (
                         <label key={index} className="flex items-center gap-3 p-2 border rounded hover:bg-gray-50 transition-colors cursor-pointer">
                           <input
                             type="checkbox"
@@ -440,7 +474,7 @@ const VideoOperationModals = ({
                   <div className="mb-3">
                     <p className="text-sm text-gray-600 mb-3">选择要删除的文件或文件夹：</p>
                     <div className="max-h-60 overflow-y-auto space-y-2 border rounded-lg p-2">
-                      {items.map((item, index) => (
+                      {getVideoOnlyItems(items).map((item, index) => (
                         <label key={index} className="flex items-center gap-3 p-2 border rounded hover:bg-gray-50 transition-colors cursor-pointer">
                           <input
                             type="checkbox"
