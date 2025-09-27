@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Film, Play, HardDrive, Loader } from 'lucide-react';
+import { Film, HardDrive, Loader } from 'lucide-react';
 import thumbnailCache from '../utils/thumbnailCache';
 import thumbnailQueue from '../utils/thumbnailQueue';
 import mobileCompatibility from '../utils/mobileCompatibility';
@@ -268,22 +268,8 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
             }}
           />
           
-          {/* 右上角播放图标 */}
-          <div className="absolute top-2 right-2">
-            <div className="w-6 h-6 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
-              <Play size={12} className="text-white ml-0.5" />
-            </div>
-          </div>
-
           {/* 鼠标悬停效果 */}
           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200" />
-          
-          {/* 悬停播放按钮 */}
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200">
-            <div className="bg-white bg-opacity-90 rounded-full p-3 transform scale-75 group-hover:scale-100 transition-transform duration-200">
-              <Play className="text-gray-800" size={20} />
-            </div>
-          </div>
 
           {/* 底部视频信息 */}
           <div className="absolute bottom-2 left-2">
@@ -337,22 +323,8 @@ const VideoThumbnail = ({ alt, fileSize, fileName, apiUrl, getToken }) => {
             )}
           </div>
 
-          {/* 右上角播放图标 - 始终显示 */}
-          <div className="absolute top-2 right-2">
-            <div className="w-6 h-6 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
-              <Play size={12} className="text-white ml-0.5" />
-            </div>
-          </div>
-
           {/* 鼠标悬停效果 */}
           <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all duration-200" />
-          
-          {/* 悬停播放按钮 */}
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200">
-            <div className="bg-white bg-opacity-90 rounded-full p-3 transform scale-75 group-hover:scale-100 transition-transform duration-200">
-              <Play className="text-gray-800" size={20} />
-            </div>
-          </div>
         </>
       )}
     </div>

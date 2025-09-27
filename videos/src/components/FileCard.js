@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Folder,
-  Play,
   Youtube,
   ExternalLink,
 } from "lucide-react";
@@ -188,12 +187,6 @@ const FileCard = ({
                 <ExternalLink className="text-white" size={10} />
               </div>
 
-              {/* 播放按钮覆盖层 */}
-              <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                <div className="bg-red-600 rounded-full p-3">
-                  <Play className="text-white" size={24} fill="white" />
-                </div>
-              </div>
             </div>
           ) : isVideo ? (
             <VideoThumbnail

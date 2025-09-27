@@ -5,6 +5,7 @@ import FileOperations from './FileOperations';
 import VideoUpload from './VideoUpload';
 import YouTubeManager from './YouTubeManager';
 import VideoOperationModals from './VideoOperationModals';
+import VideoPlayer from '../VideoPlayer';
 
 const VideoLibraryMain = () => {
   // 核心状态 - Deploy trigger 2024-09-27
@@ -420,11 +421,12 @@ const VideoLibraryMain = () => {
                 ✕
               </button>
             </div>
-            {/* VideoPlayer组件将在后续创建 */}
-            <div className="text-center py-8">
-              <p>视频播放器组件</p>
-              <p className="text-sm text-gray-500">{selectedVideo.displayName}</p>
-            </div>
+            <VideoPlayer
+              video={selectedVideo}
+              apiUrl={VIDEO_PLAYER_URL}
+              getToken={getToken}
+              onClose={() => setSelectedVideo(null)}
+            />
           </div>
         </div>
       )}
