@@ -10,10 +10,12 @@ class ThumbnailCache {
     return `thumbnails_${path || 'root'}`;
   }
 
-  // 检查缓存是否有效
+  // 检查缓存是否有效（增加提前过期检查）
   isCacheValid(cacheData) {
     if (!cacheData || !cacheData.expiresAt) return false;
-    return Date.now() < cacheData.expiresAt;
+    // 提前30分钟过期，确保URL在实际过期前就更新
+    const bufferTime = 30 * 60 * 1000; // 30分钟缓冲
+    return Date.now() < (cacheData.expiresAt - bufferTime);
   }
 
   // 从localStorage加载缓存
@@ -249,8 +251,12 @@ const thumbnailCache = new ThumbnailCache();
 thumbnailCache.cleanupExpiredCache();
 thumbnailCache.clearExpiredThumbnailCache();
 
-// 临时措施：清除旧缓存以获取新的6小时URL
-console.log('🔄 清除所有缓存以获取新的6小时有效期URL');
-thumbnailCache.clearAllCache();
+// 一次性清除旧的24小时缓存（可以在确认所有用户更新后删除这段代码）
+// TODO: 2024年10月后可以删除这段临时代码
+const now = new Date();
+if (now < new Date('2024-10-01')) {
+  console.log('🔄 一次性清除旧缓存以迁移到6小时有效期');
+  thumbnailCache.clearAllCache();
+}
 
 export default thumbnailCache;
