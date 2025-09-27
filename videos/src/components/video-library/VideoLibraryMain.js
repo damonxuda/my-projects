@@ -53,7 +53,6 @@ const VideoLibraryMain = () => {
   const processFileList = useCallback((files, currentPath) => {
     const folders = new Map();
     const videos = [];
-    const youtubeVideos = [];
 
     // 第一遍遍历：识别后端文件夹类型，设置初始计数为0
     files.forEach((file) => {
@@ -101,23 +100,11 @@ const VideoLibraryMain = () => {
         if (pathParts.length === 1) {
           // 根目录的直接文件
           const isVideo = /\.(mp4|avi|mov|wmv|mkv)$/i.test(relativePath);
-          const isYoutube = relativePath.endsWith(".youtube.json");
           if (isVideo) {
             videos.push({
               key: file.Key,
               name: relativePath,
               type: "video",
-              size: file.Size,
-              lastModified: file.LastModified,
-              path: currentPath,
-              isDirectory: false,
-              displayName: relativePath
-            });
-          } else if (isYoutube) {
-            youtubeVideos.push({
-              key: file.Key,
-              name: relativePath,
-              type: "youtube",
               size: file.Size,
               lastModified: file.LastModified,
               path: currentPath,
@@ -153,23 +140,11 @@ const VideoLibraryMain = () => {
             // 当前文件夹的直接文件
             const fileName = remainingParts[0];
             const isVideo = /\.(mp4|avi|mov|wmv|mkv)$/i.test(fileName);
-            const isYoutube = fileName.endsWith(".youtube.json");
             if (isVideo) {
               videos.push({
                 key: file.Key,
                 name: fileName,
                 type: "video",
-                size: file.Size,
-                lastModified: file.LastModified,
-                path: currentPath,
-                isDirectory: false,
-                displayName: fileName
-              });
-            } else if (isYoutube) {
-              youtubeVideos.push({
-                key: file.Key,
-                name: fileName,
-                type: "youtube",
                 size: file.Size,
                 lastModified: file.LastModified,
                 path: currentPath,
@@ -185,7 +160,6 @@ const VideoLibraryMain = () => {
     return [
       ...Array.from(folders.values()),
       ...videos.sort((a, b) => a.name.localeCompare(b.name)),
-      ...youtubeVideos.sort((a, b) => a.name.localeCompare(b.name)),
     ];
   }, [isAdmin]);
 
