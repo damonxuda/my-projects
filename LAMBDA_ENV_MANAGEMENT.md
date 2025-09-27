@@ -122,18 +122,22 @@ aws secretsmanager create-secret \
     --secret-string file://secrets.json
 ```
 
-**方案C：使用部署脚本（当前推荐）**
+**方案C：使用AWS CLI直接部署（当前推荐）**
 ```bash
-# 使用现有的部署脚本，自动从环境变量读取配置
-cd lambda-video-management/services
-./deploy-5-functions.sh
+# 当前使用Claude Code直接执行AWS CLI命令进行Lambda更新
+# 例如更新缩略图生成器：
+cd lambda-video-management/services/thumbnail-generator
+zip -r thumbnail-update.zip .
+aws lambda update-function-code \
+  --function-name THUMBNAIL_GENERATOR_LAMBDA \
+  --zip-file fileb://thumbnail-update.zip
 
-# 脚本会自动部署所有5个微服务：
-# - file-management
-# - format-converter
-# - thumbnail-generator
-# - video-player
-# - youtube-manager
+# 当前部署的5个微服务：
+# - FILE_MANAGEMENT_LAMBDA
+# - FORMAT_CONVERTER_LAMBDA
+# - THUMBNAIL_GENERATOR_LAMBDA
+# - VIDEO_PLAYER_LAMBDA
+# - YOUTUBE_MANAGER_LAMBDA
 ```
 
 ### 4. **本地开发环境**
