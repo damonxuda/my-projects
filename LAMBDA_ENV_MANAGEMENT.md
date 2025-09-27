@@ -122,22 +122,18 @@ aws secretsmanager create-secret \
     --secret-string file://secrets.json
 ```
 
-**方案C：GitHub Secrets + GitHub Actions（推荐）**
-```yaml
-# .github/workflows/deploy-lambda.yml
-- name: Deploy Lambda with Environment Variables
-  env:
-    CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
-    VIDEO_BUCKET_NAME: ${{ secrets.VIDEO_BUCKET_NAME }}
-    ADMIN_EMAILS: ${{ secrets.ADMIN_EMAILS }}
-  run: |
-    aws lambda update-function-configuration \
-      --function-name video-core-lambda \
-      --environment "Variables={
-        CLERK_SECRET_KEY=$CLERK_SECRET_KEY,
-        VIDEO_BUCKET_NAME=$VIDEO_BUCKET_NAME,
-        ADMIN_EMAILS=$ADMIN_EMAILS
-      }"
+**方案C：使用部署脚本（当前推荐）**
+```bash
+# 使用现有的部署脚本，自动从环境变量读取配置
+cd lambda-video-management/services
+./deploy-5-functions.sh
+
+# 脚本会自动部署所有5个微服务：
+# - file-management
+# - format-converter
+# - thumbnail-generator
+# - video-player
+# - youtube-manager
 ```
 
 ### 4. **本地开发环境**
