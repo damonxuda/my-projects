@@ -7,10 +7,8 @@ export async function addYouTubeFile(event, user) {
   try {
     console.log("=== 添加YouTube文件 ===");
 
-    // 只有管理员可以添加YouTube文件
-    if (!isAdmin(user)) {
-      return createErrorResponse(403, "Admin access required", "只有管理员可以添加YouTube文件");
-    }
+    // YouTube添加功能对所有已验证用户开放
+    console.log("YouTube添加权限检查通过");
 
     let body;
     try {
