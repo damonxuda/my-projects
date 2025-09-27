@@ -217,13 +217,13 @@ const VideoLibrary = () => {
     const videos = [];
     const youtubeVideos = [];
 
-    // 用于统计每个文件夹的文件数量
-    const folderCounts = new Map();
-
 
     files.forEach((file) => {
       // Skip the root "videos/" entry
       if (file.Key === "videos/") return;
+
+      // 隐藏 .folder_placeholder 文件，用户不应该看到它们
+      if (file.Key && file.Key.endsWith("/.folder_placeholder")) return;
 
       // 处理后端返回的文件夹类型
       if (file.Type === "folder") {
@@ -240,7 +240,7 @@ const VideoLibrary = () => {
             name: folderName,
             type: "folder",
             path: currentPath ? `${currentPath}/${folderName}` : folderName,
-            count: folderCounts.get(folderName) || 0,
+            count: 0,
           });
         }
         return;
@@ -262,8 +262,6 @@ const VideoLibrary = () => {
             return;
           }
 
-          // 更新文件夹计数
-          folderCounts.set(folderName, (folderCounts.get(folderName) || 0) + 1);
 
           if (!folders.has(folderName)) {
             folders.set(folderName, {
@@ -330,8 +328,6 @@ const VideoLibrary = () => {
             return;
           }
 
-          // 更新文件夹计数
-          folderCounts.set(folderName, (folderCounts.get(folderName) || 0) + 1);
 
           if (!folders.has(folderName)) {
             folders.set(folderName, {
@@ -388,10 +384,6 @@ const VideoLibrary = () => {
       }
     });
 
-    // 更新文件夹的最终计数
-    folders.forEach((folder, folderName) => {
-      folder.count = folderCounts.get(folderName) || 0;
-    });
 
     return [
       ...Array.from(folders.values()),
