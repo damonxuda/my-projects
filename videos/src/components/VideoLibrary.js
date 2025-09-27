@@ -217,7 +217,7 @@ const VideoLibrary = () => {
     const videos = [];
     const youtubeVideos = [];
 
-
+    // 第一遍遍历：识别后端文件夹类型，设置初始计数为0
     files.forEach((file) => {
       // Skip the root "videos/" entry
       if (file.Key === "videos/") return;
@@ -225,9 +225,8 @@ const VideoLibrary = () => {
       // 隐藏 .folder_placeholder 文件，用户不应该看到它们
       if (file.Key && file.Key.endsWith("/.folder_placeholder")) return;
 
-      // 处理后端返回的文件夹类型 - 但不设置计数，让后续的文件处理逻辑来计算
+      // 处理后端返回的文件夹类型 - 初始化为0计数，让后续遍历来计算
       if (file.Type === "folder") {
-        // 后端已经处理好的文件夹，暂时记录但不设置计数
         const folderName = file.Name;
         if (folderName) {
           // 隐藏Movies文件夹（仅管理员可见）
@@ -235,27 +234,64 @@ const VideoLibrary = () => {
             return;
           }
 
-          // 处理后端返回的文件夹，无论在哪个目录层级
+          // 处理后端返回的文件夹，初始计数为0
           folders.set(folderName, {
             key: file.Key,
             name: folderName,
             type: "folder",
             path: currentPath ? `${currentPath}/${folderName}` : folderName,
-            count: 0, // 会在后续文件处理时更新
+            count: 0, // 初始化为0，后续计算
           });
         }
         return;
       }
+    });
+
+    // 第二遍遍历：处理文件并计算文件夹内容
+    files.forEach((file) => {
+      // Skip the root "videos/" entry
+      if (file.Key === "videos/") return;
+
+      // 隐藏 .folder_placeholder 文件，用户不应该看到它们
+      if (file.Key && file.Key.endsWith("/.folder_placeholder")) return;
+
+      // 跳过文件夹类型（已在第一遍处理）
+      if (file.Type === "folder") return;
 
       // Remove "videos/" prefix for processing
       const relativePath = file.Key.replace("videos/", "");
 
-      // YouTube JSON files - need to respect folder structure
-      if (relativePath.endsWith(".youtube.json")) {
-        const pathParts = relativePath.split("/");
-        
-        if (currentPath === "" && pathParts.length > 1) {
-          // At root level but YouTube file is in a subfolder - should be handled as folder structure
+      // 统一的文件处理逻辑
+      const pathParts = relativePath.split("/");
+
+      if (currentPath === "") {
+        // 在根目录层级
+        if (pathParts.length === 1) {
+          // 根目录的直接文件
+          const isVideo = /\.(mp4|avi|mov|wmv|mkv)$/i.test(relativePath);
+          const isYoutube = relativePath.endsWith(".youtube.json");
+
+          if (isVideo) {
+            videos.push({
+              key: file.Key,
+              name: relativePath,
+              type: "video",
+              size: file.Size,
+              lastModified: file.LastModified,
+              path: currentPath,
+            });
+          } else if (isYoutube) {
+            youtubeVideos.push({
+              key: file.Key,
+              name: relativePath,
+              type: "youtube",
+              size: file.Size,
+              lastModified: file.LastModified,
+              path: currentPath,
+            });
+          }
+        } else {
+          // 子文件夹中的文件 - 计入文件夹计数
           const folderName = pathParts[0];
 
           // 隐藏Movies文件夹（仅管理员可见）
@@ -263,7 +299,7 @@ const VideoLibrary = () => {
             return;
           }
 
-
+          // 为文件夹创建或增加计数
           if (!folders.has(folderName)) {
             folders.set(folderName, {
               key: `videos/${folderName}/`,
@@ -273,119 +309,69 @@ const VideoLibrary = () => {
               count: 0,
             });
           }
-          folders.get(folderName).count++;
-        } else if (currentPath !== "" && relativePath.startsWith(currentPath + "/")) {
-          // YouTube file is in current directory
-          const fileName = relativePath.split("/").pop();
-          const youtubeItem = {
-            key: file.Key,
-            name: fileName,
-            type: "youtube",
-            size: file.Size,
-            lastModified: file.LastModified,
-            path: currentPath,
-          };
-          youtubeVideos.push(youtubeItem);
-        } else if (currentPath === "" && pathParts.length === 1) {
-          // YouTube file is at root level
-          const youtubeItem = {
-            key: file.Key,
-            name: relativePath,
-            type: "youtube",
-            size: file.Size,
-            lastModified: file.LastModified,
-            path: currentPath,
-          };
-          youtubeVideos.push(youtubeItem);
-        } else {
-        }
-        return;
-      }
 
-      // Regular files
-      if (!relativePath.includes("/") && currentPath === "") {
-        // Root level files - 在根目录显示测试文件
-        const isVideo = /\.(mp4|avi|mov|wmv|mkv)$/i.test(relativePath);
-        if (isVideo) {
-          videos.push({
-            key: file.Key,
-            name: relativePath,
-            type: "video",
-            size: file.Size,
-            lastModified: file.LastModified,
-            path: currentPath,
-          });
+          // 只计算直接子项（文件 + 子文件夹）
+          const pathAfterFolder = relativePath.substring(folderName.length + 1);
+          const remainingParts = pathAfterFolder.split("/");
+
+          if (remainingParts.length === 1) {
+            // 直接在该文件夹下的文件
+            folders.get(folderName).count++;
+          }
         }
       } else {
-        // Files in subdirectories
-        const pathParts = relativePath.split("/");
+        // 在特定文件夹内
+        if (relativePath.startsWith(currentPath + "/")) {
+          const pathAfterCurrent = relativePath.substring(currentPath.length + 1);
+          const remainingParts = pathAfterCurrent.split("/");
 
-        if (currentPath === "") {
-          // Show folders at root level
-          const folderName = pathParts[0];
+          if (remainingParts.length === 1) {
+            // 当前文件夹的直接文件
+            const fileName = remainingParts[0];
+            const isVideo = /\.(mp4|avi|mov|wmv|mkv)$/i.test(fileName);
+            const isYoutube = fileName.endsWith(".youtube.json");
 
-          // 隐藏Movies文件夹（仅管理员可见）
-          if (folderName === "Movies" && !isAdmin) {
-            return;
-          }
-
-
-          if (!folders.has(folderName)) {
-            folders.set(folderName, {
-              key: `videos/${folderName}/`,
-              name: folderName,
-              type: "folder",
-              path: folderName,
-              count: 0,
-            });
-          }
-          console.log(`📊 文件夹计数更新: ${folderName} -> ${folders.get(folderName).count + 1}`);
-          folders.get(folderName).count++;
-        } else {
-          // Show files in current directory - 检查文件是否在当前路径下
-          
-          if (currentPath !== "" && relativePath.startsWith(currentPath + "/")) {
-            // 文件在当前目录下
-            const pathAfterCurrent = relativePath.substring(currentPath.length + 1);
-            const remainingParts = pathAfterCurrent.split("/");
-            
-            // 只处理直接在当前目录下的文件（不是子目录中的文件）
-            if (remainingParts.length === 1) {
-              const fileName = remainingParts[0];
-              const isVideo = /\.(mp4|avi|mov|wmv|mkv)$/i.test(fileName);
-              if (isVideo) {
-                videos.push({
-                  key: file.Key,
-                  name: fileName,
-                  type: "video",
-                  size: file.Size,
-                  lastModified: file.LastModified,
-                  path: currentPath,
-                });
-              }
-            } else {
-            }
-          } else if (currentPath === "") {
-            // 根目录 - 只处理直接在根目录的文件，不处理子目录中的文件
-            if (pathParts.length === 1) {
-              const fileName = pathParts[0];
-              const isVideo = /\.(mp4|avi|mov|wmv|mkv)$/i.test(fileName);
-              if (isVideo) {
-                videos.push({
-                  key: file.Key,
-                  name: fileName,
-                  type: "video",
-                  size: file.Size,
-                  lastModified: file.LastModified,
-                  path: currentPath,
-                });
-              }
+            if (isVideo) {
+              videos.push({
+                key: file.Key,
+                name: fileName,
+                type: "video",
+                size: file.Size,
+                lastModified: file.LastModified,
+                path: currentPath,
+              });
+            } else if (isYoutube) {
+              youtubeVideos.push({
+                key: file.Key,
+                name: fileName,
+                type: "youtube",
+                size: file.Size,
+                lastModified: file.LastModified,
+                path: currentPath,
+              });
             }
           }
         }
       }
     });
 
+    // 为当前路径下的后端文件夹添加子文件夹计数
+    // 这解决了第1讲文件夹显示0个项目的问题
+    if (currentPath !== "") {
+      folders.forEach((folder) => {
+        // 检查是否有直接子文件夹（由后端文件夹类型识别）
+        const subfolderCount = Array.from(folders.values()).filter(
+          f => f.path.startsWith(currentPath + "/") &&
+               f.path.split("/").length === currentPath.split("/").length + 1
+        ).length;
+
+        if (subfolderCount > 0) {
+          folder.count += subfolderCount;
+        }
+      });
+    }
+
+    console.log("📊 最终文件夹计数:", Array.from(folders.values()).map(f => `${f.name}: ${f.count}`));
 
     return [
       ...Array.from(folders.values()),
