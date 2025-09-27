@@ -126,6 +126,7 @@ const VideoOperationModals = ({
   };
 
   const handleBatchDeleteItems = async (items) => {
+    console.log('🔧 API修复版本 2024-09-27: 使用正确的files参数格式进行批量删除');
     setIsProcessingOperation(true);
     try {
       const token = await getToken();
@@ -136,10 +137,7 @@ const VideoOperationModals = ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          items: items.map(item => ({
-            key: item.key || item.Key,
-            name: item.name
-          }))
+          files: items.map(item => item.key || item.Key)
         }),
       });
 
