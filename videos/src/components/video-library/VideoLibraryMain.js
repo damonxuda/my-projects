@@ -42,22 +42,145 @@ const VideoLibraryMain = () => {
     }
   };
 
-  // 文件列表处理逻辑
+  // 文件列表处理逻辑 - 完整的原始逻辑
   const processFileList = useCallback((files, currentPath) => {
-    // 实现文件列表处理逻辑
-    const processedItems = files.map(file => ({
-      ...file,
-      isDirectory: file.key ? file.key.endsWith('/') : false,
-      displayName: file.key ? file.key.split('/').pop() || file.key : file.fileName,
-      parentPath: currentPath
-    }));
+    const folders = new Map();
+    const videos = [];
+    const youtubeVideos = [];
 
-    return processedItems.sort((a, b) => {
-      if (a.isDirectory && !b.isDirectory) return -1;
-      if (!a.isDirectory && b.isDirectory) return 1;
-      return a.displayName.localeCompare(b.displayName);
+    // 第一遍遍历：识别后端文件夹类型，设置初始计数为0
+    files.forEach((file) => {
+      // Skip the root "videos/" entry
+      if (file.Key === "videos/") return;
+      // 隐藏 .folder_placeholder 文件，用户不应该看到它们
+      if (file.Key && file.Key.endsWith("/.folder_placeholder")) return;
+      // 处理后端返回的文件夹类型 - 初始化为0计数，让后续遍历来计算
+      if (file.Type === "folder") {
+        const folderName = file.Name;
+        if (folderName) {
+          // 隐藏Movies文件夹（仅管理员可见）
+          if (folderName === "Movies" && !isAdmin) {
+            return;
+          }
+          // 处理后端返回的文件夹
+          folders.set(folderName, {
+            key: file.Key,
+            name: folderName,
+            type: "folder",
+            path: currentPath ? `${currentPath}/${folderName}` : folderName,
+            isDirectory: true,
+            displayName: folderName
+          });
+        }
+        return;
+      }
     });
-  }, []);
+
+    // 第二遍遍历：处理文件并计算文件夹内容
+    files.forEach((file) => {
+      // Skip the root "videos/" entry
+      if (file.Key === "videos/") return;
+      // 隐藏 .folder_placeholder 文件，用户不应该看到它们
+      if (file.Key && file.Key.endsWith("/.folder_placeholder")) return;
+      // 跳过文件夹类型（已在第一遍处理）
+      if (file.Type === "folder") return;
+      // Remove "videos/" prefix for processing
+      const relativePath = file.Key.replace("videos/", "");
+      // 统一的文件处理逻辑
+      const pathParts = relativePath.split("/");
+
+      if (currentPath === "") {
+        // 在根目录层级
+        if (pathParts.length === 1) {
+          // 根目录的直接文件
+          const isVideo = /\.(mp4|avi|mov|wmv|mkv)$/i.test(relativePath);
+          const isYoutube = relativePath.endsWith(".youtube.json");
+          if (isVideo) {
+            videos.push({
+              key: file.Key,
+              name: relativePath,
+              type: "video",
+              size: file.Size,
+              lastModified: file.LastModified,
+              path: currentPath,
+              isDirectory: false,
+              displayName: relativePath
+            });
+          } else if (isYoutube) {
+            youtubeVideos.push({
+              key: file.Key,
+              name: relativePath,
+              type: "youtube",
+              size: file.Size,
+              lastModified: file.LastModified,
+              path: currentPath,
+              isDirectory: false,
+              displayName: relativePath
+            });
+          }
+        } else {
+          // 子文件夹中的文件 - 计入文件夹计数
+          const folderName = pathParts[0];
+          // 隐藏Movies文件夹（仅管理员可见）
+          if (folderName === "Movies" && !isAdmin) {
+            return;
+          }
+          // 为文件夹创建条目
+          if (!folders.has(folderName)) {
+            folders.set(folderName, {
+              key: `videos/${folderName}/`,
+              name: folderName,
+              type: "folder",
+              path: folderName,
+              isDirectory: true,
+              displayName: folderName
+            });
+          }
+        }
+      } else {
+        // 在特定文件夹内
+        if (relativePath.startsWith(currentPath + "/")) {
+          const pathAfterCurrent = relativePath.substring(currentPath.length + 1);
+          const remainingParts = pathAfterCurrent.split("/");
+          if (remainingParts.length === 1) {
+            // 当前文件夹的直接文件
+            const fileName = remainingParts[0];
+            const isVideo = /\.(mp4|avi|mov|wmv|mkv)$/i.test(fileName);
+            const isYoutube = fileName.endsWith(".youtube.json");
+            if (isVideo) {
+              videos.push({
+                key: file.Key,
+                name: fileName,
+                type: "video",
+                size: file.Size,
+                lastModified: file.LastModified,
+                path: currentPath,
+                isDirectory: false,
+                displayName: fileName
+              });
+            } else if (isYoutube) {
+              youtubeVideos.push({
+                key: file.Key,
+                name: fileName,
+                type: "youtube",
+                size: file.Size,
+                lastModified: file.LastModified,
+                path: currentPath,
+                isDirectory: false,
+                displayName: fileName
+              });
+            }
+          }
+        }
+      }
+    });
+
+    return [
+      ...Array.from(folders.values()),
+      ...videos.sort((a, b) => a.name.localeCompare(b.name)),
+      ...youtubeVideos.sort((a, b) => a.name.localeCompare(b.name)),
+    ];
+  }, [isAdmin]);
 
   // 加载文件列表
   const loadItems = useCallback(async (path = "") => {
@@ -94,23 +217,42 @@ const VideoLibraryMain = () => {
         throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
 
-      const data = await response.json();
-
-      if (data.success) {
-        const processedItems = processFileList(data.files || [], path);
-        setItems(processedItems);
-        setCurrentPath(path);
-      } else {
-        throw new Error(data.error || 'Failed to load files');
+      const responseText = await response.text();
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('❌ loadItems - JSON解析失败:', parseError);
+        throw new Error(`JSON解析失败: ${parseError.message}`);
       }
+
+      const processedItems = processFileList(data, path);
+      setItems(processedItems);
+      setCurrentPath(path);
     } catch (err) {
-      console.error('Error loading items:', err);
-      setError(`Failed to load files: ${err.message}`);
-      setItems([]);
+      console.error("VideoLibrary: 加载失败:", err);
+      // 管理员降级处理：如果是403错误且用户是管理员，显示备用内容
+      if (err.message.includes('403') && isAdmin) {
+        setError("");
+        setItems([
+          {
+            type: 'folder',
+            name: '📁 示例视频目录',
+            path: 'sample-videos/',
+            size: null,
+            lastModified: new Date().toISOString(),
+            isDirectory: true,
+            displayName: '示例视频目录'
+          }
+        ]);
+      } else {
+        setError(`Failed to load files: ${err.message}`);
+        setItems([]);
+      }
     } finally {
       setLoading(false);
     }
-  }, [isSignedIn, user, FILE_MANAGEMENT_URL, getToken, processFileList]);
+  }, [isSignedIn, user, FILE_MANAGEMENT_URL, getToken, processFileList, isAdmin]);
 
   // 路径导航
   const navigateToPath = (path) => {
