@@ -8,12 +8,8 @@ export const s3Client = new S3Client({
 // 环境变量
 export const VIDEO_BUCKET = process.env.VIDEO_BUCKET_NAME || "damonxuda-video-files";
 
-// CORS响应头 - 需要设置以支持DELETE请求
-export const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
+// CORS响应头 - 使用Function URL的CORS配置，避免重复头
+export const corsHeaders = {};
 
 // 标准响应格式化
 export function createResponse(statusCode, body, additionalHeaders = {}) {
