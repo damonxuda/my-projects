@@ -78,16 +78,28 @@ export async function listVideos(user, requestedPath = "") {
       }
 
       // 处理普通文件
-      // 如果请求特定路径，只返回该路径下的文件
+      // 如果请求特定路径，只返回该路径下的直接文件
       if (requestedPath) {
-        if (pathParts.length > 1 && pathParts[0] === requestedPath) {
-          files.push({
-            Key: obj.Key,
-            Size: obj.Size,
-            LastModified: obj.LastModified,
-            ETag: obj.ETag,
-            Type: "file"
-          });
+        // 检查文件是否在请求的路径下
+        if (relativePath.startsWith(requestedPath + "/")) {
+          // 获取请求路径后的剩余部分
+          const pathAfterRequested = relativePath.substring(requestedPath.length + 1);
+          const remainingParts = pathAfterRequested.split("/");
+
+          // 只处理直接在请求路径下的文件（不是子文件夹中的文件）
+          if (remainingParts.length === 1) {
+            const fileName = remainingParts[0];
+            const isVideo = /\.(mp4|avi|mov|wmv|mkv)$/i.test(fileName);
+            if (isVideo) {
+              files.push({
+                Key: obj.Key,
+                Size: obj.Size,
+                LastModified: obj.LastModified,
+                ETag: obj.ETag,
+                Type: "file"
+              });
+            }
+          }
         }
         return;
       }
