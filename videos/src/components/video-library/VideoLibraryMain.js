@@ -333,8 +333,6 @@ const VideoLibraryMain = () => {
             items={items}
             loading={loading}
             currentPath={currentPath}
-            selectedItems={selectedItems}
-            setSelectedItems={setSelectedItems}
             onVideoPlay={handleVideoPlay}
             onNavigate={navigateToPath}
             onRefresh={refreshItems}
@@ -370,8 +368,6 @@ const VideoLibraryMain = () => {
       <VideoOperationModals
         show={showFileManager}
         onClose={() => setShowFileManager(false)}
-        selectedItem={selectedItem}
-        selectedItems={selectedItems}
         fileOperation={fileOperation}
         operationData={operationData}
         isProcessingOperation={isProcessingOperation}
