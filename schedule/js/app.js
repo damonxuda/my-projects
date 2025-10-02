@@ -164,10 +164,13 @@ const DatabaseManager = {
     try {
       const { data, error } = await window.supabase
         .from(getTableName('schedules'))  // 使用动态表名
-        .insert(schedule)
+        .insert({
+          ...schedule,
+          user_id: 'onKxEvh0ZCq29ioSHCH1rD0hKrpc'  // 添加你的 OpenID
+        })
         .select()
         .single();
-        
+
       if (error) {
         console.error('保存到Supabase失败:', error);
         return { success: false, error: error.message };
@@ -184,11 +187,14 @@ const DatabaseManager = {
     try {
       const { data, error } = await window.supabase
         .from(getTableName('schedules'))  // 使用动态表名
-        .update(updates)
+        .update({
+          ...updates,
+          user_id: 'onKxEvh0ZCq29ioSHCH1rD0hKrpc'  // 确保 user_id 一致
+        })
         .eq('id', id)
         .select()
         .single();
-        
+
       if (error) {
         console.error('更新Supabase失败:', error);
         return { success: false, error: error.message };
