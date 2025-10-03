@@ -17,7 +17,17 @@ class SudokuLevelsPage {
       console.log('🎮 开始初始化Sudoku关卡页面 - Clerk状态:', window.clerkInitialized);
 
       // 现在可以安全地初始化存储系统了
-      this.storage = new SmartSudokuStorage();
+      // 优先使用 Edge Function 版本（更安全）
+      if (typeof SmartGameStorageEdgeFunction !== 'undefined') {
+        this.storage = new SmartGameStorageEdgeFunction('sudoku');
+        console.log('✅ Levels使用 SmartGameStorageEdgeFunction（Edge Function 安全版本）');
+      } else if (typeof SmartSudokuStorage !== 'undefined') {
+        this.storage = new SmartSudokuStorage();
+        console.log('✅ Levels使用 SmartSudokuStorage');
+      } else {
+        console.error('❌ 所有存储类都不可用');
+        this.storage = null;
+      }
 
       // 开始页面初始化
       this.init();
