@@ -330,19 +330,21 @@ const VideoLibraryMain = () => {
             <h1 className="text-3xl font-bold text-gray-900">视频库</h1>
             <div className="flex space-x-4">
               {isAdmin && (
-                <button
-                  onClick={() => setShowYouTubeManager(true)}
-                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md"
-                >
-                  YouTube 管理
-                </button>
+                <>
+                  <button
+                    onClick={() => setShowYouTubeManager(true)}
+                    className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md"
+                  >
+                    YouTube 管理
+                  </button>
+                  <button
+                    onClick={() => setShowFileManager(true)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
+                  >
+                    视频文件管理
+                  </button>
+                </>
               )}
-              <button
-                onClick={() => setShowFileManager(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
-              >
-                视频文件管理
-              </button>
             </div>
           </div>
 
