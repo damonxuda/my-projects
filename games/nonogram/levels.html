@@ -606,13 +606,23 @@
             // 📱 移动端修复：认证完成后重新加载游戏数据
             if (window.nonogramLevels && window.nonogramLevels.storage) {
               console.log('🔄 认证完成，重新加载游戏数据...');
-              setTimeout(() => {
-                window.nonogramLevels.storage.loadProgress().then(progress => {
+              setTimeout(async () => {
+                try {
+                  // 兼容两种存储：SmartGameStorageEdgeFunction.load() 和 SmartNonogramStorage.loadProgress()
+                  let progress;
+                  if (typeof window.nonogramLevels.storage.loadProgress === 'function') {
+                    progress = await window.nonogramLevels.storage.loadProgress();
+                  } else {
+                    // Edge Function版本使用通用的load方法
+                    progress = await window.nonogramLevels.storage.load('progress');
+                  }
                   console.log('🔄 用户数据重新加载完成，更新UI...');
                   window.nonogramLevels.progress = progress;
                   window.nonogramLevels.renderLevels();
                   window.nonogramLevels.updateStats();
-                });
+                } catch (error) {
+                  console.error('❌ 重新加载游戏数据失败:', error);
+                }
               }, 100);
             }
           } else {
