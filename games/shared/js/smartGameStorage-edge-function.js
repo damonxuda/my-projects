@@ -92,16 +92,16 @@ class SmartGameStorageEdgeFunction extends SmartGameStorage {
    * 获取 Supabase URL
    */
   getSupabaseUrl() {
-    // 从配置或环境变量获取
-    return window.SUPABASE_URL || 'https://your-project.supabase.co';
+    // 从 gameConfig.js 设置的全局变量获取
+    return window.SUPABASE_URL || window.GAME_CONFIG?.SUPABASE_URL || '';
   }
 
   /**
    * 获取 Supabase Anon Key
    */
   getSupabaseAnonKey() {
-    // 从配置或环境变量获取
-    return window.SUPABASE_ANON_KEY || 'your-anon-key';
+    // 从 gameConfig.js 设置的全局变量获取
+    return window.SUPABASE_ANON_KEY || window.GAME_CONFIG?.SUPABASE_ANON_KEY || '';
   }
 }
 
