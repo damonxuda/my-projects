@@ -111,7 +111,14 @@ class SudokuLevelsPage {
   // 加载用户进度（使用智能存储系统）
   async loadProgress() {
     try {
-      const savedProgress = await this.storage.loadProgress();
+      // 兼容两种存储：SmartGameStorageEdgeFunction.load() 和 SmartSudokuStorage.loadProgress()
+      let savedProgress;
+      if (typeof this.storage.loadProgress === 'function') {
+        savedProgress = await this.storage.loadProgress();
+      } else {
+        // Edge Function版本使用通用的load方法
+        savedProgress = await this.storage.load('progress');
+      }
       this.progress = savedProgress || this.createDefaultProgress();
       console.log('✅ Progress loaded:', this.progress);
     } catch (error) {

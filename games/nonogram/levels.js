@@ -85,7 +85,13 @@ class NonogramLevels {
   // 加载进度数据
   async loadProgress() {
     try {
-      this.progress = await this.storage.loadProgress();
+      // 兼容两种存储：SmartGameStorageEdgeFunction.load() 和 SmartNonogramStorage.loadProgress()
+      if (typeof this.storage.loadProgress === 'function') {
+        this.progress = await this.storage.loadProgress();
+      } else {
+        // Edge Function版本使用通用的load方法
+        this.progress = await this.storage.load('progress');
+      }
       console.log('Loaded nonogram progress:', this.progress);
     } catch (error) {
       console.error('Failed to load progress:', error);
