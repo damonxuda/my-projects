@@ -35,19 +35,23 @@ class SudokuGame {
 
       // 现在可以安全地初始化存储系统了
       try {
-        this.storage = new SmartSudokuStorage();
-        console.log('✅ SmartSudokuStorage 创建成功');
-      } catch (error) {
-        console.error('❌ SmartSudokuStorage 创建失败:', error);
-        console.log('尝试使用基础存储类...');
-        // 如果SmartSudokuStorage不可用，尝试使用基础存储
-        if (typeof SmartGameStorage !== 'undefined') {
+        // 优先使用 Edge Function 版本（更安全）
+        if (typeof SmartGameStorageEdgeFunction !== 'undefined') {
+          this.storage = new SmartGameStorageEdgeFunction('sudoku');
+          console.log('✅ 使用 SmartGameStorageEdgeFunction（Edge Function 安全版本）');
+        } else if (typeof SmartSudokuStorage !== 'undefined') {
+          this.storage = new SmartSudokuStorage();
+          console.log('✅ SmartSudokuStorage 创建成功');
+        } else if (typeof SmartGameStorage !== 'undefined') {
           this.storage = new SmartGameStorage('sudoku');
           console.log('✅ 使用基础 SmartGameStorage');
         } else {
           console.error('❌ 所有存储类都不可用');
           this.storage = null;
         }
+      } catch (error) {
+        console.error('❌ 存储系统初始化失败:', error);
+        this.storage = null;
       }
 
       // 开始游戏初始化
