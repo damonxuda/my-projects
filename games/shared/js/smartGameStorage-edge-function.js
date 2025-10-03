@@ -109,3 +109,8 @@ class SmartGameStorageEdgeFunction extends SmartGameStorage {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = SmartGameStorageEdgeFunction;
 }
+
+// 浏览器环境全局导出
+if (typeof window !== 'undefined') {
+  window.SmartGameStorageEdgeFunction = SmartGameStorageEdgeFunction;
+}
