@@ -25,3 +25,6 @@ backup-*/
 *.temp
 temp/
 tmp/
+
+# WeChat小程序项目（不需要Git管理）
+WeChatProjects/
