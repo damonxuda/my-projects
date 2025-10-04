@@ -17,9 +17,15 @@ class SmartGameStorageEdgeFunction extends SmartGameStorage {
     }
 
     const token = await this.getClerkToken();
+
+    // 如果无法获取 token，直接失败，不发送无效请求
+    if (!token) {
+      throw new Error('无法获取认证 token - Clerk 可能还未初始化完成');
+    }
+
     console.log(`📤 [Edge Function] 调用 ${action} for ${this.gameType}/${key}`);
     console.log('  - User ID:', userId);
-    console.log('  - Token:', token ? `${token.substring(0, 20)}...` : 'null');
+    console.log('  - Token:', token.substring(0, 20) + '...');
 
     const response = await fetch(this.edgeFunctionUrl, {
       method: 'POST',
@@ -98,10 +104,12 @@ class SmartGameStorageEdgeFunction extends SmartGameStorage {
       console.warn('  - mockClerkUser:', !!window.mockClerkUser);
       console.warn('  - getGameToken:', typeof window.getGameToken);
       console.warn('  - Clerk.session:', window.Clerk ? !!window.Clerk.session : false);
+
+      // 返回 null，让调用方决定如何处理
       return null;
     } catch (error) {
       console.error('❌ [Edge Function] 获取 Clerk token 失败:', error);
-      return null;
+      throw error; // 重新抛出错误，避免静默失败
     }
   }
 
