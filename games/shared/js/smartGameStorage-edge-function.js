@@ -55,61 +55,49 @@ class SmartGameStorageEdgeFunction extends SmartGameStorage {
 
   /**
    * 获取 Clerk JWT Token
-   * 支持多种方式：等待初始化、直接获取、从 unified auth 获取
+   * 使用 clerkUnifiedAuth.js 提供的统一接口（优先使用缓存 token，避免网络延迟）
    */
   async getClerkToken() {
     try {
       console.log('🔑 [Edge Function] 尝试获取 Clerk token...');
-      console.log('  - window.Clerk:', !!window.Clerk);
-      console.log('  - window.Clerk.session:', window.Clerk ? !!window.Clerk.session : false);
-      console.log('  - window.clerkInitialized:', window.clerkInitialized);
 
-      // 方式1: 如果 Clerk 已经有 session，直接获取
-      if (window.Clerk && window.Clerk.session) {
-        const token = await window.Clerk.session.getToken();
-        console.log('  - ✅ 方式1成功: 从 Clerk.session 获取 token');
-        if (token) {
-          console.log('  - Token 长度:', token.length);
-          console.log('  - Token 前20字符:', token.substring(0, 20));
-        }
+      // 方式1 (推荐): 从 mockClerkUser 获取缓存的 token (无网络延迟)
+      if (window.mockClerkUser && window.mockClerkUser.originalSessionToken) {
+        const token = window.mockClerkUser.originalSessionToken;
+        console.log('  - ✅ 从 mockClerkUser 缓存获取 token (无网络请求)');
+        console.log('  - Token 长度:', token.length);
+        console.log('  - Token 前20字符:', token.substring(0, 20));
         return token;
       }
 
-      // 方式2: 等待 Clerk 初始化完成
-      if (window.Clerk && !window.clerkInitialized) {
-        console.log('  - ⏳ Clerk 正在初始化，等待完成...');
-
-        // 等待最多 5 秒
-        for (let i = 0; i < 50; i++) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-
-          if (window.Clerk.session) {
-            const token = await window.Clerk.session.getToken();
-            console.log('  - ✅ 方式2成功: 等待初始化后获取 token');
-            if (token) {
-              console.log('  - Token 长度:', token.length);
-              console.log('  - Token 前20字符:', token.substring(0, 20));
-            }
-            return token;
-          }
-        }
-
-        console.warn('  - ⚠️ 等待超时，Clerk session 仍不可用');
-      }
-
-      // 方式3: 尝试从 clerkUnifiedAuth 获取
-      if (typeof window.getGameAuthToken === 'function') {
-        console.log('  - 🔄 尝试从 clerkUnifiedAuth 获取 token...');
-        const token = await window.getGameAuthToken();
+      // 方式2: 使用 gameAuth 统一接口
+      if (typeof window.getGameToken === 'function') {
+        console.log('  - 🔄 尝试从 gameAuth.getToken() 获取...');
+        const token = await window.getGameToken();
         if (token) {
-          console.log('  - ✅ 方式3成功: 从 clerkUnifiedAuth 获取 token');
+          console.log('  - ✅ 从 gameAuth 获取 token');
           console.log('  - Token 长度:', token.length);
           console.log('  - Token 前20字符:', token.substring(0, 20));
           return token;
         }
       }
 
-      console.warn('⚠️ [Edge Function] 所有方式都无法获取 Clerk token');
+      // 方式3: 直接从 Clerk session 获取 (可能需要网络请求刷新 token)
+      if (window.Clerk && window.Clerk.session) {
+        console.log('  - 🔄 从 Clerk.session.getToken() 获取...');
+        const token = await window.Clerk.session.getToken();
+        if (token) {
+          console.log('  - ✅ 从 Clerk session 获取 token');
+          console.log('  - Token 长度:', token.length);
+          console.log('  - Token 前20字符:', token.substring(0, 20));
+          return token;
+        }
+      }
+
+      console.warn('⚠️ [Edge Function] 无法获取 Clerk token');
+      console.warn('  - mockClerkUser:', !!window.mockClerkUser);
+      console.warn('  - getGameToken:', typeof window.getGameToken);
+      console.warn('  - Clerk.session:', window.Clerk ? !!window.Clerk.session : false);
       return null;
     } catch (error) {
       console.error('❌ [Edge Function] 获取 Clerk token 失败:', error);
