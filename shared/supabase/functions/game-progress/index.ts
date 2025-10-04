@@ -47,18 +47,21 @@ serve(async (req) => {
           }
 
           // JWT 使用 URL-safe Base64 编码，需要转换
-          // 1. 将 - 替换为 +
-          // 2. 将 _ 替换为 /
-          // 3. 添加缺失的 = padding
           const base64Url = parts[1];
           const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
           const paddedBase64 = base64.padEnd(base64.length + (4 - base64.length % 4) % 4, '=');
 
-          console.log('🔍 Base64 URL:', base64Url.substring(0, 20));
-          console.log('🔍 Base64 标准:', paddedBase64.substring(0, 20));
+          console.log('🔍 Base64 URL (前20):', base64Url.substring(0, 20));
+          console.log('🔍 Padded Base64 (前20):', paddedBase64.substring(0, 20));
 
-          const payload = JSON.parse(atob(paddedBase64));
+          // 解码 Base64 -> UTF-8 字符串 -> JSON
+          const decodedString = atob(paddedBase64);
+          console.log('🔍 解码后字符串长度:', decodedString.length);
+          console.log('🔍 解码后字符串 (前50):', decodedString.substring(0, 50));
+
+          const payload = JSON.parse(decodedString);
           console.log('🔍 JWT payload keys:', Object.keys(payload));
+          console.log('🔍 JWT payload:', JSON.stringify(payload));
 
           userId = payload.sub || payload.user_id || payload.userId;
           console.log('🔑 使用 JWT 认证:', userId);
