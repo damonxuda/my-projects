@@ -55,21 +55,42 @@ serve(async (req) => {
           console.log('🔍 Padded Base64 (前20):', paddedBase64.substring(0, 20));
 
           // 解码 Base64 -> UTF-8 字符串 -> JSON
-          const decodedString = atob(paddedBase64);
-          console.log('🔍 解码后字符串长度:', decodedString.length);
-          console.log('🔍 解码后字符串 (前50):', decodedString.substring(0, 50));
+          let decodedString;
+          try {
+            decodedString = atob(paddedBase64);
+            console.log('🔍 解码后字符串长度:', decodedString.length);
+            console.log('🔍 解码后字符串 (前50):', decodedString.substring(0, 50));
+          } catch (decodeError) {
+            throw new Error(`Base64 解码失败: ${decodeError.message}`);
+          }
 
-          const payload = JSON.parse(decodedString);
-          console.log('🔍 JWT payload keys:', Object.keys(payload));
-          console.log('🔍 JWT payload:', JSON.stringify(payload));
+          let payload;
+          try {
+            payload = JSON.parse(decodedString);
+            console.log('🔍 JWT payload keys:', Object.keys(payload));
+            console.log('🔍 JWT payload:', JSON.stringify(payload));
+          } catch (jsonError) {
+            throw new Error(`JSON 解析失败: ${jsonError.message}. 解码字符串: ${decodedString.substring(0, 100)}`);
+          }
 
           userId = payload.sub || payload.user_id || payload.userId;
           console.log('🔑 使用 JWT 认证:', userId);
         } catch (e) {
           console.error('❌ JWT 解析失败:', e.message);
           console.error('❌ JWT 解析错误详情:', e);
+
+          // 返回详细的错误信息到前端，帮助调试
+          const errorDetails = {
+            error: 'Invalid JWT',
+            message: 'JWT 解析失败: ' + e.message,
+            errorName: e.name,
+            errorStack: e.stack,
+            tokenLength: authHeader ? authHeader.replace('Bearer ', '').length : 0,
+            tokenPreview: authHeader ? authHeader.substring(0, 50) : 'N/A'
+          };
+
           return new Response(
-            JSON.stringify({ error: 'Invalid JWT', message: 'JWT 解析失败: ' + e.message }),
+            JSON.stringify(errorDetails),
             { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
