@@ -16,12 +16,17 @@ class SmartGameStorageEdgeFunction extends SmartGameStorage {
       throw new Error('User not authenticated');
     }
 
+    const token = await this.getClerkToken();
+    console.log(`📤 [Edge Function] 调用 ${action} for ${this.gameType}/${key}`);
+    console.log('  - User ID:', userId);
+    console.log('  - Token:', token ? `${token.substring(0, 20)}...` : 'null');
+
     const response = await fetch(this.edgeFunctionUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'apikey': this.getSupabaseAnonKey(),
-        'Authorization': `Bearer ${await this.getClerkToken()}` // Clerk JWT
+        'Authorization': `Bearer ${token}` // Clerk JWT
       },
       body: JSON.stringify({
         action,
@@ -31,9 +36,18 @@ class SmartGameStorageEdgeFunction extends SmartGameStorage {
       })
     });
 
+    console.log(`📥 [Edge Function] 响应状态:`, response.status);
+
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.message || 'Edge Function call failed');
+      const errorText = await response.text();
+      console.error(`❌ [Edge Function] 错误响应:`, errorText);
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch (e) {
+        errorData = { message: errorText };
+      }
+      throw new Error(errorData.message || `Edge Function call failed (${response.status})`);
     }
 
     return await response.json();
@@ -43,11 +57,28 @@ class SmartGameStorageEdgeFunction extends SmartGameStorage {
    * 获取 Clerk JWT Token
    */
   async getClerkToken() {
-    // 假设 Clerk 已经初始化
-    if (window.Clerk && window.Clerk.session) {
-      return await window.Clerk.session.getToken();
+    try {
+      console.log('🔑 [Edge Function] 尝试获取 Clerk token...');
+      console.log('  - window.Clerk:', !!window.Clerk);
+      console.log('  - window.Clerk.session:', window.Clerk ? !!window.Clerk.session : false);
+
+      // 假设 Clerk 已经初始化
+      if (window.Clerk && window.Clerk.session) {
+        const token = await window.Clerk.session.getToken();
+        console.log('  - Token 获取成功:', !!token);
+        if (token) {
+          console.log('  - Token 长度:', token.length);
+          console.log('  - Token 前20字符:', token.substring(0, 20));
+        }
+        return token;
+      }
+
+      console.warn('⚠️ [Edge Function] Clerk session 不可用');
+      return null;
+    } catch (error) {
+      console.error('❌ [Edge Function] 获取 Clerk token 失败:', error);
+      return null;
     }
-    return null;
   }
 
   /**
