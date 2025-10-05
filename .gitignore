@@ -26,5 +26,6 @@ backup-*/
 temp/
 tmp/
 
-# WeChat小程序项目（不需要Git管理）
+# 小程序项目（不需要Git管理）
 WeChatProjects/
+AliPayProjects/
