@@ -3,12 +3,13 @@ import { createClient } from "@supabase/supabase-js";
 import { ImageService } from "./ImageService";
 import { MarkdownParser } from "./MarkdownParser";
 import { StorageService } from "./StorageService";
+import quizEdgeFunctionService from "./QuizEdgeFunctionService";
 
 class DatabaseService {
   constructor() {
     this.supabase = null;
     this.connectionStatus = {
-      mode: "Supabase",
+      mode: "Edge Function",
       status: "未连接",
     };
 
@@ -16,9 +17,10 @@ class DatabaseService {
     this.imageService = null;
     this.markdownParser = new MarkdownParser();
     this.storageService = new StorageService();
+    this.edgeFunctionService = quizEdgeFunctionService;
   }
 
-  // 初始化Supabase连接
+  // 初始化Supabase连接（现在使用 Edge Function）
   async initializeSupabase() {
     try {
       // 从环境变量获取配置
@@ -29,22 +31,26 @@ class DatabaseService {
         throw new Error("Supabase配置缺失");
       }
 
+      // 仍然创建 supabase 客户端，用于 Storage 和 ImageService
       this.supabase = createClient(supabaseUrl, supabaseKey);
 
       // 初始化需要supabase实例的服务
       this.imageService = new ImageService(this.supabase);
 
+      // 初始化 Edge Function 服务
+      this.edgeFunctionService.initialize(supabaseUrl, supabaseKey);
+
       this.connectionStatus = {
-        mode: "Supabase",
+        mode: "Edge Function",
         status: "已连接",
       };
 
-      console.log("Supabase连接成功");
+      console.log("Quiz Edge Function 服务已初始化");
       return { success: true };
     } catch (error) {
-      console.error("Supabase连接失败:", error);
+      console.error("初始化失败:", error);
       this.connectionStatus = {
-        mode: "Supabase",
+        mode: "Edge Function",
         status: "连接失败",
       };
       return { success: false, error: error.message };
@@ -58,265 +64,107 @@ class DatabaseService {
 
   // ==================== 数据库操作方法 ====================
 
-  // 获取所有试卷
+  // 获取所有试卷（通过 Edge Function）
   async getPapers() {
     try {
-      if (!this.supabase) {
-        throw new Error("数据库未初始化");
-      }
-
-      const { data, error } = await this.supabase
-        .from("papers")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      return { success: true, data: data || [] };
+      return await this.edgeFunctionService.getPapers();
     } catch (error) {
       console.error("获取试卷失败:", error);
       return { success: false, error: error.message };
     }
   }
 
-  // 获取所有题目（包含试卷信息）
+  // 获取所有题目（包含试卷信息，通过 Edge Function）
   async getQuestions() {
     try {
-      if (!this.supabase) {
-        throw new Error("数据库未初始化");
-      }
-
-      const { data, error } = await this.supabase
-        .from("questions")
-        .select(
-          `
-          *,
-          papers (
-            id,
-            title,
-            teacher,
-            semester,
-            course_name,
-            math_category,
-            created_at
-          )
-        `
-        )
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      return { success: true, data: data || [] };
+      return await this.edgeFunctionService.getQuestions();
     } catch (error) {
       console.error("获取题目失败:", error);
       return { success: false, error: error.message };
     }
   }
 
-  // 获取学习记录
+  // 获取学习记录（通过 Edge Function）
   async getAttempts(options = {}) {
     try {
-      if (!this.supabase) {
-        throw new Error("数据库未初始化");
-      }
-
-      let query = this.supabase
-        .from("attempts")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      // 如果指定了用户ID，只获取该用户的记录
-      if (options.userId) {
-        query = query.eq("user_id", options.userId);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      return { success: true, data: data || [] };
+      return await this.edgeFunctionService.getAttempts(options.userId);
     } catch (error) {
       console.error("获取学习记录失败:", error);
       return { success: false, error: error.message };
     }
   }
 
-  // 添加试卷
+  // 添加试卷（通过 Edge Function）
   async addPaper(paperData) {
     try {
-      if (!this.supabase) {
-        throw new Error("数据库未初始化");
-      }
-
-      const { data, error } = await this.supabase
-        .from("papers")
-        .insert([paperData])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      return { success: true, data };
+      return await this.edgeFunctionService.addPaper(paperData);
     } catch (error) {
       console.error("添加试卷失败:", error);
       return { success: false, error: error.message };
     }
   }
 
-  // 添加题目
+  // 添加题目（通过 Edge Function）
   async addQuestion(questionData) {
     try {
-      if (!this.supabase) {
-        throw new Error("数据库未初始化");
-      }
-
-      const { data, error } = await this.supabase
-        .from("questions")
-        .insert([questionData])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      return { success: true, data };
+      return await this.edgeFunctionService.addQuestion(questionData);
     } catch (error) {
       console.error("添加题目失败:", error);
       return { success: false, error: error.message };
     }
   }
 
-  // 记录学习尝试
+  // 记录学习尝试（通过 Edge Function）
   async recordAttempt(attemptData) {
     try {
-      if (!this.supabase) {
-        throw new Error("数据库未初始化");
-      }
-
-      // 转换字段名以匹配数据库
-      const dbData = {
-        question_id: attemptData.questionId,
-        user_id: attemptData.userId,
-        mastery_score: attemptData.masteryScore,
-        is_marked_wrong: attemptData.isMarkedWrong || false,
-      };
-
-      const { data, error } = await this.supabase
-        .from("attempts")
-        .insert([dbData])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      return { success: true, data };
+      return await this.edgeFunctionService.recordAttempt(attemptData);
     } catch (error) {
       console.error("记录学习尝试失败:", error);
       return { success: false, error: error.message };
     }
   }
 
-  // 更新题目
+  // 更新题目（通过 Edge Function）
   async updateQuestion(id, updates) {
     try {
-      if (!this.supabase) {
-        throw new Error("数据库未初始化");
-      }
-
-      const { data, error } = await this.supabase
-        .from("questions")
-        .update(updates)
-        .eq("id", id)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      return { success: true, data };
+      return await this.edgeFunctionService.updateQuestion(id, updates);
     } catch (error) {
       console.error("更新题目失败:", error);
       return { success: false, error: error.message };
     }
   }
 
-  // 查找是否存在相同标签的试卷
+  // 查找是否存在相同标签的试卷（通过 Edge Function）
   async findExistingPaper(teacher, semester, courseName, mathCategory, excludeId = null) {
     try {
-      if (!this.supabase) {
-        throw new Error("数据库未初始化");
-      }
-
-      let query = this.supabase
-        .from("papers")
-        .select("id, title, teacher, semester, course_name, math_category")
-        .eq("teacher", teacher)
-        .eq("semester", semester)
-        .eq("course_name", courseName)
-        .eq("math_category", mathCategory);
-
-      // 如果提供了excludeId，排除该试卷
-      if (excludeId) {
-        query = query.neq("id", excludeId);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      console.log(`查找已存在试卷 (${teacher}, ${semester}, ${courseName}, ${mathCategory}):`, data);
-      
-      return { success: true, data: data || [] };
+      const result = await this.edgeFunctionService.findExistingPaper(
+        teacher, semester, courseName, mathCategory, excludeId
+      );
+      console.log(`查找已存在试卷 (${teacher}, ${semester}, ${courseName}, ${mathCategory}):`, result.data);
+      return result;
     } catch (error) {
       console.error("查找试卷失败:", error);
       return { success: false, error: error.message };
     }
   }
 
-  // 更新试卷
+  // 更新试卷（通过 Edge Function）
   async updatePaper(id, updates) {
     try {
       console.log('updatePaper 调用参数:', { id, updates });
-      
-      if (!this.supabase) {
-        throw new Error("数据库未初始化");
-      }
-
-      const { data, error } = await this.supabase
-        .from("papers")
-        .update(updates)
-        .eq("id", id)
-        .select()
-        .single();
-
-      console.log('Supabase 更新响应:', { data, error });
-
-      if (error) {
-        console.error('Supabase 错误详情:', error);
-        throw error;
-      }
-
-      console.log('试卷更新成功，返回数据:', data);
-      return { success: true, data };
+      const result = await this.edgeFunctionService.updatePaper(id, updates);
+      console.log('试卷更新成功，返回数据:', result.data);
+      return result;
     } catch (error) {
       console.error("更新试卷失败:", error);
       return { success: false, error: error.message };
     }
   }
 
-  // 删除题目
+  // 删除题目（通过 Edge Function）
   async deleteQuestion(id) {
     try {
-      if (!this.supabase) {
-        throw new Error("数据库未初始化");
-      }
-
-      const { error } = await this.supabase
-        .from("questions")
-        .delete()
-        .eq("id", id);
-
-      if (error) throw error;
-
-      return { success: true };
+      return await this.edgeFunctionService.deleteQuestion(id);
     } catch (error) {
       console.error("删除题目失败:", error);
       return { success: false, error: error.message };
@@ -383,70 +231,24 @@ class DatabaseService {
 
   // ==================== 复合业务逻辑方法 ====================
 
-  // 批量添加试卷和题目
+  // 批量添加试卷和题目（通过 Edge Function）
   async addPaperWithQuestions(paperData, questionsData, imageMap = {}) {
     try {
-      if (!this.supabase) {
-        throw new Error("数据库未初始化");
-      }
+      // 1. 如果有临时图片，先重命名为正式文件名（使用临时 paper ID）
+      // 注意：这里我们需要先调用 Edge Function，获取 paper ID 后再重命名图片
+      const result = await this.edgeFunctionService.addPaperWithQuestions(paperData, questionsData);
 
-      // 1. 检查是否已存在相同的试卷
-      const { data: existingPapers, error: searchError } = await this.supabase
-        .from("papers")
-        .select("*")
-        .eq("title", paperData.title)
-        .eq("teacher", paperData.teacher)
-        .eq("semester", paperData.semester)
-        .eq("course_name", paperData.course_name)
-        .eq("math_category", paperData.math_category);
-
-      if (searchError) {
-        throw new Error("检查重复试卷失败: " + searchError.message);
-      }
-
-      let paperId;
-      let paperResult;
-
-      if (existingPapers && existingPapers.length > 0) {
-        // 使用现有试卷
-        paperId = existingPapers[0].id;
-        paperResult = { data: existingPapers[0] };
-        console.log("使用现有试卷:", existingPapers[0].title);
-      } else {
-        // 创建新试卷
-        paperResult = await this.addPaper(paperData);
-        if (!paperResult.success) {
-          throw new Error("添加试卷失败: " + paperResult.error);
-        }
-        paperId = paperResult.data.id;
-        console.log("创建新试卷:", paperData.title);
+      if (!result.success) {
+        throw new Error(result.error);
       }
 
       // 2. 如果有临时图片，重命名为正式文件名
       if (Object.keys(imageMap).length > 0) {
+        const paperId = result.data.paper.id;
         await this.renameTemporaryImages(imageMap, paperId);
       }
 
-      // 3. 添加题目，关联到试卷
-      const questionsWithPaperId = questionsData.map((q) => ({
-        ...q,
-        paper_id: paperId,
-      }));
-
-      const { data, error } = await this.supabase
-        .from("questions")
-        .insert(questionsWithPaperId)
-        .select();
-
-      if (error) throw error;
-
-      return {
-        success: true,
-        data: {
-          paper: paperResult.data,
-          questions: data,
-        },
-      };
+      return result;
     } catch (error) {
       console.error("批量添加失败:", error);
       return { success: false, error: error.message };
@@ -455,46 +257,27 @@ class DatabaseService {
 
   // ==================== 调试和维护方法 ====================
 
-  // 调试用：检查数据库当前状态
+  // 调试用：检查数据库当前状态（通过 Edge Function）
   async debugDatabaseState() {
     try {
-      if (!this.supabase) {
-        throw new Error("数据库未初始化");
-      }
+      console.log("=== 数据库调试检查（通过 Edge Function）===");
 
-      console.log("=== 数据库调试检查 ===");
-
-      // 1. 检查papers表的字段
-      const { data: papersSchema, error: schemaError } = await this.supabase
-        .from("papers")
-        .select("*")
-        .limit(1);
-
-      if (schemaError) {
-        console.error("Papers表查询错误:", schemaError);
-      } else {
-        console.log("Papers表样本数据:", papersSchema);
-        if (papersSchema.length > 0) {
-          console.log("Papers表字段:", Object.keys(papersSchema[0]));
+      // 1. 检查papers表
+      const papersResult = await this.getPapers();
+      if (papersResult.success) {
+        console.log("试卷总数:", papersResult.data.length);
+        if (papersResult.data.length > 0) {
+          console.log("Papers表字段:", Object.keys(papersResult.data[0]));
         }
-      }
-
-      // 2. 检查是否有重复的试卷
-      const { data: allPapers, error: papersError } = await this.supabase
-        .from("papers")
-        .select("*");
-
-      if (!papersError && allPapers) {
-        console.log("试卷总数:", allPapers.length);
 
         // 检查重复标题
         const titleCounts = {};
-        allPapers.forEach((paper) => {
+        papersResult.data.forEach((paper) => {
           titleCounts[paper.title] = (titleCounts[paper.title] || 0) + 1;
         });
 
         const duplicates = Object.entries(titleCounts).filter(
-          ([title, count]) => count > 1
+          ([, count]) => count > 1
         );
         if (duplicates.length > 0) {
           console.warn("发现重复试卷:", duplicates);
@@ -503,13 +286,10 @@ class DatabaseService {
         }
       }
 
-      // 3. 检查questions表
-      const { data: questionsCount, error: qError } = await this.supabase
-        .from("questions")
-        .select("id", { count: "exact" });
-
-      if (!qError) {
-        console.log("题目总数:", questionsCount?.length || 0);
+      // 2. 检查questions表
+      const questionsResult = await this.getQuestions();
+      if (questionsResult.success) {
+        console.log("题目总数:", questionsResult.data.length);
       }
 
       return { success: true };
