@@ -376,6 +376,8 @@
         try {
           // 同域名多应用配置：完整的跨应用认证共享设置
           await window.Clerk.load({
+            // 自定义前端 API 域名配置
+            frontendApi: 'clerk.damonxuda.site',
             // 核心同域名共享配置
             domain: window.location.hostname,
             // Cookie配置：确保认证状态在整个域名下共享
