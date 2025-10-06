@@ -27,6 +27,7 @@ jobs:
             quiz/package-lock.json
             videos/package-lock.json
             admin/package-lock.json
+            auth-clerk/package-lock.json
 
       # 3. 配置 AWS CLI
       - name: Configure AWS CLI
@@ -116,7 +117,6 @@ jobs:
           echo "📦 Installing Quiz dependencies..."
           if [ -d "./quiz" ]; then
             cd quiz && npm ci
-            cd ../shared && npm ci
             cd ../auth-clerk && npm ci
             echo "✅ Quiz dependencies installed"
           else
@@ -155,7 +155,6 @@ jobs:
           echo "📦 Installing Videos dependencies..."
           if [ -d "./videos" ]; then
             cd videos && npm ci
-            cd ../shared && npm ci
             cd ../auth-clerk && npm ci
             echo "✅ Videos dependencies installed"
           else
