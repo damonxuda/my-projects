@@ -43,6 +43,7 @@ const VideoLibraryMain = () => {
   const FORMAT_CONVERTER_URL = process.env.REACT_APP_FORMAT_CONVERTER_API_URL;
   const VIDEO_PLAYER_URL = process.env.REACT_APP_VIDEO_PLAYER_API_URL;
   const YOUTUBE_MANAGER_URL = process.env.REACT_APP_YOUTUBE_MANAGER_API_URL;
+  const SUBTITLE_API_URL = process.env.REACT_APP_SUBTITLE_API_URL;
 
   // 跨模块导航处理
   const handleCrossModuleNavigation = (targetUrl) => {
@@ -456,7 +457,8 @@ const VideoLibraryMain = () => {
         <SubtitleGenerator
           onClose={() => setShowSubtitleGenerator(false)}
           currentPath={currentPath}
-          apiUrl={FILE_MANAGEMENT_URL}
+          fileApiUrl={FILE_MANAGEMENT_URL}
+          subtitleApiUrl={SUBTITLE_API_URL}
           getToken={getToken}
         />
       )}

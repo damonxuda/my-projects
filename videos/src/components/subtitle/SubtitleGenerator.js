@@ -4,7 +4,8 @@ import { X, Languages, Loader } from 'lucide-react';
 const SubtitleGenerator = ({
   onClose,
   currentPath,
-  apiUrl,
+  fileApiUrl,
+  subtitleApiUrl,
   getToken
 }) => {
   const [videos, setVideos] = useState([]);
@@ -26,7 +27,7 @@ const SubtitleGenerator = ({
     try {
       const token = await getToken();
       const response = await fetch(
-        `${apiUrl}/files/list?path=${encodeURIComponent(currentPath)}`,
+        `${fileApiUrl}/files/list?path=${encodeURIComponent(currentPath)}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -104,7 +105,7 @@ const SubtitleGenerator = ({
         });
 
         // 调用subtitle-trigger Lambda
-        const response = await fetch(`${apiUrl}/subtitles/generate`, {
+        const response = await fetch(`${subtitleApiUrl}/subtitles/generate`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
