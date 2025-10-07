@@ -102,11 +102,19 @@ const SubtitlePlayer = ({
       track.src = subtitles[lang];
       track.srclang = lang;
       track.label = getLanguageLabel(lang);
-      track.crossOrigin = 'anonymous';  // 允许跨域加载字幕
 
       if (lang === currentSubtitle) {
         track.default = true;
       }
+
+      // 监听track加载事件
+      track.addEventListener('load', () => {
+        console.log(`✅ Track ${lang} 加载成功, cues:`, track.track.cues?.length || 0);
+      });
+
+      track.addEventListener('error', (e) => {
+        console.error(`❌ Track ${lang} 加载失败:`, e);
+      });
 
       video.appendChild(track);
     });
