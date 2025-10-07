@@ -56,16 +56,30 @@ const SubtitleGenerator = ({
       const data = await response.json();
       console.log('📂 File list data:', data.length, 'items');
 
-      // 2. 过滤出视频文件
-      const videoFiles = data.filter(item =>
-        item.type === 'video' &&
-        /\.(mp4|avi|mov|wmv|mkv)$/i.test(item.name)
-      );
+      // 2. 过滤出视频文件 - 通过文件扩展名判断
+      const videoFiles = data.filter(item => {
+        // 获取文件名（从 Key 或 name 字段）
+        const fileName = item.name || item.Key || '';
+        const isVideo = /\.(mp4|avi|mov|wmv|mkv)$/i.test(fileName);
+        // 排除文件夹
+        const isFolder = item.type === 'folder' || fileName.endsWith('/');
+        return isVideo && !isFolder;
+      });
       console.log('🎬 Video files found:', videoFiles.length);
 
-      // 3. 检查每个视频是否已有字幕
+      // 3. 规范化视频对象结构
+      const normalizedVideos = videoFiles.map(item => ({
+        key: item.Key || item.key,
+        name: (item.name || item.Key || '').split('/').pop(),
+        size: item.Size || item.size || 0,
+        type: 'video'
+      }));
+
+      console.log('📹 Normalized videos:', normalizedVideos.map(v => v.name));
+
+      // 4. 检查每个视频是否已有字幕
       const videosWithSubtitleInfo = await Promise.all(
-        videoFiles.map(async (video) => {
+        normalizedVideos.map(async (video) => {
           try {
             const subtitleResponse = await fetch(
               `${subtitleApiUrl}/subtitles/list?videoKey=${encodeURIComponent(video.key)}`,
