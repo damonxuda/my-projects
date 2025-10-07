@@ -102,6 +102,7 @@ const SubtitlePlayer = ({
       track.src = subtitles[lang];
       track.srclang = lang;
       track.label = getLanguageLabel(lang);
+      track.crossOrigin = 'anonymous';  // 允许跨域加载字幕
 
       if (lang === currentSubtitle) {
         track.default = true;
