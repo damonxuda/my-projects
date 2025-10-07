@@ -116,19 +116,32 @@ const SubtitlePlayer = ({
 
   // 切换字幕
   const changeSubtitle = (lang) => {
+    console.log('🎯 切换字幕:', lang);
     setCurrentSubtitle(lang);
 
     // 更新video标签的字幕轨道
     if (videoRef && videoRef.current) {
       const tracks = videoRef.current.textTracks;
+      console.log('📊 总共有', tracks.length, '个字幕轨道');
+
       for (let i = 0; i < tracks.length; i++) {
+        console.log(`轨道 ${i}:`, {
+          language: tracks[i].language,
+          label: tracks[i].label,
+          kind: tracks[i].kind,
+          mode: tracks[i].mode
+        });
+
         if (lang === 'none') {
           tracks[i].mode = 'disabled';
         } else if (tracks[i].language === lang) {
+          console.log('✅ 匹配到字幕轨道，设置为showing');
           tracks[i].mode = 'showing';
         } else {
           tracks[i].mode = 'hidden';
         }
+
+        console.log(`轨道 ${i} 更新后 mode:`, tracks[i].mode);
       }
     }
   };
