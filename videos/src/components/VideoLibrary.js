@@ -987,17 +987,6 @@ const VideoLibrary = () => {
                 </button>
               )}
 
-              {/* 字幕生成按钮 - 仅管理员可见 */}
-              {isAdmin && (
-                <button
-                  onClick={() => setShowSubtitleGenerator(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                >
-                  <Languages size={20} />
-                  <span>生成字幕</span>
-                </button>
-              )}
-
               {/* 回首页按钮 */}
               <button
                 onClick={() => handleCrossModuleNavigation("/")}
@@ -1452,6 +1441,20 @@ const VideoLibrary = () => {
                     <div>
                       <div className="font-medium text-gray-800">删除文件/文件夹</div>
                       <div className="text-sm text-gray-500">选择一个或多个文件/文件夹进行删除</div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowFileManager(false);
+                      setShowSubtitleGenerator(true);
+                    }}
+                    className="w-full flex items-center gap-3 p-3 text-left border rounded-lg hover:bg-purple-50 hover:border-purple-300 transition-colors"
+                  >
+                    <Languages className="text-purple-600" size={20} />
+                    <div>
+                      <div className="font-medium text-gray-800">生成字幕</div>
+                      <div className="text-sm text-gray-500">为视频生成字幕并翻译成中文</div>
                     </div>
                   </button>
 
