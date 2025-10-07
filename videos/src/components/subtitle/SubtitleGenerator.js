@@ -26,29 +26,40 @@ const SubtitleGenerator = ({
 
     try {
       const token = await getToken();
-      const response = await fetch(
-        `${fileApiUrl}/files/list?path=${encodeURIComponent(currentPath)}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+
+      // 递归加载所有目录的视频文件
+      const allVideos = [];
+      const loadDirectory = async (path) => {
+        const response = await fetch(
+          `${fileApiUrl}/files/list?path=${encodeURIComponent(path)}`,
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Failed to load videos');
+        }
+
+        const data = await response.json();
+
+        for (const item of data) {
+          if (item.type === 'video' && /\.(mp4|avi|mov|wmv|mkv)$/i.test(item.name)) {
+            allVideos.push(item);
+          } else if (item.type === 'folder') {
+            // 递归加载子目录
+            await loadDirectory(item.key || item.path);
           }
         }
-      );
+      };
 
-      if (!response.ok) {
-        throw new Error('Failed to load videos');
-      }
+      // 从当前路径开始递归加载
+      await loadDirectory(currentPath);
 
-      const data = await response.json();
-
-      // 过滤出视频文件
-      const videoFiles = data.filter(item =>
-        item.type === 'video' &&
-        /\.(mp4|avi|mov|wmv|mkv)$/i.test(item.name)
-      );
-
-      setVideos(videoFiles);
+      setVideos(allVideos);
     } catch (err) {
       console.error('Failed to load videos:', err);
       setError('加载视频列表失败: ' + err.message);
