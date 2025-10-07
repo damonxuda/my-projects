@@ -25,6 +25,15 @@ const SubtitleGenerator = ({
     setError('');
 
     try {
+      console.log('🔍 SubtitleGenerator API URLs:', { fileApiUrl, subtitleApiUrl, currentPath });
+
+      if (!fileApiUrl) {
+        throw new Error('FILE_MANAGEMENT_API_URL 未配置');
+      }
+      if (!subtitleApiUrl) {
+        throw new Error('SUBTITLE_API_URL 未配置');
+      }
+
       const token = await getToken();
 
       // 1. 加载当前目录的文件列表
@@ -38,17 +47,21 @@ const SubtitleGenerator = ({
         }
       );
 
+      console.log('📂 File list response status:', response.status);
+
       if (!response.ok) {
         throw new Error('Failed to load videos');
       }
 
       const data = await response.json();
+      console.log('📂 File list data:', data.length, 'items');
 
       // 2. 过滤出视频文件
       const videoFiles = data.filter(item =>
         item.type === 'video' &&
         /\.(mp4|avi|mov|wmv|mkv)$/i.test(item.name)
       );
+      console.log('🎬 Video files found:', videoFiles.length);
 
       // 3. 检查每个视频是否已有字幕
       const videosWithSubtitleInfo = await Promise.all(
