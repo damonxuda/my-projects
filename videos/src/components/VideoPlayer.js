@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Play, Download } from 'lucide-react';
 import { useAuth } from '../../../auth-clerk/src';
+import { SubtitlePlayer } from './subtitle';
 
 const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
   const [videoUrl, setVideoUrl] = useState('');
@@ -10,6 +11,7 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
   const [recodingProgress, setRecodingProgress] = useState('');
   const [currentPlayingKey, setCurrentPlayingKey] = useState(''); // 追踪当前正在播放的文件
   const { getCachedToken, isSignedIn } = useAuth();
+  const videoRef = useRef(null); // 视频元素引用，用于字幕控制
 
   // 本地缓存，避免重复检查mobile版本
   const [mobileVersionCache] = useState(new Map());
@@ -362,6 +364,7 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
         {videoUrl && !loading && !error && (
           <div className="space-y-6">
             <video
+              ref={videoRef}
               src={videoUrl}
               controls
               className="responsive-video"
@@ -442,6 +445,14 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
             >
               您的浏览器不支持视频播放
             </video>
+
+            {/* 字幕控制组件 */}
+            <SubtitlePlayer
+              videoKey={video.key}
+              videoRef={videoRef}
+              apiUrl={process.env.REACT_APP_SUBTITLE_API_URL || apiUrl}
+              getToken={getCachedToken}
+            />
 
             <div className="flex flex-wrap gap-3 justify-center">
               <a

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { ArrowLeft, Youtube, Plus, X, Upload, Search, Settings, FolderOpen, ArrowRight, Copy, Trash2 } from "lucide-react";
+import { ArrowLeft, Youtube, Plus, X, Upload, Search, Settings, FolderOpen, ArrowRight, Copy, Trash2, Languages } from "lucide-react";
 import { useAuth } from "../../../auth-clerk/src";
 import VideoPlayer from "./VideoPlayer";
 import FileCard from "./FileCard";
 import Breadcrumb from "./Breadcrumb";
+import { SubtitleGenerator } from "./subtitle";
 
 const VideoLibrary = () => {
   const [currentPath, setCurrentPath] = useState("");
@@ -33,6 +34,9 @@ const VideoLibrary = () => {
   const [fileOperation, setFileOperation] = useState(null); // 'rename', 'move', 'copy', 'delete', 'create-folder', 'upload'
   const [operationData, setOperationData] = useState({});
   const [isProcessingOperation, setIsProcessingOperation] = useState(false);
+
+  // 字幕生成相关状态
+  const [showSubtitleGenerator, setShowSubtitleGenerator] = useState(false);
 
   const { user, isSignedIn, isAdmin, getToken } = useAuth();
 
@@ -983,6 +987,17 @@ const VideoLibrary = () => {
                 </button>
               )}
 
+              {/* 字幕生成按钮 - 仅管理员可见 */}
+              {isAdmin && (
+                <button
+                  onClick={() => setShowSubtitleGenerator(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                >
+                  <Languages size={20} />
+                  <span>生成字幕</span>
+                </button>
+              )}
+
               {/* 回首页按钮 */}
               <button
                 onClick={() => handleCrossModuleNavigation("/")}
@@ -1743,6 +1758,16 @@ const VideoLibrary = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 字幕生成器模态框 */}
+      {showSubtitleGenerator && (
+        <SubtitleGenerator
+          onClose={() => setShowSubtitleGenerator(false)}
+          currentPath={currentPath}
+          apiUrl={FILE_MANAGEMENT_URL}
+          getToken={getToken}
+        />
       )}
     </>
   );
