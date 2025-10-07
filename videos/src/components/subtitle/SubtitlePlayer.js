@@ -62,15 +62,24 @@ const SubtitlePlayer = ({
       }
 
       const data = await response.json();
-      setSubtitles(data.subtitles || {});
+
+      // 给所有字幕URL添加token参数（track元素无法发送Authorization header）
+      const subtitlesWithToken = {};
+      if (data.subtitles) {
+        for (const [lang, url] of Object.entries(data.subtitles)) {
+          subtitlesWithToken[lang] = `${url}&token=${encodeURIComponent(token)}`;
+        }
+      }
+
+      setSubtitles(subtitlesWithToken);
 
       // 如果有字幕，默认选中中文字幕
-      if (data.subtitles && Object.keys(data.subtitles).length > 0) {
-        if (data.subtitles['zh-CN']) {
+      if (subtitlesWithToken && Object.keys(subtitlesWithToken).length > 0) {
+        if (subtitlesWithToken['zh-CN']) {
           setCurrentSubtitle('zh-CN');
         } else {
           // 选择第一个可用的字幕
-          setCurrentSubtitle(Object.keys(data.subtitles)[0]);
+          setCurrentSubtitle(Object.keys(subtitlesWithToken)[0]);
         }
       }
 
