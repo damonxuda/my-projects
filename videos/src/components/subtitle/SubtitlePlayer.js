@@ -96,20 +96,27 @@ const SubtitlePlayer = ({
     existingTracks.forEach(track => track.remove());
 
     // 添加新的track元素
-    Object.keys(subtitles).forEach((lang) => {
+    Object.keys(subtitles).forEach((lang, index) => {
       const track = document.createElement('track');
       track.kind = 'subtitles';
       track.src = subtitles[lang];
       track.srclang = lang;
       track.label = getLanguageLabel(lang);
 
-      if (lang === currentSubtitle) {
-        track.default = true;
-      }
-
       // 监听track加载事件
       track.addEventListener('load', () => {
         console.log(`✅ Track ${lang} 加载成功, cues:`, track.track.cues?.length || 0);
+
+        // 加载成功后，设置正确的mode
+        const textTrack = video.textTracks[index];
+        if (textTrack) {
+          if (lang === currentSubtitle) {
+            textTrack.mode = 'showing';
+            console.log(`🎯 自动激活字幕: ${lang}`);
+          } else {
+            textTrack.mode = 'hidden';
+          }
+        }
       });
 
       track.addEventListener('error', (e) => {
