@@ -1,6 +1,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Languages, Loader } from 'lucide-react';
 
+// 辅助函数：获取语言显示名称
+function getLanguageLabel(lang) {
+  const labels = {
+    'ja-JP': '日语',
+    'en-US': '英语',
+    'zh-CN': '中文',
+    'ko-KR': '韩语',
+    'fr-FR': '法语',
+    'de-DE': '德语',
+    'es-ES': '西班牙语',
+    'it-IT': '意大利语',
+    'pt-BR': '葡萄牙语',
+    'ru-RU': '俄语'
+  };
+  return labels[lang] || lang;
+}
+
 const SubtitlePlayer = ({
   videoKey,
   videoRef,
@@ -65,6 +82,36 @@ const SubtitlePlayer = ({
       setLoading(false);
     }
   };
+
+  // 添加字幕轨道到video元素
+  useEffect(() => {
+    if (!videoRef || !videoRef.current || !subtitles || Object.keys(subtitles).length === 0) {
+      return;
+    }
+
+    const video = videoRef.current;
+
+    // 移除旧的track元素
+    const existingTracks = video.querySelectorAll('track');
+    existingTracks.forEach(track => track.remove());
+
+    // 添加新的track元素
+    Object.keys(subtitles).forEach((lang) => {
+      const track = document.createElement('track');
+      track.kind = 'subtitles';
+      track.src = subtitles[lang];
+      track.srclang = lang;
+      track.label = getLanguageLabel(lang);
+
+      if (lang === currentSubtitle) {
+        track.default = true;
+      }
+
+      video.appendChild(track);
+    });
+
+    console.log('✅ 字幕轨道已添加:', Object.keys(subtitles));
+  }, [subtitles, videoRef]);
 
   // 切换字幕
   const changeSubtitle = (lang) => {
@@ -141,37 +188,8 @@ const SubtitlePlayer = ({
           <span className="text-sm text-gray-500">此视频暂无字幕</span>
         )}
       </div>
-
-      {/* 字幕track标签（供video使用） */}
-      {!loading && videoRef && videoRef.current && availableSubtitles.length > 0 && (
-        <div style={{ display: 'none' }}>
-          {availableSubtitles.map((lang) => (
-            <track
-              key={lang}
-              kind="subtitles"
-              src={subtitles[lang]}
-              srcLang={lang}
-              label={getLanguageLabel(lang)}
-              default={lang === currentSubtitle}
-            />
-          ))}
-        </div>
-      )}
     </div>
   );
 };
-
-// 辅助函数：获取语言显示名称
-function getLanguageLabel(lang) {
-  const labels = {
-    'ja-JP': '日语',
-    'en-US': '英语',
-    'zh-CN': '中文',
-    'ja': '日语',
-    'en': '英语',
-    'zh': '中文'
-  };
-  return labels[lang] || lang;
-}
 
 export default SubtitlePlayer;
