@@ -27,39 +27,78 @@ const SubtitleGenerator = ({
     try {
       const token = await getToken();
 
-      // 递归加载所有目录的视频文件
-      const allVideos = [];
-      const loadDirectory = async (path) => {
-        const response = await fetch(
-          `${fileApiUrl}/files/list?path=${encodeURIComponent(path)}`,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
+      // 1. 加载当前目录的文件列表
+      const response = await fetch(
+        `${fileApiUrl}/files/list?path=${encodeURIComponent(currentPath)}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to load videos');
+      }
+
+      const data = await response.json();
+
+      // 2. 过滤出视频文件
+      const videoFiles = data.filter(item =>
+        item.type === 'video' &&
+        /\.(mp4|avi|mov|wmv|mkv)$/i.test(item.name)
+      );
+
+      // 3. 检查每个视频是否已有字幕
+      const videosWithSubtitleInfo = await Promise.all(
+        videoFiles.map(async (video) => {
+          try {
+            const subtitleResponse = await fetch(
+              `${subtitleApiUrl}/subtitles/list?videoKey=${encodeURIComponent(video.key)}`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                }
+              }
+            );
+
+            if (subtitleResponse.ok) {
+              const subtitleData = await subtitleResponse.json();
+              const subtitles = subtitleData.subtitles || {};
+
+              // 检测有哪些语言的字幕
+              const hasSubtitles = Object.keys(subtitles).map(lang => {
+                // 语言代码映射
+                const langMap = {
+                  'ja-JP': '日',
+                  'en-US': '英',
+                  'zh-CN': '中'
+                };
+                return langMap[lang] || lang;
+              });
+
+              return {
+                ...video,
+                hasSubtitles: hasSubtitles.length > 0,
+                subtitleLanguages: hasSubtitles
+              };
             }
+          } catch (err) {
+            // 如果查询字幕失败，认为没有字幕
+            console.log(`No subtitles for ${video.name}`);
           }
-        );
 
-        if (!response.ok) {
-          throw new Error('Failed to load videos');
-        }
+          return {
+            ...video,
+            hasSubtitles: false,
+            subtitleLanguages: []
+          };
+        })
+      );
 
-        const data = await response.json();
-
-        for (const item of data) {
-          if (item.type === 'video' && /\.(mp4|avi|mov|wmv|mkv)$/i.test(item.name)) {
-            allVideos.push(item);
-          } else if (item.type === 'folder') {
-            // 递归加载子目录
-            await loadDirectory(item.key || item.path);
-          }
-        }
-      };
-
-      // 从当前路径开始递归加载
-      await loadDirectory(currentPath);
-
-      setVideos(allVideos);
+      setVideos(videosWithSubtitleInfo);
     } catch (err) {
       console.error('Failed to load videos:', err);
       setError('加载视频列表失败: ' + err.message);
@@ -204,7 +243,7 @@ const SubtitleGenerator = ({
                   📁 当前目录: <span className="font-semibold">{currentPath || '根目录'}</span>
                 </p>
                 <p className="text-sm text-blue-800 mt-2">
-                  💡 提示: 如果视频已有字幕，请不要选择，以免重复生成
+                  💡 提示: 已有字幕的视频会显示语言标记（日/英/中），可以重新生成覆盖
                 </p>
               </div>
 
@@ -231,7 +270,21 @@ const SubtitleGenerator = ({
                         />
 
                         <div className="flex-1">
-                          <h3 className="font-medium text-gray-900">{video.name}</h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium text-gray-900">{video.name}</h3>
+                            {video.hasSubtitles && (
+                              <div className="flex gap-1">
+                                {video.subtitleLanguages.map((lang) => (
+                                  <span
+                                    key={lang}
+                                    className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded"
+                                  >
+                                    {lang}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-500 mt-1">
                             大小: {(video.size / (1024 * 1024)).toFixed(1)} MB
                           </p>
