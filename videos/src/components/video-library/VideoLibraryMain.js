@@ -6,6 +6,7 @@ import VideoUpload from './VideoUpload';
 import YouTubeManagerModal from './YouTubeManagerModal';
 import VideoOperationModals from './VideoOperationModals';
 import VideoPlayer from '../VideoPlayer';
+import { SubtitleGenerator } from '../subtitle';
 
 const VideoLibraryMain = () => {
   // 核心状态 - Deploy trigger 2024-09-27
@@ -19,6 +20,7 @@ const VideoLibraryMain = () => {
   const [showUpload, setShowUpload] = useState(false);
   const [showYouTubeManager, setShowYouTubeManager] = useState(false);
   const [showFileManager, setShowFileManager] = useState(false);
+  const [showSubtitleGenerator, setShowSubtitleGenerator] = useState(false);
 
   // 上传相关状态
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -309,6 +311,15 @@ const VideoLibraryMain = () => {
     }
   }, [isSignedIn, loadItems]);
 
+  // 监听文件操作变化，处理字幕生成
+  useEffect(() => {
+    if (fileOperation === 'generate-subtitle') {
+      setShowFileManager(false);
+      setFileOperation(null);
+      setShowSubtitleGenerator(true);
+    }
+  }, [fileOperation]);
+
   // 权限检查
   if (!isSignedIn) {
     return (
@@ -438,6 +449,16 @@ const VideoLibraryMain = () => {
             />
           </div>
         </div>
+      )}
+
+      {/* 字幕生成器 */}
+      {showSubtitleGenerator && (
+        <SubtitleGenerator
+          onClose={() => setShowSubtitleGenerator(false)}
+          currentPath={currentPath}
+          apiUrl={FILE_MANAGEMENT_URL}
+          getToken={getToken}
+        />
       )}
     </div>
   );

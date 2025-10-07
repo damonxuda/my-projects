@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Upload, FolderOpen, Settings, ArrowRight, Copy, Trash2 } from 'lucide-react';
+import { X, Upload, FolderOpen, Settings, ArrowRight, Copy, Trash2, Languages } from 'lucide-react';
 
 const VideoOperationModals = ({
   show,
@@ -290,6 +290,17 @@ const VideoOperationModals = ({
                 <div>
                   <div className="font-medium text-gray-800">删除文件/文件夹</div>
                   <div className="text-sm text-gray-500">选择一个或多个文件/文件夹进行删除</div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setFileOperation('generate-subtitle')}
+                className="w-full flex items-center gap-3 p-3 text-left border rounded-lg hover:bg-purple-50 hover:border-purple-300 transition-colors"
+              >
+                <Languages className="text-purple-600" size={20} />
+                <div>
+                  <div className="font-medium text-gray-800">生成字幕</div>
+                  <div className="text-sm text-gray-500">为视频生成字幕并翻译成中文</div>
                 </div>
               </button>
             </div>
