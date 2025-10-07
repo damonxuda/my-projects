@@ -154,20 +154,10 @@ const SubtitleGenerator = ({
       newSelected.set(video.key, {
         videoKey: video.key,
         videoName: video.name,
-        language: 'ja-JP', // 默认日语
         selected: true
       });
     }
     setSelectedVideos(newSelected);
-  };
-
-  // 修改视频语言
-  const changeVideoLanguage = (videoKey, language) => {
-    const newSelected = new Map(selectedVideos);
-    if (newSelected.has(videoKey)) {
-      newSelected.get(videoKey).language = language;
-      setSelectedVideos(newSelected);
-    }
   };
 
   // 开始生成字幕
@@ -192,7 +182,7 @@ const SubtitleGenerator = ({
           message: `正在处理: ${video.videoName}`
         });
 
-        // 调用subtitle-trigger Lambda
+        // 调用subtitle-trigger Lambda（自动语言识别）
         const response = await fetch(`${subtitleApiUrl}/subtitles/generate`, {
           method: 'POST',
           headers: {
@@ -200,8 +190,7 @@ const SubtitleGenerator = ({
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            videoKey: video.videoKey,
-            sourceLanguage: video.language
+            videoKey: video.videoKey
           })
         });
 
@@ -240,7 +229,7 @@ const SubtitleGenerator = ({
             <div>
               <h2 className="text-2xl font-bold text-gray-900">生成字幕</h2>
               <p className="text-sm text-gray-600 mt-1">
-                选择视频并指定原语言，系统将生成原语言字幕和中文翻译
+                选择视频，系统将自动识别语言并生成原语言字幕和中文翻译
               </p>
             </div>
           </div>
@@ -281,6 +270,9 @@ const SubtitleGenerator = ({
                   📁 当前目录: <span className="font-semibold">{currentPath || '根目录'}</span>
                 </p>
                 <p className="text-sm text-blue-800 mt-2">
+                  🤖 自动语言识别: 系统会自动识别视频语言（支持37种语言）
+                </p>
+                <p className="text-sm text-blue-800 mt-1">
                   💡 提示: 已有字幕的视频会显示语言标记（日/英/中），可以重新生成覆盖
                 </p>
               </div>
@@ -288,7 +280,6 @@ const SubtitleGenerator = ({
               <div className="space-y-3">
                 {videos.map((video) => {
                   const isSelected = selectedVideos.has(video.key);
-                  const videoData = selectedVideos.get(video.key);
 
                   return (
                     <div
@@ -326,34 +317,6 @@ const SubtitleGenerator = ({
                           <p className="text-sm text-gray-500 mt-1">
                             大小: {(video.size / (1024 * 1024)).toFixed(1)} MB
                           </p>
-
-                          {isSelected && (
-                            <div className="mt-3">
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                选择原语言:
-                              </label>
-                              <select
-                                value={videoData?.language || 'ja-JP'}
-                                onChange={(e) => changeVideoLanguage(video.key, e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                              >
-                                <option value="ja-JP">日语 (ja-JP)</option>
-                                <option value="en-US">英语 (en-US)</option>
-                                <option value="zh-CN">中文 (zh-CN)</option>
-                                <option value="ko-KR">韩语 (ko-KR)</option>
-                                <option value="fr-FR">法语 (fr-FR)</option>
-                                <option value="de-DE">德语 (de-DE)</option>
-                                <option value="es-ES">西班牙语 (es-ES)</option>
-                                <option value="it-IT">意大利语 (it-IT)</option>
-                                <option value="pt-BR">葡萄牙语 (pt-BR)</option>
-                                <option value="ru-RU">俄语 (ru-RU)</option>
-                                <option value="ar-SA">阿拉伯语 (ar-SA)</option>
-                                <option value="hi-IN">印地语 (hi-IN)</option>
-                                <option value="th-TH">泰语 (th-TH)</option>
-                                <option value="vi-VN">越南语 (vi-VN)</option>
-                              </select>
-                            </div>
-                          )}
                         </div>
                       </div>
                     </div>
