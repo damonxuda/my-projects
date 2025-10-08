@@ -31,7 +31,7 @@ AWS_ACCESS_KEY_ID          # AWS 访问密钥
 AWS_SECRET_ACCESS_KEY      # AWS 密钥
 AWS_REGION                 # ap-northeast-1
 CLERK_SECRET_KEY           # Clerk 认证密钥
-VIDEO_BUCKET_NAME          # S3 视频桶名称
+AWS_S3_VIDEO_BUCKET_NAME   # S3 视频桶名称
 YOUTUBE_API_KEY            # YouTube API 密钥（如需要）
 ```
 

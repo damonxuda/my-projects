@@ -1,0 +1,11 @@
+# Supabase Edge Functions Configuration
+
+# Quiz Management Function - 禁用 JWT 验证
+# 因为使用 Clerk JWT 而不是 Supabase JWT
+[functions.quiz-management]
+verify_jwt = false
+
+# Game Progress Function - 禁用 JWT 验证
+# 因为使用 Clerk JWT 而不是 Supabase JWT
+[functions.game-progress]
+verify_jwt = false

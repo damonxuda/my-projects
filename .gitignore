@@ -12,9 +12,6 @@ Thumbs.db
 *.log
 *.zip
 
-# 后端代码（Lambda 和 Supabase Edge Functions）
-backend/
-
 # 备份文件
 *.backup
 *.backup-*

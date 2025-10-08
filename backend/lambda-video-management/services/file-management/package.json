@@ -1,0 +1,23 @@
+{
+  "name": "file-management-lambda",
+  "version": "1.0.0",
+  "description": "Lambda function for file management operations",
+  "main": "index.mjs",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.400.0",
+    "@aws-sdk/s3-request-presigner": "^3.400.0",
+    "@clerk/backend": "^0.23.7"
+  },
+  "keywords": [
+    "aws",
+    "lambda",
+    "s3",
+    "file-management"
+  ],
+  "author": "",
+  "license": "ISC"
+}
