@@ -4,6 +4,17 @@ name: Deploy Multi-Project to AWS S3
 on:
   push:
     branches: [main]
+    paths:
+      - 'quiz/**'
+      - 'videos/**'
+      - 'admin/**'
+      - 'schedule/**'
+      - 'auth-clerk/**'
+      - 'shared/**'
+      - 'games/**'
+      - 'index.html'
+      - 'favicon.*'
+      - '.github/workflows/deploy.yml'
   workflow_dispatch: # 允许手动触发
 
 jobs:
