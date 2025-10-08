@@ -663,6 +663,33 @@ export const handler = async (event) => {
     return { statusCode: 200, body: 'Processed' };
   }
 
+  // 直接调用模式（用于管理任务，绕过API认证）
+  if (event.directInvoke === true && event.action === 'translate') {
+    console.log('📝 直接调用模式: 翻译字幕');
+    const { videoKey, sourceLang } = event;
+
+    if (!videoKey || !sourceLang) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'videoKey and sourceLang are required' })
+      };
+    }
+
+    try {
+      const result = await translateExistingSubtitle(videoKey, sourceLang);
+      return {
+        statusCode: 200,
+        body: JSON.stringify(result)
+      };
+    } catch (error) {
+      console.error('❌ 直接调用翻译失败:', error);
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: error.message, stack: error.stack })
+      };
+    }
+  }
+
   // 处理OPTIONS请求（CORS预检）
   if (event.requestContext?.http?.method === 'OPTIONS' || event.httpMethod === 'OPTIONS') {
     return {
