@@ -93,69 +93,6 @@ jobs:
           echo ""
           echo "✅ Deployment test completed!"
 
-  deploy-subtitle-manager:
-    runs-on: ubuntu-latest
-    if: |
-      contains(github.event.head_commit.added, 'lambda-subtitle') ||
-      contains(github.event.head_commit.modified, 'lambda-subtitle') ||
-      github.event_name == 'workflow_dispatch'
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Install dependencies
-        working-directory: ./lambda-subtitle
-        run: npm ci 2>/dev/null || echo "No package.json found"
-
-      - name: Create deployment package
-        working-directory: ./lambda-subtitle
-        run: |
-          echo "📦 Creating Subtitle Lambda deployment package..."
-          mkdir -p deploy
-
-          # 复制所有文件
-          if [ -f "index.mjs" ]; then
-            cp index.mjs deploy/
-          elif [ -f "index.js" ]; then
-            cp index.js deploy/
-          fi
-
-          cp package.json deploy/ 2>/dev/null || true
-          cp -r node_modules deploy/ 2>/dev/null || true
-
-          # 打包
-          cd deploy
-          zip -r ../lambda-deployment.zip . -x "*.git*" "*.DS_Store"
-          cd ..
-          ls -lh lambda-deployment.zip
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Deploy to Lambda
-        working-directory: ./lambda-subtitle
-        run: |
-          echo "🚀 Deploying Subtitle Manager to Lambda..."
-
-          aws lambda update-function-code \
-            --function-name SUBTITLE_MANAGER_LAMBDA \
-            --zip-file fileb://lambda-deployment.zip
-
-          aws lambda wait function-updated \
-            --function-name SUBTITLE_MANAGER_LAMBDA
-
-          echo "✅ Subtitle Lambda deployed!"
-
   deploy-user-management:
     runs-on: ubuntu-latest
     if: |
