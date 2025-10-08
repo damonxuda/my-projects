@@ -139,10 +139,10 @@ jobs:
           echo "🚀 Deploying User Management to Lambda..."
 
           aws lambda update-function-code \
-            --function-name USER_MANAGEMENT_LAMBDA \
+            --function-name user_management \
             --zip-file fileb://lambda-deployment.zip
 
           aws lambda wait function-updated \
-            --function-name USER_MANAGEMENT_LAMBDA
+            --function-name user_management
 
           echo "✅ User Management Lambda deployed!"
