@@ -422,6 +422,21 @@ async function translateSrtContent(srtContent, sourceLanguage) {
 }
 
 /**
+ * 将SRT格式转换为WebVTT格式
+ */
+function convertSrtToVtt(srtContent) {
+  // 将时间戳中的逗号替换为点号
+  // SRT: 00:00:08,060 --> 00:00:08,430
+  // VTT: 00:00:08.060 --> 00:00:08.430
+  let vttContent = srtContent.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
+
+  // 在文件开头添加WEBVTT标识
+  vttContent = 'WEBVTT\n\n' + vttContent;
+
+  return vttContent;
+}
+
+/**
  * 获取字幕文件内容（直接返回文件，支持URL token认证）
  */
 async function getSubtitle(event) {
@@ -464,12 +479,15 @@ async function getSubtitle(event) {
     });
 
     const response = await s3Client.send(command);
-    const content = await response.Body.transformToString();
+    let content = await response.Body.transformToString();
+
+    // 将SRT转换为WebVTT格式（浏览器<track>元素只支持VTT）
+    content = convertSrtToVtt(content);
 
     return {
       statusCode: 200,
       headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
+        'Content-Type': 'text/vtt; charset=utf-8',
         'Cache-Control': 'public, max-age=3600'
       },
       body: content
