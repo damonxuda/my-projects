@@ -18,11 +18,7 @@ on:
 jobs:
   deploy-video-management:
     runs-on: ubuntu-latest
-    # 只在 lambda-video-management 改变时运行
-    if: |
-      contains(github.event.head_commit.added, 'backend/lambda-video-management') ||
-      contains(github.event.head_commit.modified, 'backend/lambda-video-management') ||
-      github.event_name == 'workflow_dispatch'
+    # paths过滤已经在workflow级别生效，不需要额外的if条件
 
     strategy:
       matrix:
@@ -93,10 +89,7 @@ jobs:
 
   deploy-user-management:
     runs-on: ubuntu-latest
-    if: |
-      contains(github.event.head_commit.added, 'backend/lambda-user-management') ||
-      contains(github.event.head_commit.modified, 'backend/lambda-user-management') ||
-      github.event_name == 'workflow_dispatch'
+    # paths过滤已经在workflow级别生效，不需要额外的if条件
 
     steps:
       - name: Checkout code
