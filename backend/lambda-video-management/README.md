@@ -78,7 +78,8 @@ git push origin main
 cd services/subtitle-manager
 
 # 只打包代码（不包含node_modules）
-zip -r function.zip index.mjs shared/ -x "*.DS_Store"
+# 根据服务不同，可能需要包含 lib/ 目录
+zip -r function.zip index.mjs shared/ lib/ -x "*.DS_Store" "node_modules/*"
 
 # 上传到S3并更新Lambda
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)

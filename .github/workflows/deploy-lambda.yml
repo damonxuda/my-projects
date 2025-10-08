@@ -46,8 +46,16 @@ jobs:
           echo "📦 Creating deployment package for ${{ matrix.service.name }}..."
           echo "⚠️  Using Lambda Layer for dependencies - NOT including node_modules"
 
-          # 只打包代码文件
-          zip -r function.zip index.mjs shared/ -x "*.DS_Store" "node_modules/*" "*.zip"
+          # 打包代码文件（index.mjs必须，shared/和lib/如果存在就包含）
+          if [ -d "lib" ] && [ -d "shared" ]; then
+            zip -r function.zip index.mjs shared/ lib/ -x "*.DS_Store" "node_modules/*" "*.zip"
+          elif [ -d "shared" ]; then
+            zip -r function.zip index.mjs shared/ -x "*.DS_Store" "node_modules/*" "*.zip"
+          elif [ -d "lib" ]; then
+            zip -r function.zip index.mjs lib/ -x "*.DS_Store" "node_modules/*" "*.zip"
+          else
+            zip -r function.zip index.mjs -x "*.DS_Store" "*.zip"
+          fi
 
           ls -lh function.zip
           echo "✅ Package size: $(ls -lh function.zip | awk '{print $5}')"
