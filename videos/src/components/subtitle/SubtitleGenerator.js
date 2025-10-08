@@ -154,25 +154,10 @@ const SubtitleGenerator = ({
       newSelected.set(video.key, {
         videoKey: video.key,
         videoName: video.name,
-        selected: true,
-        startTime: '00:00:00',
-        endTime: ''
+        selected: true
       });
     }
     setSelectedVideos(newSelected);
-  };
-
-  // 更新视频时间范围
-  const updateVideoTime = (videoKey, field, value) => {
-    const newSelected = new Map(selectedVideos);
-    const video = newSelected.get(videoKey);
-    if (video) {
-      newSelected.set(videoKey, {
-        ...video,
-        [field]: value
-      });
-      setSelectedVideos(newSelected);
-    }
   };
 
   // 开始生成字幕
@@ -205,9 +190,7 @@ const SubtitleGenerator = ({
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            videoKey: video.videoKey,
-            startTime: video.startTime || '00:00:00',
-            endTime: video.endTime || ''
+            videoKey: video.videoKey
           })
         });
 
@@ -334,42 +317,6 @@ const SubtitleGenerator = ({
                           <p className="text-sm text-gray-500 mt-1">
                             大小: {(video.size / (1024 * 1024)).toFixed(1)} MB
                           </p>
-
-                          {isSelected && (
-                            <div className="mt-3 p-3 bg-white border border-purple-200 rounded-lg">
-                              <label className="block text-sm font-medium text-gray-700 mb-2">
-                                字幕时间范围（可选）
-                              </label>
-                              <div className="flex items-center gap-3">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm text-gray-600">起始:</span>
-                                  <input
-                                    type="text"
-                                    placeholder="00:00:00"
-                                    value={selectedVideos.get(video.key)?.startTime || '00:00:00'}
-                                    onChange={(e) => updateVideoTime(video.key, 'startTime', e.target.value)}
-                                    className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                    pattern="[0-9]{2}:[0-9]{2}:[0-9]{2}"
-                                  />
-                                </div>
-                                <span className="text-gray-400">→</span>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm text-gray-600">结束:</span>
-                                  <input
-                                    type="text"
-                                    placeholder="留空表示到结尾"
-                                    value={selectedVideos.get(video.key)?.endTime || ''}
-                                    onChange={(e) => updateVideoTime(video.key, 'endTime', e.target.value)}
-                                    className="w-24 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
-                                    pattern="[0-9]{2}:[0-9]{2}:[0-9]{2}"
-                                  />
-                                </div>
-                              </div>
-                              <p className="text-xs text-gray-500 mt-2">
-                                格式: HH:MM:SS（例如：00:00:30 表示30秒，01:25:00 表示1小时25分）
-                              </p>
-                            </div>
-                          )}
                         </div>
                       </div>
                     </div>
