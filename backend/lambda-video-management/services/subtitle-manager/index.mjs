@@ -354,10 +354,11 @@ ${texts.map((t, i) => `${i + 1}. ${t}`).join('\n')}
 
   try {
     const command = new InvokeModelCommand({
-      modelId: 'anthropic.claude-3-5-sonnet-20241022-v2:0',
+      modelId: 'apac.anthropic.claude-3-5-sonnet-20241022-v2:0',
       body: JSON.stringify({
         anthropic_version: 'bedrock-2023-05-31',
         max_tokens: 2000,
+        temperature: 0.3,
         messages: [
           {
             role: 'user',
