@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - 'backend/supabase/functions/**'
+      - '.github/workflows/deploy-supabase.yml'
   workflow_dispatch:
 
 jobs:
@@ -29,20 +30,18 @@ jobs:
           sudo dpkg -i supabase.deb
           supabase --version
 
-      - name: Login to Supabase
-        run: |
-          echo "🔐 Logging in to Supabase..."
-          # 使用 access token 登录
-          supabase login --token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-
       - name: Link to Supabase project
         working-directory: ./backend/supabase
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           echo "🔗 Linking to Supabase project..."
           supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
 
       - name: Deploy Edge Functions
         working-directory: ./backend/supabase
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           echo "🚀 Deploying Edge Functions..."
 
@@ -61,6 +60,8 @@ jobs:
 
       - name: Verify deployment
         working-directory: ./backend/supabase
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           echo "🧪 Verifying deployment..."
           # 列出所有已部署的函数
