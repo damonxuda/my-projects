@@ -338,9 +338,9 @@ async function translateSubtitle(jobName) {
 }
 
 /**
- * 使用Claude翻译文本
+ * 使用Amazon Nova翻译文本
  */
-async function translateWithClaude(texts, sourceLanguage) {
+async function translateWithNova(texts, sourceLanguage) {
   const prompt = `请将以下${sourceLanguage}字幕翻译成简体中文。要求：
 1. 保持口语化和自然
 2. 准确传达原意
@@ -354,25 +354,30 @@ ${texts.map((t, i) => `${i + 1}. ${t}`).join('\n')}
 
   try {
     const command = new InvokeModelCommand({
-      modelId: 'apac.anthropic.claude-3-5-sonnet-20241022-v2:0',
+      modelId: 'apac.amazon.nova-micro-v1:0',
       body: JSON.stringify({
-        anthropic_version: 'bedrock-2023-05-31',
-        max_tokens: 2000,
-        temperature: 0.3,
         messages: [
           {
             role: 'user',
-            content: prompt
+            content: [
+              {
+                text: prompt
+              }
+            ]
           }
-        ]
+        ],
+        inferenceConfig: {
+          max_new_tokens: 2000,
+          temperature: 0.3
+        }
       })
     });
 
     const response = await bedrockClient.send(command);
     const responseBody = JSON.parse(new TextDecoder().decode(response.body));
-    const translatedText = responseBody.content[0].text;
+    const translatedText = responseBody.output.message.content[0].text;
 
-    // 解析Claude的响应，提取翻译结果
+    // 解析Nova的响应，提取翻译结果
     const lines = translatedText.split('\n').filter(l => l.trim());
     const translations = [];
 
@@ -386,16 +391,16 @@ ${texts.map((t, i) => `${i + 1}. ${t}`).join('\n')}
 
     return translations;
   } catch (error) {
-    console.error('Claude translation error:', error);
+    console.error('Nova translation error:', error);
     throw error;
   }
 }
 
 /**
- * 翻译SRT内容（使用Claude批量翻译）
+ * 翻译SRT内容（使用Amazon Nova批量翻译）
  */
 async function translateSrtContent(srtContent, sourceLanguage) {
-  console.log('🤖 使用Claude 3.5 Sonnet翻译...');
+  console.log('🤖 使用Amazon Nova Micro翻译...');
 
   const subtitleBlocks = srtContent.split('\n\n').filter(block => block.trim());
   const translatedBlocks = [];
@@ -424,7 +429,7 @@ async function translateSrtContent(srtContent, sourceLanguage) {
 
     try {
       // 批量翻译
-      const translations = await translateWithClaude(texts, sourceLanguage);
+      const translations = await translateWithNova(texts, sourceLanguage);
 
       // 组装结果
       let translationIndex = 0;
@@ -454,7 +459,7 @@ async function translateSrtContent(srtContent, sourceLanguage) {
     }
   }
 
-  console.log('✅ Claude翻译完成');
+  console.log('✅ Nova翻译完成');
   return translatedBlocks.join('\n\n');
 }
 
