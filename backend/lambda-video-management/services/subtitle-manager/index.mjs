@@ -113,9 +113,14 @@ async function generateSubtitle(event, auth) {
     console.log('✅ 元数据已保存到S3');
 
     // 异步触发后台轮询和翻译（不等待）
-    pollAndTranslate(jobName).catch(err =>
-      console.error('Background translation failed:', err)
-    );
+    pollAndTranslate(jobName).catch(err => {
+      console.error('❌ Background translation failed:', err);
+      console.error('Error details:', JSON.stringify({
+        message: err.message,
+        stack: err.stack,
+        name: err.name
+      }));
+    });
 
     return {
       statusCode: 200,
@@ -206,42 +211,84 @@ async function getSubtitleStatus(event, auth) {
 async function pollAndTranslate(jobName) {
   console.log(`🔄 开始轮询任务状态: ${jobName}`);
   const maxAttempts = 30; // 最多30次，每次10秒，总共5分钟
+  const startTime = Date.now();
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
+      const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+      console.log(`📊 轮询尝试 ${attempt + 1}/${maxAttempts} (已等待${elapsedSeconds}秒)`);
+
       const command = new GetTranscriptionJobCommand({
         TranscriptionJobName: jobName
       });
       const response = await transcribeClient.send(command);
-      const status = response.TranscriptionJob.TranscriptionJobStatus;
+      const job = response.TranscriptionJob;
+      const status = job.TranscriptionJobStatus;
 
-      console.log(`📊 任务状态 (尝试 ${attempt + 1}/${maxAttempts}): ${status}`);
+      console.log(`📊 任务状态: ${status}`, JSON.stringify({
+        languageCode: job.LanguageCode,
+        createdAt: job.CreationTime,
+        completedAt: job.CompletionTime
+      }));
 
       if (status === 'COMPLETED') {
         console.log('✅ 转录完成，开始翻译...');
-        await translateSubtitle(jobName);
+        try {
+          await translateSubtitle(jobName);
+          console.log('✅ 翻译完成！');
+        } catch (translateError) {
+          console.error('❌ 翻译失败:', translateError);
+          console.error('翻译错误详情:', JSON.stringify({
+            message: translateError.message,
+            stack: translateError.stack
+          }));
+          throw translateError;
+        }
         return;
       } else if (status === 'FAILED') {
-        console.error('❌ Transcribe任务失败');
-        return;
+        const failureReason = job.FailureReason || 'Unknown';
+        console.error('❌ Transcribe任务失败:', failureReason);
+        throw new Error(`Transcription failed: ${failureReason}`);
       }
 
       // 等待10秒再检查
-      await new Promise(resolve => setTimeout(resolve, 10000));
+      if (attempt < maxAttempts - 1) {
+        console.log('⏳ 等待10秒后继续轮询...');
+        await new Promise(resolve => setTimeout(resolve, 10000));
+      }
     } catch (error) {
-      console.error(`轮询错误 (尝试 ${attempt + 1}):`, error);
+      console.error(`❌ 轮询错误 (尝试 ${attempt + 1}):`, error);
+      console.error('错误详情:', JSON.stringify({
+        message: error.message,
+        name: error.name,
+        code: error.code
+      }));
+
+      // 如果是AWS API错误，不继续轮询
+      if (error.name === 'ResourceNotFoundException' || error.name === 'BadRequestException') {
+        throw error;
+      }
+
+      // 其他错误继续尝试
+      if (attempt < maxAttempts - 1) {
+        await new Promise(resolve => setTimeout(resolve, 10000));
+      }
     }
   }
 
   console.log('⚠️ 轮询超时，任务可能仍在进行');
+  throw new Error('Polling timeout: Job may still be in progress');
 }
 
 /**
  * 翻译字幕文件
  */
 async function translateSubtitle(jobName) {
+  console.log(`🌍 开始翻译字幕: ${jobName}`);
+
   try {
     // 1. 获取任务元数据
+    console.log('📋 步骤1: 获取任务元数据...');
     const metadataResponse = await s3Client.send(new GetObjectCommand({
       Bucket: VIDEO_BUCKET,
       Key: `subtitles-jobs/${jobName}.json`
@@ -249,44 +296,59 @@ async function translateSubtitle(jobName) {
 
     const metadata = JSON.parse(await metadataResponse.Body.transformToString());
     const { videoKey } = metadata;
+    console.log(`📹 videoKey: ${videoKey}`);
 
     // 2. 从Transcribe job获取识别出的语言
+    console.log('🔍 步骤2: 获取识别的语言...');
     const jobResponse = await transcribeClient.send(new GetTranscriptionJobCommand({
       TranscriptionJobName: jobName
     }));
     const detectedLanguage = jobResponse.TranscriptionJob.LanguageCode;
-    console.log(`检测到的语言: ${detectedLanguage}`);
+    console.log(`🌐 检测到的语言: ${detectedLanguage}`);
 
     // 3. 获取Transcribe生成的SRT字幕
+    console.log('📥 步骤3: 从S3获取原始SRT字幕...');
     const srtKey = `subtitles-temp/${jobName}/${jobName}.srt`;
+    console.log(`📂 SRT Key: ${srtKey}`);
+
     const srtResponse = await s3Client.send(new GetObjectCommand({
       Bucket: VIDEO_BUCKET,
       Key: srtKey
     }));
 
     const originalSrt = await srtResponse.Body.transformToString();
+    console.log(`✅ 原始SRT大小: ${originalSrt.length} 字节`);
 
     // 4. 解析SRT并翻译文本
+    console.log('🔄 步骤4: 开始翻译SRT内容...');
     const translatedSrt = await translateSrtContent(originalSrt, detectedLanguage);
+    console.log(`✅ 翻译完成，大小: ${translatedSrt.length} 字节`);
 
     // 5. 保存字幕文件
+    console.log('💾 步骤5: 保存字幕文件到S3...');
     const subtitleDir = `subtitles/${videoKey}`;
 
     // 保存原语言字幕
+    const originalKey = `${subtitleDir}/${detectedLanguage}.srt`;
+    console.log(`📤 保存原语言字幕: ${originalKey}`);
     await s3Client.send(new PutObjectCommand({
       Bucket: VIDEO_BUCKET,
-      Key: `${subtitleDir}/${detectedLanguage}.srt`,
+      Key: originalKey,
       Body: originalSrt,
       ContentType: 'text/plain; charset=utf-8'
     }));
+    console.log(`✅ 原语言字幕已保存`);
 
     // 保存中文字幕
+    const chineseKey = `${subtitleDir}/zh-CN.srt`;
+    console.log(`📤 保存中文字幕: ${chineseKey}`);
     await s3Client.send(new PutObjectCommand({
       Bucket: VIDEO_BUCKET,
-      Key: `${subtitleDir}/zh-CN.srt`,
+      Key: chineseKey,
       Body: translatedSrt,
       ContentType: 'text/plain; charset=utf-8'
     }));
+    console.log(`✅ 中文字幕已保存`);
 
     // 6. 更新任务状态
     metadata.status = 'COMPLETED';
@@ -473,7 +535,14 @@ async function listSubtitles(event, auth) {
     console.log(`✅ 找到 ${response.Contents.length} 个字幕文件`);
 
     // 使用Lambda URL而不是S3预签名URL
-    const SUBTITLE_API_URL = process.env.SUBTITLE_API_URL || 'https://tqhxbokr2kdka76cra2cwu24ty0gqulu.lambda-url.ap-northeast-1.on.aws';
+    // 从请求中获取当前Lambda的URL
+    const currentHost = event.requestContext?.domainName || event.headers?.host || event.headers?.Host;
+    const SUBTITLE_API_URL = currentHost ? `https://${currentHost}` : process.env.SUBTITLE_API_URL;
+
+    if (!SUBTITLE_API_URL) {
+      throw new Error('无法确定SUBTITLE_API_URL，请设置环境变量');
+    }
+
     const subtitles = {};
 
     for (const object of response.Contents) {

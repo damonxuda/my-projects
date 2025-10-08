@@ -1,6 +1,10 @@
 # .github/workflows/deploy-lambda.yml
 name: Deploy Lambda Functions
 
+# ⚠️ 重要：所有Lambda函数已配置Lambda Layer用于依赖管理
+# Lambda Layer ARN: arn:aws:lambda:ap-northeast-1:905418159488:layer:video-management-dependencies:1
+# 部署时只打包代码文件（index.mjs + shared/），不打包node_modules
+
 on:
   push:
     branches: [main]
@@ -20,35 +24,37 @@ jobs:
       contains(github.event.head_commit.modified, 'backend/lambda-video-management') ||
       github.event_name == 'workflow_dispatch'
 
+    strategy:
+      matrix:
+        service:
+          - name: FILE_MANAGEMENT_LAMBDA
+            path: services/file-management
+          - name: VIDEO_PLAYER_LAMBDA
+            path: services/video-player
+          - name: YOUTUBE_MANAGER_LAMBDA
+            path: services/youtube-manager
+          - name: FORMAT_CONVERTER_LAMBDA
+            path: services/format-converter
+          - name: THUMBNAIL_GENERATOR_LAMBDA
+            path: services/thumbnail-generator
+          - name: SUBTITLE_MANAGER_LAMBDA
+            path: services/subtitle-manager
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Install dependencies
-        working-directory: ./backend/lambda-video-management
-        run: npm ci
-
-      - name: Create deployment package
-        working-directory: ./backend/lambda-video-management
+      - name: Create deployment package (code only, no node_modules)
+        working-directory: ./backend/lambda-video-management/${{ matrix.service.path }}
         run: |
-          echo "📦 Creating Lambda deployment package..."
-          # 创建部署目录
-          mkdir -p deploy
-          # 复制函数代码和依赖
-          cp index.mjs deploy/
-          cp package.json deploy/
-          cp -r node_modules deploy/
-          cp -r services deploy/ 2>/dev/null || true
-          # 打包
-          cd deploy
-          zip -r ../lambda-deployment.zip . -x "*.git*" "*.DS_Store"
-          cd ..
-          ls -lh lambda-deployment.zip
+          echo "📦 Creating deployment package for ${{ matrix.service.name }}..."
+          echo "⚠️  Using Lambda Layer for dependencies - NOT including node_modules"
+
+          # 只打包代码文件
+          zip -r function.zip index.mjs shared/ -x "*.DS_Store" "node_modules/*" "*.zip"
+
+          ls -lh function.zip
+          echo "✅ Package size: $(ls -lh function.zip | awk '{print $5}')"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -57,42 +63,33 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Deploy to Lambda
-        working-directory: ./backend/lambda-video-management
+      - name: Upload to S3
+        working-directory: ./backend/lambda-video-management/${{ matrix.service.path }}
         run: |
-          echo "🚀 Deploying to Lambda..."
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          S3_KEY="lambda-deploy/${{ matrix.service.name }}-${TIMESTAMP}.zip"
+
+          echo "📤 Uploading to S3: s3://damonxuda-video-files/${S3_KEY}"
+          aws s3 cp function.zip s3://damonxuda-video-files/${S3_KEY}
+
+          echo "S3_KEY=${S3_KEY}" >> $GITHUB_ENV
+
+      - name: Deploy to Lambda
+        run: |
+          echo "🚀 Deploying ${{ matrix.service.name }}..."
+          echo "📦 Using S3 key: ${{ env.S3_KEY }}"
 
           # 更新函数代码
           aws lambda update-function-code \
-            --function-name FILE_MANAGEMENT_LAMBDA \
-            --zip-file fileb://lambda-deployment.zip
+            --function-name ${{ matrix.service.name }} \
+            --s3-bucket damonxuda-video-files \
+            --s3-key ${{ env.S3_KEY }}
 
           # 等待函数更新完成
           aws lambda wait function-updated \
-            --function-name FILE_MANAGEMENT_LAMBDA
+            --function-name ${{ matrix.service.name }}
 
-          # 更新环境变量（如果需要）
-          aws lambda update-function-configuration \
-            --function-name FILE_MANAGEMENT_LAMBDA \
-            --environment Variables="{
-              CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }},
-              AWS_S3_VIDEO_BUCKET_NAME=${{ secrets.AWS_S3_VIDEO_BUCKET_NAME }},
-              YOUTUBE_API_KEY=${{ secrets.YOUTUBE_API_KEY }}
-            }"
-
-          echo "✅ Lambda function deployed successfully!"
-
-      - name: Test deployment
-        run: |
-          echo "🧪 Testing Lambda function..."
-          # 调用Lambda函数进行简单测试
-          aws lambda invoke \
-            --function-name FILE_MANAGEMENT_LAMBDA \
-            --payload '{"requestContext":{"http":{"path":"/health","method":"GET"}}}' \
-            response.json
-          cat response.json
-          echo ""
-          echo "✅ Deployment test completed!"
+          echo "✅ ${{ matrix.service.name }} deployed successfully!"
 
   deploy-user-management:
     runs-on: ubuntu-latest
