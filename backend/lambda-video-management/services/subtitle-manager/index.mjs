@@ -470,9 +470,7 @@ async function getSubtitle(event) {
       statusCode: 200,
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
-        'Cache-Control': 'public, max-age=3600',
-        'Access-Control-Allow-Origin': 'https://damonxuda.site',
-        'Access-Control-Allow-Credentials': 'true'
+        'Cache-Control': 'public, max-age=3600'
       },
       body: content
     };
