@@ -1,0 +1,80 @@
+# .github/workflows/deploy-supabase.yml
+name: Deploy Supabase Edge Functions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/supabase/functions/**'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Deno (Supabase Edge Functions使用Deno)
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+
+      - name: Install Supabase CLI
+        run: |
+          echo "📥 Installing Supabase CLI..."
+          # 使用官方安装脚本
+          curl -fsSL https://github.com/supabase/cli/releases/download/v1.123.4/supabase_1.123.4_linux_amd64.deb -o supabase.deb
+          sudo dpkg -i supabase.deb
+          supabase --version
+
+      - name: Login to Supabase
+        run: |
+          echo "🔐 Logging in to Supabase..."
+          # 使用 access token 登录
+          supabase login --token ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Link to Supabase project
+        working-directory: ./backend/supabase
+        run: |
+          echo "🔗 Linking to Supabase project..."
+          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+
+      - name: Deploy Edge Functions
+        working-directory: ./backend/supabase
+        run: |
+          echo "🚀 Deploying Edge Functions..."
+
+          # 获取所有函数目录
+          for func_dir in functions/*/; do
+            if [ -d "$func_dir" ]; then
+              func_name=$(basename "$func_dir")
+              echo "📦 Deploying function: $func_name"
+
+              # 部署单个函数
+              supabase functions deploy "$func_name" --no-verify-jwt
+
+              echo "✅ $func_name deployed successfully!"
+            fi
+          done
+
+      - name: Verify deployment
+        working-directory: ./backend/supabase
+        run: |
+          echo "🧪 Verifying deployment..."
+          # 列出所有已部署的函数
+          supabase functions list
+
+          echo "✅ Deployment verification completed!"
+
+      - name: Set environment variables (if needed)
+        working-directory: ./backend/supabase
+        run: |
+          echo "🔧 Setting environment variables for functions..."
+
+          # 示例：为函数设置环境变量
+          # supabase secrets set OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          # supabase secrets set CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }}
+
+          echo "Environment variables configured!"

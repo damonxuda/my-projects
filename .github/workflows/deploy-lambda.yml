@@ -1,0 +1,202 @@
+# .github/workflows/deploy-lambda.yml
+name: Deploy Lambda Functions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/lambda-video-management/**'
+      - 'backend/lambda-user-management/**'
+      - 'lambda-subtitle/**'
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  deploy-video-management:
+    runs-on: ubuntu-latest
+    # 只在 lambda-video-management 改变时运行
+    if: contains(github.event.head_commit.modified, 'backend/lambda-video-management') || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        working-directory: ./backend/lambda-video-management
+        run: npm ci
+
+      - name: Create deployment package
+        working-directory: ./backend/lambda-video-management
+        run: |
+          echo "📦 Creating Lambda deployment package..."
+          # 创建部署目录
+          mkdir -p deploy
+          # 复制函数代码和依赖
+          cp index.mjs deploy/
+          cp package.json deploy/
+          cp -r node_modules deploy/
+          cp -r services deploy/ 2>/dev/null || true
+          # 打包
+          cd deploy
+          zip -r ../lambda-deployment.zip . -x "*.git*" "*.DS_Store"
+          cd ..
+          ls -lh lambda-deployment.zip
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy to Lambda
+        working-directory: ./backend/lambda-video-management
+        run: |
+          echo "🚀 Deploying to Lambda..."
+
+          # 更新函数代码
+          aws lambda update-function-code \
+            --function-name FILE_MANAGEMENT_LAMBDA \
+            --zip-file fileb://lambda-deployment.zip
+
+          # 等待函数更新完成
+          aws lambda wait function-updated \
+            --function-name FILE_MANAGEMENT_LAMBDA
+
+          # 更新环境变量（如果需要）
+          aws lambda update-function-configuration \
+            --function-name FILE_MANAGEMENT_LAMBDA \
+            --environment Variables="{
+              CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }},
+              VIDEO_BUCKET_NAME=${{ secrets.VIDEO_BUCKET_NAME }},
+              YOUTUBE_API_KEY=${{ secrets.YOUTUBE_API_KEY }}
+            }"
+
+          echo "✅ Lambda function deployed successfully!"
+
+      - name: Test deployment
+        run: |
+          echo "🧪 Testing Lambda function..."
+          # 调用Lambda函数进行简单测试
+          aws lambda invoke \
+            --function-name FILE_MANAGEMENT_LAMBDA \
+            --payload '{"requestContext":{"http":{"path":"/health","method":"GET"}}}' \
+            response.json
+          cat response.json
+          echo ""
+          echo "✅ Deployment test completed!"
+
+  deploy-subtitle-manager:
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.modified, 'lambda-subtitle') || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        working-directory: ./lambda-subtitle
+        run: npm ci 2>/dev/null || echo "No package.json found"
+
+      - name: Create deployment package
+        working-directory: ./lambda-subtitle
+        run: |
+          echo "📦 Creating Subtitle Lambda deployment package..."
+          mkdir -p deploy
+
+          # 复制所有文件
+          if [ -f "index.mjs" ]; then
+            cp index.mjs deploy/
+          elif [ -f "index.js" ]; then
+            cp index.js deploy/
+          fi
+
+          cp package.json deploy/ 2>/dev/null || true
+          cp -r node_modules deploy/ 2>/dev/null || true
+
+          # 打包
+          cd deploy
+          zip -r ../lambda-deployment.zip . -x "*.git*" "*.DS_Store"
+          cd ..
+          ls -lh lambda-deployment.zip
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy to Lambda
+        working-directory: ./lambda-subtitle
+        run: |
+          echo "🚀 Deploying Subtitle Manager to Lambda..."
+
+          aws lambda update-function-code \
+            --function-name SUBTITLE_MANAGER_LAMBDA \
+            --zip-file fileb://lambda-deployment.zip
+
+          aws lambda wait function-updated \
+            --function-name SUBTITLE_MANAGER_LAMBDA
+
+          echo "✅ Subtitle Lambda deployed!"
+
+  deploy-user-management:
+    runs-on: ubuntu-latest
+    if: contains(github.event.head_commit.modified, 'backend/lambda-user-management') || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        working-directory: ./backend/lambda-user-management
+        run: npm ci
+
+      - name: Create deployment package
+        working-directory: ./backend/lambda-user-management
+        run: |
+          echo "📦 Creating User Management Lambda package..."
+          mkdir -p deploy
+          cp *.mjs deploy/ 2>/dev/null || cp *.js deploy/
+          cp package.json deploy/
+          cp -r node_modules deploy/
+          cd deploy
+          zip -r ../lambda-deployment.zip .
+          cd ..
+          ls -lh lambda-deployment.zip
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy to Lambda
+        working-directory: ./backend/lambda-user-management
+        run: |
+          echo "🚀 Deploying User Management to Lambda..."
+
+          aws lambda update-function-code \
+            --function-name USER_MANAGEMENT_LAMBDA \
+            --zip-file fileb://lambda-deployment.zip
+
+          aws lambda wait function-updated \
+            --function-name USER_MANAGEMENT_LAMBDA
+
+          echo "✅ User Management Lambda deployed!"
