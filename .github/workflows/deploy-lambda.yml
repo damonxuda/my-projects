@@ -14,7 +14,10 @@ jobs:
   deploy-video-management:
     runs-on: ubuntu-latest
     # 只在 lambda-video-management 改变时运行
-    if: contains(github.event.head_commit.modified, 'backend/lambda-video-management') || github.event_name == 'workflow_dispatch'
+    if: |
+      contains(github.event.head_commit.added, 'backend/lambda-video-management') ||
+      contains(github.event.head_commit.modified, 'backend/lambda-video-management') ||
+      github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout code
@@ -92,7 +95,10 @@ jobs:
 
   deploy-subtitle-manager:
     runs-on: ubuntu-latest
-    if: contains(github.event.head_commit.modified, 'lambda-subtitle') || github.event_name == 'workflow_dispatch'
+    if: |
+      contains(github.event.head_commit.added, 'lambda-subtitle') ||
+      contains(github.event.head_commit.modified, 'lambda-subtitle') ||
+      github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout code
@@ -152,7 +158,10 @@ jobs:
 
   deploy-user-management:
     runs-on: ubuntu-latest
-    if: contains(github.event.head_commit.modified, 'backend/lambda-user-management') || github.event_name == 'workflow_dispatch'
+    if: |
+      contains(github.event.head_commit.added, 'backend/lambda-user-management') ||
+      contains(github.event.head_commit.modified, 'backend/lambda-user-management') ||
+      github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout code
