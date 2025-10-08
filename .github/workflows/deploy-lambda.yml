@@ -97,33 +97,23 @@ jobs:
 
   deploy-user-management:
     runs-on: ubuntu-latest
-    # paths过滤已经在workflow级别生效，不需要额外的if条件
+    # user-management只有单个文件，无需依赖安装
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Install dependencies
-        working-directory: ./backend/lambda-user-management
-        run: npm ci
-
       - name: Create deployment package
         working-directory: ./backend/lambda-user-management
         run: |
           echo "📦 Creating User Management Lambda package..."
-          mkdir -p deploy
-          cp *.mjs deploy/ 2>/dev/null || cp *.js deploy/
-          cp package.json deploy/
-          cp -r node_modules deploy/
-          cd deploy
-          zip -r ../lambda-deployment.zip .
-          cd ..
-          ls -lh lambda-deployment.zip
+          echo "ℹ️  This Lambda has no dependencies, packaging code only"
+
+          # 只打包代码文件
+          zip -r function.zip *.mjs -x "*.DS_Store"
+
+          ls -lh function.zip
+          echo "✅ Package size: $(ls -lh function.zip | awk '{print $5}')"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -132,16 +122,28 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Deploy to Lambda
+      - name: Upload to S3
         working-directory: ./backend/lambda-user-management
         run: |
-          echo "🚀 Deploying User Management to Lambda..."
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          S3_KEY="lambda-deploy/user_management-${TIMESTAMP}.zip"
+
+          echo "📤 Uploading to S3: s3://damonxuda-video-files/${S3_KEY}"
+          aws s3 cp function.zip s3://damonxuda-video-files/${S3_KEY}
+
+          echo "S3_KEY=${S3_KEY}" >> $GITHUB_ENV
+
+      - name: Deploy to Lambda
+        run: |
+          echo "🚀 Deploying user_management..."
+          echo "📦 Using S3 key: ${{ env.S3_KEY }}"
 
           aws lambda update-function-code \
             --function-name user_management \
-            --zip-file fileb://lambda-deployment.zip
+            --s3-bucket damonxuda-video-files \
+            --s3-key ${{ env.S3_KEY }}
 
           aws lambda wait function-updated \
             --function-name user_management
 
-          echo "✅ User Management Lambda deployed!"
+          echo "✅ user_management deployed successfully!"
