@@ -56,8 +56,9 @@ async function generateSubtitle(event, auth) {
   console.log('📝 开始生成字幕...');
 
   const body = JSON.parse(event.body);
-  const { videoKey } = body;
+  const { videoKey, startTime, endTime } = body;
   console.log('📹 videoKey:', videoKey);
+  console.log('⏰ 时间范围:', startTime || '00:00:00', '→', endTime || '结尾');
 
   if (!videoKey) {
     console.log('❌ videoKey缺失');
@@ -99,6 +100,8 @@ async function generateSubtitle(event, auth) {
     const metadata = {
       jobName,
       videoKey,
+      startTime: startTime || '00:00:00',
+      endTime: endTime || '',
       status: 'PROCESSING',
       createdAt: new Date().toISOString(),
       transcriptionJob: response.TranscriptionJob
@@ -278,8 +281,15 @@ async function translateSubtitle(jobName) {
       Key: srtKey
     }));
 
-    const originalSrt = await srtResponse.Body.transformToString();
+    let originalSrt = await srtResponse.Body.transformToString();
     console.log(`✅ 原始SRT大小: ${originalSrt.length} 字节`);
+
+    // 3.5. 裁剪字幕时间范围（如果指定了）
+    if (metadata.startTime || metadata.endTime) {
+      console.log('✂️ 步骤3.5: 裁剪字幕时间范围...');
+      originalSrt = trimSubtitlesByTimeRange(originalSrt, metadata.startTime, metadata.endTime);
+      console.log(`✅ 裁剪后SRT大小: ${originalSrt.length} 字节`);
+    }
 
     // 4. 解析SRT并翻译文本
     console.log('🔄 步骤4: 开始翻译SRT内容...');
@@ -461,6 +471,60 @@ async function translateSrtContent(srtContent, sourceLanguage) {
 
   console.log('✅ Nova翻译完成');
   return translatedBlocks.join('\n\n');
+}
+
+/**
+ * 解析时间字符串（HH:MM:SS）为秒数
+ */
+function parseTimeToSeconds(timeStr) {
+  if (!timeStr || timeStr.trim() === '') {
+    return null;
+  }
+  const parts = timeStr.split(':');
+  if (parts.length !== 3) {
+    return null;
+  }
+  const hours = parseInt(parts[0], 10);
+  const minutes = parseInt(parts[1], 10);
+  const seconds = parseInt(parts[2], 10);
+  return hours * 3600 + minutes * 60 + seconds;
+}
+
+/**
+ * 裁剪字幕时间范围
+ */
+function trimSubtitlesByTimeRange(srtContent, startTime, endTime) {
+  console.log(`✂️ 裁剪字幕时间范围: ${startTime || '00:00:00'} → ${endTime || '结尾'}`);
+
+  const startSeconds = parseTimeToSeconds(startTime) || 0;
+  const endSeconds = parseTimeToSeconds(endTime) || 999999; // 如果没有结束时间，使用很大的数
+
+  console.log(`⏰ 时间范围(秒): ${startSeconds} → ${endSeconds}`);
+
+  const blocks = srtContent.split('\n\n').filter(b => b.trim());
+  const trimmedBlocks = [];
+  let newIndex = 1;
+
+  for (const block of blocks) {
+    const lines = block.split('\n');
+    if (lines.length < 3) continue;
+
+    // 解析时间戳：00:00:02,589 --> 00:00:05,429
+    const timeMatch = lines[1].match(/(\d{2}):(\d{2}):(\d{2}),(\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2}),(\d{3})/);
+    if (!timeMatch) continue;
+
+    const subtitleStart = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseInt(timeMatch[3]);
+    const subtitleEnd = parseInt(timeMatch[5]) * 3600 + parseInt(timeMatch[6]) * 60 + parseInt(timeMatch[7]);
+
+    // 只保留在时间范围内的字幕
+    if (subtitleEnd >= startSeconds && subtitleStart <= endSeconds) {
+      lines[0] = String(newIndex++);  // 重新编号
+      trimmedBlocks.push(lines.join('\n'));
+    }
+  }
+
+  console.log(`✅ 裁剪完成: 原${blocks.length}条 → 保留${trimmedBlocks.length}条`);
+  return trimmedBlocks.join('\n\n');
 }
 
 /**
