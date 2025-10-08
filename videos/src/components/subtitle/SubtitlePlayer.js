@@ -180,7 +180,7 @@ const SubtitlePlayer = ({
       return;
     }
 
-    if (!confirm(`确定要使用Claude重新翻译${getLanguageLabel(sourceLang)}字幕吗？这将替换现有的中文字幕。`)) {
+    if (!window.confirm(`确定要使用Claude重新翻译${getLanguageLabel(sourceLang)}字幕吗？这将替换现有的中文字幕。`)) {
       return;
     }
 
