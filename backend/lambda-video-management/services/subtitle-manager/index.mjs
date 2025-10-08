@@ -281,6 +281,50 @@ async function pollAndTranslate(jobName) {
 }
 
 /**
+ * 手动翻译已存在的字幕文件
+ */
+async function translateExistingSubtitle(videoKey, sourceLang) {
+  console.log(`🌍 手动翻译字幕: ${videoKey} (${sourceLang} -> zh-CN)`);
+
+  try {
+    // 1. 读取原字幕
+    const sourceKey = `subtitles/${videoKey}/${sourceLang}.srt`;
+    console.log(`📥 读取原字幕: ${sourceKey}`);
+
+    const srtResponse = await s3Client.send(new GetObjectCommand({
+      Bucket: VIDEO_BUCKET,
+      Key: sourceKey
+    }));
+
+    const originalSrt = await srtResponse.Body.transformToString();
+    console.log(`✅ 原始SRT大小: ${originalSrt.length} 字节`);
+
+    // 2. 翻译
+    console.log('🔄 开始翻译...');
+    const translatedSrt = await translateSrtContent(originalSrt, sourceLang);
+    console.log(`✅ 翻译完成，大小: ${translatedSrt.length} 字节`);
+
+    // 3. 保存中文字幕
+    const chineseKey = `subtitles/${videoKey}/zh-CN.srt`;
+    console.log(`📤 保存中文字幕: ${chineseKey}`);
+
+    await s3Client.send(new PutObjectCommand({
+      Bucket: VIDEO_BUCKET,
+      Key: chineseKey,
+      Body: translatedSrt,
+      ContentType: 'text/plain; charset=utf-8'
+    }));
+
+    console.log(`✅ ${videoKey} 中文字幕生成完成！`);
+    return { success: true, chineseKey };
+
+  } catch (error) {
+    console.error('❌ 翻译失败:', error);
+    throw error;
+  }
+}
+
+/**
  * 翻译字幕文件
  */
 async function translateSubtitle(jobName) {
@@ -637,6 +681,32 @@ export const handler = async (event) => {
     // GET /subtitles/list - 列出字幕
     if (method === 'GET' && path.includes('/subtitles/list')) {
       return await listSubtitles(event, auth);
+    }
+
+    // POST /subtitles/translate - 手动翻译已存在的字幕
+    if (method === 'POST' && path.includes('/subtitles/translate')) {
+      const body = JSON.parse(event.body);
+      const { videoKey, sourceLang } = body;
+
+      if (!videoKey || !sourceLang) {
+        return {
+          statusCode: 400,
+          body: JSON.stringify({ error: 'videoKey and sourceLang are required' })
+        };
+      }
+
+      try {
+        const result = await translateExistingSubtitle(videoKey, sourceLang);
+        return {
+          statusCode: 200,
+          body: JSON.stringify(result)
+        };
+      } catch (error) {
+        return {
+          statusCode: 500,
+          body: JSON.stringify({ error: error.message })
+        };
+      }
     }
 
     // 未知路由
