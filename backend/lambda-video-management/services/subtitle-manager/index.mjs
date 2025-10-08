@@ -1,12 +1,12 @@
 import { S3Client, GetObjectCommand, PutObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { TranscribeClient, StartTranscriptionJobCommand, GetTranscriptionJobCommand } from '@aws-sdk/client-transcribe';
-import { TranslateClient, TranslateTextCommand } from '@aws-sdk/client-translate';
+import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { verifyTokenAndCheckAccess, isAdmin as checkIsAdmin } from './shared/auth.mjs';
 
 const s3Client = new S3Client({ region: process.env.AWS_REGION || 'us-east-1' });
 const transcribeClient = new TranscribeClient({ region: process.env.AWS_REGION || 'us-east-1' });
-const translateClient = new TranslateClient({ region: process.env.AWS_REGION || 'us-east-1' });
+const bedrockClient = new BedrockRuntimeClient({ region: 'ap-northeast-1' });
 
 // 管理员邮箱列表
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim());
@@ -420,48 +420,122 @@ async function translateSubtitle(jobName) {
 }
 
 /**
- * 翻译SRT内容
+ * 使用Claude翻译文本
+ */
+async function translateWithClaude(texts, sourceLanguage) {
+  const prompt = `请将以下${sourceLanguage}字幕翻译成简体中文。要求：
+1. 保持口语化和自然
+2. 准确传达原意
+3. 使用日常用语，避免生硬
+4. 每行一个翻译结果，顺序不变
+
+原文：
+${texts.map((t, i) => `${i + 1}. ${t}`).join('\n')}
+
+翻译：`;
+
+  try {
+    const command = new InvokeModelCommand({
+      modelId: 'anthropic.claude-3-5-sonnet-20241022-v2:0',
+      body: JSON.stringify({
+        anthropic_version: 'bedrock-2023-05-31',
+        max_tokens: 2000,
+        messages: [
+          {
+            role: 'user',
+            content: prompt
+          }
+        ]
+      })
+    });
+
+    const response = await bedrockClient.send(command);
+    const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+    const translatedText = responseBody.content[0].text;
+
+    // 解析Claude的响应，提取翻译结果
+    const lines = translatedText.split('\n').filter(l => l.trim());
+    const translations = [];
+
+    for (const line of lines) {
+      // 匹配 "1. 译文" 或 "译文" 格式
+      const match = line.match(/^\d+\.\s*(.+)$/) || [null, line.trim()];
+      if (match[1]) {
+        translations.push(match[1]);
+      }
+    }
+
+    return translations;
+  } catch (error) {
+    console.error('Claude translation error:', error);
+    throw error;
+  }
+}
+
+/**
+ * 翻译SRT内容（使用Claude批量翻译）
  */
 async function translateSrtContent(srtContent, sourceLanguage) {
-  // 解析SRT格式
+  console.log('🤖 使用Claude 3.5 Sonnet翻译...');
+
   const subtitleBlocks = srtContent.split('\n\n').filter(block => block.trim());
   const translatedBlocks = [];
+  const batchSize = 5; // 每次翻译5条字幕
 
-  for (const block of subtitleBlocks) {
-    const lines = block.split('\n');
+  for (let i = 0; i < subtitleBlocks.length; i += batchSize) {
+    const batch = subtitleBlocks.slice(i, i + batchSize);
+    const texts = [];
+    const blockInfo = [];
 
-    if (lines.length < 3) {
-      translatedBlocks.push(block);
-      continue;
+    // 提取文本
+    for (const block of batch) {
+      const lines = block.split('\n');
+      if (lines.length < 3) {
+        blockInfo.push({ index: lines[0], timestamp: lines[1], text: '', skip: true });
+        continue;
+      }
+
+      const index = lines[0];
+      const timestamp = lines[1];
+      const text = lines.slice(2).join('\n');
+
+      blockInfo.push({ index, timestamp, text, skip: false });
+      texts.push(text);
     }
 
-    const index = lines[0];
-    const timestamp = lines[1];
-    const text = lines.slice(2).join('\n');
-
-    // 翻译文本
     try {
-      const command = new TranslateTextCommand({
-        Text: text,
-        SourceLanguageCode: sourceLanguage.split('-')[0], // ja-JP -> ja
-        TargetLanguageCode: 'zh'
-      });
+      // 批量翻译
+      const translations = await translateWithClaude(texts, sourceLanguage);
 
-      const response = await translateClient.send(command);
-      const translatedText = response.TranslatedText;
+      // 组装结果
+      let translationIndex = 0;
+      for (const info of blockInfo) {
+        if (info.skip) {
+          translatedBlocks.push(`${info.index}\n${info.timestamp}\n`);
+        } else {
+          const translatedText = translations[translationIndex] || info.text;
+          translatedBlocks.push(`${info.index}\n${info.timestamp}\n${translatedText}`);
+          translationIndex++;
+        }
+      }
 
-      translatedBlocks.push(`${index}\n${timestamp}\n${translatedText}`);
+      if ((i + batchSize) % 20 === 0) {
+        console.log(`  进度: ${Math.min(i + batchSize, subtitleBlocks.length)}/${subtitleBlocks.length}`);
+      }
+
+      // 避免过快调用API
+      await new Promise(resolve => setTimeout(resolve, 500));
 
     } catch (error) {
-      console.error('Translation error for block:', error);
+      console.error(`Translation error for batch ${i}:`, error);
       // 如果翻译失败，保留原文
-      translatedBlocks.push(block);
+      for (const info of blockInfo) {
+        translatedBlocks.push(`${info.index}\n${info.timestamp}\n${info.text}`);
+      }
     }
-
-    // 避免超过AWS Translate限速
-    await new Promise(resolve => setTimeout(resolve, 100));
   }
 
+  console.log('✅ Claude翻译完成');
   return translatedBlocks.join('\n\n');
 }
 
