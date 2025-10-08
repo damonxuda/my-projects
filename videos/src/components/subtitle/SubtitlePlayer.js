@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Languages, Loader } from 'lucide-react';
 
 // 辅助函数：获取语言显示名称
@@ -28,7 +28,6 @@ const SubtitlePlayer = ({
   const [currentSubtitle, setCurrentSubtitle] = useState('none');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [translating, setTranslating] = useState(false);
 
   // 加载字幕文件列表
   useEffect(() => {
@@ -171,58 +170,6 @@ const SubtitlePlayer = ({
     }
   };
 
-  // 重新翻译字幕（使用Claude）
-  const retranslateSubtitle = async () => {
-    // 找到原语言字幕（非中文的第一个字幕）
-    const sourceLang = Object.keys(subtitles).find(lang => lang !== 'zh-CN');
-    if (!sourceLang) {
-      alert('没有找到原语言字幕');
-      return;
-    }
-
-    if (!window.confirm(`确定要使用Claude重新翻译${getLanguageLabel(sourceLang)}字幕吗？这将替换现有的中文字幕。`)) {
-      return;
-    }
-
-    setTranslating(true);
-    setError('');
-
-    try {
-      const token = await getToken();
-      const response = await fetch(`${apiUrl}/subtitles/translate`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          videoKey,
-          sourceLang
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('翻译失败');
-      }
-
-      const result = await response.json();
-      console.log('✅ 翻译成功:', result);
-      alert('翻译完成！正在重新加载字幕...');
-
-      // 重新加载字幕列表
-      await loadSubtitles();
-
-      // 自动切换到中文字幕
-      setCurrentSubtitle('zh-CN');
-
-    } catch (err) {
-      console.error('翻译失败:', err);
-      alert('翻译失败: ' + err.message);
-    } finally {
-      setTranslating(false);
-    }
-  };
-
   const availableSubtitles = Object.keys(subtitles);
 
   // 如果没有字幕，不显示控制器
@@ -244,59 +191,35 @@ const SubtitlePlayer = ({
         )}
 
         {!loading && availableSubtitles.length > 0 && (
-          <>
-            <div className="flex gap-2 flex-wrap">
-              <button
-                onClick={() => changeSubtitle('none')}
-                className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                  currentSubtitle === 'none'
-                    ? 'bg-purple-600 text-white'
-                    : 'bg-white border border-gray-300 text-gray-700 hover:border-purple-300'
-                }`}
-              >
-                无字幕
-              </button>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => changeSubtitle('none')}
+              className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                currentSubtitle === 'none'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-white border border-gray-300 text-gray-700 hover:border-purple-300'
+              }`}
+            >
+              无字幕
+            </button>
 
-              {availableSubtitles.map((lang) => {
-                const label = getLanguageLabel(lang);
-                return (
-                  <button
-                    key={lang}
-                    onClick={() => changeSubtitle(lang)}
-                    className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                      currentSubtitle === lang
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-white border border-gray-300 text-gray-700 hover:border-purple-300'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* 重新翻译按钮 - 仅当有原语言字幕时显示 */}
-            {availableSubtitles.some(lang => lang !== 'zh-CN') && (
-              <button
-                onClick={retranslateSubtitle}
-                disabled={translating}
-                className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                  translating
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-blue-500 text-white hover:bg-blue-600'
-                }`}
-              >
-                {translating ? (
-                  <span className="flex items-center gap-2">
-                    <Loader className="animate-spin" size={14} />
-                    翻译中...
-                  </span>
-                ) : (
-                  `🔄 重新翻译为中文`
-                )}
-              </button>
-            )}
-          </>
+            {availableSubtitles.map((lang) => {
+              const label = getLanguageLabel(lang);
+              return (
+                <button
+                  key={lang}
+                  onClick={() => changeSubtitle(lang)}
+                  className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                    currentSubtitle === lang
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-white border border-gray-300 text-gray-700 hover:border-purple-300'
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
         )}
 
         {!loading && availableSubtitles.length === 0 && (

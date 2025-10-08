@@ -112,15 +112,8 @@ async function generateSubtitle(event, auth) {
     }));
     console.log('✅ 元数据已保存到S3');
 
-    // 异步触发后台轮询和翻译（不等待）
-    pollAndTranslate(jobName).catch(err => {
-      console.error('❌ Background translation failed:', err);
-      console.error('Error details:', JSON.stringify({
-        message: err.message,
-        stack: err.stack,
-        name: err.name
-      }));
-    });
+    // S3事件通知会自动触发翻译，不需要在这里轮询
+    console.log('💡 Transcribe完成后，S3事件将自动触发翻译');
 
     return {
       statusCode: 200,
@@ -129,7 +122,7 @@ async function generateSubtitle(event, auth) {
         success: true,
         jobName,
         jobId: jobName,
-        message: '字幕生成任务已启动（自动识别语言）',
+        message: '字幕生成任务已启动（自动识别语言），完成后将自动翻译为中文',
         estimatedTime: '5-15分钟'
       })
     };
@@ -203,81 +196,6 @@ async function getSubtitleStatus(event, auth) {
       })
     };
   }
-}
-
-/**
- * 轮询Transcribe任务并在完成后翻译
- */
-async function pollAndTranslate(jobName) {
-  console.log(`🔄 开始轮询任务状态: ${jobName}`);
-  const maxAttempts = 30; // 最多30次，每次10秒，总共5分钟
-  const startTime = Date.now();
-
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    try {
-      const elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-      console.log(`📊 轮询尝试 ${attempt + 1}/${maxAttempts} (已等待${elapsedSeconds}秒)`);
-
-      const command = new GetTranscriptionJobCommand({
-        TranscriptionJobName: jobName
-      });
-      const response = await transcribeClient.send(command);
-      const job = response.TranscriptionJob;
-      const status = job.TranscriptionJobStatus;
-
-      console.log(`📊 任务状态: ${status}`, JSON.stringify({
-        languageCode: job.LanguageCode,
-        createdAt: job.CreationTime,
-        completedAt: job.CompletionTime
-      }));
-
-      if (status === 'COMPLETED') {
-        console.log('✅ 转录完成，开始翻译...');
-        try {
-          await translateSubtitle(jobName);
-          console.log('✅ 翻译完成！');
-        } catch (translateError) {
-          console.error('❌ 翻译失败:', translateError);
-          console.error('翻译错误详情:', JSON.stringify({
-            message: translateError.message,
-            stack: translateError.stack
-          }));
-          throw translateError;
-        }
-        return;
-      } else if (status === 'FAILED') {
-        const failureReason = job.FailureReason || 'Unknown';
-        console.error('❌ Transcribe任务失败:', failureReason);
-        throw new Error(`Transcription failed: ${failureReason}`);
-      }
-
-      // 等待10秒再检查
-      if (attempt < maxAttempts - 1) {
-        console.log('⏳ 等待10秒后继续轮询...');
-        await new Promise(resolve => setTimeout(resolve, 10000));
-      }
-    } catch (error) {
-      console.error(`❌ 轮询错误 (尝试 ${attempt + 1}):`, error);
-      console.error('错误详情:', JSON.stringify({
-        message: error.message,
-        name: error.name,
-        code: error.code
-      }));
-
-      // 如果是AWS API错误，不继续轮询
-      if (error.name === 'ResourceNotFoundException' || error.name === 'BadRequestException') {
-        throw error;
-      }
-
-      // 其他错误继续尝试
-      if (attempt < maxAttempts - 1) {
-        await new Promise(resolve => setTimeout(resolve, 10000));
-      }
-    }
-  }
-
-  console.log('⚠️ 轮询超时，任务可能仍在进行');
-  throw new Error('Polling timeout: Job may still be in progress');
 }
 
 /**
@@ -717,6 +635,33 @@ async function listSubtitles(event, auth) {
  */
 export const handler = async (event) => {
   console.log('Event:', JSON.stringify(event, null, 2));
+
+  // 检查是否是S3事件（Transcribe完成后的通知）
+  if (event.Records && event.Records[0]?.eventSource === 'aws:s3') {
+    console.log('📨 收到S3事件通知');
+
+    for (const record of event.Records) {
+      const bucket = record.s3.bucket.name;
+      const key = decodeURIComponent(record.s3.object.key.replace(/\+/g, ' '));
+
+      console.log(`📂 S3事件: ${bucket}/${key}`);
+
+      // 只处理subtitles-temp目录下的.srt文件（Transcribe输出）
+      if (key.startsWith('subtitles-temp/') && key.endsWith('.srt')) {
+        const jobName = key.split('/')[1]; // 提取jobName
+        console.log(`🎯 检测到Transcribe输出，jobName: ${jobName}`);
+
+        try {
+          await translateSubtitle(jobName);
+          console.log(`✅ 字幕翻译完成: ${jobName}`);
+        } catch (error) {
+          console.error(`❌ 翻译失败: ${jobName}`, error);
+        }
+      }
+    }
+
+    return { statusCode: 200, body: 'Processed' };
+  }
 
   // 处理OPTIONS请求（CORS预检）
   if (event.requestContext?.http?.method === 'OPTIONS' || event.httpMethod === 'OPTIONS') {
