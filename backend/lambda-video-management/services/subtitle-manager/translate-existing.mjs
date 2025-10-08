@@ -1,53 +1,125 @@
-// 临时脚本：为现有字幕生成中文译文
+// 临时脚本：为现有字幕生成中文译文（使用Claude）
 import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
-import { TranslateClient, TranslateTextCommand } from '@aws-sdk/client-translate';
+import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
 
 const s3Client = new S3Client({ region: 'ap-northeast-1' });
-const translateClient = new TranslateClient({ region: 'ap-northeast-1' });
+const bedrockClient = new BedrockRuntimeClient({ region: 'ap-northeast-1' });
 const VIDEO_BUCKET = 'damonxuda-video-files';
+
+// 使用Claude翻译一批文本
+async function translateWithClaude(texts, sourceLanguage) {
+  const languageMap = {
+    'de': '德语',
+    'en': '英语',
+    'ja': '日语',
+    'es': '西班牙语',
+    'fr': '法语'
+  };
+
+  const langCode = sourceLanguage.split('-')[0];
+  const langName = languageMap[langCode] || sourceLanguage;
+
+  const prompt = `请将以下${langName}字幕翻译成简体中文。要求：
+1. 保持口语化和自然
+2. 准确传达原意
+3. 使用日常用语，避免生硬的直译
+4. 每行一个翻译结果，顺序不变
+
+字幕内容：
+${texts.map((t, i) => `${i + 1}. ${t}`).join('\n')}
+
+请只返回翻译结果，每行一个，不要包含序号。`;
+
+  try {
+    const command = new InvokeModelCommand({
+      modelId: 'anthropic.claude-3-5-sonnet-20241022-v2:0',
+      body: JSON.stringify({
+        anthropic_version: 'bedrock-2023-05-31',
+        max_tokens: 2000,
+        temperature: 0.3,
+        messages: [{
+          role: 'user',
+          content: prompt
+        }]
+      })
+    });
+
+    const response = await bedrockClient.send(command);
+    const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+    const translatedText = responseBody.content[0].text;
+
+    return translatedText.split('\n').filter(line => line.trim());
+  } catch (error) {
+    console.error('Claude翻译失败:', error.message);
+    throw error;
+  }
+}
 
 // 翻译SRT内容
 async function translateSrtContent(srtContent, sourceLanguage) {
-  console.log(`🔄 开始翻译 (${sourceLanguage} -> zh)...`);
+  console.log(`🔄 开始使用Claude翻译 (${sourceLanguage} -> zh)...`);
 
   const subtitleBlocks = srtContent.split('\n\n').filter(block => block.trim());
   const translatedBlocks = [];
 
-  for (let i = 0; i < subtitleBlocks.length; i++) {
-    const block = subtitleBlocks[i];
-    const lines = block.split('\n');
+  // 批量处理，每次5条
+  const BATCH_SIZE = 5;
 
-    if (lines.length < 3) {
-      translatedBlocks.push(block);
-      continue;
-    }
+  for (let i = 0; i < subtitleBlocks.length; i += BATCH_SIZE) {
+    const batch = subtitleBlocks.slice(i, Math.min(i + BATCH_SIZE, subtitleBlocks.length));
+    const texts = [];
+    const blockData = [];
 
-    const index = lines[0];
-    const timestamp = lines[1];
-    const text = lines.slice(2).join('\n');
-
-    try {
-      const command = new TranslateTextCommand({
-        Text: text,
-        SourceLanguageCode: sourceLanguage.split('-')[0], // de-DE -> de
-        TargetLanguageCode: 'zh'
-      });
-
-      const response = await translateClient.send(command);
-      const translatedText = response.TranslatedText;
-
-      translatedBlocks.push(`${index}\n${timestamp}\n${translatedText}`);
-
-      if ((i + 1) % 10 === 0) {
-        console.log(`  进度: ${i + 1}/${subtitleBlocks.length}`);
+    for (const block of batch) {
+      const lines = block.split('\n');
+      if (lines.length < 3) {
+        blockData.push({ skip: true, block });
+        continue;
       }
 
-      // 避免超过AWS Translate限速
-      await new Promise(resolve => setTimeout(resolve, 100));
+      const index = lines[0];
+      const timestamp = lines[1];
+      const text = lines.slice(2).join('\n');
 
-    } catch (error) {
-      console.error(`翻译失败 (block ${index}):`, error.message);
-      translatedBlocks.push(block);
+      blockData.push({ index, timestamp, text });
+      texts.push(text);
+    }
+
+    if (texts.length > 0) {
+      try {
+        const translations = await translateWithClaude(texts, sourceLanguage);
+
+        let textIndex = 0;
+        for (const data of blockData) {
+          if (data.skip) {
+            translatedBlocks.push(data.block);
+          } else {
+            const translatedText = translations[textIndex] || data.text;
+            translatedBlocks.push(`${data.index}\n${data.timestamp}\n${translatedText}`);
+            textIndex++;
+          }
+        }
+
+        console.log(`  进度: ${Math.min(i + BATCH_SIZE, subtitleBlocks.length)}/${subtitleBlocks.length}`);
+
+        // 避免请求过快
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+      } catch (error) {
+        console.error(`批次翻译失败 (${i}-${i + BATCH_SIZE}):`, error.message);
+        // 失败时保留原文
+        for (const data of blockData) {
+          if (data.skip) {
+            translatedBlocks.push(data.block);
+          } else {
+            translatedBlocks.push(`${data.index}\n${data.timestamp}\n${data.text}`);
+          }
+        }
+      }
+    } else {
+      for (const data of blockData) {
+        translatedBlocks.push(data.block);
+      }
     }
   }
 
