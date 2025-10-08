@@ -8,6 +8,7 @@ on:
       - 'backend/lambda-video-management/**'
       - 'backend/lambda-user-management/**'
       - 'lambda-subtitle/**'
+      - '.github/workflows/deploy-lambda.yml'  # workflow 自身修改也触发
   workflow_dispatch: # 允许手动触发
 
 jobs:
