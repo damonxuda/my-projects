@@ -427,8 +427,76 @@
       </div>
     </div>
 
+    <!-- Clerk SDK for SSO with fallback -->
+    <script>
+      function loadClerkSDK() {
+        const primaryScript = document.createElement('script');
+        primaryScript.crossOrigin = 'anonymous';
+        primaryScript.setAttribute('data-clerk-publishable-key', '${CLERK_PUBLISHABLE_KEY}');
+        primaryScript.src = 'https://clerk.damonxuda.site/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+        primaryScript.type = 'text/javascript';
+        primaryScript.onload = function() { console.log('✅ Clerk SDK加载成功 (主CDN)'); };
+        primaryScript.onerror = function() {
+          console.warn('⚠️ 主Clerk CDN加载失败，尝试备用CDN...');
+          const fallbackScript = document.createElement('script');
+          fallbackScript.crossOrigin = 'anonymous';
+          fallbackScript.setAttribute('data-clerk-publishable-key', '${CLERK_PUBLISHABLE_KEY}');
+          fallbackScript.src = 'https://unpkg.com/@clerk/clerk-js@latest/dist/clerk.browser.js';
+          fallbackScript.type = 'text/javascript';
+          fallbackScript.onload = function() { console.log('✅ Clerk SDK加载成功 (备用CDN)'); };
+          fallbackScript.onerror = function() {
+            console.error('❌ 所有Clerk CDN都无法加载，将以离线模式继续');
+            window.clerkInitialized = true;
+            window.dispatchEvent(new CustomEvent('clerkReady'));
+          };
+          document.head.appendChild(fallbackScript);
+        };
+        document.head.appendChild(primaryScript);
+      }
+      setTimeout(loadClerkSDK, 100);
+    </script>
+
+    <!-- Clerk 初始化 -->
+    <script>
+      window.clerkInitialized = false;
+      window.addEventListener('load', async () => {
+        if (window.Clerk) {
+          try {
+            await window.Clerk.load();
+            console.log('✅ Clerk 初始化成功');
+            if (window.Clerk.user) {
+              console.log('👤 用户: ' + window.Clerk.user.id);
+            }
+            window.clerkInitialized = true;
+            window.dispatchEvent(new CustomEvent('clerkReady'));
+          } catch (error) {
+            console.error('❌ Clerk 初始化失败:', error);
+            window.clerkInitialized = true;
+            window.dispatchEvent(new CustomEvent('clerkReady'));
+          }
+        } else {
+          window.clerkInitialized = true;
+          window.dispatchEvent(new CustomEvent('clerkReady'));
+        }
+      });
+    </script>
+
+    <!-- Supabase 客户端 -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+    <!-- 环境变量配置 -->
+    <script>
+      window.REACT_APP_SUPABASE_URL = '{{SUPABASE_URL}}';
+      window.REACT_APP_SUPABASE_ANON_KEY = '{{SUPABASE_ANON_KEY}}';
+      if (window.REACT_APP_SUPABASE_URL === '{{SUPABASE_URL}}') {
+        window.REACT_APP_SUPABASE_URL = 'https://qeedsnqbudbogqpcerqb.supabase.co';
+        window.REACT_APP_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlZWRzbnFidWRib2dxcGNlcnFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NjMxOTIsImV4cCI6MjA3MDAzOTE5Mn0.-hWnQwcpvXjX1dMJcNaQC7AUp8jYC9ozhgjFzSHeAGo';
+      }
+    </script>
+
     <!-- 引入依赖 -->
-    <script src="../shared/js/clerkUnifiedAuth.js"></script>
+    <script src="../shared/js/gameConfig.js"></script>
+    <script src="../shared/js/smartGameStorage.js"></script>
     <script src="../shared/js/smartGameStorage-edge-function.js"></script>
     <script src="puzzle15.js"></script>
     <script src="levels.js"></script>

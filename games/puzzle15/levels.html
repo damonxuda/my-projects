@@ -239,8 +239,128 @@
       </div>
     </div>
 
+    <!-- Clerk SDK for SSO with fallback -->
+    <script>
+      // Clerk SDK加载检测和备用方案
+      function loadClerkSDK() {
+        const primaryScript = document.createElement('script');
+        primaryScript.crossOrigin = 'anonymous';
+        primaryScript.setAttribute('data-clerk-publishable-key', '${CLERK_PUBLISHABLE_KEY}');
+        primaryScript.src = 'https://clerk.damonxuda.site/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+        primaryScript.type = 'text/javascript';
+
+        primaryScript.onload = function() {
+          console.log('✅ Clerk SDK加载成功 (主CDN)');
+        };
+
+        primaryScript.onerror = function() {
+          console.warn('⚠️ 主Clerk CDN加载失败，尝试备用CDN...');
+
+          // 尝试备用CDN
+          const fallbackScript = document.createElement('script');
+          fallbackScript.crossOrigin = 'anonymous';
+          fallbackScript.setAttribute('data-clerk-publishable-key', '${CLERK_PUBLISHABLE_KEY}');
+          fallbackScript.src = 'https://unpkg.com/@clerk/clerk-js@latest/dist/clerk.browser.js';
+          fallbackScript.type = 'text/javascript';
+
+          fallbackScript.onload = function() {
+            console.log('✅ Clerk SDK加载成功 (备用CDN)');
+          };
+
+          fallbackScript.onerror = function() {
+            console.error('❌ 所有Clerk CDN都无法加载，将以离线模式继续');
+            // 触发离线模式初始化
+            window.clerkInitialized = true;
+            window.dispatchEvent(new CustomEvent('clerkReady'));
+          };
+
+          document.head.appendChild(fallbackScript);
+        };
+
+        document.head.appendChild(primaryScript);
+      }
+
+      // 延迟加载给页面更多时间初始化
+      setTimeout(loadClerkSDK, 100);
+    </script>
+
+    <!-- Clerk 初始化和登录UI -->
+    <script>
+      window.clerkInitialized = false;
+      window.addEventListener('load', async () => {
+        if (window.Clerk) {
+          try {
+            await window.Clerk.load();
+            console.log('✅ Clerk 初始化成功');
+            console.log('   - Clerk loaded:', window.Clerk.loaded);
+
+            // 尝试手动恢复session（重要：从Cookie恢复登录状态）
+            console.log('🔄 尝试从Cookie恢复用户session...');
+            try {
+              await window.Clerk.client.sessions.getSessionList();
+              console.log('✅ Session列表获取成功');
+            } catch (e) {
+              console.warn('⚠️ Session恢复可能需要时间:', e.message);
+            }
+
+            // 详细的Clerk状态调试信息
+            console.log('🔍 详细的Clerk状态调试:');
+            console.log('   - window.Clerk:', window.Clerk);
+            console.log('   - window.Clerk.loaded:', window.Clerk ? window.Clerk.loaded : 'N/A');
+            console.log('   - window.Clerk.user:', window.Clerk ? window.Clerk.user : 'N/A');
+            console.log('   - window.Clerk.session:', window.Clerk ? window.Clerk.session : 'N/A');
+
+            // 由于JWT解析是即时的，无需等待网络验证，直接完成初始化
+            console.log('✅ 用户状态检查完成');
+            if (window.Clerk.user) {
+              console.log('👤 最终用户信息:');
+              console.log('   - User ID:', window.Clerk.user.id);
+              console.log('   - Email:', window.Clerk.user.primaryEmailAddress?.emailAddress);
+            } else {
+              console.log('❌ 最终结果：用户未登录，将以游客模式继续');
+            }
+
+            // 标记Clerk已初始化
+            window.clerkInitialized = true;
+
+            // 触发自定义事件通知游戏可以开始初始化
+            window.dispatchEvent(new CustomEvent('clerkReady'));
+
+          } catch (error) {
+            console.error('❌ Clerk 初始化失败:', error);
+            // 即使失败也要让游戏继续，以游客模式运行
+            window.clerkInitialized = true;
+            window.dispatchEvent(new CustomEvent('clerkReady'));
+          }
+        } else {
+          console.error('❌ Clerk SDK 未加载');
+          // 没有Clerk SDK也要让游戏继续
+          window.clerkInitialized = true;
+          window.dispatchEvent(new CustomEvent('clerkReady'));
+        }
+      });
+
+    </script>
+
+    <!-- Supabase 客户端 -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+    <!-- 环境变量配置 -->
+    <script>
+      // GitHub Actions 会在部署时替换这些占位符
+      window.REACT_APP_SUPABASE_URL = '{{SUPABASE_URL}}';
+      window.REACT_APP_SUPABASE_ANON_KEY = '{{SUPABASE_ANON_KEY}}';
+
+      // 本地开发时的fallback（如果占位符未被替换）
+      if (window.REACT_APP_SUPABASE_URL === '{{SUPABASE_URL}}') {
+        window.REACT_APP_SUPABASE_URL = 'https://qeedsnqbudbogqpcerqb.supabase.co';
+        window.REACT_APP_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlZWRzbnFidWRib2dxcGNlcnFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NjMxOTIsImV4cCI6MjA3MDAzOTE5Mn0.-hWnQwcpvXjX1dMJcNaQC7AUp8jYC9ozhgjFzSHeAGo';
+      }
+    </script>
+
     <!-- 引入依赖 -->
-    <script src="../shared/js/clerkUnifiedAuth.js"></script>
+    <script src="../shared/js/gameConfig.js"></script>
+    <script src="../shared/js/smartGameStorage.js"></script>
     <script src="../shared/js/smartGameStorage-edge-function.js"></script>
     <script src="puzzle15.js"></script>
     <script src="levels.js"></script>
