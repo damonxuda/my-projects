@@ -270,6 +270,58 @@
       </div>
     </div>
 
+    <!-- Clerk SDK for SSO with fallback -->
+    <script>
+      // Clerk SDK加载检测和备用方案
+      function loadClerkSDK() {
+        const primaryScript = document.createElement('script');
+        primaryScript.crossOrigin = 'anonymous';
+        primaryScript.setAttribute('data-clerk-publishable-key', 'pk_live_Y2xlcmsuZGFtb254dWRhLnNpdGUk');
+        primaryScript.src = 'https://clerk.damonxuda.site/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+        primaryScript.type = 'text/javascript';
+
+        primaryScript.onload = function() {
+          console.log('✅ Clerk SDK加载成功 (主CDN)');
+        };
+
+        primaryScript.onerror = function() {
+          console.warn('⚠️ 主Clerk CDN加载失败，尝试备用CDN...');
+
+          // 尝试备用CDN
+          const fallbackScript = document.createElement('script');
+          fallbackScript.crossOrigin = 'anonymous';
+          fallbackScript.setAttribute('data-clerk-publishable-key', 'pk_live_Y2xlcmsuZGFtb254dWRhLnNpdGUk');
+          fallbackScript.src = 'https://unpkg.com/@clerk/clerk-js@latest/dist/clerk.browser.js';
+          fallbackScript.type = 'text/javascript';
+
+          fallbackScript.onload = function() {
+            console.log('✅ Clerk SDK加载成功 (备用CDN)');
+          };
+
+          fallbackScript.onerror = function() {
+            console.error('❌ 所有Clerk CDN都无法加载，将以离线模式继续');
+          };
+
+          document.head.appendChild(fallbackScript);
+        };
+
+        document.head.appendChild(primaryScript);
+      }
+
+      // 延迟加载给页面更多时间初始化
+      setTimeout(loadClerkSDK, 100);
+    </script>
+
+    <!-- Supabase 客户端 -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+    <!-- 环境变量配置 -->
+    <script>
+      // 设置 Supabase 环境变量
+      window.REACT_APP_SUPABASE_URL = 'https://qeedsnqbudbogqpcerqb.supabase.co';
+      window.REACT_APP_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlZWRzbnFidWRib2dxcGNlcnFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NjMxOTIsImV4cCI6MjA3MDAzOTE5Mn0.-hWnQwcpvXjX1dMJcNaQC7AUp8jYC9ozhgjFzSHeAGo';
+    </script>
+
     <!-- 引入依赖 -->
     <script src="../shared/js/clerkUnifiedAuth.js"></script>
     <!-- 智能存储系统 -->

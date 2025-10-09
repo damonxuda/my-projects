@@ -6,6 +6,9 @@
 
   console.log('🎮 游戏模块统一认证系统开始初始化');
 
+  // 初始化全局标志
+  window.clerkInitialized = false;
+
   // ===========================================
   // 1. 统一的token获取机制
   // ===========================================
@@ -230,6 +233,27 @@
       // 初始化认证状态
       await gameAuth.refresh();
 
+      // 🔥 立即初始化 mockClerkUser（用于缓存token访问）
+      if (window.Clerk && window.Clerk.user && window.Clerk.session) {
+        try {
+          const token = await window.Clerk.session.getToken();
+          window.mockClerkUser = {
+            ...window.Clerk.user,
+            isAuthenticated: true,
+            sessionId: window.Clerk.session.id,
+            originalSessionToken: token,
+            authSource: 'games-unified-auth-init'
+          };
+          console.log('✅ [Games] 已初始化mockClerkUser（含缓存token）');
+        } catch (error) {
+          console.warn('⚠️ [Games] 初始化mockClerkUser失败:', error);
+          window.mockClerkUser = null;
+        }
+      } else {
+        window.mockClerkUser = null;
+        console.log('ℹ️ [Games] 未登录状态，mockClerkUser为null');
+      }
+
       // 设置认证状态监听
       if (window.Clerk) {
         window.Clerk.addListener(async ({ user, session }) => {
@@ -244,7 +268,7 @@
                 isAuthenticated: true,
                 sessionId: session.id,
                 originalSessionToken: token,
-                authSource: 'games-unified-auth'
+                authSource: 'games-unified-auth-listener'
               };
               console.log('✅ [Games] 已更新mockClerkUser');
             } catch (error) {
@@ -273,13 +297,26 @@
       console.log('👤 [Games] 当前认证状态:', {
         isSignedIn,
         userId: user?.id,
-        email: user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress
+        email: user?.primaryEmailAddress?.emailAddress || user?.emailAddresses?.[0]?.emailAddress,
+        mockClerkUser: !!window.mockClerkUser,
+        hasToken: !!window.mockClerkUser?.originalSessionToken
       });
+
+      // 🔥 设置全局标志并触发事件（让游戏知道认证系统已就绪）
+      window.clerkInitialized = true;
+      window.dispatchEvent(new CustomEvent('clerkReady'));
+      console.log('🎉 [Games] 已触发 clerkReady 事件');
 
       return gameAuth;
 
     } catch (error) {
       console.error('❌ [Games] 统一认证系统初始化失败:', error);
+
+      // 即使失败也要设置标志，让游戏以游客模式继续
+      window.clerkInitialized = true;
+      window.dispatchEvent(new CustomEvent('clerkReady'));
+      console.log('⚠️ [Games] 认证失败，已触发 clerkReady 事件（游客模式）');
+
       return null;
     }
   }
