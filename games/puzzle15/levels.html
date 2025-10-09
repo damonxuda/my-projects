@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0"
+    />
+    <title>数字华容道 - 关卡选择</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="../../favicon.svg" />
+    <link rel="icon" type="image/x-icon" href="../../favicon.ico" />
+
+    <!-- PWA 支持 -->
+    <meta name="theme-color" content="#667eea" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="数字华容道" />
+
+    <style>
+      * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        user-select: none;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 1rem;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* 顶部导航 */
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding: 0.5rem;
+      }
+
+      .header .back-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        border-radius: 8px;
+        color: white;
+        font-size: 1rem;
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        transition: all 0.3s ease;
+      }
+
+      @media (hover: hover) and (pointer: fine) {
+        .header .back-btn:hover {
+          background: rgba(255, 255, 255, 0.3);
+        }
+      }
+
+      .header .title {
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+      }
+
+      .header .stats {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        text-align: center;
+        font-size: 0.9rem;
+      }
+
+      /* 难度选择标签页 */
+      .difficulty-tabs {
+        display: flex;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 0.3rem;
+        margin-bottom: 1.5rem;
+        backdrop-filter: blur(10px);
+      }
+
+      .difficulty-tab {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: white;
+        padding: 0.8rem 0.5rem;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.9rem;
+        opacity: 0.7;
+      }
+
+      .difficulty-tab.active {
+        background: rgba(255, 255, 255, 0.25);
+        opacity: 1;
+        font-weight: 600;
+      }
+
+      @media (hover: hover) and (pointer: fine) {
+        .difficulty-tab:hover {
+          opacity: 1;
+        }
+      }
+
+      /* 关卡网格 */
+      .levels-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(65px, 1fr));
+        gap: 0.8rem;
+        margin-bottom: 2rem;
+        flex: 1;
+      }
+
+      .level-card {
+        aspect-ratio: 1;
+        background: rgba(255, 255, 255, 0.15);
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        text-decoration: none;
+        color: white;
+      }
+
+      @media (hover: hover) and (pointer: fine) {
+        .level-card:hover {
+          transform: translateY(-2px);
+          background: rgba(255, 255, 255, 0.25);
+          border-color: rgba(255, 255, 255, 0.4);
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+      }
+
+      .level-card:active {
+        transform: scale(0.95);
+      }
+
+      .level-number {
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-bottom: 0.2rem;
+      }
+
+      .level-stars {
+        display: flex;
+        gap: 0.1rem;
+        font-size: 0.7rem;
+      }
+
+      .level-stars .star {
+        color: #ddd;
+      }
+
+      .level-stars .star.filled {
+        color: #ffd93d;
+      }
+
+      .level-card.completed {
+        background: rgba(76, 175, 80, 0.2);
+        border-color: rgba(76, 175, 80, 0.4);
+      }
+
+      .level-card.locked {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+      }
+
+      /* 加载动画 */
+      .loading {
+        text-align: center;
+        padding: 2rem;
+        opacity: 0.7;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- 顶部导航 -->
+      <div class="header">
+        <a href="../index.html" class="back-btn">← 返回</a>
+        <h1 class="title">数字华容道</h1>
+        <div class="stats">
+          <div id="completedCount">0/250</div>
+        </div>
+      </div>
+
+      <!-- 难度选择 -->
+      <div class="difficulty-tabs">
+        <button class="difficulty-tab active" data-difficulty="easy">
+          简单 (3×3)
+        </button>
+        <button class="difficulty-tab" data-difficulty="medium">
+          中等 (4×4)
+        </button>
+        <button class="difficulty-tab" data-difficulty="hard">
+          困难 (5×5)
+        </button>
+      </div>
+
+      <!-- 关卡网格 -->
+      <div class="levels-grid" id="levelsGrid">
+        <div class="loading">加载中...</div>
+      </div>
+    </div>
+
+    <!-- 引入依赖 -->
+    <script src="../shared/js/clerkUnifiedAuth.js"></script>
+    <script src="../shared/js/smartGameStorage-edge-function.js"></script>
+    <script src="puzzle15.js"></script>
+    <script src="levels.js"></script>
+    <script>
+      // 关卡选择页面逻辑
+      class LevelsPage {
+        constructor() {
+          this.storage = null;
+          this.currentDifficulty = 'easy';
+          this.records = {};
+          this.waitForClerkAndInit();
+        }
+
+        waitForClerkAndInit() {
+          const startInit = () => {
+            console.log('🎮 初始化关卡选择页面');
+
+            try {
+              if (typeof SmartGameStorageEdgeFunction !== 'undefined') {
+                this.storage = new SmartGameStorageEdgeFunction('puzzle15');
+                console.log('✅ 存储系统初始化成功');
+              }
+            } catch (error) {
+              console.error('❌ 存储系统初始化失败:', error);
+            }
+
+            this.init();
+          };
+
+          let gameStarted = false;
+          const forceStartGame = () => {
+            if (!gameStarted) {
+              gameStarted = true;
+              startInit();
+            }
+          };
+
+          if (window.clerkInitialized) {
+            forceStartGame();
+          } else {
+            window.addEventListener('clerkReady', forceStartGame, { once: true });
+            setTimeout(forceStartGame, 3000);
+            if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+              setTimeout(forceStartGame, 1000);
+            }
+          }
+        }
+
+        async init() {
+          // 获取URL参数
+          const urlParams = new URLSearchParams(window.location.search);
+          this.currentDifficulty = urlParams.get('difficulty') || 'easy';
+
+          // 初始化标签页
+          this.initTabs();
+
+          // 加载记录
+          await this.loadAllRecords();
+
+          // 渲染关卡
+          this.renderLevels();
+
+          // 更新统计
+          this.updateStats();
+        }
+
+        initTabs() {
+          const tabs = document.querySelectorAll('.difficulty-tab');
+
+          tabs.forEach(tab => {
+            const difficulty = tab.dataset.difficulty;
+
+            // 设置当前激活的标签
+            if (difficulty === this.currentDifficulty) {
+              tab.classList.add('active');
+            } else {
+              tab.classList.remove('active');
+            }
+
+            // 点击切换难度
+            tab.addEventListener('click', () => {
+              this.currentDifficulty = difficulty;
+              tabs.forEach(t => t.classList.remove('active'));
+              tab.classList.add('active');
+              this.renderLevels();
+              this.updateStats();
+            });
+          });
+        }
+
+        async loadAllRecords() {
+          if (!this.storage) return;
+
+          try {
+            const difficulties = ['easy', 'medium', 'hard'];
+            const totalLevels = levelGenerator.getTotalLevels();
+
+            for (const difficulty of difficulties) {
+              for (let i = 1; i <= totalLevels; i++) {
+                const levelKey = `${difficulty}_${i}`;
+                const record = await this.storage.getUserData(levelKey);
+                if (record) {
+                  this.records[levelKey] = record;
+                }
+              }
+            }
+          } catch (error) {
+            console.error('加载记录失败:', error);
+          }
+        }
+
+        renderLevels() {
+          const container = document.getElementById('levelsGrid');
+          container.innerHTML = '';
+
+          const totalLevels = levelGenerator.getTotalLevels();
+
+          for (let i = 1; i <= totalLevels; i++) {
+            const card = this.createLevelCard(i);
+            container.appendChild(card);
+          }
+        }
+
+        createLevelCard(levelNumber) {
+          const levelKey = `${this.currentDifficulty}_${levelNumber}`;
+          const record = this.records[levelKey] || {};
+          const completed = record.completed || false;
+          const stars = record.bestStars || 0;
+
+          const card = document.createElement('a');
+          card.href = `index.html?difficulty=${this.currentDifficulty}&level=${levelNumber}`;
+          card.className = 'level-card';
+
+          if (completed) {
+            card.classList.add('completed');
+          }
+
+          // 关卡编号
+          const numberEl = document.createElement('div');
+          numberEl.className = 'level-number';
+          numberEl.textContent = levelNumber;
+
+          // 星星显示
+          const starsEl = document.createElement('div');
+          starsEl.className = 'level-stars';
+
+          for (let i = 0; i < 3; i++) {
+            const star = document.createElement('span');
+            star.className = i < stars ? 'star filled' : 'star';
+            star.textContent = '★';
+            starsEl.appendChild(star);
+          }
+
+          card.appendChild(numberEl);
+          card.appendChild(starsEl);
+
+          return card;
+        }
+
+        updateStats() {
+          const totalLevels = levelGenerator.getTotalLevels();
+          let completedCount = 0;
+
+          for (let i = 1; i <= totalLevels; i++) {
+            const levelKey = `${this.currentDifficulty}_${i}`;
+            const record = this.records[levelKey];
+            if (record && record.completed) {
+              completedCount++;
+            }
+          }
+
+          document.getElementById('completedCount').textContent =
+            `${completedCount}/${totalLevels}`;
+        }
+      }
+
+      // 初始化
+      let levelsPage;
+      document.addEventListener('DOMContentLoaded', () => {
+        levelsPage = new LevelsPage();
+      });
+    </script>
+  </body>
+</html>
