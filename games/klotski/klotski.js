@@ -138,16 +138,61 @@ class KlotskiEngine {
     return true;
   }
 
-  // 通过拖动移动方块（计算移动方向和距离）
-  // 允许沿直线方向移动多格，但只能水平或垂直移动，不能斜向
-  moveBlockByDrag(blockId, deltaRow, deltaCol) {
+  // 使用BFS检查从起点到终点是否有可达路径（允许拐弯）
+  canReachPosition(blockId, targetRow, targetCol) {
     const block = this.blocks.find(b => b.id === blockId);
     if (!block) return false;
 
-    // 必须是纯水平或纯垂直移动，不能斜向
-    if (deltaRow !== 0 && deltaCol !== 0) {
+    const [startRow, startCol] = block.position;
+
+    // 如果目标位置就是起始位置
+    if (startRow === targetRow && startCol === targetCol) {
       return false;
     }
+
+    // 检查目标位置是否合法
+    if (!this.canMove(blockId, targetRow, targetCol)) {
+      return false;
+    }
+
+    // 使用BFS搜索可达路径
+    const queue = [[startRow, startCol]];
+    const visited = new Set();
+    visited.add(`${startRow},${startCol}`);
+
+    while (queue.length > 0) {
+      const [currRow, currCol] = queue.shift();
+
+      // 找到目标位置
+      if (currRow === targetRow && currCol === targetCol) {
+        return true;
+      }
+
+      // 尝试四个方向
+      const directions = [
+        [currRow - 1, currCol], // 上
+        [currRow + 1, currCol], // 下
+        [currRow, currCol - 1], // 左
+        [currRow, currCol + 1]  // 右
+      ];
+
+      for (const [nextRow, nextCol] of directions) {
+        const key = `${nextRow},${nextCol}`;
+
+        if (!visited.has(key) && this.canMove(blockId, nextRow, nextCol)) {
+          visited.add(key);
+          queue.push([nextRow, nextCol]);
+        }
+      }
+    }
+
+    return false;
+  }
+
+  // 通过拖动移动方块（支持L型路径，只要路径可达即可）
+  moveBlockByDrag(blockId, deltaRow, deltaCol) {
+    const block = this.blocks.find(b => b.id === blockId);
+    if (!block) return false;
 
     // 如果没有移动，返回false
     if (deltaRow === 0 && deltaCol === 0) {
@@ -155,25 +200,12 @@ class KlotskiEngine {
     }
 
     const [row, col] = block.position;
-    const newRow = row + deltaRow;
-    const newCol = col + deltaCol;
+    const targetRow = row + deltaRow;
+    const targetCol = col + deltaCol;
 
-    // 检查路径上的每一格是否都可以通过
-    // 需要逐格检查，确保整个路径都是畅通的
-    const stepRow = deltaRow === 0 ? 0 : (deltaRow > 0 ? 1 : -1);
-    const stepCol = deltaCol === 0 ? 0 : (deltaCol > 0 ? 1 : -1);
-
-    let checkRow = row;
-    let checkCol = col;
-
-    // 逐步检查路径
-    while (checkRow !== newRow || checkCol !== newCol) {
-      checkRow += stepRow;
-      checkCol += stepCol;
-
-      if (!this.canMove(blockId, checkRow, checkCol)) {
-        return false;
-      }
+    // 使用BFS检查是否可以到达目标位置（允许拐弯）
+    if (!this.canReachPosition(blockId, targetRow, targetCol)) {
+      return false;
     }
 
     // 保存当前状态用于撤销
@@ -183,12 +215,12 @@ class KlotskiEngine {
     this.removeBlockFromBoard(this.board, block);
 
     // 更新位置
-    block.position = [newRow, newCol];
+    block.position = [targetRow, targetCol];
 
     // 放置到新位置
     this.placeBlockOnBoard(this.board, block);
 
-    // 增加移动计数（无论移动多少格，只算一步）
+    // 增加移动计数（无论移动多少格或是否拐弯，只算一步）
     this.moveCount++;
 
     return true;
