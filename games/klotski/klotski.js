@@ -138,19 +138,21 @@ class KlotskiEngine {
     return true;
   }
 
-  // 使用BFS检查从起点到终点是否有可达路径（允许拐弯）
+  // 使用BFS检查从起点到终点是否有可达路径
+  // 重要：检查时需要考虑方块的完整尺寸，确保路径上每个位置都能容纳整个方块
   canReachPosition(blockId, targetRow, targetCol) {
     const block = this.blocks.find(b => b.id === blockId);
     if (!block) return false;
 
     const [startRow, startCol] = block.position;
+    const [height, width] = block.shape;
 
     // 如果目标位置就是起始位置
     if (startRow === targetRow && startCol === targetCol) {
       return false;
     }
 
-    // 检查目标位置是否合法
+    // 检查目标位置是否合法（整个方块都能放下）
     if (!this.canMove(blockId, targetRow, targetCol)) {
       return false;
     }
@@ -179,6 +181,7 @@ class KlotskiEngine {
       for (const [nextRow, nextCol] of directions) {
         const key = `${nextRow},${nextCol}`;
 
+        // 检查这个位置是否已访问，以及整个方块是否能放在这个位置
         if (!visited.has(key) && this.canMove(blockId, nextRow, nextCol)) {
           visited.add(key);
           queue.push([nextRow, nextCol]);
@@ -186,6 +189,7 @@ class KlotskiEngine {
       }
     }
 
+    // 路径不可达
     return false;
   }
 
