@@ -272,6 +272,9 @@
 
     <!-- 引入依赖 -->
     <script src="../shared/js/clerkUnifiedAuth.js"></script>
+    <!-- 智能存储系统 -->
+    <script src="../shared/js/gameConfig.js"></script>
+    <script src="../shared/js/smartGameStorage.js"></script>
     <script src="../shared/js/smartGameStorage-edge-function.js"></script>
     <script src="levels.js"></script>
     <script>
@@ -422,17 +425,6 @@
       let levelsPage;
       document.addEventListener('DOMContentLoaded', () => {
         levelsPage = new LevelsPage();
-      });
-
-      // 处理从其他页面返回的情况（浏览器缓存恢复）
-      window.addEventListener('pageshow', async (event) => {
-        // 如果是从缓存恢复的页面，重新加载数据
-        if (event.persisted && levelsPage) {
-          console.log('🔄 页面从缓存恢复，重新加载记录');
-          await levelsPage.loadAllRecords();
-          levelsPage.renderLevels();
-          levelsPage.updateStats();
-        }
       });
     </script>
   </body>
