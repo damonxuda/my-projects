@@ -286,6 +286,104 @@
       window.REACT_APP_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlZWRzbnFidWRib2dxcGNlcnFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NjMxOTIsImV4cCI6MjA3MDAzOTE5Mn0.-hWnQwcpvXjX1dMJcNaQC7AUp8jYC9ozhgjFzSHeAGo';
     </script>
 
+    <!-- Clerk 初始化脚本 -->
+    <script>
+      async function initializeClerkForGames() {
+        if (window.clerkInitialized) {
+          console.log('⏭️ Clerk已初始化，跳过重复调用');
+          return;
+        }
+
+        if (!window.Clerk) {
+          console.error('❌ Clerk SDK 未加载');
+          window.clerkInitialized = true;
+          window.dispatchEvent(new CustomEvent('clerkReady'));
+          return;
+        }
+
+        try {
+          console.log('🔄 开始增强的Clerk初始化...');
+          console.log('🔍 Clerk对象状态:', {
+            loaded: window.Clerk.loaded,
+            user: !!window.Clerk.user,
+            session: !!window.Clerk.session
+          });
+
+          if (window.Clerk.user && window.Clerk.session) {
+            console.log('🚀 检测到活跃session: ' + window.Clerk.user.id);
+            window.clerkInitialized = true;
+            window.dispatchEvent(new CustomEvent('clerkReady'));
+            return;
+          }
+
+          console.log('⏳ 等待Clerk完全加载...');
+          await window.Clerk.load();
+
+          console.log('✅ Clerk.load() 完成，当前状态:', {
+            loaded: window.Clerk.loaded,
+            user: !!window.Clerk.user,
+            session: !!window.Clerk.session
+          });
+
+          if (!window.Clerk.user) {
+            console.log('🔍 尝试从localStorage读取缓存的认证数据...');
+            try {
+              const clerkEnv = localStorage.getItem('__clerk_environment');
+              if (clerkEnv) {
+                const envData = JSON.parse(clerkEnv);
+                if (envData.user && envData.session && !window.Clerk.user) {
+                  console.log('🔄 检测到localStorage中的用户session，尝试激活...');
+                  const sessionId = envData.session.id;
+                  if (sessionId) {
+                    await window.Clerk.setActive({ session: sessionId });
+                    console.log('✅ localStorage Session激活成功，等待同步...');
+                    let attempts = 0;
+                    while (!window.Clerk.user && attempts < 5) {
+                      await new Promise(resolve => setTimeout(resolve, 100));
+                      attempts++;
+                    }
+                    if (window.Clerk.user) {
+                      console.log('🎉 localStorage认证恢复成功!', {
+                        userId: window.Clerk.user.id,
+                        email: window.Clerk.user.emailAddresses?.[0]?.emailAddress
+                      });
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              console.log('⚠️ localStorage认证读取失败:', error);
+            }
+          }
+
+          if (window.Clerk.user) {
+            console.log('👤 用户已登录: ' + window.Clerk.user.id);
+            console.log('📧 用户邮箱:', window.Clerk.user.emailAddresses?.[0]?.emailAddress);
+          } else {
+            console.log('❌ 用户未登录');
+          }
+
+          window.clerkInitialized = true;
+          window.dispatchEvent(new CustomEvent('clerkReady'));
+
+        } catch (error) {
+          console.error('❌ Clerk初始化失败:', error);
+          window.clerkInitialized = true;
+          window.dispatchEvent(new CustomEvent('clerkReady'));
+        }
+      }
+
+      window.addEventListener("load", initializeClerkForGames);
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeClerkForGames);
+      } else {
+        setTimeout(initializeClerkForGames, 100);
+      }
+      if (window.Clerk) {
+        setTimeout(initializeClerkForGames, 50);
+      }
+    </script>
+
     <!-- 引入依赖 -->
     <script src="../shared/js/clerkUnifiedAuth.js"></script>
     <!-- 智能存储系统 -->
