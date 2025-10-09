@@ -449,12 +449,10 @@
           if (!this.storage) return;
 
           try {
-            for (let i = 1; i <= KLOTSKI_LEVELS.length; i++) {
-              const levelKey = `level_${i}`;
-              const record = await this.storage.load(levelKey);
-              if (record) {
-                this.records[i] = record;
-              }
+            // 一次性加载所有进度数据（而不是循环加载每个关卡）
+            const progress = await this.storage.load('progress');
+            if (progress && progress.records) {
+              this.records = progress.records;
             }
           } catch (error) {
             console.error('加载记录失败:', error);

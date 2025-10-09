@@ -353,9 +353,13 @@ class KlotskiGame {
     if (!this.storage) return;
 
     try {
-      const levelKey = `level_${this.levelNumber}`;
-      const record = await this.storage.load(levelKey) || {};
+      // 加载整个进度对象
+      let progress = await this.storage.load('progress') || { records: {} };
+      if (!progress.records) {
+        progress.records = {};
+      }
 
+      const record = progress.records[this.levelNumber] || {};
       let isNewRecord = false;
 
       // 更新最佳时间
@@ -373,7 +377,9 @@ class KlotskiGame {
       // 标记为已完成
       record.completed = true;
 
-      await this.storage.save(levelKey, record);
+      // 保存回进度对象
+      progress.records[this.levelNumber] = record;
+      await this.storage.save('progress', progress);
 
       if (isNewRecord) {
         document.getElementById('newRecordText').style.display = 'block';
@@ -387,8 +393,9 @@ class KlotskiGame {
     if (!this.storage) return;
 
     try {
-      const levelKey = `level_${this.levelNumber}`;
-      const record = await this.storage.load(levelKey);
+      // 从整个进度对象中加载
+      const progress = await this.storage.load('progress');
+      const record = progress?.records?.[this.levelNumber];
 
       if (record && record.bestTime) {
         const seconds = Math.floor(record.bestTime / 1000);
