@@ -341,12 +341,12 @@ class SmartGameStorage {
 
   isUserLoggedIn() {
     // 🔥 增强的用户登录状态检查 - 专门优化跨模块身份传递
-    console.log('🔐 检查用户登录状态:');
-    console.log('  - window.Clerk:', !!window.Clerk);
-    console.log('  - window.Clerk.loaded:', window.Clerk ? window.Clerk.loaded : 'N/A');
-    console.log('  - window.Clerk.user:', window.Clerk ? !!window.Clerk.user : 'N/A');
-    console.log('  - window.Clerk.session:', window.Clerk ? !!window.Clerk.session : 'N/A');
-    console.log('  - window.clerkInitialized:', window.clerkInitialized);
+    // console.log('🔐 检查用户登录状态:');
+    // console.log('  - window.Clerk:', !!window.Clerk);
+    // console.log('  - window.Clerk.loaded:', window.Clerk ? window.Clerk.loaded : 'N/A');
+    // console.log('  - window.Clerk.user:', window.Clerk ? !!window.Clerk.user : 'N/A');
+    // console.log('  - window.Clerk.session:', window.Clerk ? !!window.Clerk.session : 'N/A');
+    // console.log('  - window.clerkInitialized:', window.clerkInitialized);
 
     // 🔥 策略1: 最高优先级 - 检查模拟用户对象 (跨模块token解析)
     if (window.mockClerkUser && window.mockClerkUser.isAuthenticated) {
