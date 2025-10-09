@@ -138,62 +138,58 @@ class KlotskiEngine {
     return true;
   }
 
-  // 使用BFS检查从起点到终点是否有可达路径
-  // 重要：检查时需要考虑方块的完整尺寸，确保路径上每个位置都能容纳整个方块
-  canReachPosition(blockId, targetRow, targetCol) {
+  // 检查直线路径是否畅通
+  checkStraightPath(blockId, startRow, startCol, targetRow, targetCol) {
+    const stepRow = targetRow === startRow ? 0 : (targetRow > startRow ? 1 : -1);
+    const stepCol = targetCol === startCol ? 0 : (targetCol > startCol ? 1 : -1);
+
+    let checkRow = startRow;
+    let checkCol = startCol;
+
+    // 逐格检查路径
+    while (checkRow !== targetRow || checkCol !== targetCol) {
+      checkRow += stepRow;
+      checkCol += stepCol;
+
+      if (!this.canMove(blockId, checkRow, checkCol)) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  // 检查L型路径是否畅通（只有小兵可以走L型）
+  checkLShapePath(blockId, startRow, startCol, targetRow, targetCol) {
     const block = this.blocks.find(b => b.id === blockId);
     if (!block) return false;
 
-    const [startRow, startCol] = block.position;
+    // 只有1x1的小兵可以走L型
     const [height, width] = block.shape;
-
-    // 如果目标位置就是起始位置
-    if (startRow === targetRow && startCol === targetCol) {
+    if (height !== 1 || width !== 1) {
       return false;
     }
 
-    // 检查目标位置是否合法（整个方块都能放下）
-    if (!this.canMove(blockId, targetRow, targetCol)) {
-      return false;
-    }
+    // 尝试两种L型路径：
+    // 路径1: 先横向移动，再纵向移动
+    const path1Corner = [startRow, targetCol];
+    const path1Valid =
+      this.canMove(blockId, path1Corner[0], path1Corner[1]) &&
+      this.checkStraightPath(blockId, startRow, startCol, path1Corner[0], path1Corner[1]) &&
+      this.checkStraightPath(blockId, path1Corner[0], path1Corner[1], targetRow, targetCol);
 
-    // 使用BFS搜索可达路径
-    const queue = [[startRow, startCol]];
-    const visited = new Set();
-    visited.add(`${startRow},${startCol}`);
+    // 路径2: 先纵向移动，再横向移动
+    const path2Corner = [targetRow, startCol];
+    const path2Valid =
+      this.canMove(blockId, path2Corner[0], path2Corner[1]) &&
+      this.checkStraightPath(blockId, startRow, startCol, path2Corner[0], path2Corner[1]) &&
+      this.checkStraightPath(blockId, path2Corner[0], path2Corner[1], targetRow, targetCol);
 
-    while (queue.length > 0) {
-      const [currRow, currCol] = queue.shift();
-
-      // 找到目标位置
-      if (currRow === targetRow && currCol === targetCol) {
-        return true;
-      }
-
-      // 尝试四个方向
-      const directions = [
-        [currRow - 1, currCol], // 上
-        [currRow + 1, currCol], // 下
-        [currRow, currCol - 1], // 左
-        [currRow, currCol + 1]  // 右
-      ];
-
-      for (const [nextRow, nextCol] of directions) {
-        const key = `${nextRow},${nextCol}`;
-
-        // 检查这个位置是否已访问，以及整个方块是否能放在这个位置
-        if (!visited.has(key) && this.canMove(blockId, nextRow, nextCol)) {
-          visited.add(key);
-          queue.push([nextRow, nextCol]);
-        }
-      }
-    }
-
-    // 路径不可达
-    return false;
+    return path1Valid || path2Valid;
   }
 
-  // 通过拖动移动方块（支持L型路径，只要路径可达即可）
+  // 通过拖动移动方块
+  // 规则：非小兵只能走直线，小兵可以走L型（拐角处需要空闲）
   moveBlockByDrag(blockId, deltaRow, deltaCol) {
     const block = this.blocks.find(b => b.id === blockId);
     if (!block) return false;
@@ -203,12 +199,29 @@ class KlotskiEngine {
       return false;
     }
 
-    const [row, col] = block.position;
-    const targetRow = row + deltaRow;
-    const targetCol = col + deltaCol;
+    const [startRow, startCol] = block.position;
+    const targetRow = startRow + deltaRow;
+    const targetCol = startCol + deltaCol;
 
-    // 使用BFS检查是否可以到达目标位置（允许拐弯）
-    if (!this.canReachPosition(blockId, targetRow, targetCol)) {
+    // 检查目标位置是否合法
+    if (!this.canMove(blockId, targetRow, targetCol)) {
+      return false;
+    }
+
+    let canReach = false;
+
+    // 判断是直线移动还是L型移动
+    const isStraight = (deltaRow === 0 || deltaCol === 0);
+
+    if (isStraight) {
+      // 直线移动：所有棋子都可以
+      canReach = this.checkStraightPath(blockId, startRow, startCol, targetRow, targetCol);
+    } else {
+      // L型移动：只有小兵可以
+      canReach = this.checkLShapePath(blockId, startRow, startCol, targetRow, targetCol);
+    }
+
+    if (!canReach) {
       return false;
     }
 
@@ -224,7 +237,7 @@ class KlotskiEngine {
     // 放置到新位置
     this.placeBlockOnBoard(this.board, block);
 
-    // 增加移动计数（无论移动多少格或是否拐弯，只算一步）
+    // 增加移动计数（一次拖动算一步）
     this.moveCount++;
 
     return true;
