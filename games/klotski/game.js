@@ -354,7 +354,7 @@ class KlotskiGame {
 
     try {
       const levelKey = `level_${this.levelNumber}`;
-      const record = await this.storage.getUserData(levelKey) || {};
+      const record = await this.storage.load(levelKey) || {};
 
       let isNewRecord = false;
 
@@ -373,7 +373,7 @@ class KlotskiGame {
       // 标记为已完成
       record.completed = true;
 
-      await this.storage.saveUserData(levelKey, record);
+      await this.storage.save(levelKey, record);
 
       if (isNewRecord) {
         document.getElementById('newRecordText').style.display = 'block';
@@ -388,7 +388,7 @@ class KlotskiGame {
 
     try {
       const levelKey = `level_${this.levelNumber}`;
-      const record = await this.storage.getUserData(levelKey);
+      const record = await this.storage.load(levelKey);
 
       if (record && record.bestTime) {
         const seconds = Math.floor(record.bestTime / 1000);

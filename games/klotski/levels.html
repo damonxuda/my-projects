@@ -330,7 +330,7 @@
           try {
             for (let i = 1; i <= KLOTSKI_LEVELS.length; i++) {
               const levelKey = `level_${i}`;
-              const record = await this.storage.getUserData(levelKey);
+              const record = await this.storage.load(levelKey);
               if (record) {
                 this.records[i] = record;
               }
@@ -422,6 +422,17 @@
       let levelsPage;
       document.addEventListener('DOMContentLoaded', () => {
         levelsPage = new LevelsPage();
+      });
+
+      // 处理从其他页面返回的情况（浏览器缓存恢复）
+      window.addEventListener('pageshow', async (event) => {
+        // 如果是从缓存恢复的页面，重新加载数据
+        if (event.persisted && levelsPage) {
+          console.log('🔄 页面从缓存恢复，重新加载记录');
+          await levelsPage.loadAllRecords();
+          levelsPage.renderLevels();
+          levelsPage.updateStats();
+        }
       });
     </script>
   </body>
