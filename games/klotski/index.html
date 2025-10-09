@@ -512,8 +512,26 @@
           if (window.Clerk.user) {
             console.log('👤 用户已登录: ' + window.Clerk.user.id);
             console.log('📧 用户邮箱:', window.Clerk.user.emailAddresses?.[0]?.emailAddress);
+
+            // 🔥 缓存 JWT token 到 mockClerkUser（用于 SmartGameStorageEdgeFunction）
+            if (window.Clerk.session) {
+              try {
+                const token = await window.Clerk.session.getToken();
+                window.mockClerkUser = {
+                  ...window.Clerk.user,
+                  isAuthenticated: true,
+                  sessionId: window.Clerk.session.id,
+                  originalSessionToken: token,
+                  authSource: 'klotski-init'
+                };
+                console.log('✅ mockClerkUser 已初始化（含缓存token）');
+              } catch (error) {
+                console.warn('⚠️ 获取token失败:', error);
+              }
+            }
           } else {
             console.log('❌ 用户未登录');
+            window.mockClerkUser = null;
           }
 
           window.clerkInitialized = true;
@@ -538,7 +556,6 @@
     </script>
 
     <!-- 引入依赖 -->
-    <script src="../shared/js/clerkUnifiedAuth.js"></script>
     <!-- 智能存储系统 -->
     <script src="../shared/js/gameConfig.js"></script>
     <script src="../shared/js/smartGameStorage.js"></script>
