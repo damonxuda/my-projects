@@ -1,9 +1,9 @@
 // 数字华容道关卡生成器
-// 每个难度250关，关卡通过种子生成保证可复现
+// 每个难度50关，关卡通过种子生成保证可复现
 
 class Puzzle15LevelGenerator {
   constructor() {
-    this.levelsPerDifficulty = 250;
+    this.levelsPerDifficulty = 50;
   }
 
   // 使用种子生成随机数（保证相同种子生成相同关卡）
