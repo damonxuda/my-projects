@@ -126,12 +126,6 @@ class KlotskiGame {
         cell.style.width = `${this.cellSize}px`;
         cell.style.height = `${this.cellSize}px`;
 
-        // 标记出口格子
-        if ((r === KLOTSKI_CONFIG.exitPosition.row && c === KLOTSKI_CONFIG.exitPosition.col) ||
-            (r === KLOTSKI_CONFIG.exitPosition.row && c === KLOTSKI_CONFIG.exitPosition.col + 1)) {
-          cell.classList.add('exit');
-        }
-
         boardGrid.appendChild(cell);
       }
     }

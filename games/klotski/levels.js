@@ -1,184 +1,1790 @@
-// 经典华容道关卡数据（按最少步数从少到多排序）
+// 经典华容道关卡数据（基于维基百科引用的同济大学数学建模协会数据）
+// 数据来源: https://zh.wikipedia.org/zh-hans/華容道_(遊戲)
+// 参考: https://github.com/SimonHung/Klotski
+//
+// 重要说明：
+// 1. 参考最少步数来源于同济大学数学建模协会第6期会刊
+// 2. 该步数统计规则为：1x1小兵连续移动多格只算1步
+// 3. 本游戏实现为：每移动1格算1步，因此实际步数可能多于参考值
+//
 // 棋盘: 5行4列 (行索引0-4, 列索引0-3)
-// shape: [height, width] - 方块高度和宽度
-// position: [row, col] - 方块左上角位置
 // 出口: 第4行中间两格 [3,1] 和 [3,2]
 
 const KLOTSKI_LEVELS = [
   {
-    id: 1,
-    name: "过五关",
-    description: "关羽过五关斩六将，需要37步",
-    minMoves: 37,
-    blocks: [
-      { id: "caocao", type: "2x2", shape: [2, 2], position: [1, 1], color: "#ff6b6b", name: "曹操" },
-      { id: "guanyu", type: "1x2", shape: [1, 2], position: [0, 1], color: "#4ecdc4", name: "关羽" },
-      { id: "zhangfei", type: "2x1", shape: [2, 1], position: [3, 0], color: "#45b7d1", name: "张飞" },
-      { id: "zhaoyun", type: "2x1", shape: [2, 1], position: [3, 3], color: "#45b7d1", name: "赵云" },
-      { id: "machao", type: "2x1", shape: [2, 1], position: [0, 0], color: "#45b7d1", name: "马超" },
-      { id: "huangzhong", type: "2x1", shape: [2, 1], position: [0, 3], color: "#45b7d1", name: "黄忠" },
-      { id: "soldier1", type: "1x1", shape: [1, 1], position: [3, 1], color: "#95e1d3", name: "兵" },
-      { id: "soldier2", type: "1x1", shape: [1, 1], position: [3, 2], color: "#95e1d3", name: "兵" },
-      { id: "soldier3", type: "1x1", shape: [1, 1], position: [2, 0], color: "#95e1d3", name: "兵" },
-      { id: "soldier4", type: "1x1", shape: [1, 1], position: [2, 3], color: "#95e1d3", name: "兵" }
+    "id": 1,
+    "name": "比翼横空",
+    "minMoves": 28,
+    "description": "最简单的布局，参考最少28步",
+    "blocks": [
+      {
+        "id": "horizontal1",
+        "type": "1x2",
+        "shape": [
+          1,
+          2
+        ],
+        "position": [
+          0,
+          0
+        ],
+        "color": "#4ecdc4",
+        "name": "横将"
+      },
+      {
+        "id": "caocao",
+        "type": "2x2",
+        "shape": [
+          2,
+          2
+        ],
+        "position": [
+          0,
+          2
+        ],
+        "color": "#ff6b6b",
+        "name": "曹操"
+      },
+      {
+        "id": "horizontal2",
+        "type": "1x2",
+        "shape": [
+          1,
+          2
+        ],
+        "position": [
+          1,
+          0
+        ],
+        "color": "#4ecdc4",
+        "name": "横将"
+      },
+      {
+        "id": "horizontal3",
+        "type": "1x2",
+        "shape": [
+          1,
+          2
+        ],
+        "position": [
+          2,
+          0
+        ],
+        "color": "#4ecdc4",
+        "name": "横将"
+      },
+      {
+        "id": "horizontal4",
+        "type": "1x2",
+        "shape": [
+          1,
+          2
+        ],
+        "position": [
+          2,
+          2
+        ],
+        "color": "#4ecdc4",
+        "name": "横将"
+      },
+      {
+        "id": "soldier1",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          3,
+          0
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier2",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          3,
+          2
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "vertical1",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "soldier3",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          4,
+          0
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier4",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          4,
+          2
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      }
     ]
   },
   {
-    id: 2,
-    name: "雨声淅沥",
-    description: "如雨点般密集的布局，需要47步",
-    minMoves: 47,
-    blocks: [
-      { id: "caocao", type: "2x2", shape: [2, 2], position: [0, 1], color: "#ff6b6b", name: "曹操" },
-      { id: "general1", type: "1x2", shape: [1, 2], position: [2, 1], color: "#4ecdc4", name: "横将" },
-      { id: "general2", type: "2x1", shape: [2, 1], position: [2, 0], color: "#45b7d1", name: "竖将" },
-      { id: "general3", type: "2x1", shape: [2, 1], position: [2, 3], color: "#45b7d1", name: "竖将" },
-      { id: "general4", type: "1x2", shape: [1, 2], position: [4, 1], color: "#4ecdc4", name: "横将" },
-      { id: "soldier1", type: "1x1", shape: [1, 1], position: [3, 1], color: "#95e1d3", name: "兵" },
-      { id: "soldier2", type: "1x1", shape: [1, 1], position: [3, 2], color: "#95e1d3", name: "兵" },
-      { id: "soldier3", type: "1x1", shape: [1, 1], position: [4, 0], color: "#95e1d3", name: "兵" },
-      { id: "soldier4", type: "1x1", shape: [1, 1], position: [4, 3], color: "#95e1d3", name: "兵" }
+    "id": 2,
+    "name": "捷足先登",
+    "minMoves": 32,
+    "description": "简单布局，参考最少32步",
+    "blocks": [
+      {
+        "id": "soldier1",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          0,
+          0
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "caocao",
+        "type": "2x2",
+        "shape": [
+          2,
+          2
+        ],
+        "position": [
+          0,
+          1
+        ],
+        "color": "#ff6b6b",
+        "name": "曹操"
+      },
+      {
+        "id": "soldier2",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          0,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier3",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          1,
+          0
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier4",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          1,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "horizontal1",
+        "type": "1x2",
+        "shape": [
+          1,
+          2
+        ],
+        "position": [
+          2,
+          1
+        ],
+        "color": "#4ecdc4",
+        "name": "横将"
+      },
+      {
+        "id": "vertical1",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "vertical2",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          1
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "vertical3",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          2
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "vertical4",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      }
     ]
   },
   {
-    id: 3,
-    name: "前呼后拥",
-    description: "前后夹击的布局，需要51步",
-    minMoves: 51,
-    blocks: [
-      { id: "caocao", type: "2x2", shape: [2, 2], position: [1, 1], color: "#ff6b6b", name: "曹操" },
-      { id: "general1", type: "1x2", shape: [1, 2], position: [0, 1], color: "#4ecdc4", name: "横将" },
-      { id: "general2", type: "1x2", shape: [1, 2], position: [3, 1], color: "#4ecdc4", name: "横将" },
-      { id: "general3", type: "2x1", shape: [2, 1], position: [2, 0], color: "#45b7d1", name: "竖将" },
-      { id: "general4", type: "2x1", shape: [2, 1], position: [2, 3], color: "#45b7d1", name: "竖将" },
-      { id: "soldier1", type: "1x1", shape: [1, 1], position: [0, 0], color: "#95e1d3", name: "兵" },
-      { id: "soldier2", type: "1x1", shape: [1, 1], position: [0, 3], color: "#95e1d3", name: "兵" },
-      { id: "soldier3", type: "1x1", shape: [1, 1], position: [4, 1], color: "#95e1d3", name: "兵" },
-      { id: "soldier4", type: "1x1", shape: [1, 1], position: [4, 2], color: "#95e1d3", name: "兵" }
+    "id": 3,
+    "name": "一路顺风",
+    "minMoves": 39,
+    "description": "一路顺风布局，参考最少39步",
+    "blocks": [
+      {
+        "id": "vertical1",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          0,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "caocao",
+        "type": "2x2",
+        "shape": [
+          2,
+          2
+        ],
+        "position": [
+          0,
+          1
+        ],
+        "color": "#ff6b6b",
+        "name": "曹操"
+      },
+      {
+        "id": "soldier1",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          0,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier2",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          1,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "vertical2",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "horizontal1",
+        "type": "1x2",
+        "shape": [
+          1,
+          2
+        ],
+        "position": [
+          2,
+          1
+        ],
+        "color": "#4ecdc4",
+        "name": "横将"
+      },
+      {
+        "id": "vertical3",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "soldier3",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          3,
+          1
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "vertical4",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          2
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "soldier4",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          4,
+          1
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      }
     ]
   },
   {
-    id: 4,
-    name: "峰回路转",
-    description: "曲折的解法路径，需要55步",
-    minMoves: 55,
-    blocks: [
-      { id: "caocao", type: "2x2", shape: [2, 2], position: [2, 1], color: "#ff6b6b", name: "曹操" },
-      { id: "general1", type: "1x2", shape: [1, 2], position: [1, 1], color: "#4ecdc4", name: "横将" },
-      { id: "general2", type: "2x1", shape: [2, 1], position: [0, 0], color: "#45b7d1", name: "竖将" },
-      { id: "general3", type: "2x1", shape: [2, 1], position: [0, 3], color: "#45b7d1", name: "竖将" },
-      { id: "general4", type: "2x1", shape: [2, 1], position: [2, 0], color: "#45b7d1", name: "竖将" },
-      { id: "general5", type: "2x1", shape: [2, 1], position: [2, 3], color: "#45b7d1", name: "竖将" },
-      { id: "soldier1", type: "1x1", shape: [1, 1], position: [0, 1], color: "#95e1d3", name: "兵" },
-      { id: "soldier2", type: "1x1", shape: [1, 1], position: [0, 2], color: "#95e1d3", name: "兵" },
-      { id: "soldier3", type: "1x1", shape: [1, 1], position: [4, 1], color: "#95e1d3", name: "兵" },
-      { id: "soldier4", type: "1x1", shape: [1, 1], position: [4, 2], color: "#95e1d3", name: "兵" }
+    "id": 4,
+    "name": "雨声淅沥",
+    "minMoves": 47,
+    "description": "如雨点般密集的布局，参考最少47步",
+    "blocks": [
+      {
+        "id": "vertical1",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          0,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "caocao",
+        "type": "2x2",
+        "shape": [
+          2,
+          2
+        ],
+        "position": [
+          0,
+          1
+        ],
+        "color": "#ff6b6b",
+        "name": "曹操"
+      },
+      {
+        "id": "soldier1",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          0,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier2",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          1,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "vertical2",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "horizontal1",
+        "type": "1x2",
+        "shape": [
+          1,
+          2
+        ],
+        "position": [
+          2,
+          1
+        ],
+        "color": "#4ecdc4",
+        "name": "横将"
+      },
+      {
+        "id": "vertical3",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "vertical4",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          1
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "soldier3",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          4,
+          0
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier4",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          4,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      }
     ]
   },
   {
-    id: 5,
-    name: "齐头并进",
-    description: "四将齐头并进，需要60步",
-    minMoves: 60,
-    blocks: [
-      { id: "caocao", type: "2x2", shape: [2, 2], position: [1, 1], color: "#ff6b6b", name: "曹操" },
-      { id: "general1", type: "2x1", shape: [2, 1], position: [0, 0], color: "#45b7d1", name: "竖将" },
-      { id: "general2", type: "2x1", shape: [2, 1], position: [0, 3], color: "#45b7d1", name: "竖将" },
-      { id: "general3", type: "1x2", shape: [1, 2], position: [0, 1], color: "#4ecdc4", name: "横将" },
-      { id: "general4", type: "1x2", shape: [1, 2], position: [3, 1], color: "#4ecdc4", name: "横将" },
-      { id: "soldier1", type: "1x1", shape: [1, 1], position: [3, 0], color: "#95e1d3", name: "兵" },
-      { id: "soldier2", type: "1x1", shape: [1, 1], position: [3, 3], color: "#95e1d3", name: "兵" },
-      { id: "soldier3", type: "1x1", shape: [1, 1], position: [4, 0], color: "#95e1d3", name: "兵" },
-      { id: "soldier4", type: "1x1", shape: [1, 1], position: [4, 3], color: "#95e1d3", name: "兵" }
+    "id": 5,
+    "name": "左右布兵",
+    "minMoves": 54,
+    "description": "左右布兵布局，参考最少54步",
+    "blocks": [
+      {
+        "id": "soldier1",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          0,
+          0
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "caocao",
+        "type": "2x2",
+        "shape": [
+          2,
+          2
+        ],
+        "position": [
+          0,
+          1
+        ],
+        "color": "#ff6b6b",
+        "name": "曹操"
+      },
+      {
+        "id": "soldier2",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          0,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier3",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          1,
+          0
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier4",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          1,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "vertical1",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "vertical2",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          1
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "vertical3",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          2
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "vertical4",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "horizontal1",
+        "type": "1x2",
+        "shape": [
+          1,
+          2
+        ],
+        "position": [
+          4,
+          1
+        ],
+        "color": "#4ecdc4",
+        "name": "横将"
+      }
     ]
   },
   {
-    id: 6,
-    name: "指挥若定",
-    description: "曹操居中指挥，需要70步",
-    minMoves: 70,
-    blocks: [
-      { id: "caocao", type: "2x2", shape: [2, 2], position: [1, 1], color: "#ff6b6b", name: "曹操" },
-      { id: "general1", type: "2x1", shape: [2, 1], position: [0, 0], color: "#45b7d1", name: "竖将" },
-      { id: "general2", type: "2x1", shape: [2, 1], position: [0, 3], color: "#45b7d1", name: "竖将" },
-      { id: "general3", type: "1x2", shape: [1, 2], position: [0, 1], color: "#4ecdc4", name: "横将" },
-      { id: "general4", type: "2x1", shape: [2, 1], position: [3, 0], color: "#45b7d1", name: "竖将" },
-      { id: "general5", type: "2x1", shape: [2, 1], position: [3, 3], color: "#45b7d1", name: "竖将" },
-      { id: "soldier1", type: "1x1", shape: [1, 1], position: [3, 1], color: "#95e1d3", name: "兵" },
-      { id: "soldier2", type: "1x1", shape: [1, 1], position: [3, 2], color: "#95e1d3", name: "兵" },
-      { id: "soldier3", type: "1x1", shape: [1, 1], position: [2, 0], color: "#95e1d3", name: "兵" },
-      { id: "soldier4", type: "1x1", shape: [1, 1], position: [2, 3], color: "#95e1d3", name: "兵" }
+    "id": 6,
+    "name": "一路进军",
+    "minMoves": 58,
+    "description": "一路进军布局，参考最少58步",
+    "blocks": [
+      {
+        "id": "vertical1",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          0,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "caocao",
+        "type": "2x2",
+        "shape": [
+          2,
+          2
+        ],
+        "position": [
+          0,
+          1
+        ],
+        "color": "#ff6b6b",
+        "name": "曹操"
+      },
+      {
+        "id": "soldier1",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          0,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier2",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          1,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "vertical2",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "vertical3",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          1
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "vertical4",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          2
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "soldier3",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          2,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier4",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          3,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "horizontal1",
+        "type": "1x2",
+        "shape": [
+          1,
+          2
+        ],
+        "position": [
+          4,
+          1
+        ],
+        "color": "#4ecdc4",
+        "name": "横将"
+      }
     ]
   },
   {
-    id: 7,
-    name: "兵分三路",
-    description: "三路出击的经典阵型，需要72步",
-    minMoves: 72,
-    blocks: [
-      { id: "caocao", type: "2x2", shape: [2, 2], position: [0, 1], color: "#ff6b6b", name: "曹操" },
-      { id: "general1", type: "2x1", shape: [2, 1], position: [0, 0], color: "#45b7d1", name: "竖将" },
-      { id: "general2", type: "2x1", shape: [2, 1], position: [0, 3], color: "#45b7d1", name: "竖将" },
-      { id: "general3", type: "2x1", shape: [2, 1], position: [2, 0], color: "#45b7d1", name: "竖将" },
-      { id: "general4", type: "2x1", shape: [2, 1], position: [2, 3], color: "#45b7d1", name: "竖将" },
-      { id: "general5", type: "1x2", shape: [1, 2], position: [4, 1], color: "#4ecdc4", name: "横将" },
-      { id: "soldier1", type: "1x1", shape: [1, 1], position: [2, 1], color: "#95e1d3", name: "兵" },
-      { id: "soldier2", type: "1x1", shape: [1, 1], position: [2, 2], color: "#95e1d3", name: "兵" },
-      { id: "soldier3", type: "1x1", shape: [1, 1], position: [4, 0], color: "#95e1d3", name: "兵" },
-      { id: "soldier4", type: "1x1", shape: [1, 1], position: [4, 3], color: "#95e1d3", name: "兵" }
+    "id": 7,
+    "name": "齐头并进",
+    "minMoves": 60,
+    "description": "四将齐头并进，参考最少60步",
+    "blocks": [
+      {
+        "id": "vertical1",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          0,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "caocao",
+        "type": "2x2",
+        "shape": [
+          2,
+          2
+        ],
+        "position": [
+          0,
+          1
+        ],
+        "color": "#ff6b6b",
+        "name": "曹操"
+      },
+      {
+        "id": "vertical2",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          0,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "soldier1",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          2,
+          0
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier2",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          2,
+          1
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier3",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          2,
+          2
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier4",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          2,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "vertical3",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "horizontal1",
+        "type": "1x2",
+        "shape": [
+          1,
+          2
+        ],
+        "position": [
+          3,
+          1
+        ],
+        "color": "#4ecdc4",
+        "name": "横将"
+      },
+      {
+        "id": "vertical4",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      }
     ]
   },
   {
-    id: 8,
-    name: "将拥曹营",
-    description: "众将围绕曹操，需要72步",
-    minMoves: 72,
-    blocks: [
-      { id: "caocao", type: "2x2", shape: [2, 2], position: [1, 1], color: "#ff6b6b", name: "曹操" },
-      { id: "general1", type: "1x2", shape: [1, 2], position: [0, 1], color: "#4ecdc4", name: "横将" },
-      { id: "general2", type: "2x1", shape: [2, 1], position: [0, 0], color: "#45b7d1", name: "竖将" },
-      { id: "general3", type: "2x1", shape: [2, 1], position: [0, 3], color: "#45b7d1", name: "竖将" },
-      { id: "general4", type: "1x2", shape: [1, 2], position: [3, 1], color: "#4ecdc4", name: "横将" },
-      { id: "soldier1", type: "1x1", shape: [1, 1], position: [2, 0], color: "#95e1d3", name: "兵" },
-      { id: "soldier2", type: "1x1", shape: [1, 1], position: [2, 3], color: "#95e1d3", name: "兵" },
-      { id: "soldier3", type: "1x1", shape: [1, 1], position: [4, 1], color: "#95e1d3", name: "兵" },
-      { id: "soldier4", type: "1x1", shape: [1, 1], position: [4, 2], color: "#95e1d3", name: "兵" }
+    "id": 8,
+    "name": "指挥若定",
+    "minMoves": 70,
+    "description": "曹操居中指挥，参考最少70步",
+    "blocks": [
+      {
+        "id": "vertical1",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          0,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "caocao",
+        "type": "2x2",
+        "shape": [
+          2,
+          2
+        ],
+        "position": [
+          0,
+          1
+        ],
+        "color": "#ff6b6b",
+        "name": "曹操"
+      },
+      {
+        "id": "vertical2",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          0,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "soldier1",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          2,
+          0
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "horizontal1",
+        "type": "1x2",
+        "shape": [
+          1,
+          2
+        ],
+        "position": [
+          2,
+          1
+        ],
+        "color": "#4ecdc4",
+        "name": "横将"
+      },
+      {
+        "id": "soldier2",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          2,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "vertical3",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "soldier3",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          3,
+          1
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier4",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          3,
+          2
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "vertical4",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      }
     ]
   },
   {
-    id: 9,
-    name: "横刀立马",
-    description: "最经典的华容道布局，需要81步",
-    minMoves: 81,
-    blocks: [
-      { id: "caocao", type: "2x2", shape: [2, 2], position: [0, 1], color: "#ff6b6b", name: "曹操" },
-      { id: "guanyu", type: "1x2", shape: [1, 2], position: [2, 1], color: "#4ecdc4", name: "关羽" },
-      { id: "zhangfei", type: "2x1", shape: [2, 1], position: [0, 0], color: "#45b7d1", name: "张飞" },
-      { id: "zhaoyun", type: "2x1", shape: [2, 1], position: [0, 3], color: "#45b7d1", name: "赵云" },
-      { id: "machao", type: "2x1", shape: [2, 1], position: [2, 0], color: "#45b7d1", name: "马超" },
-      { id: "huangzhong", type: "2x1", shape: [2, 1], position: [2, 3], color: "#45b7d1", name: "黄忠" },
-      { id: "soldier1", type: "1x1", shape: [1, 1], position: [3, 1], color: "#95e1d3", name: "兵" },
-      { id: "soldier2", type: "1x1", shape: [1, 1], position: [3, 2], color: "#95e1d3", name: "兵" },
-      { id: "soldier3", type: "1x1", shape: [1, 1], position: [4, 0], color: "#95e1d3", name: "兵" },
-      { id: "soldier4", type: "1x1", shape: [1, 1], position: [4, 3], color: "#95e1d3", name: "兵" }
+    "id": 9,
+    "name": "兵分三路",
+    "minMoves": 72,
+    "description": "三路出击的经典阵型，参考最少72步",
+    "blocks": [
+      {
+        "id": "soldier1",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          0,
+          0
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "caocao",
+        "type": "2x2",
+        "shape": [
+          2,
+          2
+        ],
+        "position": [
+          0,
+          1
+        ],
+        "color": "#ff6b6b",
+        "name": "曹操"
+      },
+      {
+        "id": "soldier2",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          0,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "vertical1",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          1,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "vertical2",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          1,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "horizontal1",
+        "type": "1x2",
+        "shape": [
+          1,
+          2
+        ],
+        "position": [
+          2,
+          1
+        ],
+        "color": "#4ecdc4",
+        "name": "横将"
+      },
+      {
+        "id": "vertical3",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "soldier3",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          3,
+          1
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier4",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          3,
+          2
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "vertical4",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      }
     ]
   },
   {
-    id: 10,
-    name: "近在咫尺",
-    description: "曹操近在咫尺却难以脱身，需要82步",
-    minMoves: 82,
-    blocks: [
-      { id: "caocao", type: "2x2", shape: [2, 2], position: [2, 1], color: "#ff6b6b", name: "曹操" },
-      { id: "general1", type: "1x2", shape: [1, 2], position: [0, 1], color: "#4ecdc4", name: "横将" },
-      { id: "general2", type: "2x1", shape: [2, 1], position: [0, 0], color: "#45b7d1", name: "竖将" },
-      { id: "general3", type: "2x1", shape: [2, 1], position: [0, 3], color: "#45b7d1", name: "竖将" },
-      { id: "general4", type: "2x1", shape: [2, 1], position: [2, 0], color: "#45b7d1", name: "竖将" },
-      { id: "general5", type: "2x1", shape: [2, 1], position: [2, 3], color: "#45b7d1", name: "竖将" },
-      { id: "soldier1", type: "1x1", shape: [1, 1], position: [1, 1], color: "#95e1d3", name: "兵" },
-      { id: "soldier2", type: "1x1", shape: [1, 1], position: [1, 2], color: "#95e1d3", name: "兵" },
-      { id: "soldier3", type: "1x1", shape: [1, 1], position: [4, 1], color: "#95e1d3", name: "兵" },
-      { id: "soldier4", type: "1x1", shape: [1, 1], position: [4, 2], color: "#95e1d3", name: "兵" }
+    "id": 10,
+    "name": "将拥曹营",
+    "minMoves": 72,
+    "description": "众将围绕曹操，参考最少72步",
+    "blocks": [
+      {
+        "id": "caocao",
+        "type": "2x2",
+        "shape": [
+          2,
+          2
+        ],
+        "position": [
+          0,
+          1
+        ],
+        "color": "#ff6b6b",
+        "name": "曹操"
+      },
+      {
+        "id": "vertical1",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          1,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "vertical2",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          1,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "vertical3",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          1
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "vertical4",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          2
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "soldier1",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          3,
+          0
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier2",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          3,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "horizontal1",
+        "type": "1x2",
+        "shape": [
+          1,
+          2
+        ],
+        "position": [
+          4,
+          0
+        ],
+        "color": "#4ecdc4",
+        "name": "横将"
+      },
+      {
+        "id": "soldier3",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          4,
+          2
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier4",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          4,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      }
+    ]
+  },
+  {
+    "id": 11,
+    "name": "横刀立马",
+    "minMoves": 81,
+    "description": "最经典的华容道布局，参考最少81步",
+    "blocks": [
+      {
+        "id": "vertical1",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          0,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "caocao",
+        "type": "2x2",
+        "shape": [
+          2,
+          2
+        ],
+        "position": [
+          0,
+          1
+        ],
+        "color": "#ff6b6b",
+        "name": "曹操"
+      },
+      {
+        "id": "vertical2",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          0,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "vertical3",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "horizontal1",
+        "type": "1x2",
+        "shape": [
+          1,
+          2
+        ],
+        "position": [
+          2,
+          1
+        ],
+        "color": "#4ecdc4",
+        "name": "横将"
+      },
+      {
+        "id": "vertical4",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "soldier1",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          3,
+          1
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier2",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          3,
+          2
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier3",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          4,
+          0
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier4",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          4,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      }
+    ]
+  },
+  {
+    "id": 12,
+    "name": "峰回路转",
+    "minMoves": 138,
+    "description": "最难的布局，参考最少138步",
+    "blocks": [
+      {
+        "id": "soldier1",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          0,
+          0
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier2",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          0,
+          1
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier3",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          0,
+          2
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "vertical1",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          0,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "caocao",
+        "type": "2x2",
+        "shape": [
+          2,
+          2
+        ],
+        "position": [
+          1,
+          0
+        ],
+        "color": "#ff6b6b",
+        "name": "曹操"
+      },
+      {
+        "id": "vertical2",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          1,
+          2
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "vertical3",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "竖将"
+      },
+      {
+        "id": "horizontal1",
+        "type": "1x2",
+        "shape": [
+          1,
+          2
+        ],
+        "position": [
+          3,
+          1
+        ],
+        "color": "#4ecdc4",
+        "name": "横将"
+      },
+      {
+        "id": "soldier4",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          4,
+          1
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "horizontal2",
+        "type": "1x2",
+        "shape": [
+          1,
+          2
+        ],
+        "position": [
+          4,
+          2
+        ],
+        "color": "#4ecdc4",
+        "name": "横将"
+      }
     ]
   }
 ];
