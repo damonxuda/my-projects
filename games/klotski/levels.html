@@ -531,9 +531,10 @@
         }
 
         updateStats() {
-          const completedCount = Object.values(this.records).filter(r => r.completed).length;
+          const completedCount = Object.values(this.records).filter(r => r && r.completed).length;
           document.getElementById('completedCount').textContent =
             `${completedCount}/${KLOTSKI_LEVELS.length}`;
+          console.log('[klotski] 统计信息更新:', { completedCount, total: KLOTSKI_LEVELS.length, records: this.records });
         }
       }
 
