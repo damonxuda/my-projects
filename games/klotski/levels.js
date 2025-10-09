@@ -15,157 +15,9 @@
 const KLOTSKI_LEVELS = [
   {
     "id": 1,
-    "name": "比翼横空",
-    "minMoves": 28,
-    "description": "最简单的布局，参考最少28步",
-    "blocks": [
-      {
-        "id": "horizontal1",
-        "type": "1x2",
-        "shape": [
-          1,
-          2
-        ],
-        "position": [
-          0,
-          0
-        ],
-        "color": "#4ecdc4",
-        "name": "关羽"
-      },
-      {
-        "id": "caocao",
-        "type": "2x2",
-        "shape": [
-          2,
-          2
-        ],
-        "position": [
-          0,
-          2
-        ],
-        "color": "#ff6b6b",
-        "name": "曹操"
-      },
-      {
-        "id": "horizontal2",
-        "type": "1x2",
-        "shape": [
-          1,
-          2
-        ],
-        "position": [
-          1,
-          0
-        ],
-        "color": "#4ecdc4",
-        "name": "关羽"
-      },
-      {
-        "id": "horizontal3",
-        "type": "1x2",
-        "shape": [
-          1,
-          2
-        ],
-        "position": [
-          2,
-          0
-        ],
-        "color": "#4ecdc4",
-        "name": "关羽"
-      },
-      {
-        "id": "horizontal4",
-        "type": "1x2",
-        "shape": [
-          1,
-          2
-        ],
-        "position": [
-          2,
-          2
-        ],
-        "color": "#4ecdc4",
-        "name": "关羽"
-      },
-      {
-        "id": "soldier1",
-        "type": "1x1",
-        "shape": [
-          1,
-          1
-        ],
-        "position": [
-          3,
-          0
-        ],
-        "color": "#95e1d3",
-        "name": "兵"
-      },
-      {
-        "id": "soldier2",
-        "type": "1x1",
-        "shape": [
-          1,
-          1
-        ],
-        "position": [
-          3,
-          2
-        ],
-        "color": "#95e1d3",
-        "name": "兵"
-      },
-      {
-        "id": "vertical1",
-        "type": "2x1",
-        "shape": [
-          2,
-          1
-        ],
-        "position": [
-          3,
-          3
-        ],
-        "color": "#45b7d1",
-        "name": "张飞"
-      },
-      {
-        "id": "soldier3",
-        "type": "1x1",
-        "shape": [
-          1,
-          1
-        ],
-        "position": [
-          4,
-          0
-        ],
-        "color": "#95e1d3",
-        "name": "兵"
-      },
-      {
-        "id": "soldier4",
-        "type": "1x1",
-        "shape": [
-          1,
-          1
-        ],
-        "position": [
-          4,
-          2
-        ],
-        "color": "#95e1d3",
-        "name": "兵"
-      }
-    ]
-  },
-  {
-    "id": 2,
     "name": "捷足先登",
     "minMoves": 32,
-    "description": "简单布局，参考最少32步",
+    "description": "最简单的布局，参考最少32步",
     "blocks": [
       {
         "id": "soldier1",
@@ -310,7 +162,7 @@ const KLOTSKI_LEVELS = [
     ]
   },
   {
-    "id": 3,
+    "id": 2,
     "name": "一路顺风",
     "minMoves": 39,
     "description": "一路顺风布局，参考最少39步",
@@ -451,6 +303,154 @@ const KLOTSKI_LEVELS = [
         "position": [
           4,
           1
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "name": "小燕出巢",
+    "minMoves": 43,
+    "description": "小燕出巢布局，参考最少43步",
+    "blocks": [
+      {
+        "id": "soldier1",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          0,
+          0
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier2",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          0,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "vertical1",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          1,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "张飞"
+      },
+      {
+        "id": "caocao",
+        "type": "2x2",
+        "shape": [
+          2,
+          2
+        ],
+        "position": [
+          1,
+          1
+        ],
+        "color": "#ff6b6b",
+        "name": "曹操"
+      },
+      {
+        "id": "vertical2",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          1,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "赵云"
+      },
+      {
+        "id": "vertical3",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "马超"
+      },
+      {
+        "id": "horizontal1",
+        "type": "1x2",
+        "shape": [
+          1,
+          2
+        ],
+        "position": [
+          3,
+          1
+        ],
+        "color": "#4ecdc4",
+        "name": "关羽"
+      },
+      {
+        "id": "vertical4",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "黄忠"
+      },
+      {
+        "id": "soldier3",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          4,
+          1
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier4",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          4,
+          2
         ],
         "color": "#95e1d3",
         "name": "兵"
@@ -1199,6 +1199,288 @@ const KLOTSKI_LEVELS = [
   },
   {
     "id": 9,
+    "name": "桃花园中",
+    "minMoves": 70,
+    "description": "桃花园中布局，参考最少70步",
+    "blocks": [
+      {
+        "id": "soldier1",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          0,
+          0
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "caocao",
+        "type": "2x2",
+        "shape": [
+          2,
+          2
+        ],
+        "position": [
+          0,
+          1
+        ],
+        "color": "#ff6b6b",
+        "name": "曹操"
+      },
+      {
+        "id": "soldier2",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          0,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "vertical1",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          1,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "张飞"
+      },
+      {
+        "id": "vertical2",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          1,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "赵云"
+      },
+      {
+        "id": "vertical3",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          1
+        ],
+        "color": "#45b7d1",
+        "name": "马超"
+      },
+      {
+        "id": "vertical4",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          2
+        ],
+        "color": "#45b7d1",
+        "name": "黄忠"
+      },
+      {
+        "id": "soldier3",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          3,
+          0
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier4",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          3,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "horizontal1",
+        "type": "1x2",
+        "shape": [
+          1,
+          2
+        ],
+        "position": [
+          4,
+          1
+        ],
+        "color": "#4ecdc4",
+        "name": "关羽"
+      }
+    ]
+  },
+  {
+    "id": 10,
+    "name": "旗开得胜",
+    "minMoves": 70,
+    "description": "旗开得胜布局，参考最少70步",
+    "blocks": [
+      {
+        "id": "soldier1",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          0,
+          0
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "caocao",
+        "type": "2x2",
+        "shape": [
+          2,
+          2
+        ],
+        "position": [
+          0,
+          1
+        ],
+        "color": "#ff6b6b",
+        "name": "曹操"
+      },
+      {
+        "id": "soldier2",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          0,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "vertical1",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          1,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "张飞"
+      },
+      {
+        "id": "vertical2",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          1,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "赵云"
+      },
+      {
+        "id": "horizontal1",
+        "type": "1x2",
+        "shape": [
+          1,
+          2
+        ],
+        "position": [
+          2,
+          1
+        ],
+        "color": "#4ecdc4",
+        "name": "关羽"
+      },
+      {
+        "id": "vertical3",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "马超"
+      },
+      {
+        "id": "vertical4",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          1
+        ],
+        "color": "#45b7d1",
+        "name": "黄忠"
+      },
+      {
+        "id": "soldier3",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          3,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      }
+    ]
+  },
+  {
+    "id": 11,
     "name": "兵分三路",
     "minMoves": 72,
     "description": "三路出击的经典阵型，参考最少72步",
@@ -1346,7 +1628,7 @@ const KLOTSKI_LEVELS = [
     ]
   },
   {
-    "id": 10,
+    "id": 12,
     "name": "将拥曹营",
     "minMoves": 72,
     "description": "众将围绕曹操，参考最少72步",
@@ -1494,7 +1776,155 @@ const KLOTSKI_LEVELS = [
     ]
   },
   {
-    "id": 11,
+    "id": 13,
+    "name": "兵挫曹营",
+    "minMoves": 78,
+    "description": "兵挫曹营布局，参考最少78步",
+    "blocks": [
+      {
+        "id": "caocao",
+        "type": "2x2",
+        "shape": [
+          2,
+          2
+        ],
+        "position": [
+          0,
+          1
+        ],
+        "color": "#ff6b6b",
+        "name": "曹操"
+      },
+      {
+        "id": "vertical1",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          1,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "张飞"
+      },
+      {
+        "id": "vertical2",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          1,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "赵云"
+      },
+      {
+        "id": "horizontal1",
+        "type": "1x2",
+        "shape": [
+          1,
+          2
+        ],
+        "position": [
+          2,
+          1
+        ],
+        "color": "#4ecdc4",
+        "name": "关羽"
+      },
+      {
+        "id": "soldier1",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          3,
+          0
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "vertical3",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          1
+        ],
+        "color": "#45b7d1",
+        "name": "马超"
+      },
+      {
+        "id": "vertical4",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          2
+        ],
+        "color": "#45b7d1",
+        "name": "黄忠"
+      },
+      {
+        "id": "soldier2",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          3,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier3",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          4,
+          0
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier4",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          4,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      }
+    ]
+  },
+  {
+    "id": 14,
     "name": "横刀立马",
     "minMoves": 81,
     "description": "最经典的华容道布局，参考最少81步",
@@ -1642,10 +2072,158 @@ const KLOTSKI_LEVELS = [
     ]
   },
   {
-    "id": 12,
-    "name": "峰回路转",
-    "minMoves": 138,
-    "description": "最难的布局，参考最少138步",
+    "id": 15,
+    "name": "云遮雾障",
+    "minMoves": 81,
+    "description": "云遮雾障布局，参考最少81步",
+    "blocks": [
+      {
+        "id": "vertical1",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          0,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "张飞"
+      },
+      {
+        "id": "caocao",
+        "type": "2x2",
+        "shape": [
+          2,
+          2
+        ],
+        "position": [
+          0,
+          1
+        ],
+        "color": "#ff6b6b",
+        "name": "曹操"
+      },
+      {
+        "id": "soldier1",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          0,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier2",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          1,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "vertical2",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "赵云"
+      },
+      {
+        "id": "horizontal1",
+        "type": "1x2",
+        "shape": [
+          1,
+          2
+        ],
+        "position": [
+          2,
+          1
+        ],
+        "color": "#4ecdc4",
+        "name": "关羽"
+      },
+      {
+        "id": "vertical3",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "马超"
+      },
+      {
+        "id": "vertical4",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          1
+        ],
+        "color": "#45b7d1",
+        "name": "黄忠"
+      },
+      {
+        "id": "soldier3",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          4,
+          0
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier4",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          4,
+          2
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      }
+    ]
+  },
+  {
+    "id": 16,
+    "name": "天兵神将",
+    "minMoves": 82,
+    "description": "天兵神将布局，参考最少82步",
     "blocks": [
       {
         "id": "soldier1",
@@ -1670,13 +2248,429 @@ const KLOTSKI_LEVELS = [
         ],
         "position": [
           0,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "vertical1",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          1,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "张飞"
+      },
+      {
+        "id": "caocao",
+        "type": "2x2",
+        "shape": [
+          2,
+          2
+        ],
+        "position": [
+          1,
+          1
+        ],
+        "color": "#ff6b6b",
+        "name": "曹操"
+      },
+      {
+        "id": "vertical2",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          1,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "赵云"
+      },
+      {
+        "id": "vertical3",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "马超"
+      },
+      {
+        "id": "horizontal1",
+        "type": "1x2",
+        "shape": [
+          1,
+          2
+        ],
+        "position": [
+          3,
+          1
+        ],
+        "color": "#4ecdc4",
+        "name": "关羽"
+      },
+      {
+        "id": "vertical4",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "黄忠"
+      },
+      {
+        "id": "soldier3",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          4,
           1
         ],
         "color": "#95e1d3",
         "name": "兵"
       },
       {
+        "id": "soldier4",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          4,
+          2
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      }
+    ]
+  },
+  {
+    "id": 17,
+    "name": "双将挺进",
+    "minMoves": 82,
+    "description": "双将挺进布局，参考最少82步",
+    "blocks": [
+      {
+        "id": "soldier1",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          0,
+          0
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier2",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          0,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "vertical1",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          1,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "张飞"
+      },
+      {
+        "id": "caocao",
+        "type": "2x2",
+        "shape": [
+          2,
+          2
+        ],
+        "position": [
+          1,
+          1
+        ],
+        "color": "#ff6b6b",
+        "name": "曹操"
+      },
+      {
+        "id": "vertical2",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          1,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "赵云"
+      },
+      {
+        "id": "vertical3",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "马超"
+      },
+      {
+        "id": "horizontal1",
+        "type": "1x2",
+        "shape": [
+          1,
+          2
+        ],
+        "position": [
+          3,
+          1
+        ],
+        "color": "#4ecdc4",
+        "name": "关羽"
+      },
+      {
+        "id": "vertical4",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "黄忠"
+      },
+      {
         "id": "soldier3",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          4,
+          1
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier4",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          4,
+          2
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      }
+    ]
+  },
+  {
+    "id": 18,
+    "name": "陷入包围",
+    "minMoves": 90,
+    "description": "陷入包围布局，参考最少90步",
+    "blocks": [
+      {
+        "id": "soldier1",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          0,
+          0
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier2",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          0,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "vertical1",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          1,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "张飞"
+      },
+      {
+        "id": "caocao",
+        "type": "2x2",
+        "shape": [
+          2,
+          2
+        ],
+        "position": [
+          1,
+          1
+        ],
+        "color": "#ff6b6b",
+        "name": "曹操"
+      },
+      {
+        "id": "vertical2",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          1,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "赵云"
+      },
+      {
+        "id": "vertical3",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "马超"
+      },
+      {
+        "id": "horizontal1",
+        "type": "1x2",
+        "shape": [
+          1,
+          2
+        ],
+        "position": [
+          3,
+          1
+        ],
+        "color": "#4ecdc4",
+        "name": "关羽"
+      },
+      {
+        "id": "vertical4",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "黄忠"
+      },
+      {
+        "id": "soldier3",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          4,
+          1
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      }
+    ]
+  },
+  {
+    "id": 19,
+    "name": "层层设防",
+    "minMoves": 102,
+    "description": "层层设防布局，参考最少102步",
+    "blocks": [
+      {
+        "id": "caocao",
+        "type": "2x2",
+        "shape": [
+          2,
+          2
+        ],
+        "position": [
+          0,
+          0
+        ],
+        "color": "#ff6b6b",
+        "name": "曹操"
+      },
+      {
+        "id": "soldier1",
         "type": "1x1",
         "shape": [
           1,
@@ -1704,18 +2698,18 @@ const KLOTSKI_LEVELS = [
         "name": "张飞"
       },
       {
-        "id": "caocao",
-        "type": "2x2",
+        "id": "soldier2",
+        "type": "1x1",
         "shape": [
-          2,
-          2
+          1,
+          1
         ],
         "position": [
           1,
-          0
+          2
         ],
-        "color": "#ff6b6b",
-        "name": "曹操"
+        "color": "#95e1d3",
+        "name": "兵"
       },
       {
         "id": "vertical2",
@@ -1725,11 +2719,25 @@ const KLOTSKI_LEVELS = [
           1
         ],
         "position": [
-          1,
-          2
+          2,
+          0
         ],
         "color": "#45b7d1",
         "name": "赵云"
+      },
+      {
+        "id": "horizontal1",
+        "type": "1x2",
+        "shape": [
+          1,
+          2
+        ],
+        "position": [
+          2,
+          1
+        ],
+        "color": "#4ecdc4",
+        "name": "关羽"
       },
       {
         "id": "vertical3",
@@ -1746,18 +2754,32 @@ const KLOTSKI_LEVELS = [
         "name": "马超"
       },
       {
-        "id": "horizontal1",
-        "type": "1x2",
+        "id": "soldier3",
+        "type": "1x1",
         "shape": [
           1,
-          2
+          1
         ],
         "position": [
           3,
           1
         ],
-        "color": "#4ecdc4",
-        "name": "关羽"
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "vertical4",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          3,
+          2
+        ],
+        "color": "#45b7d1",
+        "name": "黄忠"
       },
       {
         "id": "soldier4",
@@ -1772,9 +2794,143 @@ const KLOTSKI_LEVELS = [
         ],
         "color": "#95e1d3",
         "name": "兵"
+      }
+    ]
+  },
+  {
+    "id": 20,
+    "name": "步步为营一",
+    "minMoves": 106,
+    "description": "步步为营布局，参考最少106步",
+    "blocks": [
+      {
+        "id": "caocao",
+        "type": "2x2",
+        "shape": [
+          2,
+          2
+        ],
+        "position": [
+          0,
+          0
+        ],
+        "color": "#ff6b6b",
+        "name": "曹操"
       },
       {
-        "id": "horizontal2",
+        "id": "soldier1",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          0,
+          2
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "vertical1",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          0,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "张飞"
+      },
+      {
+        "id": "soldier2",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          1,
+          2
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "vertical2",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "赵云"
+      },
+      {
+        "id": "vertical3",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          1
+        ],
+        "color": "#45b7d1",
+        "name": "马超"
+      },
+      {
+        "id": "vertical4",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          2
+        ],
+        "color": "#45b7d1",
+        "name": "黄忠"
+      },
+      {
+        "id": "soldier3",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          2,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier4",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          3,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "horizontal1",
         "type": "1x2",
         "shape": [
           1,
@@ -1782,7 +2938,155 @@ const KLOTSKI_LEVELS = [
         ],
         "position": [
           4,
+          1
+        ],
+        "color": "#4ecdc4",
+        "name": "关羽"
+      }
+    ]
+  },
+  {
+    "id": 21,
+    "name": "步步为营二",
+    "minMoves": 116,
+    "description": "最难的布局，参考最少116步",
+    "blocks": [
+      {
+        "id": "caocao",
+        "type": "2x2",
+        "shape": [
+          2,
           2
+        ],
+        "position": [
+          0,
+          0
+        ],
+        "color": "#ff6b6b",
+        "name": "曹操"
+      },
+      {
+        "id": "soldier1",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          0,
+          2
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier2",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          0,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier3",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          1,
+          2
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "soldier4",
+        "type": "1x1",
+        "shape": [
+          1,
+          1
+        ],
+        "position": [
+          1,
+          3
+        ],
+        "color": "#95e1d3",
+        "name": "兵"
+      },
+      {
+        "id": "vertical1",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          0
+        ],
+        "color": "#45b7d1",
+        "name": "张飞"
+      },
+      {
+        "id": "vertical2",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          1
+        ],
+        "color": "#45b7d1",
+        "name": "赵云"
+      },
+      {
+        "id": "vertical3",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          2
+        ],
+        "color": "#45b7d1",
+        "name": "马超"
+      },
+      {
+        "id": "vertical4",
+        "type": "2x1",
+        "shape": [
+          2,
+          1
+        ],
+        "position": [
+          2,
+          3
+        ],
+        "color": "#45b7d1",
+        "name": "黄忠"
+      },
+      {
+        "id": "horizontal1",
+        "type": "1x2",
+        "shape": [
+          1,
+          2
+        ],
+        "position": [
+          4,
+          1
         ],
         "color": "#4ecdc4",
         "name": "关羽"
