@@ -9,6 +9,8 @@
 //
 // 棋盘: 5行4列 (行索引0-4, 列索引0-3)
 // 出口: 第4行中间两格 [3,1] 和 [3,2]
+//
+// 武将命名：横将-关羽；竖将-张飞、赵云、马超、黄忠
 
 const KLOTSKI_LEVELS = [
   {
@@ -29,7 +31,7 @@ const KLOTSKI_LEVELS = [
           0
         ],
         "color": "#4ecdc4",
-        "name": "横将"
+        "name": "关羽"
       },
       {
         "id": "caocao",
@@ -57,7 +59,7 @@ const KLOTSKI_LEVELS = [
           0
         ],
         "color": "#4ecdc4",
-        "name": "横将"
+        "name": "关羽"
       },
       {
         "id": "horizontal3",
@@ -71,7 +73,7 @@ const KLOTSKI_LEVELS = [
           0
         ],
         "color": "#4ecdc4",
-        "name": "横将"
+        "name": "关羽"
       },
       {
         "id": "horizontal4",
@@ -85,7 +87,7 @@ const KLOTSKI_LEVELS = [
           2
         ],
         "color": "#4ecdc4",
-        "name": "横将"
+        "name": "关羽"
       },
       {
         "id": "soldier1",
@@ -127,7 +129,7 @@ const KLOTSKI_LEVELS = [
           3
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "张飞"
       },
       {
         "id": "soldier3",
@@ -247,7 +249,7 @@ const KLOTSKI_LEVELS = [
           1
         ],
         "color": "#4ecdc4",
-        "name": "横将"
+        "name": "关羽"
       },
       {
         "id": "vertical1",
@@ -261,7 +263,7 @@ const KLOTSKI_LEVELS = [
           0
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "张飞"
       },
       {
         "id": "vertical2",
@@ -275,7 +277,7 @@ const KLOTSKI_LEVELS = [
           1
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "赵云"
       },
       {
         "id": "vertical3",
@@ -289,7 +291,7 @@ const KLOTSKI_LEVELS = [
           2
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "马超"
       },
       {
         "id": "vertical4",
@@ -303,7 +305,7 @@ const KLOTSKI_LEVELS = [
           3
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "黄忠"
       }
     ]
   },
@@ -325,7 +327,7 @@ const KLOTSKI_LEVELS = [
           0
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "张飞"
       },
       {
         "id": "caocao",
@@ -381,7 +383,7 @@ const KLOTSKI_LEVELS = [
           0
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "赵云"
       },
       {
         "id": "horizontal1",
@@ -395,7 +397,7 @@ const KLOTSKI_LEVELS = [
           1
         ],
         "color": "#4ecdc4",
-        "name": "横将"
+        "name": "关羽"
       },
       {
         "id": "vertical3",
@@ -409,7 +411,7 @@ const KLOTSKI_LEVELS = [
           3
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "马超"
       },
       {
         "id": "soldier3",
@@ -437,7 +439,7 @@ const KLOTSKI_LEVELS = [
           2
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "黄忠"
       },
       {
         "id": "soldier4",
@@ -473,7 +475,7 @@ const KLOTSKI_LEVELS = [
           0
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "张飞"
       },
       {
         "id": "caocao",
@@ -529,7 +531,7 @@ const KLOTSKI_LEVELS = [
           0
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "赵云"
       },
       {
         "id": "horizontal1",
@@ -543,7 +545,7 @@ const KLOTSKI_LEVELS = [
           1
         ],
         "color": "#4ecdc4",
-        "name": "横将"
+        "name": "关羽"
       },
       {
         "id": "vertical3",
@@ -557,7 +559,7 @@ const KLOTSKI_LEVELS = [
           3
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "马超"
       },
       {
         "id": "vertical4",
@@ -571,7 +573,7 @@ const KLOTSKI_LEVELS = [
           1
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "黄忠"
       },
       {
         "id": "soldier3",
@@ -691,7 +693,7 @@ const KLOTSKI_LEVELS = [
           0
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "张飞"
       },
       {
         "id": "vertical2",
@@ -705,7 +707,7 @@ const KLOTSKI_LEVELS = [
           1
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "赵云"
       },
       {
         "id": "vertical3",
@@ -719,7 +721,7 @@ const KLOTSKI_LEVELS = [
           2
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "马超"
       },
       {
         "id": "vertical4",
@@ -733,7 +735,7 @@ const KLOTSKI_LEVELS = [
           3
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "黄忠"
       },
       {
         "id": "horizontal1",
@@ -747,7 +749,7 @@ const KLOTSKI_LEVELS = [
           1
         ],
         "color": "#4ecdc4",
-        "name": "横将"
+        "name": "关羽"
       }
     ]
   },
@@ -769,7 +771,7 @@ const KLOTSKI_LEVELS = [
           0
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "张飞"
       },
       {
         "id": "caocao",
@@ -825,7 +827,7 @@ const KLOTSKI_LEVELS = [
           0
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "赵云"
       },
       {
         "id": "vertical3",
@@ -839,7 +841,7 @@ const KLOTSKI_LEVELS = [
           1
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "马超"
       },
       {
         "id": "vertical4",
@@ -853,7 +855,7 @@ const KLOTSKI_LEVELS = [
           2
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "黄忠"
       },
       {
         "id": "soldier3",
@@ -895,7 +897,7 @@ const KLOTSKI_LEVELS = [
           1
         ],
         "color": "#4ecdc4",
-        "name": "横将"
+        "name": "关羽"
       }
     ]
   },
@@ -917,7 +919,7 @@ const KLOTSKI_LEVELS = [
           0
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "张飞"
       },
       {
         "id": "caocao",
@@ -945,7 +947,7 @@ const KLOTSKI_LEVELS = [
           3
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "赵云"
       },
       {
         "id": "soldier1",
@@ -1015,7 +1017,7 @@ const KLOTSKI_LEVELS = [
           0
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "马超"
       },
       {
         "id": "horizontal1",
@@ -1029,7 +1031,7 @@ const KLOTSKI_LEVELS = [
           1
         ],
         "color": "#4ecdc4",
-        "name": "横将"
+        "name": "关羽"
       },
       {
         "id": "vertical4",
@@ -1043,7 +1045,7 @@ const KLOTSKI_LEVELS = [
           3
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "黄忠"
       }
     ]
   },
@@ -1065,7 +1067,7 @@ const KLOTSKI_LEVELS = [
           0
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "张飞"
       },
       {
         "id": "caocao",
@@ -1093,7 +1095,7 @@ const KLOTSKI_LEVELS = [
           3
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "赵云"
       },
       {
         "id": "soldier1",
@@ -1121,7 +1123,7 @@ const KLOTSKI_LEVELS = [
           1
         ],
         "color": "#4ecdc4",
-        "name": "横将"
+        "name": "关羽"
       },
       {
         "id": "soldier2",
@@ -1149,7 +1151,7 @@ const KLOTSKI_LEVELS = [
           0
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "马超"
       },
       {
         "id": "soldier3",
@@ -1191,7 +1193,7 @@ const KLOTSKI_LEVELS = [
           3
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "黄忠"
       }
     ]
   },
@@ -1255,7 +1257,7 @@ const KLOTSKI_LEVELS = [
           0
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "张飞"
       },
       {
         "id": "vertical2",
@@ -1269,7 +1271,7 @@ const KLOTSKI_LEVELS = [
           3
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "赵云"
       },
       {
         "id": "horizontal1",
@@ -1283,7 +1285,7 @@ const KLOTSKI_LEVELS = [
           1
         ],
         "color": "#4ecdc4",
-        "name": "横将"
+        "name": "关羽"
       },
       {
         "id": "vertical3",
@@ -1297,7 +1299,7 @@ const KLOTSKI_LEVELS = [
           0
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "马超"
       },
       {
         "id": "soldier3",
@@ -1339,7 +1341,7 @@ const KLOTSKI_LEVELS = [
           3
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "黄忠"
       }
     ]
   },
@@ -1375,7 +1377,7 @@ const KLOTSKI_LEVELS = [
           0
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "张飞"
       },
       {
         "id": "vertical2",
@@ -1389,7 +1391,7 @@ const KLOTSKI_LEVELS = [
           3
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "赵云"
       },
       {
         "id": "vertical3",
@@ -1403,7 +1405,7 @@ const KLOTSKI_LEVELS = [
           1
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "马超"
       },
       {
         "id": "vertical4",
@@ -1417,7 +1419,7 @@ const KLOTSKI_LEVELS = [
           2
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "黄忠"
       },
       {
         "id": "soldier1",
@@ -1459,7 +1461,7 @@ const KLOTSKI_LEVELS = [
           0
         ],
         "color": "#4ecdc4",
-        "name": "横将"
+        "name": "关羽"
       },
       {
         "id": "soldier3",
@@ -1509,7 +1511,7 @@ const KLOTSKI_LEVELS = [
           0
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "张飞"
       },
       {
         "id": "caocao",
@@ -1537,7 +1539,7 @@ const KLOTSKI_LEVELS = [
           3
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "赵云"
       },
       {
         "id": "vertical3",
@@ -1551,7 +1553,7 @@ const KLOTSKI_LEVELS = [
           0
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "马超"
       },
       {
         "id": "horizontal1",
@@ -1565,7 +1567,7 @@ const KLOTSKI_LEVELS = [
           1
         ],
         "color": "#4ecdc4",
-        "name": "横将"
+        "name": "关羽"
       },
       {
         "id": "vertical4",
@@ -1579,7 +1581,7 @@ const KLOTSKI_LEVELS = [
           3
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "黄忠"
       },
       {
         "id": "soldier1",
@@ -1699,7 +1701,7 @@ const KLOTSKI_LEVELS = [
           3
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "张飞"
       },
       {
         "id": "caocao",
@@ -1727,7 +1729,7 @@ const KLOTSKI_LEVELS = [
           2
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "赵云"
       },
       {
         "id": "vertical3",
@@ -1741,7 +1743,7 @@ const KLOTSKI_LEVELS = [
           3
         ],
         "color": "#45b7d1",
-        "name": "竖将"
+        "name": "马超"
       },
       {
         "id": "horizontal1",
@@ -1755,7 +1757,7 @@ const KLOTSKI_LEVELS = [
           1
         ],
         "color": "#4ecdc4",
-        "name": "横将"
+        "name": "关羽"
       },
       {
         "id": "soldier4",
@@ -1783,7 +1785,7 @@ const KLOTSKI_LEVELS = [
           2
         ],
         "color": "#4ecdc4",
-        "name": "横将"
+        "name": "关羽"
       }
     ]
   }
