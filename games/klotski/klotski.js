@@ -143,6 +143,16 @@ class KlotskiEngine {
     const block = this.blocks.find(b => b.id === blockId);
     if (!block) return false;
 
+    // 限制每次只能移动一格（不能斜向或跨格）
+    // deltaRow和deltaCol必须有且仅有一个为±1，另一个为0
+    const isValidMove =
+      (Math.abs(deltaRow) === 1 && deltaCol === 0) ||
+      (Math.abs(deltaCol) === 1 && deltaRow === 0);
+
+    if (!isValidMove) {
+      return false;
+    }
+
     const [row, col] = block.position;
     const newRow = row + deltaRow;
     const newCol = col + deltaCol;
@@ -164,7 +174,7 @@ class KlotskiEngine {
     // 放置到新位置
     this.placeBlockOnBoard(this.board, block);
 
-    // 增加移动计数
+    // 增加移动计数（每移动一格算一步）
     this.moveCount++;
 
     return true;
