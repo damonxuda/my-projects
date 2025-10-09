@@ -139,17 +139,18 @@ class KlotskiEngine {
   }
 
   // 通过拖动移动方块（计算移动方向和距离）
+  // 允许沿直线方向移动多格，但只能水平或垂直移动，不能斜向
   moveBlockByDrag(blockId, deltaRow, deltaCol) {
     const block = this.blocks.find(b => b.id === blockId);
     if (!block) return false;
 
-    // 限制每次只能移动一格（不能斜向或跨格）
-    // deltaRow和deltaCol必须有且仅有一个为±1，另一个为0
-    const isValidMove =
-      (Math.abs(deltaRow) === 1 && deltaCol === 0) ||
-      (Math.abs(deltaCol) === 1 && deltaRow === 0);
+    // 必须是纯水平或纯垂直移动，不能斜向
+    if (deltaRow !== 0 && deltaCol !== 0) {
+      return false;
+    }
 
-    if (!isValidMove) {
+    // 如果没有移动，返回false
+    if (deltaRow === 0 && deltaCol === 0) {
       return false;
     }
 
@@ -157,9 +158,22 @@ class KlotskiEngine {
     const newRow = row + deltaRow;
     const newCol = col + deltaCol;
 
-    // 检查是否可以移动
-    if (!this.canMove(blockId, newRow, newCol)) {
-      return false;
+    // 检查路径上的每一格是否都可以通过
+    // 需要逐格检查，确保整个路径都是畅通的
+    const stepRow = deltaRow === 0 ? 0 : (deltaRow > 0 ? 1 : -1);
+    const stepCol = deltaCol === 0 ? 0 : (deltaCol > 0 ? 1 : -1);
+
+    let checkRow = row;
+    let checkCol = col;
+
+    // 逐步检查路径
+    while (checkRow !== newRow || checkCol !== newCol) {
+      checkRow += stepRow;
+      checkCol += stepCol;
+
+      if (!this.canMove(blockId, checkRow, checkCol)) {
+        return false;
+      }
     }
 
     // 保存当前状态用于撤销
@@ -174,7 +188,7 @@ class KlotskiEngine {
     // 放置到新位置
     this.placeBlockOnBoard(this.board, block);
 
-    // 增加移动计数（每移动一格算一步）
+    // 增加移动计数（无论移动多少格，只算一步）
     this.moveCount++;
 
     return true;
