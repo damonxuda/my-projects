@@ -192,6 +192,15 @@
         pointer-events: none;
       }
 
+      .level-card.locked::before {
+        content: "🔒";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 1.5rem;
+      }
+
       /* 加载动画 */
       .loading {
         text-align: center;
@@ -242,6 +251,7 @@
           this.storage = null;
           this.currentDifficulty = 'easy';
           this.records = {};
+          this.currentLevels = {}; // 存储每个难度的当前解锁关卡
           this.waitForClerkAndInit();
         }
 
@@ -330,6 +340,12 @@
             const totalLevels = levelGenerator.getTotalLevels();
 
             for (const difficulty of difficulties) {
+              // 获取该难度的进度信息
+              const progressKey = `progress_${difficulty}`;
+              const progress = await this.storage.getUserData(progressKey);
+              this.currentLevels[difficulty] = progress?.current_level || 1;
+
+              // 加载所有关卡记录
               for (let i = 1; i <= totalLevels; i++) {
                 const levelKey = `${difficulty}_${i}`;
                 const record = await this.storage.getUserData(levelKey);
@@ -361,12 +377,23 @@
           const completed = record.completed || false;
           const stars = record.bestStars || 0;
 
+          // 判断关卡是否锁定
+          const currentLevel = this.currentLevels[this.currentDifficulty] || 1;
+          const isLocked = levelNumber > currentLevel;
+
           const card = document.createElement('a');
-          card.href = `index.html?difficulty=${this.currentDifficulty}&level=${levelNumber}`;
           card.className = 'level-card';
 
-          if (completed) {
-            card.classList.add('completed');
+          if (isLocked) {
+            // 锁定状态：不可点击
+            card.classList.add('locked');
+            card.removeAttribute('href');
+          } else {
+            // 未锁定：可以点击进入游戏
+            card.href = `index.html?difficulty=${this.currentDifficulty}&level=${levelNumber}`;
+            if (completed) {
+              card.classList.add('completed');
+            }
           }
 
           // 关卡编号

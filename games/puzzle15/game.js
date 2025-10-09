@@ -306,12 +306,23 @@ class Puzzle15Game {
     try {
       // 保存当前难度的进度
       const progressKey = `progress_${this.difficulty}`;
-      const progress = await this.storage.getUserData(progressKey) || {};
+      const progress = await this.storage.getUserData(progressKey) || { current_level: 1 };
 
+      // 更新最大关卡
       if (!progress.maxLevel || this.levelNumber > progress.maxLevel) {
         progress.maxLevel = this.levelNumber;
-        await this.storage.saveUserData(progressKey, progress);
       }
+
+      // 关卡解锁逻辑：完成当前关卡后解锁下一关
+      if (!progress.current_level) {
+        progress.current_level = 1;
+      }
+
+      if (this.levelNumber >= progress.current_level) {
+        progress.current_level = this.levelNumber + 1;
+      }
+
+      await this.storage.saveUserData(progressKey, progress);
     } catch (error) {
       console.error('更新进度失败:', error);
     }
