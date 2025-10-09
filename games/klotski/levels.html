@@ -270,47 +270,11 @@
       </div>
     </div>
 
-    <!-- Clerk SDK for SSO with fallback -->
-    <script>
-      // Clerk SDK加载检测和备用方案
-      function loadClerkSDK() {
-        const primaryScript = document.createElement('script');
-        primaryScript.crossOrigin = 'anonymous';
-        primaryScript.setAttribute('data-clerk-publishable-key', 'pk_live_Y2xlcmsuZGFtb254dWRhLnNpdGUk');
-        primaryScript.src = 'https://clerk.damonxuda.site/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
-        primaryScript.type = 'text/javascript';
-
-        primaryScript.onload = function() {
-          console.log('✅ Clerk SDK加载成功 (主CDN)');
-        };
-
-        primaryScript.onerror = function() {
-          console.warn('⚠️ 主Clerk CDN加载失败，尝试备用CDN...');
-
-          // 尝试备用CDN
-          const fallbackScript = document.createElement('script');
-          fallbackScript.crossOrigin = 'anonymous';
-          fallbackScript.setAttribute('data-clerk-publishable-key', 'pk_live_Y2xlcmsuZGFtb254dWRhLnNpdGUk');
-          fallbackScript.src = 'https://unpkg.com/@clerk/clerk-js@latest/dist/clerk.browser.js';
-          fallbackScript.type = 'text/javascript';
-
-          fallbackScript.onload = function() {
-            console.log('✅ Clerk SDK加载成功 (备用CDN)');
-          };
-
-          fallbackScript.onerror = function() {
-            console.error('❌ 所有Clerk CDN都无法加载，将以离线模式继续');
-          };
-
-          document.head.appendChild(fallbackScript);
-        };
-
-        document.head.appendChild(primaryScript);
-      }
-
-      // 延迟加载给页面更多时间初始化
-      setTimeout(loadClerkSDK, 100);
-    </script>
+    <!-- Clerk SDK (静态加载，与数独保持一致) -->
+    <script crossorigin="anonymous"
+            data-clerk-publishable-key="pk_live_Y2xlcmsuZGFtb254dWRhLnNpdGUk"
+            src="https://clerk.damonxuda.site/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
+            type="text/javascript"></script>
 
     <!-- Supabase 客户端 -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
