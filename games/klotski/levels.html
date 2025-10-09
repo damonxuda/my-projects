@@ -552,10 +552,27 @@
         }
 
         updateStats() {
-          const completedCount = Object.values(this.records).filter(r => r && r.completed).length;
-          document.getElementById('completedCount').textContent =
-            `${completedCount}/${KLOTSKI_LEVELS.length}`;
-          console.log('[klotski] 统计信息更新:', { completedCount, total: KLOTSKI_LEVELS.length, records: this.records });
+          console.log('[klotski] updateStats 被调用');
+          console.log('[klotski] this.records:', this.records);
+          console.log('[klotski] KLOTSKI_LEVELS.length:', KLOTSKI_LEVELS.length);
+
+          const recordsArray = Object.values(this.records || {});
+          console.log('[klotski] recordsArray:', recordsArray);
+
+          const completedRecords = recordsArray.filter(r => r && r.completed);
+          console.log('[klotski] completedRecords:', completedRecords);
+
+          const completedCount = completedRecords.length;
+          console.log('[klotski] completedCount:', completedCount, typeof completedCount);
+
+          const el = document.getElementById('completedCount');
+          console.log('[klotski] completedCount element:', el);
+
+          const text = `${completedCount}/${KLOTSKI_LEVELS.length}`;
+          console.log('[klotski] 设置的文本:', text);
+
+          el.textContent = text;
+          console.log('[klotski] 设置后的textContent:', el.textContent);
         }
       }
 
