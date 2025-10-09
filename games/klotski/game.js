@@ -252,21 +252,17 @@ class KlotskiGame {
     const deltaX = clientX - this.dragStartX;
     const deltaY = clientY - this.dragStartY;
 
-    // 计算移动的格子数（根据实际拖动距离）
+    // 计算移动的格子数（同时计算横向和纵向，支持L型移动）
     const moveThreshold = this.cellSize / 3;  // 最小触发阈值
     let deltaRow = 0;
     let deltaCol = 0;
 
-    if (Math.abs(deltaY) > Math.abs(deltaX)) {
-      // 垂直移动
-      if (Math.abs(deltaY) > moveThreshold) {
-        deltaRow = Math.round(deltaY / (this.cellSize + this.gap));
-      }
-    } else {
-      // 水平移动
-      if (Math.abs(deltaX) > moveThreshold) {
-        deltaCol = Math.round(deltaX / (this.cellSize + this.gap));
-      }
+    // 分别计算横向和纵向的移动格数（而不是只选择主要方向）
+    if (Math.abs(deltaX) > moveThreshold) {
+      deltaCol = Math.round(deltaX / (this.cellSize + this.gap));
+    }
+    if (Math.abs(deltaY) > moveThreshold) {
+      deltaRow = Math.round(deltaY / (this.cellSize + this.gap));
     }
 
     // 尝试移动方块
