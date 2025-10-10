@@ -79,6 +79,13 @@ class Puzzle15Game {
     try {
       // 生成关卡配置
       this.levelConfig = levelGenerator.generateLevel(this.difficulty, this.levelNumber);
+      console.log('[puzzle15] 关卡配置:', {
+        difficulty: this.difficulty,
+        level: this.levelNumber,
+        size: this.levelConfig.size,
+        shuffleMoves: this.levelConfig.shuffleMoves,
+        seed: this.levelConfig.seed
+      });
 
       // 创建游戏引擎
       this.engine = new Puzzle15Engine(this.levelConfig.size);

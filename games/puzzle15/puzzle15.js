@@ -45,6 +45,7 @@ class Puzzle15Engine {
 
   // 生成打乱的棋盘（保证可解）
   shuffle(moves = 100, seed = Date.now()) {
+    console.log('[puzzle15] 开始打乱 - 倒退步数:', moves, '种子:', seed);
     this.initBoard();
     this.shuffleSeed = seed;
 
@@ -52,6 +53,7 @@ class Puzzle15Engine {
     const directions = ['up', 'down', 'left', 'right'];
     let lastDirection = null;
     let currentSeed = seed;
+    let actualMoves = 0;
 
     for (let i = 0; i < moves; i++) {
       // 获取可能的移动方向
@@ -67,8 +69,12 @@ class Puzzle15Engine {
         const randomDir = validMoves[Math.floor(randomValue * validMoves.length)];
         this.moveEmpty(randomDir);
         lastDirection = randomDir;
+        actualMoves++;
       }
     }
+
+    console.log('[puzzle15] 打乱完成 - 实际执行:', actualMoves, '步');
+    this.printBoard();
 
     // 重置移动计数（打乱不计入移动步数）
     this.moveCount = 0;
