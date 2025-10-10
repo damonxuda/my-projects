@@ -38,10 +38,10 @@ class Puzzle15LevelGenerator {
 
   // 计算打乱步数（随关卡递增难度）
   calculateShuffleMoves(baseMoves, levelNumber) {
-    // 前50关使用基础步数
-    // 之后每50关增加20%
-    const tier = Math.floor((levelNumber - 1) / 50);
-    const multiplier = 1 + (tier * 0.2);
+    // 在50关内线性递增：第1关用基础步数，第50关用2倍基础步数
+    // 例如：baseMoves=10时，第1关10步，第25关15步，第50关20步
+    const progressRatio = (levelNumber - 1) / (this.levelsPerDifficulty - 1);
+    const multiplier = 1.0 + progressRatio; // 从1.0递增到2.0
     return Math.floor(baseMoves * multiplier);
   }
 

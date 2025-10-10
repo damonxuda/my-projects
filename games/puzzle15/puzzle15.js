@@ -272,35 +272,36 @@ class Puzzle15Engine {
 }
 
 // 难度配置
+// 基于研究数据：8-puzzle最大31步，15-puzzle最大80步
 const PUZZLE15_DIFFICULTIES = {
   easy: {
     name: '简单',
     size: 3,
-    shuffleMoves: 30,
+    shuffleMoves: 10,  // 8-puzzle最大31步，10步约为1/3难度
     starThresholds: {
-      gold: 45,    // 45秒内完成得3星
-      silver: 90,  // 90秒内完成得2星
-      bronze: 180  // 180秒内完成得1星
+      gold: 30,    // 30秒内完成得3星
+      silver: 60,  // 1分钟内完成得2星
+      bronze: 120  // 2分钟内完成得1星
     }
   },
   medium: {
     name: '中等',
     size: 4,
-    shuffleMoves: 80,
+    shuffleMoves: 20,  // 15-puzzle最大80步，20步约为1/4难度
     starThresholds: {
-      gold: 120,   // 2分钟内完成得3星
-      silver: 240, // 4分钟内完成得2星
-      bronze: 480  // 8分钟内完成得1星
+      gold: 90,    // 1.5分钟内完成得3星
+      silver: 180, // 3分钟内完成得2星
+      bronze: 360  // 6分钟内完成得1星
     }
   },
   hard: {
     name: '困难',
     size: 5,
-    shuffleMoves: 150,
+    shuffleMoves: 30,  // 5x5难度适中，从30步开始
     starThresholds: {
-      gold: 300,   // 5分钟内完成得3星
-      silver: 600, // 10分钟内完成得2星
-      bronze: 1200 // 20分钟内完成得1星
+      gold: 180,   // 3分钟内完成得3星
+      silver: 360, // 6分钟内完成得2星
+      bronze: 720  // 12分钟内完成得1星
     }
   }
 };
