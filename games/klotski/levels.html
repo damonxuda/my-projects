@@ -464,7 +464,7 @@
               // 兼容旧数据格式：尝试逐个加载 level_1, level_2, ...
               for (let i = 1; i <= KLOTSKI_LEVELS.length; i++) {
                 try {
-                  const levelKey = `level_${i}`;
+                  const levelKey = 'level_' + i;
                   const record = await this.storage.load(levelKey);
                   if (record) {
                     this.records[i] = record;
@@ -495,7 +495,7 @@
           const completed = record.completed || false;
 
           const card = document.createElement('a');
-          card.href = `index.html?level=${level.id}`;
+          card.href = 'index.html?level=' + level.id;
           card.className = 'level-card';
 
           // 关卡编号
@@ -519,7 +519,7 @@
           statsEl.className = 'level-stats';
 
           const minMovesEl = document.createElement('span');
-          minMovesEl.innerHTML = `📊 最少步数: ${level.minMoves}`;
+          minMovesEl.innerHTML = '📊 最少步数: ' + level.minMoves;
 
           statsEl.appendChild(minMovesEl);
 
@@ -528,10 +528,10 @@
             const seconds = Math.floor(record.bestTime / 1000);
             const minutes = Math.floor(seconds / 60);
             const secs = seconds % 60;
-            const timeStr = `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            const timeStr = minutes.toString().padStart(2, '0') + ':' + secs.toString().padStart(2, '0');
 
             const bestTimeEl = document.createElement('span');
-            bestTimeEl.innerHTML = `⏱️ <span class="best-time">${timeStr}</span>`;
+            bestTimeEl.innerHTML = '⏱️ <span class="best-time">' + timeStr + '</span>';
             statsEl.appendChild(bestTimeEl);
           }
 
@@ -541,7 +541,7 @@
 
           // 完成状态
           const statusEl = document.createElement('div');
-          statusEl.className = `level-status ${completed ? 'completed' : 'incomplete'}`;
+          statusEl.className = 'level-status ' + (completed ? 'completed' : 'incomplete');
           statusEl.textContent = completed ? '✓' : '○';
 
           card.appendChild(numberEl);
@@ -552,27 +552,13 @@
         }
 
         updateStats() {
-          console.log('[klotski] updateStats 被调用');
-          console.log('[klotski] this.records:', this.records);
-          console.log('[klotski] KLOTSKI_LEVELS.length:', KLOTSKI_LEVELS.length);
-
           const recordsArray = Object.values(this.records || {});
-          console.log('[klotski] recordsArray:', recordsArray);
-
           const completedRecords = recordsArray.filter(r => r && r.completed);
-          console.log('[klotski] completedRecords:', completedRecords);
-
           const completedCount = completedRecords.length;
-          console.log('[klotski] completedCount:', completedCount, typeof completedCount);
 
           const el = document.getElementById('completedCount');
-          console.log('[klotski] completedCount element:', el);
-
-          const text = `${completedCount}/${KLOTSKI_LEVELS.length}`;
-          console.log('[klotski] 设置的文本:', text);
-
-          el.textContent = text;
-          console.log('[klotski] 设置后的textContent:', el.textContent);
+          // 使用字符串连接避免 envsubst 替换模板字符串
+          el.textContent = completedCount + '/' + KLOTSKI_LEVELS.length;
         }
       }
 
