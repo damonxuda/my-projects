@@ -277,7 +277,7 @@ const PUZZLE15_DIFFICULTIES = {
   easy: {
     name: '简单',
     size: 3,
-    shuffleMoves: 10,  // 8-puzzle最大31步，10步约为1/3难度
+    shuffleMoves: 5,  // 倒退5步，玩家实际可能需要10-15步
     starThresholds: {
       gold: 30,    // 30秒内完成得3星
       silver: 60,  // 1分钟内完成得2星
