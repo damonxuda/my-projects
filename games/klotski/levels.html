@@ -420,31 +420,18 @@
           if (!this.storage) return;
 
           try {
-            // 一次性加载所有进度数据（而不是循环加载每个关卡）
             const progress = await this.storage.load('progress');
-            console.log('[klotski] 加载的进度数据:', progress);
 
-            if (progress && progress.records) {
+            if (progress?.records) {
               this.records = progress.records;
-              console.log('[klotski] 从 progress.records 加载:', Object.keys(this.records).length, '条记录');
+              console.log('[klotski] 加载进度:', Object.keys(this.records).length, '条记录');
             } else {
-              console.log('[klotski] progress.records 为空，尝试加载旧格式数据...');
-              // 兼容旧数据格式：尝试逐个加载 level_1, level_2, ...
-              for (let i = 1; i <= KLOTSKI_LEVELS.length; i++) {
-                try {
-                  const levelKey = 'level_' + i;
-                  const record = await this.storage.load(levelKey);
-                  if (record) {
-                    this.records[i] = record;
-                  }
-                } catch (e) {
-                  // 忽略单个关卡加载失败
-                }
-              }
-              console.log('[klotski] 从旧格式加载:', Object.keys(this.records).length, '条记录');
+              this.records = {};
+              console.log('[klotski] 新用户，初始化空记录');
             }
           } catch (error) {
             console.error('加载记录失败:', error);
+            this.records = {};
           }
         }
 
