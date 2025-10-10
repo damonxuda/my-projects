@@ -107,7 +107,7 @@ class Puzzle15Game {
 
     // 更新棋盘大小样式
     const board = document.getElementById('board');
-    board.className = `board size-${this.levelConfig.size}`;
+    board.className = 'board size-' + this.levelConfig.size;
   }
 
   renderBoard() {
@@ -115,14 +115,14 @@ class Puzzle15Game {
     boardGrid.innerHTML = '';
 
     // 设置网格布局
-    boardGrid.style.gridTemplateColumns = `repeat(${this.levelConfig.size}, 1fr)`;
-    boardGrid.style.gridTemplateRows = `repeat(${this.levelConfig.size}, 1fr)`;
+    boardGrid.style.gridTemplateColumns = 'repeat(' + this.levelConfig.size + ', 1fr)';
+    boardGrid.style.gridTemplateRows = 'repeat(' + this.levelConfig.size + ', 1fr)';
 
     // 计算瓷砖大小
     const maxBoardSize = 360;
     const tileSize = Math.floor((maxBoardSize - (this.levelConfig.size + 1) * 6) / this.levelConfig.size);
-    boardGrid.style.width = `${maxBoardSize}px`;
-    boardGrid.style.height = `${maxBoardSize}px`;
+    boardGrid.style.width = maxBoardSize + 'px';
+    boardGrid.style.height = maxBoardSize + 'px';
 
     // 创建所有瓷砖
     const board = this.engine.getBoard();
@@ -211,7 +211,7 @@ class Puzzle15Game {
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
     document.getElementById('timer').textContent =
-      `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      minutes.toString().padStart(2, '0') + ':' + secs.toString().padStart(2, '0');
   }
 
   async checkWin() {
@@ -235,8 +235,8 @@ class Puzzle15Game {
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
 
-    document.getElementById('finalTime').textContent = `${minutes}分${secs}秒`;
-    document.getElementById('finalMoves').textContent = `${moves}步`;
+    document.getElementById('finalTime').textContent = minutes + '分' + secs + '秒';
+    document.getElementById('finalMoves').textContent = moves + '步';
 
     // 显示星星
     const victoryStars = document.getElementById('victoryStars');
@@ -261,9 +261,13 @@ class Puzzle15Game {
     if (!this.storage) return;
 
     try {
-      const levelKey = `${this.difficulty}_${this.levelNumber}`;
-      const record = await this.storage.getUserData(levelKey) || {};
+      // 加载整个进度对象
+      let progress = await this.storage.load('progress') || { records: {}, currentLevels: {} };
+      if (!progress.records) progress.records = {};
+      if (!progress.currentLevels) progress.currentLevels = {};
 
+      const levelKey = this.difficulty + '_' + this.levelNumber;
+      const record = progress.records[levelKey] || {};
       let isNewRecord = false;
 
       // 更新最佳时间
@@ -287,45 +291,28 @@ class Puzzle15Game {
       // 标记为已完成
       record.completed = true;
 
-      await this.storage.saveUserData(levelKey, record);
+      // 保存到records中
+      progress.records[levelKey] = record;
+
+      // 更新当前难度的进度
+      const currentLevel = progress.currentLevels[this.difficulty] || 1;
+      if (this.levelNumber >= currentLevel) {
+        progress.currentLevels[this.difficulty] = this.levelNumber + 1;
+      }
+
+      // 保存整个进度对象
+      await this.storage.save('progress', progress);
 
       if (isNewRecord) {
         document.getElementById('newRecordText').style.display = 'block';
       }
-
-      // 更新进度（用于关卡列表显示）
-      await this.updateProgress();
     } catch (error) {
       console.error('保存记录失败:', error);
     }
   }
 
   async updateProgress() {
-    if (!this.storage) return;
-
-    try {
-      // 保存当前难度的进度
-      const progressKey = `progress_${this.difficulty}`;
-      const progress = await this.storage.getUserData(progressKey) || { current_level: 1 };
-
-      // 更新最大关卡
-      if (!progress.maxLevel || this.levelNumber > progress.maxLevel) {
-        progress.maxLevel = this.levelNumber;
-      }
-
-      // 关卡解锁逻辑：完成当前关卡后解锁下一关
-      if (!progress.current_level) {
-        progress.current_level = 1;
-      }
-
-      if (this.levelNumber >= progress.current_level) {
-        progress.current_level = this.levelNumber + 1;
-      }
-
-      await this.storage.saveUserData(progressKey, progress);
-    } catch (error) {
-      console.error('更新进度失败:', error);
-    }
+    // 已合并到saveRecord中，保留空函数避免调用错误
   }
 
   async loadProgress() {
@@ -349,7 +336,7 @@ class Puzzle15Game {
 
     // 关卡列表按钮
     document.getElementById('levelsBtn').addEventListener('click', () => {
-      window.location.href = `levels.html?difficulty=${this.difficulty}`;
+      window.location.href = 'levels.html?difficulty=' + this.difficulty;
     });
 
     // 胜利弹窗按钮
@@ -364,10 +351,10 @@ class Puzzle15Game {
       const maxLevels = levelGenerator.getTotalLevels();
 
       if (nextLevel <= maxLevels) {
-        window.location.href = `index.html?difficulty=${this.difficulty}&level=${nextLevel}`;
+        window.location.href = 'index.html?difficulty=' + this.difficulty + '&level=' + nextLevel;
       } else {
         // 如果是最后一关，返回关卡列表
-        window.location.href = `levels.html?difficulty=${this.difficulty}`;
+        window.location.href = 'levels.html?difficulty=' + this.difficulty;
       }
     });
   }

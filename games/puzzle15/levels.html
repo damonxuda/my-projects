@@ -456,26 +456,25 @@
           if (!this.storage) return;
 
           try {
-            const difficulties = ['easy', 'medium', 'hard'];
-            const totalLevels = levelGenerator.getTotalLevels();
+            const progress = await this.storage.load('progress');
 
-            for (const difficulty of difficulties) {
-              // 获取该难度的进度信息
-              const progressKey = `progress_${difficulty}`;
-              const progress = await this.storage.getUserData(progressKey);
-              this.currentLevels[difficulty] = progress?.current_level || 1;
+            if (progress?.records) {
+              this.records = progress.records;
+              console.log('[puzzle15] 加载进度:', Object.keys(this.records).length, '条记录');
+            } else {
+              this.records = {};
+              console.log('[puzzle15] 新用户，初始化空记录');
+            }
 
-              // 加载所有关卡记录
-              for (let i = 1; i <= totalLevels; i++) {
-                const levelKey = `${difficulty}_${i}`;
-                const record = await this.storage.getUserData(levelKey);
-                if (record) {
-                  this.records[levelKey] = record;
-                }
-              }
+            if (progress?.currentLevels) {
+              this.currentLevels = progress.currentLevels;
+            } else {
+              this.currentLevels = { easy: 1, medium: 1, hard: 1 };
             }
           } catch (error) {
             console.error('加载记录失败:', error);
+            this.records = {};
+            this.currentLevels = { easy: 1, medium: 1, hard: 1 };
           }
         }
 
@@ -492,7 +491,7 @@
         }
 
         createLevelCard(levelNumber) {
-          const levelKey = `${this.currentDifficulty}_${levelNumber}`;
+          const levelKey = this.currentDifficulty + '_' + levelNumber;
           const record = this.records[levelKey] || {};
           const completed = record.completed || false;
           const stars = record.bestStars || 0;
@@ -510,7 +509,7 @@
             card.removeAttribute('href');
           } else {
             // 未锁定：可以点击进入游戏
-            card.href = `index.html?difficulty=${this.currentDifficulty}&level=${levelNumber}`;
+            card.href = 'index.html?difficulty=' + this.currentDifficulty + '&level=' + levelNumber;
             if (completed) {
               card.classList.add('completed');
             }
@@ -543,7 +542,7 @@
           let completedCount = 0;
 
           for (let i = 1; i <= totalLevels; i++) {
-            const levelKey = `${this.currentDifficulty}_${i}`;
+            const levelKey = this.currentDifficulty + '_' + i;
             const record = this.records[levelKey];
             if (record && record.completed) {
               completedCount++;
@@ -551,7 +550,7 @@
           }
 
           document.getElementById('completedCount').textContent =
-            `${completedCount}/${totalLevels}`;
+            completedCount + '/' + totalLevels;
         }
       }
 
