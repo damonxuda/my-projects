@@ -187,7 +187,14 @@
       .tile.empty {
         background: rgba(0, 0, 0, 0.15);
         border: 2px solid rgba(255, 255, 255, 0.1);
-        cursor: default;
+        cursor: pointer;
+      }
+
+      .tile.selected {
+        background: linear-gradient(135deg, rgba(255, 215, 0, 0.6), rgba(255, 193, 7, 0.5));
+        border: 3px solid rgba(255, 215, 0, 0.9);
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+        transform: scale(1.05);
       }
 
       /* 不同尺寸的字体调整 */

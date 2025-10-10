@@ -37,13 +37,21 @@ class Puzzle15Engine {
     this.moveHistory = [];
   }
 
+  // 种子随机数生成器
+  seededRandom(seed) {
+    const x = Math.sin(seed) * 10000;
+    return x - Math.floor(x);
+  }
+
   // 生成打乱的棋盘（保证可解）
-  shuffle(moves = 100) {
+  shuffle(moves = 100, seed = Date.now()) {
     this.initBoard();
+    this.shuffleSeed = seed;
 
     // 通过随机移动来打乱，保证可解
     const directions = ['up', 'down', 'left', 'right'];
     let lastDirection = null;
+    let currentSeed = seed;
 
     for (let i = 0; i < moves; i++) {
       // 获取可能的移动方向
@@ -54,7 +62,9 @@ class Puzzle15Engine {
       const validMoves = possibleMoves.filter(dir => dir !== opposites[lastDirection]);
 
       if (validMoves.length > 0) {
-        const randomDir = validMoves[Math.floor(Math.random() * validMoves.length)];
+        currentSeed++;
+        const randomValue = this.seededRandom(currentSeed);
+        const randomDir = validMoves[Math.floor(randomValue * validMoves.length)];
         this.moveEmpty(randomDir);
         lastDirection = randomDir;
       }

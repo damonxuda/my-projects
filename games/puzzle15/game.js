@@ -13,6 +13,7 @@ class Puzzle15Game {
     this.elapsedTime = 0;
     this.isPlaying = false;
     this.currentStars = 0;
+    this.selectedTile = null; // 记录选中的数字块位置
 
     // 等待Clerk初始化
     this.waitForClerkAndInit();
@@ -82,8 +83,8 @@ class Puzzle15Game {
       // 创建游戏引擎
       this.engine = new Puzzle15Engine(this.levelConfig.size);
 
-      // 打乱棋盘
-      this.engine.shuffle(this.levelConfig.shuffleMoves);
+      // 使用种子打乱棋盘（保证每次相同关卡题目一致）
+      this.engine.shuffle(this.levelConfig.shuffleMoves, this.levelConfig.seed);
 
       // 更新UI
       this.updateLevelInfo();
@@ -140,11 +141,16 @@ class Puzzle15Game {
     tile.dataset.row = row;
     tile.dataset.col = col;
 
+    // 如果是选中的数字块，添加selected类
+    if (this.selectedTile && this.selectedTile.row === row && this.selectedTile.col === col) {
+      tile.classList.add('selected');
+    }
+
+    // 所有格子都可以点击
+    tile.addEventListener('click', () => this.handleTileClick(row, col));
+
     if (value !== 0) {
       tile.textContent = value;
-
-      // 添加点击事件
-      tile.addEventListener('click', () => this.handleTileClick(row, col));
     }
 
     return tile;
@@ -153,13 +159,39 @@ class Puzzle15Game {
   handleTileClick(row, col) {
     if (!this.isPlaying) return;
 
-    const success = this.engine.moveTile(row, col);
+    const clickedValue = this.engine.getTile(row, col);
 
-    if (success) {
+    // 情况1: 点击空格
+    if (clickedValue === 0) {
+      // 如果之前选中了数字块，尝试移动到空格
+      if (this.selectedTile) {
+        const success = this.engine.moveTile(this.selectedTile.row, this.selectedTile.col);
+        if (success) {
+          this.selectedTile = null;
+          this.renderBoard();
+          this.updateStats();
+          this.updateStars();
+          this.checkWin();
+        } else {
+          // 移动失败，取消选中
+          this.selectedTile = null;
+          this.renderBoard();
+        }
+      }
+      return;
+    }
+
+    // 情况2: 点击数字块
+    // 如果这个数字块与空格相邻，记录选中状态
+    const emptyRow = this.engine.emptyRow;
+    const emptyCol = this.engine.emptyCol;
+    const rowDiff = Math.abs(row - emptyRow);
+    const colDiff = Math.abs(col - emptyCol);
+    const isAdjacent = (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
+
+    if (isAdjacent) {
+      this.selectedTile = { row, col };
       this.renderBoard();
-      this.updateStats();
-      this.updateStars();
-      this.checkWin();
     }
   }
 
