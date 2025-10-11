@@ -52,7 +52,7 @@ const VideoOperationModals = ({
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ path: folderPath }),
+        body: JSON.stringify({ folderPath }),
       });
 
       if (!response.ok) {
