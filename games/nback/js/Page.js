@@ -263,41 +263,75 @@ function Page() {
 
  	// display trial information (square, audio, etc.) to the user
  	this.presentTrialInfoToUser = function(t) {
- 		switch(t.GetLetter()) {
- 			case Consonant.Letter1:
- 				document.getElementById("letter1").play();
- 				break;
+ 		// Letter mapping for visual display
+ 		var letterMap = {
+ 			'Letter1': 'C',
+ 			'Letter2': 'H',
+ 			'Letter3': 'K',
+ 			'Letter4': 'L',
+ 			'Letter5': 'Q',
+ 			'Letter6': 'R',
+ 			'Letter7': 'T',
+ 			'Letter8': 'W'
+ 		};
 
-			case Consonant.Letter2:
- 				document.getElementById("letter2").play();
- 				break;
+ 		var letterKey = Object.keys(Consonant).find(function(key) {
+ 			return Consonant[key] === t.GetLetter();
+ 		});
 
-			case Consonant.Letter3:
- 				document.getElementById("letter3").play();
- 				break;
+ 		// Check if silent mode is enabled
+ 		var isSilentMode = window.nbackSilentMode === true;
 
-			case Consonant.Letter4:
- 				document.getElementById("letter4").play();
- 				break;
+ 		if (isSilentMode) {
+ 			// Silent mode: Display letter visually
+ 			var letterDisplay = document.getElementById("letter-display");
+ 			if (letterDisplay && letterKey) {
+ 				letterDisplay.textContent = letterMap[letterKey] || '';
+ 				letterDisplay.classList.add('show');
 
-			case Consonant.Letter5:
- 				document.getElementById("letter5").play();
- 				break;
+ 				// Hide letter after stimulus time (500ms)
+ 				setTimeout(function() {
+ 					letterDisplay.classList.remove('show');
+ 				}, 500);
+ 			}
+ 		} else {
+ 			// Normal mode: Play audio
+ 			switch(t.GetLetter()) {
+ 				case Consonant.Letter1:
+ 					document.getElementById("letter1").play();
+ 					break;
 
-			case Consonant.Letter6:
- 				document.getElementById("letter6").play();
- 				break;
+				case Consonant.Letter2:
+ 					document.getElementById("letter2").play();
+ 					break;
 
-			case Consonant.Letter7:
- 				document.getElementById("letter7").play();
- 				break;
+				case Consonant.Letter3:
+ 					document.getElementById("letter3").play();
+ 					break;
 
-			case Consonant.Letter8:
- 				document.getElementById("letter8").play();
- 				break;
+				case Consonant.Letter4:
+ 					document.getElementById("letter4").play();
+ 					break;
 
-			default:
- 				break;
+				case Consonant.Letter5:
+ 					document.getElementById("letter5").play();
+ 					break;
+
+				case Consonant.Letter6:
+ 					document.getElementById("letter6").play();
+ 					break;
+
+				case Consonant.Letter7:
+ 					document.getElementById("letter7").play();
+ 					break;
+
+				case Consonant.Letter8:
+ 					document.getElementById("letter8").play();
+ 					break;
+
+				default:
+ 					break;
+ 			}
  		}
 
  		// display the visual information
