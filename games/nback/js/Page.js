@@ -91,14 +91,19 @@ function Page() {
             DisplayN(self._n);
             self._score.startBlock(self._n);
 
+            // Resume playing state and update start button
+            self._playingGame = true;
+            startButton.value = "Pause";
+            startButton.textContent = "暂停";
+
             // Give the user a chance to catch their breath before starting the next block.
             self._continueTimer = new Timer(self.startBlock, 675);
         } else if(event.target.value == "Reset") {
             event.target.value = "Continue";
-            event.target.textContent = "Continue";
+            event.target.textContent = "继续";
 
             startButton.value = "Start";
-            startButton.textContent = "Start";
+            startButton.textContent = "开始";
 
             self._blockNum = 0;
             self._playingGame = false;
@@ -109,7 +114,7 @@ function Page() {
             DisplayN(self._n);
 
             // reset session number
-            document.getElementById("session-number").innerHTML = "1 / " + 
+            document.getElementById("session-number").innerHTML = "1 / " +
                 self.blockCreator.GetDefaultBlockSize().toString();
             document.getElementById("score-text").innerHTML = "0";
         }
@@ -187,7 +192,12 @@ function Page() {
 
                 // change button to reset to start a brand new trial
                 continueButton.value = "Reset";
-                continueButton.textContent = "Reset";
+                continueButton.textContent = "重置";
+
+                // reset start button to initial state
+                startButton.value = "Start";
+                startButton.textContent = "开始";
+                self._playingGame = false;
 
                 // save progress
                 addSessionToHistory(Date.now(), averageN);
@@ -210,6 +220,11 @@ function Page() {
 
  			// display the next trial level (N number) in the popup
             document.getElementById("next-level-info").innerHTML = "下一级别：" + self._n.toString();
+
+            // reset start button to show block has ended
+            startButton.value = "Start";
+            startButton.textContent = "开始";
+            self._playingGame = false;
 
             // display results dialog
             $('#scoreModal').modal('show');
