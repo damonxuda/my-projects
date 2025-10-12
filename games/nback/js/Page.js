@@ -78,6 +78,9 @@ function Page() {
 
     continueButton.addEventListener('click', function(event) {
         if(event.target.value == "Continue") {
+            // Close the modal
+            document.getElementById('scoreModal').classList.remove('show');
+
             // Start a new block...
             setProgress(0);
             self._blockNum++;
@@ -99,6 +102,9 @@ function Page() {
             // Give the user a chance to catch their breath before starting the next block.
             self._continueTimer = new Timer(self.startBlock, 675);
         } else if(event.target.value == "Reset") {
+            // Close the modal
+            document.getElementById('scoreModal').classList.remove('show');
+
             event.target.value = "Continue";
             event.target.textContent = "继续";
 
@@ -207,7 +213,7 @@ function Page() {
                 // save progress
                 addSessionToHistory(Date.now(), averageN);
 
-                $('#scoreModal').modal('show');
+                document.getElementById('scoreModal').classList.add('show');
                 return;
  			}
 
@@ -237,7 +243,7 @@ function Page() {
             self._playingGame = false;
 
             // display results dialog
-            $('#scoreModal').modal('show');
+            document.getElementById('scoreModal').classList.add('show');
             return;
  		}
 
