@@ -364,49 +364,11 @@ function handleTrialResult(result) {
 
 
 // display appropriate N to user
-// from NDisplayGrid.xaml.cs
+// Updated to show clearer format: "当前难度：N=X"
 function DisplayN(n) {
-    document.getElementById("N1").style.display = "none";
-    document.getElementById("N2").style.display = "none";
-    document.getElementById("N3").style.display = "none";
-    document.getElementById("N4").style.display = "none";
-    document.getElementById("N5").style.display = "none";
-    document.getElementById("N6").style.display = "none";
-    document.getElementById("N7").style.display = "none";
-
-    if (n > 7)
-    {
-        var n7 = document.getElementById("N7");
-        n7.style.display = "inline-block";
-        n7.textContent = n.toString();
-    } else {
-        if (n > 0) {
-            document.getElementById("N1").style.display = "inline-block";
-        }
-
-        if (n > 1) {
-            document.getElementById("N2").style.display = "inline-block";
-        }
-        
-        if (n > 2) {
-            document.getElementById("N3").style.display = "inline-block";
-        }
-        
-        if (n > 3) {
-            document.getElementById("N4").style.display = "inline-block";
-        }
-        
-        if (n > 4) {
-            document.getElementById("N5").style.display = "inline-block";
-        }
-        
-        if (n > 5) {
-            document.getElementById("N6").style.display = "inline-block";
-        }
-        
-        if (n > 6) {
-            document.getElementById("N7").style.display = "inline-block";
-        }
+    var displayElement = document.getElementById("current-n-display");
+    if (displayElement) {
+        displayElement.textContent = "当前难度：N=" + n.toString();
     }
 }
 
