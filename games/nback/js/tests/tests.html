@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>NBack Unit Test Results</title>
+  <link rel="stylesheet" href="qunit-2.0.1.css">
+</head>
+<body>
+  <div id="qunit"></div>
+  <!-- use the fixture for any HTML from the source page that is required for testing -->
+  <div id="qunit-fixture">
+    <!-- button fixtures -->
+    <button id="start-button" value="Start">Start</button>
+    <input id="save-toggle" type="checkbox" checked data-toggle="toggle" data-onstyle="success" data-offstyle="danger" data-on="Yes" data-off="No">
+    <a id="progress-link" href="#"></a>
+
+    <!-- fixture for testing n-back display -->
+    <div class="text-center n-grid" id="N1">1</div>
+    <div class="text-center n-grid" id="N2">2</div>
+    <div class="text-center n-grid" id="N3">3</div>
+    <div class="text-center n-grid" id="N4">4</div>
+    <div class="text-center n-grid" id="N5">5</div>
+    <div class="text-center n-grid" id="N6">6</div>
+    <div class="text-center n-grid" id="N7">7</div>
+
+    <!-- fixture for progress bar -->
+    <div class="progress">
+        <div class="progress-bar progress-bar-success" id="prog-bar" 
+            role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
+            <span class="sr-only"></span>
+        </div>
+    </div>
+
+    <!-- main grid fixture -->
+    <!-- 1st grid row -->
+    <div id="top-left" class="col-xs-2 text-center cell"></div>
+    <div id="top-middle" class="col-xs-2 text-center cell"></div>
+    <div id="top-right" class="col-xs-2 text-center cell"></div>
+
+    <!-- 2nd grid row -->
+    <div id="middle-left" class="col-xs-2 col-lg-offset-3 text-center cell"></div>
+    <div id="middle" class="col-xs-2 text-center cell"></div>
+    <div id="middle-right" class="col-xs-2 text-center cell"></div>
+
+    <!-- final grid row -->
+    <div id="bottom-left" class="col-xs-2 col-lg-offset-3 text-center cell"></div>
+    <div id="bottom-middle" class="col-xs-2 text-center cell"></div>
+    <div id="bottom-right" class="col-xs-2 text-center cell"></div>
+
+    <!-- feedback fixtures -->
+    <div id="left-hand-feedback" class="col-xs-2 col-md-offset-1 text-center"></div>
+    <div id="right-hand-feedback" class="col-xs-2 col-md-offset-1 text-center"></div>
+
+    <!-- audio fixtures, muted just for testing -->
+    <audio src="../../audio/letter1.mp3" id="letter1" muted></audio>
+    <audio src="../../audio/letter2.mp3" id="letter2" muted></audio>
+    <audio src="../../audio/letter3.mp3" id="letter3" muted></audio>
+    <audio src="../../audio/letter4.mp3" id="letter4" muted></audio>
+    <audio src="../../audio/letter5.mp3" id="letter5" muted></audio>
+    <audio src="../../audio/letter6.mp3" id="letter6" muted></audio>
+    <audio src="../../audio/letter7.mp3" id="letter7" muted></audio>
+    <audio src="../../audio/letter8.mp3" id="letter8" muted></audio>
+
+    <!-- score output fixtures -->
+    <!-- <div id="help-text"></div> -->
+    <span id="score-text"></span>
+
+    <div class="modal fade" id="scoreModal" tabindex="-1" role="dialog" aria-labelledby="scoreModalLabel">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="myModalLabel">Session complete!</h4>
+            </div>
+            <div class="modal-body">
+                <p id="next-level-info">Next level: </p>
+                <p id="correct-audio-results">Correct audio results: </p>
+                <p id="correct-visual-results">Correct visual results: </p>
+            </div>
+            <div class="modal-footer">
+                <button id="continue-button" class="btn btn-default" value="Continue" data-dismiss="modal">Continue</button>
+            </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- jQuery Version 1.11.1 -->
+  <script src="../jquery.js"></script>
+
+  <!-- modal dialog testing needs bootstrap -->
+  <script src="../bootstrap.js"></script>
+
+  <!-- toggle switch tests needs bootstrap toggle js -->
+  <script src="https://gitcdn.github.io/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js"></script>
+
+  <!-- NBack js scripts -->
+  <script src="../Page.js" data-cover></script>
+  <script src="../Consonant.js" data-cover></script>
+  <script src="../SquarePosition.js" data-cover></script>
+  <script src="../TargetKind.js" data-cover></script>
+  <script src="../TrialResult.js" data-cover></script>
+  <script src="../Score.js" data-cover></script>
+  <script src="../Block.js" data-cover></script>
+  <script src="../BlockCreator.js"></script>
+  <script src="../Trial.js" data-cover></script>
+  <script src="../History.js" data-cover></script>
+  <!--<script src="../App.js" data-cover></script>-->
+
+  <!-- test runner -->
+  <script src="qunit-2.0.1.js"></script>
+  <script src="tests.js"></script>
+</body>
+</html>

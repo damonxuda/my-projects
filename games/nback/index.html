@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Dual N-Back training for memory and intelligence">
+
+    <title>Dual N-Back Training</title>
+
+    <!-- Bootstrap Core CSS -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <!--<style>
+    body {
+        padding-top: 70px;
+        /* Required padding for .navbar-fixed-top. Remove if using .navbar-static-top. Change if height of navigation changes. */
+    }
+    </style>-->
+
+    <!-- Bootstrap Toggle -->
+    <link href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css" rel="stylesheet">
+
+    <link href="css/n-back.css" rel="stylesheet">
+
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+</head>
+
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+        <div class="container">
+            <!-- Brand and toggle get grouped for better mobile display -->
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="index.html">Dual N-Back Training</a>
+            </div>
+            <!-- Collect the nav links, forms, and other content for toggling -->
+            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a href="#" data-toggle="modal" data-target="#howToPlayModal">How To Play</a>
+                    </li>
+                    <li>
+                        <a id="progress-link" href="#">Your Progress</a>
+                    </li>
+                    <li>
+                        <a href="#" data-toggle="modal" data-target="#aboutModal">About</a>
+                    </li>
+                    <li>
+                        <a href="../index.html">← 返回游戏主页</a>
+                    </li>
+                </ul>
+            </div> <!-- /.navbar-collapse -->
+        </div> <!-- /.container -->
+    </nav>
+
+    <!-- Page Content -->
+    <div class="container">
+
+        <div class="row">
+            <div class="col-lg-12 text-center">
+                <h1>Dual N-Back Training</h1>
+                <!-- <p class="lead">Dual n-back training for memory and intelligence.</p> -->
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-xs-12 text-center">
+                <h2>REMEMBER:</h2>
+                <div class="text-center n-grid" id="N1">1</div>
+                <div class="text-center n-grid" id="N2">2</div>
+                <div class="text-center n-grid" id="N3">3</div>
+                <div class="text-center n-grid" id="N4">4</div>
+                <div class="text-center n-grid" id="N5">5</div>
+                <div class="text-center n-grid" id="N6">6</div>
+                <div class="text-center n-grid" id="N7">7</div>
+            </div>
+        </div>
+
+        <!-- empty spacer row -->
+        <br />
+
+        <div class="row">
+            <div class="col-xs-6">
+                <p>Session: <span id="session-number">1 / 20</span></p>
+                <p>Score: <span id="score-text">0</span></p>
+            </div>
+            <div class="col-xs-6 text-right">
+                <p>Save progress: 
+                    <input id="save-toggle" type="checkbox" checked data-toggle="toggle" data-onstyle="success" data-offstyle="danger" data-on="Yes" data-off="No">
+                </p>
+            </div>
+        </div>
+
+        <!-- empty spacer row -->
+        <br />
+
+        <!-- main grid area -->
+        <div class="row">
+            <!-- 1st grid row -->
+            <div id="top-left" class="col-xs-2 col-xs-offset-3 text-center cell"></div>
+            <div id="top-middle" class="col-xs-2 text-center cell"></div>
+            <div id="top-right" class="col-xs-2 text-center cell"></div>
+        </div>
+
+        <!-- 2nd grid row -->
+        <div class="row">
+            <div id="middle-left" class="col-xs-2 col-xs-offset-3 text-center cell"></div>
+            <div id="middle" class="col-xs-2 text-center cell"></div>
+            <div id="middle-right" class="col-xs-2 text-center cell"></div>
+        </div>
+
+        <!-- final grid row -->
+        <div class="row">
+            <div id="bottom-left" class="col-xs-2 col-xs-offset-3 text-center cell"></div>
+            <div id="bottom-middle" class="col-xs-2 text-center cell"></div>
+            <div id="bottom-right" class="col-xs-2 text-center cell"></div>
+        </div>
+
+        <!-- empty spacer row -->
+        <br />
+
+        <!-- key indicator and progress bar -->
+        <div class="row">
+            <div id="left-hand-feedback" class="col-xs-2 col-xs-offset-1 text-center">
+                <h4>A</h4>
+                <p>Box appears in same location</p>
+            </div>
+
+            <div class="col-xs-4 col-xs-offset-1 text-center">
+                <div class="progress">
+                    <div class="progress-bar progress-bar-success" id="prog-bar" 
+                        role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                        <span class="sr-only"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="right-hand-feedback" class="col-xs-2 col-xs-offset-1 text-center">
+                <h4>L</h4>
+                <p>When the same letter is said</p>
+            </div>
+        </div>
+
+        <!-- button row -->
+        <div class="row">
+            <div class="col-xs-2 col-xs-offset-5 text-center">
+                <button id="start-button" class="btn btn-default btn-lg" value="Start">Start</button>
+            </div>
+        </div>
+
+    </div><!-- /.container -->
+
+    <!-- empty spacer row -->
+    <br />
+
+
+    <!-- score modal dialog -->
+    <div class="modal fade" id="scoreModal" tabindex="-1" role="dialog" aria-labelledby="scoreModalLabel">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="myModalLabel">Session complete!</h4>
+            </div>
+            <div class="modal-body">
+                <p id="next-level-info">Next level: </p>
+                <p id="correct-audio-results">Correct audio results: </p>
+                <p id="correct-visual-results">Correct visual results: </p>
+            </div>
+            <div class="modal-footer">
+                <button id="continue-button" class="btn btn-default" value="Continue" data-dismiss="modal">Continue</button>
+            </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- progress modal dialog -->
+    <div class="modal fade" id="progressModal" tabindex="-1" role="dialog" aria-labelledby="progressModalLabel">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title" id="myModalLabel">Progress History</h4>
+            </div>
+            <div class="modal-body">
+                <table class="table table-striped" id="progress-score-table">
+                    <tr>
+                        <th>#</th>
+                        <th>Date</th>
+                        <th>Average N Level</th>
+                    </tr>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-default" value="Ok" data-dismiss="modal">Ok</button>
+            </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- how to play modal dialog -->
+    <div class="modal fade" id="howToPlayModal" tabindex="-1" role="dialog" aria-labelledby="howToPlayModalLabel">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="myModalLabel">How to Play</h4>
+            </div>
+            <div class="modal-body">
+                <p>When you press the Start button, the application will begin by showing you a box and playing an audio recording of a letter. Remember where the box 
+                    appeared and also remember the letter. After a few seconds, another box appears and another letter is played. Remember these, too. When you start the game, 
+                    it will start at the 2-back level (displayed across the top). This means that you need to remember if a letter was repeated or a box appeared in the same 
+                    location 2 times ago. For example: 
+                    <ol>
+                        <li>Top-right corner, letter 'F'.</li>
+                        <li>Bottom-right corner, letter 'G'.</li>
+                        <li>Top-right corner, letter 'S'.</li>
+                        <li>Bottom-middle, letter 'G'.</li>
+                    </ol>
+                    For the first 2 'blocks' you don't need to do anything because you are at the 2-back level (this obviously increases as you go up the levels). But when the
+                    third block is presented you need to decide if it matches the position or the letter (or both) of block 1. Likewise, for block 4, does it match either the position, letter, 
+                    or both, of block 2, etc. etc. Press the letter 'a' on the keyboard if the position matches, 'l' if the letter matches, or both if they both match.
+                </p>
+                <p>So, from the example above, when block 3 is presented, the position matches block 1 (top-right corner), but the letters do not. So, press 'a'. For block 4, the 
+                    position doesn't match block 2, but the letter does, so press 'l'. Remember blocks 3 and 4 to carry on. Each session has 20 blocks. At the end of the session, if you 
+                    have performed well, the level will increase to 3. So, you need to remember whenever the letter/square matches what was said/displayed 3 times ago. The level can 
+                    increase or decrease depending on your performance. An entire training run consists of 20 sessions. Finish the entire run to see your results, which you can 
+                    optionally save by toggling the save progress switch.
+                </p>
+                <p>Be aware that this is a difficult game. At first, it will be difficult to press the correct keys. Be assured that this was the same for the research subjects when 
+                    they first started. However, after enough practice, the subjects improved.
+                </p>
+                <p>For more information see the <a href="http://www.soakyourhead.com/dual-n-back.aspx" target="_blank">demo on the original site</a>. Note this requires Silverlight. 
+                    I will be porting the demo to a native web application in due course.
+                </p>
+            </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- about modal dialog -->
+    <div class="modal fade" id="aboutModal" tabindex="-1" role="dialog" aria-labelledby="aboutModalLabel">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title" id="myModalLabel">About</h4>
+            </div>
+            <div class="modal-body">
+                <blockquote cite="http://www.soakyourhead.com/Default.aspx">
+                    <p>Dual N-Back training is an application that may, with daily training, improve a person's intelligence.</p>
+                    <footer>
+                        <a href="http://www.soakyourhead.com/Default.aspx" target="_blank">
+                            soakyourhead.com
+                        </a>
+                    </footer>
+                </blockquote>
+
+                <p>This application is a replica of the Dual N-Back application that was used in Jaeggi, S., Buschkuehl, M., Jonides, J. and Perrig, W. (2008). 
+                    Improving fluid intelligence with training on working memory. <cite>Proceedings of the National Academy of Sciences of the United States 
+                    of America</cite>, 105(19), pp. 6829-6833. Further information available 
+                    <a href="http://www.soakyourhead.com/Research.aspx" target="_blank">on the original site</a>, and 
+                    <a href="http://www.pnas.org/content/105/19/6829.abstract" target="_blank">in the research paper</a>.
+                </p>
+
+                <p>The application is a JavaScript conversion of the 
+                    <a href="http://www.soakyourhead.com/dual-n-back.aspx" target="_blank">original Silverlight version</a>
+                    (<a href="http://www.soakyourhead.com/dual-n-back-open-source.aspx" target="_blank">source code</a>). 
+                    As support for Silverlight diminishes in most modern browsers, this conversion will hopefully help users continue to use Dual N-Back training. Feel 
+                    free to use the <a href="https://github.com/Poc275/NBack" target="_blank">converted source code</a> to improve the application, or to make your own version.
+                </p>
+            </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- audio -->
+    <audio src="audio/letter1.mp3" id="letter1">
+        <p>Your browser doesn't support audio, upgrade to do NBack testing.</p>
+    </audio>
+    <audio src="audio/letter2.mp3" id="letter2"></audio>
+    <audio src="audio/letter3.mp3" id="letter3"></audio>
+    <audio src="audio/letter4.mp3" id="letter4"></audio>
+    <audio src="audio/letter5.mp3" id="letter5"></audio>
+    <audio src="audio/letter6.mp3" id="letter6"></audio>
+    <audio src="audio/letter7.mp3" id="letter7"></audio>
+    <audio src="audio/letter8.mp3" id="letter8"></audio>
+
+
+    <!-- jQuery Version 1.11.1 -->
+    <script src="js/jquery.js"></script>
+
+    <!-- Bootstrap Core JavaScript -->
+    <script src="js/bootstrap.min.js"></script>
+
+    <!-- Bootstrap toggle -->
+    <script src="https://gitcdn.github.io/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js"></script>
+
+    <!-- NBack js scripts -->
+    <script src="js/Consonant.js"></script>
+    <script src="js/SquarePosition.js"></script>
+    <script src="js/TargetKind.js"></script>
+    <script src="js/TrialResult.js"></script>
+    <script src="js/Page.js"></script>
+    <script src="js/Score.js"></script>
+    <script src="js/Block.js"></script>
+    <script src="js/BlockCreator.js"></script>
+    <script src="js/Trial.js"></script>
+    <script src="js/App.js"></script>
+    <script src="js/History.js"></script>
+</body>
+
+</html>
