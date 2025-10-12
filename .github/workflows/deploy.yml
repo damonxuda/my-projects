@@ -317,7 +317,42 @@ jobs:
             echo "ℹ️ No games directory found"
           fi
 
-      # 11. 验证所有部署结果
+      # 11. CloudFront 缓存清除（仅 /schedule 和 /games）
+      - name: Invalidate CloudFront Cache
+        if: steps.changes.outputs.schedule_changed == 'true' || steps.changes.outputs.root_files_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        env:
+          CLOUDFRONT_DISTRIBUTION_ID: E3JLLPNZWYQBZQ
+        run: |
+          echo "🔄 清除 CloudFront 缓存..."
+
+          PATHS=""
+
+          # 检查 schedule 是否变化
+          if [[ "${{ steps.changes.outputs.schedule_changed }}" == "true" ]] || [[ "${{ steps.changes.outputs.force_deploy }}" == "true" ]]; then
+            PATHS="$PATHS /schedule/*"
+            echo "  ✅ 将清除 /schedule/* 缓存"
+          fi
+
+          # 检查 games 是否变化（包含在 root_files_changed 中）
+          if [[ "${{ steps.changes.outputs.root_files_changed }}" == "true" ]] || [[ "${{ steps.changes.outputs.force_deploy }}" == "true" ]]; then
+            if git diff --name-only HEAD~1 HEAD | grep -q '^games/' || [[ "${{ steps.changes.outputs.force_deploy }}" == "true" ]]; then
+              PATHS="$PATHS /games/*"
+              echo "  ✅ 将清除 /games/* 缓存"
+            fi
+          fi
+
+          # 如果有需要清除的路径，创建 invalidation
+          if [ -n "$PATHS" ]; then
+            echo "🚀 创建 CloudFront invalidation..."
+            aws cloudfront create-invalidation \
+              --distribution-id $CLOUDFRONT_DISTRIBUTION_ID \
+              --paths $PATHS
+            echo "✅ CloudFront 缓存清除请求已提交"
+          else
+            echo "ℹ️ 无需清除缓存"
+          fi
+
+      # 12. 验证所有部署结果
       - name: Verify all deployments
         run: |
           echo "📁 验证所有项目部署..."
@@ -334,7 +369,7 @@ jobs:
           echo "=== Admin ==="
           aws s3 ls s3://damonxuda-projects/admin/ --recursive | head -3 || echo "❌ Admin not found"
 
-      # 12. 部署成功报告
+      # 13. 部署成功报告
       - name: Deploy Success Report
         run: |
           echo "🎉 多项目部署完成!"
