@@ -20,7 +20,7 @@ function Page() {
 	this._trialNum = 0;
 
 	// starting value of n
-	this._starting_N = 2;
+	this._starting_N = 1;
 
 	// value of n for the current block
 	this._n = this._starting_N;
