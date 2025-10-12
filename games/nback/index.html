@@ -620,15 +620,20 @@
             }
 
             .key-hints {
-                flex-direction: column;
+                /* 保持左右排列，不改为上下 */
+                flex-direction: row;
             }
 
             .key-hint {
-                margin: 5px 0;
+                margin: 0 5px;
             }
 
             .grid-container {
                 max-width: 300px;
+            }
+
+            .letter-display {
+                font-size: 80px;
             }
         }
     </style>
@@ -666,14 +671,14 @@
 
                 <div style="margin: 30px 0; padding: 20px; background: rgba(255, 255, 255, 0.15); border-radius: 12px;">
                     <div style="display: flex; align-items: center; justify-content: center; gap: 15px;">
-                        <label style="font-size: 18px; font-weight: bold; margin: 0;">静音模式：</label>
+                        <label style="font-size: 18px; font-weight: bold; margin: 0;">语音模式：</label>
                         <label class="toggle-switch">
-                            <input type="checkbox" id="silent-mode-toggle">
+                            <input type="checkbox" id="audio-mode-toggle">
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
                     <p style="margin: 10px 0 0 0; text-align: center; font-size: 14px; opacity: 0.9;">
-                        开启后字母会显示在屏幕上，而不播放声音
+                        开启后会播放字母语音，关闭则在屏幕上显示字母
                     </p>
                 </div>
 
@@ -681,7 +686,7 @@
                     <p style="margin: 0; font-size: 16px; line-height: 1.8;">
                         <strong>说明：</strong>例如N=2表示记住2步之前的方块位置和字母。<br>
                         游戏会根据你的表现自动调整难度。<br>
-                        <strong>模式：</strong>默认使用方块位置+声音（双模态），静音模式使用方块位置+视觉字母（纯视觉）。
+                        <strong>模式：</strong>默认使用方块位置+视觉字母（纯视觉），语音模式使用方块位置+声音（双模态）。
                     </p>
                 </div>
 
@@ -931,7 +936,7 @@
         // 难度选择功能
         var selectedDifficulty = 2; // 默认N=2
         var lastSavedLevel = null;
-        var silentMode = false; // 静音模式
+        var audioMode = false; // 语音模式，默认关闭（使用视觉模式）
 
         // 从localStorage读取上次的N级别
         function getLastLevel() {
@@ -949,19 +954,20 @@
             }
         }
 
-        // 读取静音模式设置
-        function getSilentMode() {
+        // 读取语音模式设置
+        function getAudioMode() {
             if (storageAvailable('localStorage')) {
-                var savedMode = localStorage.getItem('nback-silent-mode');
+                var savedMode = localStorage.getItem('nback-audio-mode');
+                // 默认为false（视觉模式），除非用户明确开启了语音模式
                 return savedMode === 'true';
             }
             return false;
         }
 
-        // 保存静音模式设置
-        function saveSilentMode(mode) {
+        // 保存语音模式设置
+        function saveAudioMode(mode) {
             if (storageAvailable('localStorage')) {
-                localStorage.setItem('nback-silent-mode', mode.toString());
+                localStorage.setItem('nback-audio-mode', mode.toString());
             }
         }
 
@@ -993,19 +999,19 @@
                 }
             });
 
-            // 设置静音模式开关状态
-            silentMode = getSilentMode();
-            document.getElementById('silent-mode-toggle').checked = silentMode;
+            // 设置语音模式开关状态
+            audioMode = getAudioMode();
+            document.getElementById('audio-mode-toggle').checked = audioMode;
 
             // 显示难度选择界面
             document.getElementById('difficulty-screen').style.display = 'block';
             document.getElementById('game-screen').style.display = 'none';
         }
 
-        // 静音模式开关监听
-        document.getElementById('silent-mode-toggle').addEventListener('change', function() {
-            silentMode = this.checked;
-            saveSilentMode(silentMode);
+        // 语音模式开关监听
+        document.getElementById('audio-mode-toggle').addEventListener('change', function() {
+            audioMode = this.checked;
+            saveAudioMode(audioMode);
         });
 
         // 难度按钮点击事件（主屏幕）
@@ -1025,14 +1031,14 @@
             document.getElementById('difficulty-screen').style.display = 'none';
             document.getElementById('game-screen').style.display = 'block';
 
-            // 设置静音模式全局变量
-            window.nbackSilentMode = silentMode;
+            // 设置静音模式全局变量（audioMode=false表示静音/视觉模式）
+            window.nbackSilentMode = !audioMode;
 
             // 更新按键提示文字
-            if (silentMode) {
-                document.querySelector('#right-hand-feedback p').textContent = '显示字母相同';
-            } else {
+            if (audioMode) {
                 document.querySelector('#right-hand-feedback p').textContent = '字母相同';
+            } else {
+                document.querySelector('#right-hand-feedback p').textContent = '显示字母相同';
             }
 
             // 设置起始N级别
