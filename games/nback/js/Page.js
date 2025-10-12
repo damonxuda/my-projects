@@ -199,6 +199,11 @@ function Page() {
                 startButton.textContent = "开始";
                 self._playingGame = false;
 
+                // save current N level to localStorage
+                if (typeof saveCurrentLevel === 'function') {
+                    saveCurrentLevel(self._n);
+                }
+
                 // save progress
                 addSessionToHistory(Date.now(), averageN);
 
@@ -220,6 +225,11 @@ function Page() {
 
  			// display the next trial level (N number) in the popup
             document.getElementById("next-level-info").innerHTML = "下一级别：" + self._n.toString();
+
+            // save current N level to localStorage
+            if (typeof saveCurrentLevel === 'function') {
+                saveCurrentLevel(self._n);
+            }
 
             // reset start button to show block has ended
             startButton.value = "Start";
