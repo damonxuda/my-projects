@@ -416,8 +416,8 @@ export async function analyzeAndAutoConvert(videoKey, autoConvert = true, user =
           format: "mp4",
           resolution: "720p",
           enableMobile: true,
-          // 如果是MOOV问题，只生成mobile版本，否则生成两个版本
-          skipMainOutput: isMoovIssue
+          // 总是跳过720p标准版，只生成与原文件分辨率接近的mobile版本
+          skipMainOutput: true
         };
 
         // 根据文件大小调整设置

@@ -6,6 +6,77 @@ import { spawn } from "child_process";
 import { writeFileSync, readFileSync, unlinkSync, existsSync } from "fs";
 import path from "path";
 
+/**
+ * 解析MP4文件的box结构，精确定位moov atom的位置
+ * @param {Buffer} buffer - MP4文件的前部分数据（至少几KB）
+ * @param {number} maxScanSize - 最大扫描大小（字节）
+ * @returns {Object|null} { offset: number, size: number } 或 null
+ */
+function parseMoovLocation(buffer, maxScanSize = 1024 * 1024) {
+  let offset = 0;
+  const scanLimit = Math.min(buffer.length, maxScanSize);
+
+  console.log(`📦 开始解析MP4 box结构，扫描范围: ${scanLimit} bytes`);
+
+  while (offset < scanLimit - 8) {
+    // 读取box header (8 bytes)
+    // 前4字节：box大小（big-endian）
+    // 后4字节：box类型（ASCII）
+
+    const boxSize = buffer.readUInt32BE(offset);
+    const boxType = buffer.toString('ascii', offset + 4, offset + 8);
+
+    console.log(`  📍 偏移 ${offset}: 类型="${boxType}", 大小=${boxSize} bytes`);
+
+    // 检查box大小的合法性
+    if (boxSize < 8) {
+      console.log(`  ⚠️  box大小异常 (${boxSize} < 8)，停止解析`);
+      break;
+    }
+
+    // 特殊情况：boxSize = 1 表示使用64位扩展大小
+    if (boxSize === 1) {
+      if (offset + 16 > buffer.length) {
+        console.log(`  ⚠️  需要64位大小但buffer不足，停止解析`);
+        break;
+      }
+      // 读取8字节的扩展大小（跳过，因为我们主要关注位置）
+      const extendedSize = Number(buffer.readBigUInt64BE(offset + 8));
+      console.log(`  📍 使用扩展大小: ${extendedSize} bytes`);
+
+      if (boxType === 'moov') {
+        console.log(`  ✅ 找到moov atom! 偏移=${offset}, 大小=${extendedSize}`);
+        return { offset, size: extendedSize };
+      }
+
+      offset += extendedSize;
+      continue;
+    }
+
+    // 特殊情况：boxSize = 0 表示box延伸到文件末尾
+    if (boxSize === 0) {
+      console.log(`  📍 box延伸到文件末尾 (size=0)`);
+      if (boxType === 'moov') {
+        console.log(`  ✅ 找到moov atom (延伸到文件末尾)! 偏移=${offset}`);
+        return { offset, size: 0 }; // size=0表示到文件末尾
+      }
+      break;
+    }
+
+    // 找到moov atom
+    if (boxType === 'moov') {
+      console.log(`  ✅ 找到moov atom! 偏移=${offset}, 大小=${boxSize}`);
+      return { offset, size: boxSize };
+    }
+
+    // 继续扫描下一个box
+    offset += boxSize;
+  }
+
+  console.log(`  ❌ 未在前${scanLimit}字节中找到moov atom`);
+  return null;
+}
+
 export async function generateThumbnail(videoKey) {
   try {
     console.log("=== 开始生成缩略图 ===");
@@ -90,13 +161,16 @@ export async function generateThumbnail(videoKey) {
 
     try {
       // 智能MOOV atom检测和下载策略
-      console.log("开始智能检测MOOV atom位置...");
+      console.log("🔍 开始智能检测MOOV atom位置...");
 
-      // 第一步：检查MOOV atom是否在文件开头（前8KB）
-      console.log("检查文件开头是否包含MOOV atom...");
+      // 第一步：下载文件头部进行box结构解析
+      // 大多数MP4的moov在前1MB或末尾，先下载前512KB进行精确解析
+      const initialScanSize = Math.min(fileSize, 512 * 1024); // 512KB
+      console.log(`📥 下载前${Math.round(initialScanSize/1024)}KB进行box结构解析...`);
+
       const headerResponse = await fetch(videoUrl, {
         headers: {
-          'Range': `bytes=0-8191` // 前8KB
+          'Range': `bytes=0-${initialScanSize - 1}`
         }
       });
 
@@ -105,17 +179,18 @@ export async function generateThumbnail(videoKey) {
       }
 
       const headerBuffer = Buffer.from(await headerResponse.arrayBuffer());
-      const hasMoovAtBeginning = headerBuffer.includes(Buffer.from('moov'));
 
-      console.log(`文件头部MOOV检测结果: ${hasMoovAtBeginning ? '找到' : '未找到'}`);
+      // 使用box结构解析来精确定位moov
+      const moovInfo = parseMoovLocation(headerBuffer);
 
       let downloadStrategy;
       let videoBuffer;
 
-      if (hasMoovAtBeginning) {
-        // MOOV在开头：只需下载前部分即可
-        const downloadSize = Math.min(fileSize, 5 * 1024 * 1024); // 5MB应该够了
-        console.log(`MOOV在开头，下载前${Math.round(downloadSize/1024/1024)}MB...`);
+      if (moovInfo) {
+        // 在文件开头找到了moov，计算需要下载的精确大小
+        const moovEnd = moovInfo.offset + moovInfo.size;
+        const downloadSize = Math.min(fileSize, Math.max(moovEnd, 5 * 1024 * 1024)); // 至少5MB
+        console.log(`✅ MOOV在开头(偏移${moovInfo.offset})，下载前${Math.round(downloadSize/1024/1024)}MB...`);
 
         const videoResponse = await fetch(videoUrl, {
           headers: {
@@ -128,13 +203,18 @@ export async function generateThumbnail(videoKey) {
         }
 
         videoBuffer = Buffer.from(await videoResponse.arrayBuffer());
-        downloadStrategy = 'front-only';
+        downloadStrategy = 'front-only-precise';
       } else {
-        // MOOV可能在文件末尾：检查末尾8KB
-        console.log("检查文件末尾是否包含MOOV atom...");
+        // MOOV不在开头：检查文件末尾
+        console.log("⏩ MOOV不在前512KB，检查文件末尾...");
+
+        // 下载末尾512KB进行box结构解析
+        const tailScanSize = Math.min(fileSize, 512 * 1024);
+        console.log(`📥 下载末尾${Math.round(tailScanSize/1024)}KB进行box结构解析...`);
+
         const tailResponse = await fetch(videoUrl, {
           headers: {
-            'Range': `bytes=-8192` // 末尾8KB
+            'Range': `bytes=-${tailScanSize}` // 末尾512KB
           }
         });
 
@@ -143,43 +223,52 @@ export async function generateThumbnail(videoKey) {
         }
 
         const tailBuffer = Buffer.from(await tailResponse.arrayBuffer());
-        const hasMoovAtEnd = tailBuffer.includes(Buffer.from('moov'));
 
-        console.log(`文件尾部MOOV检测结果: ${hasMoovAtEnd ? '找到' : '未找到'}`);
+        // 解析末尾的box结构
+        // 注意：tailBuffer的偏移需要加上实际文件位置
+        const tailStartOffset = fileSize - tailScanSize;
+        const moovInfoInTail = parseMoovLocation(tailBuffer);
 
-        if (hasMoovAtEnd) {
-          // MOOV在末尾：下载前面部分+末尾部分，然后重新组合
+        if (moovInfoInTail) {
+          // 在文件末尾找到了moov
+          const actualMoovOffset = tailStartOffset + moovInfoInTail.offset;
+          console.log(`✅ MOOV在末尾(文件偏移${actualMoovOffset})，下载前部分+MOOV部分...`);
+
+          // 下载前面部分+moov部分
           const frontSize = Math.min(fileSize, 3 * 1024 * 1024); // 前3MB
-          const tailSize = Math.min(fileSize, 2 * 1024 * 1024);  // 末尾2MB
+          const moovEnd = actualMoovOffset + moovInfoInTail.size;
+          const tailSize = Math.min(fileSize - actualMoovOffset, moovInfoInTail.size + 1024 * 1024); // moov + 1MB余量
 
-          console.log(`MOOV在末尾，下载前${Math.round(frontSize/1024/1024)}MB + 末尾${Math.round(tailSize/1024/1024)}MB...`);
+          console.log(`📥 下载前${Math.round(frontSize/1024/1024)}MB + MOOV区域${Math.round(tailSize/1024/1024)}MB...`);
 
-          // 并行下载前部分和末尾部分
-          const [frontResponse, tailResponse2] = await Promise.all([
+          // 并行下载前部分和moov部分
+          const [frontResponse, moovResponse] = await Promise.all([
             fetch(videoUrl, {
               headers: { 'Range': `bytes=0-${frontSize - 1}` }
             }),
             fetch(videoUrl, {
-              headers: { 'Range': `bytes=-${tailSize}` }
+              headers: { 'Range': `bytes=${actualMoovOffset}-${moovEnd}` }
             })
           ]);
 
           if ((!frontResponse.ok && frontResponse.status !== 206) ||
-              (!tailResponse2.ok && tailResponse2.status !== 206)) {
-            throw new Error('下载前部分或尾部失败');
+              (!moovResponse.ok && moovResponse.status !== 206)) {
+            throw new Error('下载前部分或MOOV部分失败');
           }
 
           const frontBuffer = Buffer.from(await frontResponse.arrayBuffer());
-          const tailBuffer2 = Buffer.from(await tailResponse2.arrayBuffer());
+          const moovBuffer = Buffer.from(await moovResponse.arrayBuffer());
 
-          // 合并前部分和尾部
-          videoBuffer = Buffer.concat([frontBuffer, tailBuffer2]);
-          downloadStrategy = 'front-and-tail';
+          // 合并前部分和moov部分
+          videoBuffer = Buffer.concat([frontBuffer, moovBuffer]);
+          downloadStrategy = 'front-and-tail-precise';
         } else {
-          // 没有找到MOOV atom的处理策略
-          if (fileSize < 50 * 1024 * 1024) {
-            // 小文件（<50MB）：直接下载整个文件
-            console.log(`文件较小(${Math.round(fileSize/1024/1024)}MB)，下载完整文件...`);
+          // 前后512KB都未找到MOOV atom
+          console.log(`⚠️  前后各512KB都未找到MOOV atom`);
+
+          if (fileSize < 200 * 1024 * 1024) {
+            // 小于200MB的文件，直接下载完整文件
+            console.log(`💾 文件大小${Math.round(fileSize/1024/1024)}MB < 200MB，下载完整文件以确保MOOV完整...`);
 
             const videoResponse = await fetch(videoUrl);
             if (!videoResponse.ok) {
@@ -187,20 +276,49 @@ export async function generateThumbnail(videoKey) {
             }
 
             videoBuffer = Buffer.from(await videoResponse.arrayBuffer());
-            downloadStrategy = 'complete-small-file';
+            downloadStrategy = 'complete-moov-not-found';
           } else {
-            // 大文件且未检测到MOOV：尝试更智能的策略
-            console.log(`未检测到MOOV位置，尝试多段下载策略...`);
+            // 超大文件（>=200MB）：MOOV可能在中间，采用扩展扫描策略
+            console.log(`🔍 超大文件(${Math.round(fileSize/1024/1024)}MB)，扩展扫描范围...`);
 
-            // 策略1: 下载更大的前端 + 中间段 + 尾端
-            const frontSize = Math.min(fileSize, 15 * 1024 * 1024); // 前15MB
-            const middleSize = Math.min(fileSize, 5 * 1024 * 1024);  // 中间5MB
-            const tailSize = Math.min(fileSize, 5 * 1024 * 1024);    // 末尾5MB
-            const middleStart = Math.floor(fileSize / 2) - Math.floor(middleSize / 2); // 中间位置
+            // 下载前2MB进行扫描
+            const extendedScanSize = Math.min(fileSize, 2 * 1024 * 1024);
+            console.log(`📥 下载前${Math.round(extendedScanSize/1024/1024)}MB进行扩展扫描...`);
 
-            if (fileSize < 100 * 1024 * 1024) {
-              // 小于100MB的文件，直接下载完整文件
-              console.log(`文件适中(${Math.round(fileSize/1024/1024)}MB)，下载完整文件确保MOOV完整...`);
+            const extendedResponse = await fetch(videoUrl, {
+              headers: {
+                'Range': `bytes=0-${extendedScanSize - 1}`
+              }
+            });
+
+            if (!extendedResponse.ok && extendedResponse.status !== 206) {
+              throw new Error(`扩展扫描失败: ${extendedResponse.status}`);
+            }
+
+            const extendedBuffer = Buffer.from(await extendedResponse.arrayBuffer());
+            const moovInExtended = parseMoovLocation(extendedBuffer, extendedScanSize);
+
+            if (moovInExtended) {
+              // 在扩展扫描中找到了moov
+              const moovEnd = moovInExtended.offset + moovInExtended.size;
+              const downloadSize = Math.min(fileSize, Math.max(moovEnd, 10 * 1024 * 1024)); // 至少10MB
+              console.log(`✅ 扩展扫描找到MOOV(偏移${moovInExtended.offset})，下载前${Math.round(downloadSize/1024/1024)}MB...`);
+
+              const videoResponse = await fetch(videoUrl, {
+                headers: {
+                  'Range': `bytes=0-${downloadSize - 1}`
+                }
+              });
+
+              if (!videoResponse.ok && videoResponse.status !== 206) {
+                throw new Error(`视频下载失败: ${videoResponse.status}`);
+              }
+
+              videoBuffer = Buffer.from(await videoResponse.arrayBuffer());
+              downloadStrategy = 'extended-scan-success';
+            } else {
+              // 仍未找到MOOV：可能文件损坏或格式异常，尝试下载完整文件
+              console.log(`❌ 扩展扫描仍未找到MOOV，下载完整文件作为最后尝试...`);
 
               const videoResponse = await fetch(videoUrl);
               if (!videoResponse.ok) {
@@ -208,36 +326,7 @@ export async function generateThumbnail(videoKey) {
               }
 
               videoBuffer = Buffer.from(await videoResponse.arrayBuffer());
-              downloadStrategy = 'complete-for-moov';
-            } else {
-              // 大文件：三段下载策略
-              console.log(`大文件三段下载: 前${Math.round(frontSize/1024/1024)}MB + 中间${Math.round(middleSize/1024/1024)}MB + 末${Math.round(tailSize/1024/1024)}MB...`);
-
-              const [frontResponse, middleResponse, tailResponse2] = await Promise.all([
-                fetch(videoUrl, {
-                  headers: { 'Range': `bytes=0-${frontSize - 1}` }
-                }),
-                fetch(videoUrl, {
-                  headers: { 'Range': `bytes=${middleStart}-${middleStart + middleSize - 1}` }
-                }),
-                fetch(videoUrl, {
-                  headers: { 'Range': `bytes=-${tailSize}` }
-                })
-              ]);
-
-              if ((!frontResponse.ok && frontResponse.status !== 206) ||
-                  (!middleResponse.ok && middleResponse.status !== 206) ||
-                  (!tailResponse2.ok && tailResponse2.status !== 206)) {
-                throw new Error('三段下载失败');
-              }
-
-              const frontBuffer = Buffer.from(await frontResponse.arrayBuffer());
-              const middleBuffer = Buffer.from(await middleResponse.arrayBuffer());
-              const tailBuffer2 = Buffer.from(await tailResponse2.arrayBuffer());
-
-              // 合并三段数据
-              videoBuffer = Buffer.concat([frontBuffer, middleBuffer, tailBuffer2]);
-              downloadStrategy = 'three-segment';
+              downloadStrategy = 'complete-fallback';
             }
           }
         }
