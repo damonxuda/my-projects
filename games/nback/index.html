@@ -270,6 +270,31 @@
             opacity: 0.9;
         }
 
+        /* 可点击按键样式 */
+        .key-button {
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            transition: all 0.15s ease;
+        }
+
+        .key-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.05);
+        }
+
+        .key-button:active {
+            transform: scale(0.95);
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .key-button.pressed {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(0.95);
+        }
+
         .start-button {
             display: block;
             width: 200px;
@@ -559,11 +584,11 @@
         <!-- Controls -->
         <div class="controls">
             <div class="key-hints">
-                <div class="key-hint" id="left-hand-feedback">
+                <div class="key-hint key-button" id="left-hand-feedback" data-key="a">
                     <h4>A</h4>
                     <p>方块位置相同</p>
                 </div>
-                <div class="key-hint" id="right-hand-feedback">
+                <div class="key-hint key-button" id="right-hand-feedback" data-key="l">
                     <h4>L</h4>
                     <p>字母相同</p>
                 </div>
@@ -686,6 +711,41 @@
     <script src="js/History.js"></script>
 
     <script>
+        // 触摸/点击按键处理
+        document.querySelectorAll('.key-button').forEach(function(button) {
+            // 模拟键盘按键的函数
+            function simulateKeyPress(key) {
+                // 创建并触发keyup事件
+                var event = new KeyboardEvent('keyup', {
+                    key: key,
+                    code: key === 'a' ? 'KeyA' : 'KeyL',
+                    bubbles: true,
+                    cancelable: true
+                });
+                document.dispatchEvent(event);
+
+                // 添加视觉反馈
+                button.classList.add('pressed');
+                setTimeout(function() {
+                    button.classList.remove('pressed');
+                }, 150);
+            }
+
+            // 点击事件（桌面和移动端都支持）
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                var key = this.getAttribute('data-key');
+                simulateKeyPress(key);
+            });
+
+            // 触摸事件（移动端优化，防止双击缩放）
+            button.addEventListener('touchstart', function(e) {
+                e.preventDefault(); // 防止触发click事件
+                var key = this.getAttribute('data-key');
+                simulateKeyPress(key);
+            }, { passive: false });
+        });
+
         // Modal handling
         document.querySelectorAll('[data-modal]').forEach(function(element) {
             element.addEventListener('click', function(e) {
