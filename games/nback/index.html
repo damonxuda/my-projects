@@ -1,302 +1,668 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 
 <head>
-
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Dual N-Back training for memory and intelligence">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="description" content="双重N-Back记忆训练 - 提升工作记忆和智力">
 
-    <title>Dual N-Back Training</title>
+    <title>N-Back记忆训练</title>
 
-    <!-- Bootstrap Core CSS -->
-    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    <!-- Custom CSS -->
-    <!--<style>
-    body {
-        padding-top: 70px;
-        /* Required padding for .navbar-fixed-top. Remove if using .navbar-static-top. Change if height of navigation changes. */
-    }
-    </style>-->
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+            padding: 10px;
+        }
 
-    <!-- Bootstrap Toggle -->
-    <link href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css" rel="stylesheet">
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px 0;
+        }
 
-    <link href="css/n-back.css" rel="stylesheet">
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
 
-    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
-    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
-    <!--[if lt IE 9]>
-        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
-        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
-    <![endif]-->
+        .back-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
 
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .menu-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .menu-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Title */
+        .title {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .title h1 {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        /* N-Level Display */
+        .n-level-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .n-level-label {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .n-level-display {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .n-grid {
+            background: rgba(129, 247, 53, 0.9);
+            color: #333;
+            border: 3px solid rgba(255, 255, 255, 0.5);
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            width: 55px;
+            height: 55px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Game Info */
+        .game-info {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .game-info-left {
+            display: flex;
+            gap: 20px;
+        }
+
+        .info-item {
+            font-size: 16px;
+        }
+
+        .info-value {
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        /* Save Toggle */
+        .save-toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #dc3545;
+            transition: .4s;
+            border-radius: 26px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: #28a745;
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+
+        /* Game Board */
+        .game-board {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 30px 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            max-width: 360px;
+            margin: 0 auto;
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            background: #f0f0f0;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            margin: 20px 0;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            height: 20px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #5cb85c);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+
+        /* Controls */
+        .controls {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .key-hints {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+        }
+
+        .key-hint {
+            text-align: center;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            flex: 1;
+            margin: 0 10px;
+        }
+
+        .key-hint h4 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .key-hint p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .start-button {
+            display: block;
+            width: 200px;
+            margin: 0 auto;
+            padding: 15px 30px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .start-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .start-button:active {
+            transform: translateY(0);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 15px;
+            padding: 0;
+            border-radius: 16px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h4 {
+            margin: 0;
+            font-size: 22px;
+            color: white;
+        }
+
+        .close {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            background: none;
+            line-height: 1;
+        }
+
+        .close:hover {
+            color: white;
+        }
+
+        .modal-body {
+            padding: 25px;
+            color: white;
+        }
+
+        .modal-body p {
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .modal-body ol {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        .modal-body li {
+            margin-bottom: 8px;
+        }
+
+        .modal-body a {
+            color: #ffd700;
+            text-decoration: underline;
+        }
+
+        .modal-body table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        .modal-body th,
+        .modal-body td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .modal-body th {
+            background: rgba(255, 255, 255, 0.1);
+            font-weight: bold;
+        }
+
+        .modal-footer {
+            padding: 15px 25px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: right;
+        }
+
+        .modal-button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .modal-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Dropdown Menu */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            min-width: 160px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            z-index: 1;
+            overflow: hidden;
+        }
+
+        .dropdown-content a {
+            color: #333;
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            transition: background 0.3s ease;
+        }
+
+        .dropdown-content a:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .title h1 {
+                font-size: 24px;
+            }
+
+            .game-info {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .game-info-left {
+                flex-direction: column;
+                gap: 10px;
+                width: 100%;
+            }
+
+            .key-hints {
+                flex-direction: column;
+            }
+
+            .key-hint {
+                margin: 5px 0;
+            }
+
+            .grid-container {
+                max-width: 300px;
+            }
+        }
+    </style>
 </head>
 
 <body>
-
-    <!-- Navigation -->
-    <nav class="navbar navbar-inverse navbar-fixed-top" role="navigation">
-        <div class="container">
-            <!-- Brand and toggle get grouped for better mobile display -->
-            <div class="navbar-header">
-                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1">
-                    <span class="sr-only">Toggle navigation</span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                    <span class="icon-bar"></span>
-                </button>
-                <a class="navbar-brand" href="index.html">Dual N-Back Training</a>
-            </div>
-            <!-- Collect the nav links, forms, and other content for toggling -->
-            <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
-                <ul class="nav navbar-nav navbar-right">
-                    <li>
-                        <a href="#" data-toggle="modal" data-target="#howToPlayModal">How To Play</a>
-                    </li>
-                    <li>
-                        <a id="progress-link" href="#">Your Progress</a>
-                    </li>
-                    <li>
-                        <a href="#" data-toggle="modal" data-target="#aboutModal">About</a>
-                    </li>
-                    <li>
-                        <a href="../index.html">← 返回游戏主页</a>
-                    </li>
-                </ul>
-            </div> <!-- /.navbar-collapse -->
-        </div> <!-- /.container -->
-    </nav>
-
-    <!-- Page Content -->
-    <div class="container">
-
-        <div class="row">
-            <div class="col-lg-12 text-center">
-                <h1>Dual N-Back Training</h1>
-                <!-- <p class="lead">Dual n-back training for memory and intelligence.</p> -->
+    <!-- Header -->
+    <div class="header">
+        <a href="../index.html" class="back-btn">← 返回游戏主页</a>
+        <div class="dropdown">
+            <button class="menu-btn">菜单 ▼</button>
+            <div class="dropdown-content">
+                <a href="#" data-modal="howToPlayModal">游戏说明</a>
+                <a href="#" id="progress-link">训练记录</a>
+                <a href="#" data-modal="aboutModal">关于</a>
             </div>
         </div>
-
-        <div class="row">
-            <div class="col-xs-12 text-center">
-                <h2>REMEMBER:</h2>
-                <div class="text-center n-grid" id="N1">1</div>
-                <div class="text-center n-grid" id="N2">2</div>
-                <div class="text-center n-grid" id="N3">3</div>
-                <div class="text-center n-grid" id="N4">4</div>
-                <div class="text-center n-grid" id="N5">5</div>
-                <div class="text-center n-grid" id="N6">6</div>
-                <div class="text-center n-grid" id="N7">7</div>
-            </div>
-        </div>
-
-        <!-- empty spacer row -->
-        <br />
-
-        <div class="row">
-            <div class="col-xs-6">
-                <p>Session: <span id="session-number">1 / 20</span></p>
-                <p>Score: <span id="score-text">0</span></p>
-            </div>
-            <div class="col-xs-6 text-right">
-                <p>Save progress: 
-                    <input id="save-toggle" type="checkbox" checked data-toggle="toggle" data-onstyle="success" data-offstyle="danger" data-on="Yes" data-off="No">
-                </p>
-            </div>
-        </div>
-
-        <!-- empty spacer row -->
-        <br />
-
-        <!-- main grid area -->
-        <div class="row">
-            <!-- 1st grid row -->
-            <div id="top-left" class="col-xs-2 col-xs-offset-3 text-center cell"></div>
-            <div id="top-middle" class="col-xs-2 text-center cell"></div>
-            <div id="top-right" class="col-xs-2 text-center cell"></div>
-        </div>
-
-        <!-- 2nd grid row -->
-        <div class="row">
-            <div id="middle-left" class="col-xs-2 col-xs-offset-3 text-center cell"></div>
-            <div id="middle" class="col-xs-2 text-center cell"></div>
-            <div id="middle-right" class="col-xs-2 text-center cell"></div>
-        </div>
-
-        <!-- final grid row -->
-        <div class="row">
-            <div id="bottom-left" class="col-xs-2 col-xs-offset-3 text-center cell"></div>
-            <div id="bottom-middle" class="col-xs-2 text-center cell"></div>
-            <div id="bottom-right" class="col-xs-2 text-center cell"></div>
-        </div>
-
-        <!-- empty spacer row -->
-        <br />
-
-        <!-- key indicator and progress bar -->
-        <div class="row">
-            <div id="left-hand-feedback" class="col-xs-2 col-xs-offset-1 text-center">
-                <h4>A</h4>
-                <p>Box appears in same location</p>
-            </div>
-
-            <div class="col-xs-4 col-xs-offset-1 text-center">
-                <div class="progress">
-                    <div class="progress-bar progress-bar-success" id="prog-bar" 
-                        role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
-                        <span class="sr-only"></span>
-                    </div>
-                </div>
-            </div>
-
-            <div id="right-hand-feedback" class="col-xs-2 col-xs-offset-1 text-center">
-                <h4>L</h4>
-                <p>When the same letter is said</p>
-            </div>
-        </div>
-
-        <!-- button row -->
-        <div class="row">
-            <div class="col-xs-2 col-xs-offset-5 text-center">
-                <button id="start-button" class="btn btn-default btn-lg" value="Start">Start</button>
-            </div>
-        </div>
-
-    </div><!-- /.container -->
-
-    <!-- empty spacer row -->
-    <br />
-
-
-    <!-- score modal dialog -->
-    <div class="modal fade" id="scoreModal" tabindex="-1" role="dialog" aria-labelledby="scoreModalLabel">
-      <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h4 class="modal-title" id="myModalLabel">Session complete!</h4>
-            </div>
-            <div class="modal-body">
-                <p id="next-level-info">Next level: </p>
-                <p id="correct-audio-results">Correct audio results: </p>
-                <p id="correct-visual-results">Correct visual results: </p>
-            </div>
-            <div class="modal-footer">
-                <button id="continue-button" class="btn btn-default" value="Continue" data-dismiss="modal">Continue</button>
-            </div>
-        </div>
-      </div>
     </div>
 
+    <div class="container">
+        <!-- Title -->
+        <div class="title">
+            <h1>N-Back记忆训练</h1>
+        </div>
 
-    <!-- progress modal dialog -->
-    <div class="modal fade" id="progressModal" tabindex="-1" role="dialog" aria-labelledby="progressModalLabel">
-      <div class="modal-dialog" role="document">
+        <!-- N-Level Display -->
+        <div class="n-level-container">
+            <div class="n-level-label">记忆级别：</div>
+            <div class="n-level-display">
+                <div class="n-grid" id="N1">1</div>
+                <div class="n-grid" id="N2">2</div>
+                <div class="n-grid" id="N3">3</div>
+                <div class="n-grid" id="N4">4</div>
+                <div class="n-grid" id="N5">5</div>
+                <div class="n-grid" id="N6">6</div>
+                <div class="n-grid" id="N7">7</div>
+            </div>
+        </div>
+
+        <!-- Game Info -->
+        <div class="game-info">
+            <div class="game-info-left">
+                <div class="info-item">
+                    回合：<span class="info-value" id="session-number">1 / 20</span>
+                </div>
+                <div class="info-item">
+                    得分：<span class="info-value" id="score-text">0</span>
+                </div>
+            </div>
+            <div class="save-toggle-container">
+                <span>保存进度：</span>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="save-toggle" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Game Board -->
+        <div class="game-board">
+            <div class="grid-container">
+                <div id="top-left" class="cell"></div>
+                <div id="top-middle" class="cell"></div>
+                <div id="top-right" class="cell"></div>
+                <div id="middle-left" class="cell"></div>
+                <div id="middle" class="cell"></div>
+                <div id="middle-right" class="cell"></div>
+                <div id="bottom-left" class="cell"></div>
+                <div id="bottom-middle" class="cell"></div>
+                <div id="bottom-right" class="cell"></div>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-container">
+            <div class="progress-bar" id="prog-bar"></div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+            <div class="key-hints">
+                <div class="key-hint" id="left-hand-feedback">
+                    <h4>A</h4>
+                    <p>方块位置相同</p>
+                </div>
+                <div class="key-hint" id="right-hand-feedback">
+                    <h4>L</h4>
+                    <p>字母相同</p>
+                </div>
+            </div>
+            <button id="start-button" class="start-button" value="Start">开始</button>
+        </div>
+    </div>
+
+    <!-- Score Modal -->
+    <div class="modal" id="scoreModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h4 class="modal-title" id="myModalLabel">Progress History</h4>
+                <h4>回合完成！</h4>
             </div>
             <div class="modal-body">
-                <table class="table table-striped" id="progress-score-table">
+                <p id="next-level-info">下一级别：</p>
+                <p id="correct-audio-results">听觉正确率：</p>
+                <p id="correct-visual-results">视觉正确率：</p>
+            </div>
+            <div class="modal-footer">
+                <button id="continue-button" class="modal-button" value="Continue">继续</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Modal -->
+    <div class="modal" id="progressModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4>训练历史</h4>
+                <button class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <table id="progress-score-table">
                     <tr>
                         <th>#</th>
-                        <th>Date</th>
-                        <th>Average N Level</th>
+                        <th>日期</th>
+                        <th>平均N级别</th>
                     </tr>
                 </table>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-default" value="Ok" data-dismiss="modal">Ok</button>
+                <button class="modal-button" data-dismiss="modal">确定</button>
             </div>
         </div>
-      </div>
     </div>
 
-
-    <!-- how to play modal dialog -->
-    <div class="modal fade" id="howToPlayModal" tabindex="-1" role="dialog" aria-labelledby="howToPlayModalLabel">
-      <div class="modal-dialog" role="document">
+    <!-- How to Play Modal -->
+    <div class="modal" id="howToPlayModal">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h4 class="modal-title" id="myModalLabel">How to Play</h4>
+                <h4>游戏说明</h4>
+                <button class="close" data-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body">
-                <p>When you press the Start button, the application will begin by showing you a box and playing an audio recording of a letter. Remember where the box 
-                    appeared and also remember the letter. After a few seconds, another box appears and another letter is played. Remember these, too. When you start the game, 
-                    it will start at the 2-back level (displayed across the top). This means that you need to remember if a letter was repeated or a box appeared in the same 
-                    location 2 times ago. For example: 
-                    <ol>
-                        <li>Top-right corner, letter 'F'.</li>
-                        <li>Bottom-right corner, letter 'G'.</li>
-                        <li>Top-right corner, letter 'S'.</li>
-                        <li>Bottom-middle, letter 'G'.</li>
-                    </ol>
-                    For the first 2 'blocks' you don't need to do anything because you are at the 2-back level (this obviously increases as you go up the levels). But when the
-                    third block is presented you need to decide if it matches the position or the letter (or both) of block 1. Likewise, for block 4, does it match either the position, letter, 
-                    or both, of block 2, etc. etc. Press the letter 'a' on the keyboard if the position matches, 'l' if the letter matches, or both if they both match.
-                </p>
-                <p>So, from the example above, when block 3 is presented, the position matches block 1 (top-right corner), but the letters do not. So, press 'a'. For block 4, the 
-                    position doesn't match block 2, but the letter does, so press 'l'. Remember blocks 3 and 4 to carry on. Each session has 20 blocks. At the end of the session, if you 
-                    have performed well, the level will increase to 3. So, you need to remember whenever the letter/square matches what was said/displayed 3 times ago. The level can 
-                    increase or decrease depending on your performance. An entire training run consists of 20 sessions. Finish the entire run to see your results, which you can 
-                    optionally save by toggling the save progress switch.
-                </p>
-                <p>Be aware that this is a difficult game. At first, it will be difficult to press the correct keys. Be assured that this was the same for the research subjects when 
-                    they first started. However, after enough practice, the subjects improved.
-                </p>
-                <p>For more information see the <a href="http://www.soakyourhead.com/dual-n-back.aspx" target="_blank">demo on the original site</a>. Note this requires Silverlight. 
-                    I will be porting the demo to a native web application in due course.
-                </p>
+                <p>当你按下开始按钮后，应用会显示一个方块并播放一个字母的音频。记住方块出现的位置和字母。几秒钟后，另一个方块出现并播放另一个字母。也要记住这些。</p>
+
+                <p>游戏从2-back级别开始（显示在顶部）。这意味着你需要记住字母是否重复，或方块是否出现在2次之前的位置。例如：</p>
+                <ol>
+                    <li>右上角，字母'F'</li>
+                    <li>右下角，字母'G'</li>
+                    <li>右上角，字母'S'</li>
+                    <li>底部中间，字母'G'</li>
+                </ol>
+
+                <p>前2个"区块"你不需要做任何事情，因为你处于2-back级别（随着级别提升，这个数字会增加）。但当第3个区块出现时，你需要判断它是否与区块1的位置或字母（或两者）匹配。同样，对于区块4，它是否与区块2的位置、字母或两者匹配，以此类推。</p>
+
+                <p>如果位置匹配，按键盘上的'A'；如果字母匹配，按'L'；如果两者都匹配，同时按两个键。</p>
+
+                <p>从上面的例子来看，当区块3出现时，位置与区块1匹配（右上角），但字母不匹配。所以，按'A'。对于区块4，位置与区块2不匹配，但字母匹配，所以按'L'。记住区块3和4以继续游戏。</p>
+
+                <p>每个回合有20个区块。在回合结束时，如果你表现良好，级别将增加到3。这样，你需要记住字母/方块是否与3次之前显示的内容匹配。级别可以根据你的表现增加或减少。</p>
+
+                <p>一次完整的训练包括20个回合。完成整个训练以查看你的结果，你可以通过切换保存进度开关来选择保存它们。</p>
+
+                <p><strong>注意：</strong>这是一个有难度的游戏。一开始，可能很难按下正确的键。但请放心，研究对象在刚开始时也是如此。然而，经过足够的练习，研究对象的表现有所改善。</p>
             </div>
         </div>
-      </div>
     </div>
 
-
-    <!-- about modal dialog -->
-    <div class="modal fade" id="aboutModal" tabindex="-1" role="dialog" aria-labelledby="aboutModalLabel">
-      <div class="modal-dialog" role="document">
+    <!-- About Modal -->
+    <div class="modal" id="aboutModal">
         <div class="modal-content">
             <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h4 class="modal-title" id="myModalLabel">About</h4>
+                <h4>关于</h4>
+                <button class="close" data-dismiss="modal">&times;</button>
             </div>
             <div class="modal-body">
-                <blockquote cite="http://www.soakyourhead.com/Default.aspx">
-                    <p>Dual N-Back training is an application that may, with daily training, improve a person's intelligence.</p>
-                    <footer>
-                        <a href="http://www.soakyourhead.com/Default.aspx" target="_blank">
-                            soakyourhead.com
-                        </a>
-                    </footer>
-                </blockquote>
+                <p><em>"双重N-Back训练是一个应用程序，通过每天的训练，可能会提高一个人的智力。"</em></p>
 
-                <p>This application is a replica of the Dual N-Back application that was used in Jaeggi, S., Buschkuehl, M., Jonides, J. and Perrig, W. (2008). 
-                    Improving fluid intelligence with training on working memory. <cite>Proceedings of the National Academy of Sciences of the United States 
-                    of America</cite>, 105(19), pp. 6829-6833. Further information available 
-                    <a href="http://www.soakyourhead.com/Research.aspx" target="_blank">on the original site</a>, and 
-                    <a href="http://www.pnas.org/content/105/19/6829.abstract" target="_blank">in the research paper</a>.
-                </p>
+                <p>这个应用程序是Jaeggi, S., Buschkuehl, M., Jonides, J. 和 Perrig, W. (2008)研究中使用的双重N-Back应用程序的复制品。<cite>《美国国家科学院院刊》</cite>，105(19)，第6829-6833页。</p>
 
-                <p>The application is a JavaScript conversion of the 
-                    <a href="http://www.soakyourhead.com/dual-n-back.aspx" target="_blank">original Silverlight version</a>
-                    (<a href="http://www.soakyourhead.com/dual-n-back-open-source.aspx" target="_blank">source code</a>). 
-                    As support for Silverlight diminishes in most modern browsers, this conversion will hopefully help users continue to use Dual N-Back training. Feel 
-                    free to use the <a href="https://github.com/Poc275/NBack" target="_blank">converted source code</a> to improve the application, or to make your own version.
-                </p>
+                <p>该应用程序是<a href="http://www.soakyourhead.com/dual-n-back.aspx" target="_blank">原始Silverlight版本</a>的JavaScript转换版本（<a href="https://github.com/Poc275/NBack" target="_blank">源代码</a>）。随着大多数现代浏览器对Silverlight支持的减少，这个转换版本将帮助用户继续使用双重N-Back训练。</p>
             </div>
         </div>
-      </div>
     </div>
 
-
-    <!-- audio -->
-    <audio src="audio/letter1.mp3" id="letter1">
-        <p>Your browser doesn't support audio, upgrade to do NBack testing.</p>
-    </audio>
+    <!-- Audio Elements -->
+    <audio src="audio/letter1.mp3" id="letter1"></audio>
     <audio src="audio/letter2.mp3" id="letter2"></audio>
     <audio src="audio/letter3.mp3" id="letter3"></audio>
     <audio src="audio/letter4.mp3" id="letter4"></audio>
@@ -305,17 +671,8 @@
     <audio src="audio/letter7.mp3" id="letter7"></audio>
     <audio src="audio/letter8.mp3" id="letter8"></audio>
 
-
-    <!-- jQuery Version 1.11.1 -->
+    <!-- JavaScript -->
     <script src="js/jquery.js"></script>
-
-    <!-- Bootstrap Core JavaScript -->
-    <script src="js/bootstrap.min.js"></script>
-
-    <!-- Bootstrap toggle -->
-    <script src="https://gitcdn.github.io/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js"></script>
-
-    <!-- NBack js scripts -->
     <script src="js/Consonant.js"></script>
     <script src="js/SquarePosition.js"></script>
     <script src="js/TargetKind.js"></script>
@@ -327,6 +684,73 @@
     <script src="js/Trial.js"></script>
     <script src="js/App.js"></script>
     <script src="js/History.js"></script>
+
+    <script>
+        // Modal handling
+        document.querySelectorAll('[data-modal]').forEach(function(element) {
+            element.addEventListener('click', function(e) {
+                e.preventDefault();
+                var modalId = this.getAttribute('data-modal');
+                document.getElementById(modalId).classList.add('show');
+            });
+        });
+
+        document.querySelectorAll('[data-dismiss="modal"]').forEach(function(element) {
+            element.addEventListener('click', function() {
+                this.closest('.modal').classList.remove('show');
+            });
+        });
+
+        // Close modal when clicking outside
+        document.querySelectorAll('.modal').forEach(function(modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('show');
+                }
+            });
+        });
+
+        // Override button text changes for Chinese
+        var originalStartHandler = document.getElementById('start-button');
+        originalStartHandler.addEventListener('click', function() {
+            setTimeout(function() {
+                var btn = document.getElementById('start-button');
+                if (btn.value === "Pause") {
+                    btn.textContent = "暂停";
+                } else if (btn.value === "Resume") {
+                    btn.textContent = "继续";
+                }
+            }, 10);
+        });
+
+        // Override continue button text for Chinese
+        document.getElementById('continue-button').addEventListener('click', function() {
+            setTimeout(function() {
+                var btn = document.getElementById('continue-button');
+                if (btn.value === "Reset") {
+                    btn.textContent = "重置";
+                } else if (btn.value === "Continue") {
+                    btn.textContent = "继续";
+                }
+            }, 10);
+        });
+
+        // Update N-Grid display style
+        function updateNGridDisplay() {
+            var grids = document.querySelectorAll('.n-grid');
+            grids.forEach(function(grid) {
+                if (grid.style.display !== 'none') {
+                    grid.style.display = 'flex';
+                }
+            });
+        }
+
+        // Monitor N-Grid changes
+        var observer = new MutationObserver(updateNGridDisplay);
+        document.querySelectorAll('.n-grid').forEach(function(grid) {
+            observer.observe(grid, { attributes: true, attributeFilter: ['style'] });
+        });
+    </script>
 </body>
 
 </html>

@@ -169,8 +169,8 @@ function Page() {
  			if(self._blockNum == (self.blockCreator.GetNumBlocksTotal() - 1)) {
  				// what was the average n level?
  				var averageN = self._score.getMeanN();
- 				document.getElementById("next-level-info").innerHTML = "You have completed all of the sessions. Congratulations!<br>" + 
-                    "You had an average N level of " + averageN.toString();
+ 				document.getElementById("next-level-info").innerHTML = "你已完成所有训练回合，恭喜！<br>" +
+                    "你的平均N级别为 " + averageN.toString();
 
  				if(self._score.getPercentGFIncrease() > 0) {
  					var gFIncrease = self._score.getPercentGFIncrease();
@@ -178,11 +178,11 @@ function Page() {
  				}
 
                 // output last block score, note the original version doesn't do this
-                document.getElementById("correct-audio-results").innerHTML = "Correct Audio Results: " +
-                    (self.blockCreator.GetDefaultBlockSize() - self._score.audioMistakes()).toString() + 
+                document.getElementById("correct-audio-results").innerHTML = "听觉正确率：" +
+                    (self.blockCreator.GetDefaultBlockSize() - self._score.audioMistakes()).toString() +
                     " / " + self.blockCreator.GetDefaultBlockSize().toString();
-                document.getElementById("correct-visual-results").innerHTML = "Correct Visual Results: " + 
-                    (self.blockCreator.GetDefaultBlockSize() - self._score.visualMistakes()).toString() + 
+                document.getElementById("correct-visual-results").innerHTML = "视觉正确率：" +
+                    (self.blockCreator.GetDefaultBlockSize() - self._score.visualMistakes()).toString() +
                     " / " + self.blockCreator.GetDefaultBlockSize().toString();
 
                 // change button to reset to start a brand new trial
@@ -197,11 +197,11 @@ function Page() {
  			}
 
  			// end the block, output results
-            document.getElementById("correct-audio-results").innerHTML = "Correct Audio Results: " +
-                (self.blockCreator.GetDefaultBlockSize() - self._score.audioMistakes()).toString() + 
+            document.getElementById("correct-audio-results").innerHTML = "听觉正确率：" +
+                (self.blockCreator.GetDefaultBlockSize() - self._score.audioMistakes()).toString() +
                 " / " + self.blockCreator.GetDefaultBlockSize().toString();
-            document.getElementById("correct-visual-results").innerHTML = "Correct Visual Results: " + 
-                (self.blockCreator.GetDefaultBlockSize() - self._score.visualMistakes()).toString() + 
+            document.getElementById("correct-visual-results").innerHTML = "视觉正确率：" +
+                (self.blockCreator.GetDefaultBlockSize() - self._score.visualMistakes()).toString() +
                 " / " + self.blockCreator.GetDefaultBlockSize().toString();
  			var deltaN = self._score.endBlock();
  			if((deltaN + self._n) >= 2) {
@@ -209,7 +209,7 @@ function Page() {
  			}
 
  			// display the next trial level (N number) in the popup
-            document.getElementById("next-level-info").innerHTML = "Next level: " + self._n.toString();
+            document.getElementById("next-level-info").innerHTML = "下一级别：" + self._n.toString();
 
             // display results dialog
             $('#scoreModal').modal('show');
