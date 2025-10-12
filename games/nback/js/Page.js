@@ -40,6 +40,7 @@ function Page() {
     this.Timer_1;
     this.TrialTimer;
     this._continueTimer;
+    this._letterDisplayTimer = null; // timer for letter display cleanup
 
 	DisplayN(this._starting_N);
  	setProgress(0);
@@ -139,6 +140,12 @@ function Page() {
         document.getElementById("top-left").style.backgroundColor = "";
         document.getElementById("top-middle").style.backgroundColor = "";
         document.getElementById("top-right").style.backgroundColor = "";
+
+        // Also hide letter display if in silent mode
+        var letterDisplay = document.getElementById("letter-display");
+        if (letterDisplay) {
+            letterDisplay.classList.remove('show');
+        }
     }
 
  	this.Start_Training = function() {
@@ -292,13 +299,24 @@ function Page() {
  			// Silent mode: Display letter visually
  			var letterDisplay = document.getElementById("letter-display");
  			if (letterDisplay && letterKey) {
- 				letterDisplay.textContent = letterMap[letterKey] || '';
- 				letterDisplay.classList.add('show');
+ 				// Clear any existing letter display timer to prevent overlap
+ 				if (self._letterDisplayTimer) {
+ 					clearTimeout(self._letterDisplayTimer);
+ 					self._letterDisplayTimer = null;
+ 				}
 
- 				// Hide letter after stimulus time (500ms)
+ 				// Immediately update letter and show
+ 				letterDisplay.textContent = letterMap[letterKey] || '';
+ 				letterDisplay.classList.remove('show'); // force reflow
  				setTimeout(function() {
+ 					letterDisplay.classList.add('show');
+ 				}, 10);
+
+ 				// Hide letter after stimulus time (500ms) - this will be also handled by hideStimulus
+ 				self._letterDisplayTimer = setTimeout(function() {
  					letterDisplay.classList.remove('show');
- 				}, 500);
+ 					self._letterDisplayTimer = null;
+ 				}, _stimulus_time);
  			}
  		} else {
  			// Normal mode: Play audio
