@@ -644,7 +644,7 @@
     <div id="difficulty-screen" class="full-screen-overlay">
         <div class="container">
             <div class="header">
-                <a href="../index.html" class="back-btn">← 返回游戏主页</a>
+                <a href="../index.html" class="back-btn">← 返回</a>
             </div>
 
             <div class="title">
@@ -704,7 +704,7 @@
 
     <!-- Header -->
     <div class="header">
-        <a href="../index.html" class="back-btn">← 返回游戏主页</a>
+        <a href="#" id="back-to-difficulty-btn" class="back-btn">← 返回</a>
         <div class="dropdown">
             <button class="menu-btn">菜单 ▼</button>
             <div class="dropdown-content">
@@ -1132,6 +1132,23 @@
                     btn.textContent = "继续";
                 }
             }, 10);
+        });
+
+        // 返回难度选择界面
+        document.getElementById('back-to-difficulty-btn').addEventListener('click', function(e) {
+            e.preventDefault();
+            // 隐藏游戏界面，显示难度选择界面
+            document.getElementById('game-screen').style.display = 'none';
+            document.getElementById('difficulty-screen').style.display = 'block';
+
+            // 重置游戏状态
+            if (window.pageInstance) {
+                window.pageInstance._playingGame = false;
+                // 重置开始按钮
+                var startBtn = document.getElementById('start-button');
+                startBtn.value = "Start";
+                startBtn.textContent = "开始";
+            }
         });
     </script>
 </body>
