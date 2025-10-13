@@ -13,19 +13,16 @@ class SmartGameStorage {
     // 监听网络状态变化
     window.addEventListener('online', () => {
       this.isOnline = true;
-      console.log(`🌐 [${this.gameType}] 网络已连接，开始处理同步队列`);
       this.processSyncQueue();
     });
 
     window.addEventListener('offline', () => {
       this.isOnline = false;
-      console.log(`📱 [${this.gameType}] 网络已断开`);
     });
 
     // 定期同步机制 - 每30秒检查一次同步队列
     this.syncInterval = setInterval(() => {
       if (this.syncQueue.length > 0) {
-        console.log(`⏰ [${this.gameType}] 定期同步检查 - 队列长度: ${this.syncQueue.length}`);
         this.processSyncQueue();
       }
     }, 30000);
@@ -39,14 +36,12 @@ class SmartGameStorage {
   async save(key, data) {
     const isLoggedIn = this.isUserLoggedIn();
     const timestamp = Date.now();
-    
-    console.log(`💾 [${this.gameType}] 保存数据 - 用户状态: ${isLoggedIn ? '已登录' : '游客'}, 键: ${key}`);
-    
+
     // 总是先保存到本地（作为缓存/备份）
     const localSuccess = this.saveToLocal(key, data, timestamp);
-    
+
     if (!localSuccess) {
-      console.error('❌ 本地保存失败，中止保存操作');
+      console.error(`❌ [${this.gameType}] 本地保存失败`);
       return false;
     }
 
@@ -54,29 +49,18 @@ class SmartGameStorage {
     if (isLoggedIn && this.isOnline) {
       try {
         const cloudSuccess = await this.saveToCloud(key, data, timestamp);
-        if (cloudSuccess) {
-          console.log(`☁️ [${this.gameType}] 云端保存成功`);
-        } else {
-          console.warn(`⚠️ [${this.gameType}] 云端保存失败，已加入同步队列`);
+        if (!cloudSuccess) {
           this.addToSyncQueue('save', key, data, timestamp);
-          // 立即尝试同步队列
           setTimeout(() => this.processSyncQueue(), 1000);
         }
       } catch (error) {
         console.error(`❌ [${this.gameType}] 云端保存出错:`, error);
         this.addToSyncQueue('save', key, data, timestamp);
-        // 立即尝试同步队列
         setTimeout(() => this.processSyncQueue(), 1000);
       }
-    } else if (isLoggedIn && !this.isOnline) {
-      // 注册用户但离线 - 加入同步队列
-      console.log(`📱 [${this.gameType}] 用户已登录但离线，数据已加入同步队列`);
-      this.addToSyncQueue('save', key, data, timestamp);
     } else if (isLoggedIn) {
-      // 其他情况下的注册用户 - 也尝试加入同步队列
-      console.log(`🔄 [${this.gameType}] 注册用户，加入同步队列稍后处理`);
+      // 注册用户离线或其他情况 - 加入同步队列
       this.addToSyncQueue('save', key, data, timestamp);
-      // 延迟尝试同步
       setTimeout(() => this.processSyncQueue(), 2000);
     }
 
@@ -86,28 +70,23 @@ class SmartGameStorage {
   // 统一加载接口 - 游戏代码只需调用这个方法
   async load(key) {
     const isLoggedIn = this.isUserLoggedIn();
-    
-    console.log(`📖 [${this.gameType}] 加载数据 - 用户状态: ${isLoggedIn ? '已登录' : '游客'}, 键: ${key}`);
 
     // 如果是注册用户且在线，优先从云端加载
     if (isLoggedIn && this.isOnline) {
       try {
         const cloudData = await this.loadFromCloud(key);
         if (cloudData !== null) {
-          console.log(`☁️ [${this.gameType}] 从云端加载成功`);
           // 更新本地缓存
           this.saveToLocal(key, cloudData, Date.now());
           return cloudData;
         }
       } catch (error) {
-        console.warn(`⚠️ [${this.gameType}] 云端加载失败，回退到本地:`, error);
+        console.warn(`⚠️ [${this.gameType}] 云端加载失败，使用本地数据`);
       }
     }
 
     // 从本地加载（游客 或 注册用户云端失败时的回退）
-    const localData = this.loadFromLocal(key);
-    console.log(`💾 [${this.gameType}] 从本地加载 ${localData ? '成功' : '无数据'}`);
-    return localData;
+    return this.loadFromLocal(key);
   }
 
   // ===================
@@ -210,9 +189,8 @@ class SmartGameStorage {
         .single();
 
       if (error) {
+        // 数据不存在是正常情况，不输出日志
         if (error.code === 'PGRST116' || error.code === 'PGRST301' || error.message?.includes('406')) {
-          // 数据不存在或406错误
-          console.log(`📝 [${this.gameType}] 云端数据不存在 (${key}): ${error.code || error.message}`);
           return null;
         }
         console.error(`❌ [${this.gameType}] 云端加载失败:`, error);
@@ -281,57 +259,29 @@ class SmartGameStorage {
   }
 
   async processSyncQueue() {
-    // 详细的条件检查和日志
-    console.log(`🔄 [${this.gameType}] 同步队列检查 - 在线: ${this.isOnline}, 登录: ${this.isUserLoggedIn()}, 队列长度: ${this.syncQueue.length}`);
-
-    if (!this.isOnline) {
-      console.log(`❌ [${this.gameType}] 网络离线，跳过同步`);
+    if (!this.isOnline || !this.isUserLoggedIn() || this.syncQueue.length === 0) {
       return;
     }
-
-    if (!this.isUserLoggedIn()) {
-      console.log(`❌ [${this.gameType}] 用户未登录，跳过同步`);
-      return;
-    }
-
-    if (this.syncQueue.length === 0) {
-      console.log(`✅ [${this.gameType}] 同步队列为空`);
-      return;
-    }
-
-    console.log(`🔄 [${this.gameType}] 开始处理同步队列 (${this.syncQueue.length} 项)...`);
 
     const queue = [...this.syncQueue];
     this.syncQueue = [];
-    let successCount = 0;
-    let failCount = 0;
 
     for (const item of queue) {
       try {
-        console.log(`📤 [${this.gameType}] 同步数据: ${item.key} (${item.operation})`);
         if (item.operation === 'save') {
           const success = await this.saveToCloud(item.key, item.data, item.timestamp);
-          if (success) {
-            successCount++;
-            console.log(`✅ [${this.gameType}] 同步成功: ${item.key}`);
-          } else {
-            failCount++;
-            console.warn(`❌ [${this.gameType}] 同步失败: ${item.key} - 重新加入队列`);
+          if (!success) {
             this.syncQueue.push(item); // 失败则重新加入队列
           }
         }
       } catch (error) {
-        failCount++;
-        console.error(`❌ [${this.gameType}] 同步队列处理错误:`, error);
+        console.error(`❌ [${this.gameType}] 同步失败:`, error);
         this.syncQueue.push(item); // 失败则重新加入队列
       }
     }
 
     if (this.syncQueue.length === 0) {
       this.lastSyncTime = Date.now();
-      console.log(`✅ [${this.gameType}] 同步队列处理完成 - 成功: ${successCount}, 失败: ${failCount}`);
-    } else {
-      console.warn(`⚠️ [${this.gameType}] 同步队列仍有 ${this.syncQueue.length} 项待处理 - 成功: ${successCount}, 失败: ${failCount}`);
     }
   }
 
@@ -340,149 +290,88 @@ class SmartGameStorage {
   // ===================
 
   isUserLoggedIn() {
-    // 🔥 增强的用户登录状态检查 - 专门优化跨模块身份传递
-    // console.log('🔐 检查用户登录状态:');
-    // console.log('  - window.Clerk:', !!window.Clerk);
-    // console.log('  - window.Clerk.loaded:', window.Clerk ? window.Clerk.loaded : 'N/A');
-    // console.log('  - window.Clerk.user:', window.Clerk ? !!window.Clerk.user : 'N/A');
-    // console.log('  - window.Clerk.session:', window.Clerk ? !!window.Clerk.session : 'N/A');
-    // console.log('  - window.clerkInitialized:', window.clerkInitialized);
-
-    // 🔥 策略1: 最高优先级 - 检查模拟用户对象 (跨模块token解析)
+    // 策略1: 检查模拟用户对象 (跨模块token解析)
     if (window.mockClerkUser && window.mockClerkUser.isAuthenticated) {
-      console.log('✅ 用户已登录 (跨模块token解析):', {
-        userId: window.mockClerkUser.id,
-        email: window.mockClerkUser.emailAddresses?.[0]?.emailAddress,
-        sessionId: window.mockClerkUser.sessionId,
-        authSource: window.mockClerkUser.authSource
-      });
       return true;
     }
 
-    // 🔥 策略2: 检查活跃的session (React模块传递过来的核心指标)
+    // 策略2: 检查活跃的session
     if (window.Clerk && window.Clerk.user && window.Clerk.session) {
-      console.log('✅ 用户已登录 (活跃session):', {
-        userId: window.Clerk.user.id,
-        email: window.Clerk.user.emailAddresses?.[0]?.emailAddress,
-        sessionId: window.Clerk.session.id
-      });
       return true;
     }
 
-    // 🔥 策略3: 用户对象存在检查 (兼容之前的快速检查)
+    // 策略3: 用户对象存在检查
     if (window.Clerk && window.Clerk.user) {
-      console.log('✅ 用户已登录 (用户对象检查):', window.Clerk.user.id);
       return true;
     }
 
-    // 🔥 策略4: 已初始化状态下的用户检查
+    // 策略4: 已初始化状态下的用户检查
     if (window.clerkInitialized && window.Clerk) {
-      // 检查是否有任何形式的认证信息
       if (window.Clerk.user || window.Clerk.session) {
-        console.log('✅ 用户已登录 (初始化后检查):', {
-          user: !!window.Clerk.user,
-          session: !!window.Clerk.session
-        });
         return true;
       }
     }
 
-    // 🔥 策略5: 传统的完全加载检查
+    // 策略5: 传统的完全加载检查
     if (window.Clerk && window.Clerk.loaded && window.Clerk.user) {
-      console.log('✅ 用户已登录 (传统完全加载检查):', window.Clerk.user.id);
       return true;
     }
 
-    // 🔥 策略6: localStorage缓存数据检查 (React模块兼容性)
+    // 策略6: localStorage缓存数据检查
     try {
       const clerkEnv = localStorage.getItem('__clerk_environment');
       if (clerkEnv) {
         const envData = JSON.parse(clerkEnv);
         if (envData.user && envData.session) {
-          console.log('✅ 用户已登录 (localStorage缓存检查):', {
-            userId: envData.user.id,
-            email: envData.user.emailAddresses?.[0]?.emailAddress,
-            sessionId: envData.session.id
-          });
           return true;
         }
       }
     } catch (error) {
-      console.log('⚠️ localStorage检查失败:', error);
+      // 忽略 localStorage 读取错误
     }
 
-    // 🔥 策略7: 等待状态判断
-    if (window.Clerk && !window.clerkInitialized) {
-      console.log('⏳ Clerk正在初始化中，稍后再试...');
-      return false;
-    }
-
-    // 🔥 策略8: 最终的未登录判断
-    console.log('❌ 用户未登录或session已过期');
     return false;
   }
 
   getUser() {
-    // 🔥 增强的用户对象获取 - 多策略检查
-
-    // 🔥 策略1: 模拟用户对象 (跨模块token解析)
+    // 策略1: 模拟用户对象 (跨模块token解析)
     if (window.mockClerkUser && window.mockClerkUser.isAuthenticated) {
-      console.log('👤 获取用户对象成功 (跨模块token解析):', {
-        id: window.mockClerkUser.id,
-        email: window.mockClerkUser.emailAddresses?.[0]?.emailAddress,
-        authSource: window.mockClerkUser.authSource
-      });
       return window.mockClerkUser;
     }
 
-    // 🔥 策略2: 标准Clerk用户对象
+    // 策略2: 标准Clerk用户对象
     if (window.Clerk && window.Clerk.user) {
-      console.log('👤 获取用户对象成功:', {
-        id: window.Clerk.user.id,
-        email: window.Clerk.user.emailAddresses?.[0]?.emailAddress
-      });
       return window.Clerk.user;
     }
 
-    // 🔥 策略3: localStorage缓存数据获取 (React模块兼容性)
+    // 策略3: localStorage缓存数据获取
     try {
       const clerkEnv = localStorage.getItem('__clerk_environment');
       if (clerkEnv) {
         const envData = JSON.parse(clerkEnv);
         if (envData.user) {
-          console.log('👤 获取用户对象成功 (localStorage缓存):', {
-            id: envData.user.id,
-            email: envData.user.emailAddresses?.[0]?.emailAddress
-          });
           return envData.user;
         }
       }
     } catch (error) {
-      console.log('⚠️ localStorage用户获取失败:', error);
-    }
-
-    // 如果没有用户对象但初始化完成，可能是未登录状态
-    if (window.clerkInitialized) {
-      console.log('❌ 用户对象不存在 (已初始化)');
-    } else {
-      console.log('⏳ 用户对象不存在 (未初始化)');
+      // 忽略 localStorage 读取错误
     }
 
     return null;
   }
 
   getUserId() {
-    // 🔥 策略1: 模拟用户对象 (跨模块token解析)
+    // 策略1: 模拟用户对象 (跨模块token解析)
     if (window.mockClerkUser && window.mockClerkUser.isAuthenticated) {
       return window.mockClerkUser.id || null;
     }
 
-    // 🔥 策略2: 标准Clerk用户对象
+    // 策略2: 标准Clerk用户对象
     if (window.Clerk && window.Clerk.user) {
       return window.Clerk.user.id || null;
     }
 
-    // 🔥 策略3: localStorage缓存数据获取
+    // 策略3: localStorage缓存数据获取
     try {
       const clerkEnv = localStorage.getItem('__clerk_environment');
       if (clerkEnv) {
@@ -492,7 +381,7 @@ class SmartGameStorage {
         }
       }
     } catch (error) {
-      console.log('⚠️ localStorage用户ID获取失败:', error);
+      // 忽略 localStorage 读取错误
     }
 
     return null;
@@ -573,7 +462,6 @@ class SmartGameStorage {
 
   // 手动强制同步 - 游戏可以在关键时刻调用
   async forceSyncNow() {
-    console.log(`🔄 [${this.gameType}] 手动强制同步`);
     await this.processSyncQueue();
   }
 

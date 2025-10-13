@@ -23,10 +23,6 @@ class SmartGameStorageEdgeFunction extends SmartGameStorage {
       throw new Error('无法获取认证 token - Clerk 可能还未初始化完成');
     }
 
-    console.log(`📤 [Edge Function] 调用 ${action} for ${this.gameType}/${key}`);
-    console.log('  - User ID:', userId);
-    console.log('  - Token:', token.substring(0, 20) + '...');
-
     const response = await fetch(this.edgeFunctionUrl, {
       method: 'POST',
       headers: {
@@ -42,17 +38,15 @@ class SmartGameStorageEdgeFunction extends SmartGameStorage {
       })
     });
 
-    console.log(`📥 [Edge Function] 响应状态:`, response.status);
-
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`❌ [Edge Function] 错误响应:`, errorText);
       let errorData;
       try {
         errorData = JSON.parse(errorText);
       } catch (e) {
         errorData = { message: errorText };
       }
+      console.error(`❌ [Edge Function] ${action} 失败:`, errorData.message || errorText);
       throw new Error(errorData.message || `Edge Function call failed (${response.status})`);
     }
 
@@ -65,51 +59,31 @@ class SmartGameStorageEdgeFunction extends SmartGameStorage {
    */
   async getClerkToken() {
     try {
-      console.log('🔑 [Edge Function] 尝试获取 Clerk token...');
-
-      // 方式1 (推荐): 从 mockClerkUser 获取缓存的 token (无网络延迟)
+      // 方式1: 从 mockClerkUser 获取缓存的 token (无网络延迟)
       if (window.mockClerkUser && window.mockClerkUser.originalSessionToken) {
-        const token = window.mockClerkUser.originalSessionToken;
-        console.log('  - ✅ 从 mockClerkUser 缓存获取 token (无网络请求)');
-        console.log('  - Token 长度:', token.length);
-        console.log('  - Token 前20字符:', token.substring(0, 20));
-        return token;
+        return window.mockClerkUser.originalSessionToken;
       }
 
       // 方式2: 使用 gameAuth 统一接口
       if (typeof window.getGameToken === 'function') {
-        console.log('  - 🔄 尝试从 gameAuth.getToken() 获取...');
         const token = await window.getGameToken();
         if (token) {
-          console.log('  - ✅ 从 gameAuth 获取 token');
-          console.log('  - Token 长度:', token.length);
-          console.log('  - Token 前20字符:', token.substring(0, 20));
           return token;
         }
       }
 
-      // 方式3: 直接从 Clerk session 获取 (可能需要网络请求刷新 token)
+      // 方式3: 直接从 Clerk session 获取
       if (window.Clerk && window.Clerk.session) {
-        console.log('  - 🔄 从 Clerk.session.getToken() 获取...');
         const token = await window.Clerk.session.getToken();
         if (token) {
-          console.log('  - ✅ 从 Clerk session 获取 token');
-          console.log('  - Token 长度:', token.length);
-          console.log('  - Token 前20字符:', token.substring(0, 20));
           return token;
         }
       }
 
-      console.warn('⚠️ [Edge Function] 无法获取 Clerk token');
-      console.warn('  - mockClerkUser:', !!window.mockClerkUser);
-      console.warn('  - getGameToken:', typeof window.getGameToken);
-      console.warn('  - Clerk.session:', window.Clerk ? !!window.Clerk.session : false);
-
-      // 返回 null，让调用方决定如何处理
       return null;
     } catch (error) {
       console.error('❌ [Edge Function] 获取 Clerk token 失败:', error);
-      throw error; // 重新抛出错误，避免静默失败
+      throw error;
     }
   }
 
@@ -119,15 +93,9 @@ class SmartGameStorageEdgeFunction extends SmartGameStorage {
   async saveToCloud(key, data, timestamp = Date.now()) {
     try {
       const result = await this.callEdgeFunction('save', key, data);
-
-      if (result.success) {
-        console.log(`☁️ [${this.gameType}] Edge Function 保存成功`);
-        return true;
-      }
-
-      return false;
+      return result.success || false;
     } catch (error) {
-      console.error(`❌ [${this.gameType}] Edge Function 保存失败:`, error);
+      console.error(`❌ [${this.gameType}] 保存失败:`, error);
       return false;
     }
   }
@@ -138,15 +106,9 @@ class SmartGameStorageEdgeFunction extends SmartGameStorage {
   async loadFromCloud(key) {
     try {
       const result = await this.callEdgeFunction('get', key);
-
-      if (result.success && result.data) {
-        console.log(`☁️ [${this.gameType}] Edge Function 加载成功`);
-        return result.data;
-      }
-
-      return null;
+      return (result.success && result.data) ? result.data : null;
     } catch (error) {
-      console.error(`❌ [${this.gameType}] Edge Function 加载失败:`, error);
+      // 数据不存在是正常情况，不输出错误
       return null;
     }
   }
