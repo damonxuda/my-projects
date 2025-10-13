@@ -137,9 +137,11 @@
 
     /* 游戏容器 */
     .game-container-wrapper {
+      flex: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: center;
       padding: 0.5rem 1rem;
     }
 
@@ -290,16 +292,21 @@
     }
 
     .game-intro {
-      margin: 0.5rem 0 0 0;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
       text-align: center;
       color: white;
-      padding: 0.5rem 1rem;
-      font-size: 0.95rem;
+      padding: 0.8rem 1rem;
+      font-size: 0.9rem;
+      background: rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(10px);
     }
 
     .game-explanation {
-      margin-top: 1rem;
-      color: rgba(255, 255, 255, 0.9);
+      margin: 0;
+      color: rgba(255, 255, 255, 0.95);
     }
 
     .game-message {
@@ -507,7 +514,7 @@
   <!-- 游戏说明 -->
   <div class="game-intro">
     <p class="game-explanation">
-      <strong>玩法：</strong>使用方向键或 WASD 移动方块。当两个相同数字的方块相遇时，它们会合并成一个！
+      <strong>玩法：</strong>滑动屏幕移动方块，当两个相同数字的方块相遇时，它们会合并成一个！
     </p>
   </div>
 
