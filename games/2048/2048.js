@@ -243,7 +243,10 @@ GameManager.prototype.move = function (direction) {
       this.over = true;
     }
 
-    this.storage.saveGameState(this.serialize());
+    // 异步保存游戏状态
+    this.storage.saveGameState(this.serialize()).catch(function(err) {
+      console.error('💥 [2048] 保存游戏状态失败:', err);
+    });
   }
 
   return moved;

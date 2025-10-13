@@ -338,7 +338,9 @@
     if (moved) {
       if (this.gameManager.score > this.bestScore) {
         this.bestScore = this.gameManager.score;
-        this.storage.saveBestScore(this.bestScore);
+        this.storage.saveBestScore(this.bestScore).catch(function(err) {
+          console.error('💥 [2048] 保存最高分失败:', err);
+        });
       }
 
       this.actuator.actuate(this.gameManager.grid, {
