@@ -42,20 +42,11 @@ class NonogramGame {
 
       // 现在可以安全地初始化存储系统了
       try {
-        // 优先使用 Edge Function 版本（更安全）
-        if (typeof SmartGameStorageEdgeFunction !== 'undefined') {
-          this.storage = new SmartGameStorageEdgeFunction('nonogram');
-          console.log('✅ 使用 SmartGameStorageEdgeFunction（Edge Function 安全版本）');
-        } else if (typeof SmartNonogramStorage !== 'undefined') {
-          this.storage = new SmartNonogramStorage();
-          console.log('✅ SmartNonogramStorage 创建成功');
-        } else {
-          console.error('❌ 所有存储类都不可用');
-          this.storage = null;
-        }
+        this.storage = new SmartGameStorageEdgeFunction('nonogram');
+        console.log('✅ 使用 SmartGameStorageEdgeFunction（Edge Function 版本）');
       } catch (error) {
         console.error('❌ 存储系统初始化失败:', error);
-        this.storage = null;
+        throw error; // 如果Edge Function不可用，应该完全失败而不是fallback
       }
 
       // 开始游戏初始化

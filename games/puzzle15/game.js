@@ -25,16 +25,11 @@ class Puzzle15Game {
 
       // 初始化存储系统
       try {
-        if (typeof SmartGameStorageEdgeFunction !== 'undefined') {
-          this.storage = new SmartGameStorageEdgeFunction('puzzle15');
-          console.log('✅ SmartGameStorageEdgeFunction 创建成功');
-        } else {
-          console.error('❌ 存储类不可用');
-          this.storage = null;
-        }
+        this.storage = new SmartGameStorageEdgeFunction('puzzle15');
+        console.log('✅ SmartGameStorageEdgeFunction 创建成功');
       } catch (error) {
         console.error('❌ 存储系统初始化失败:', error);
-        this.storage = null;
+        throw error; // 如果Edge Function不可用，应该完全失败而不是fallback
       }
 
       this.init();

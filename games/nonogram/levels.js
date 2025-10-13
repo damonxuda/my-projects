@@ -10,10 +10,8 @@ class NonogramLevels {
     this.currentDifficulty = 'easy';
     this.levels = {};
     this.progress = null;
-    // 优先使用 Edge Function 版本（更安全）
-    this.storage = typeof SmartGameStorageEdgeFunction !== 'undefined'
-      ? new SmartGameStorageEdgeFunction('nonogram')
-      : new SmartNonogramStorage();
+    // 使用 Edge Function 版本
+    this.storage = new SmartGameStorageEdgeFunction('nonogram');
     console.log('🔧 Levels using storage:', this.storage.constructor.name);
     this.isLoading = false;
     
