@@ -351,6 +351,7 @@
   <!-- 引入共享模块 -->
   <script src="../shared/js/gameConfig.js"></script>
   <script src="../shared/js/smartGameStorage.js"></script>
+  <script src="../shared/js/smartGameStorage-edge-function.js"></script>
 
   <!-- 启动页面逻辑 -->
   <script>
@@ -359,7 +360,7 @@
 
       // 初始化存储
       async function initStorage() {
-        storage = new Smart2048Storage();
+        storage = new SmartGameStorageEdgeFunction('2048');
         console.log('✅ 2048 Storage initialized');
         return storage;
       }

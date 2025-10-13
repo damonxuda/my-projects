@@ -255,7 +255,7 @@
 
   // Application Controller
   function Application() {
-    this.storage = new window.Smart2048Storage();
+    this.storage = new window.SmartGameStorageEdgeFunction('2048');
     this.inputManager = new KeyboardInputManager();
     this.actuator = new HTMLActuator();
     this.bestScore = 0;
