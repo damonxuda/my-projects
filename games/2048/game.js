@@ -327,8 +327,33 @@
     this.inputManager.on('restart', this.restart.bind(this));
     this.inputManager.on('keepPlaying', this.keepPlaying.bind(this));
 
+    // 检查 URL 参数决定游戏模式
+    this.checkGameMode();
+
     this.setup();
   }
+
+  Application.prototype.checkGameMode = function() {
+    var urlParams = new URLSearchParams(window.location.search);
+    var mode = urlParams.get('mode');
+
+    if (mode === 'new') {
+      console.log('🎮 新游戏模式 - 清除保存的状态');
+      this.storageManager.clearGameState();
+
+      // 更新统计数据
+      if (this.storageManager.storage) {
+        this.storageManager.storage.loadStats().then(function(stats) {
+          stats.gamesPlayed = (stats.gamesPlayed || 0) + 1;
+          return this.storageManager.storage.saveStats(stats);
+        }.bind(this)).catch(function(err) {
+          console.warn('Failed to update stats:', err);
+        });
+      }
+    } else if (mode === 'continue') {
+      console.log('▶️ 继续游戏模式 - 加载保存的状态');
+    }
+  };
 
   Application.prototype.setup = function() {
     var previousState = this.storageManager.getGameState();

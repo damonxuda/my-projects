@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
+  <title>2048 - 开始游戏</title>
+
+  <!-- PWA 支持 -->
+  <meta name="theme-color" content="#667eea">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="2048">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+      color: white;
+      min-height: 100vh;
+    }
+
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      flex-direction: column;
+      padding: 1rem;
+    }
+
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+      width: 100%;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 头部 */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    .back-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 1rem;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      transition: all 0.3s ease;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .back-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+    }
+
+    .title-section {
+      flex: 1;
+      text-align: center;
+    }
+
+    .game-title {
+      font-size: 3rem;
+      font-weight: 700;
+      margin: 0;
+      text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    .game-subtitle {
+      font-size: 0.9rem;
+      opacity: 0.9;
+      margin-top: 0.5rem;
+    }
+
+    /* 统计信息卡片 */
+    .stats-container {
+      background: rgba(255, 255, 255, 0.15);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      backdrop-filter: blur(10px);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+
+    .stat-item {
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 0.85rem;
+      opacity: 0.8;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 700;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .stat-value.large {
+      font-size: 2.5rem;
+    }
+
+    /* 游戏选项按钮 */
+    .game-options {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      justify-content: center;
+      max-width: 400px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .game-button {
+      background: rgba(255, 255, 255, 0.2);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 16px;
+      padding: 1.5rem;
+      cursor: pointer;
+      text-decoration: none;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .game-button:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      }
+    }
+
+    .game-button:active {
+      transform: translateY(-2px);
+    }
+
+    .game-button.primary {
+      background: rgba(76, 175, 80, 0.6);
+      border-color: rgba(76, 175, 80, 0.8);
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .game-button.primary:hover {
+        background: rgba(76, 175, 80, 0.8);
+        border-color: rgba(76, 175, 80, 1);
+      }
+    }
+
+    .game-button.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    .button-icon {
+      font-size: 2.5rem;
+    }
+
+    .button-title {
+      font-size: 1.4rem;
+      font-weight: 600;
+    }
+
+    .button-subtitle {
+      font-size: 0.9rem;
+      opacity: 0.8;
+    }
+
+    .button-score {
+      font-size: 1.1rem;
+      font-weight: 500;
+      margin-top: 0.3rem;
+    }
+
+    /* 加载状态 */
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      opacity: 0.8;
+    }
+
+    /* 响应式 */
+    @media (max-width: 480px) {
+      .game-title {
+        font-size: 2.5rem;
+      }
+
+      .stats-container {
+        padding: 1rem;
+      }
+
+      .stat-value {
+        font-size: 1.5rem;
+      }
+
+      .stat-value.large {
+        font-size: 2rem;
+      }
+
+      .game-button {
+        padding: 1.2rem;
+      }
+
+      .button-icon {
+        font-size: 2rem;
+      }
+
+      .button-title {
+        font-size: 1.2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- 头部 -->
+    <div class="header">
+      <a href="../" class="back-btn">← 返回</a>
+      <div class="title-section">
+        <h1 class="game-title">2048</h1>
+        <p class="game-subtitle">合并方块，挑战极限</p>
+      </div>
+      <div style="width: 80px;"></div>
+    </div>
+
+    <!-- 统计信息 -->
+    <div class="stats-container">
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-label">最高分</div>
+          <div class="stat-value large" id="best-score">0</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">游戏次数</div>
+          <div class="stat-value" id="games-played">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 游戏选项 -->
+    <div class="game-options">
+      <!-- 继续游戏按钮 -->
+      <a href="./index.html?mode=continue" class="game-button" id="continue-btn" style="display: none;">
+        <div class="button-icon">▶️</div>
+        <div class="button-title">继续游戏</div>
+        <div class="button-subtitle">继续上一局</div>
+        <div class="button-score" id="continue-score">分数: 0</div>
+      </a>
+
+      <!-- 新游戏按钮 -->
+      <a href="./index.html?mode=new" class="game-button primary">
+        <div class="button-icon">🎮</div>
+        <div class="button-title">新游戏</div>
+        <div class="button-subtitle">开始新的挑战</div>
+      </a>
+    </div>
+
+    <!-- 加载状态 -->
+    <div class="loading" id="loading">
+      <div>正在加载游戏数据...</div>
+    </div>
+  </div>
+
+  <!-- Clerk SDK -->
+  <script>
+    function loadClerkSDK() {
+      const primaryScript = document.createElement('script');
+      primaryScript.crossOrigin = 'anonymous';
+      primaryScript.setAttribute('data-clerk-publishable-key', '${CLERK_PUBLISHABLE_KEY}');
+      primaryScript.src = 'https://clerk.damonxuda.site/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+      primaryScript.type = 'text/javascript';
+
+      primaryScript.onload = function() {
+        console.log('✅ Clerk SDK加载成功');
+      };
+
+      primaryScript.onerror = function() {
+        console.warn('⚠️ Clerk CDN加载失败');
+        window.clerkInitialized = true;
+        window.dispatchEvent(new CustomEvent('clerkReady'));
+      };
+
+      document.head.appendChild(primaryScript);
+    }
+
+    setTimeout(loadClerkSDK, 100);
+  </script>
+
+  <!-- Clerk 初始化 -->
+  <script>
+    window.clerkInitialized = false;
+    window.addEventListener('load', async () => {
+      if (window.Clerk) {
+        try {
+          await window.Clerk.load();
+          console.log('✅ Clerk 初始化成功');
+          window.clerkInitialized = true;
+          window.dispatchEvent(new CustomEvent('clerkReady'));
+        } catch (error) {
+          console.error('❌ Clerk 初始化失败:', error);
+          window.clerkInitialized = true;
+          window.dispatchEvent(new CustomEvent('clerkReady'));
+        }
+      } else {
+        console.error('❌ Clerk SDK 未加载');
+        window.clerkInitialized = true;
+        window.dispatchEvent(new CustomEvent('clerkReady'));
+      }
+    });
+  </script>
+
+  <!-- Supabase 客户端 -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <!-- 环境变量配置 -->
+  <script>
+    window.REACT_APP_SUPABASE_URL = 'https://qeedsnqbudbogqpcerqb.supabase.co';
+    window.REACT_APP_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlZWRzbnFidWRib2dxcGNlcnFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NjMxOTIsImV4cCI6MjA3MDAzOTE5Mn0.-hWnQwcpvXjX1dMJcNaQC7AUp8jYC9ozhgjFzSHeAGo';
+  </script>
+
+  <!-- 引入共享模块 -->
+  <script src="../shared/js/gameConfig.js"></script>
+  <script src="../shared/js/smartGameStorage.js"></script>
+
+  <!-- 启动页面逻辑 -->
+  <script>
+    (function() {
+      let storage;
+
+      // 初始化存储
+      async function initStorage() {
+        storage = new Smart2048Storage();
+        console.log('✅ 2048 Storage initialized');
+        return storage;
+      }
+
+      // 加载游戏数据
+      async function loadGameData() {
+        try {
+          document.getElementById('loading').style.display = 'block';
+
+          await initStorage();
+
+          // 加载最高分
+          const bestScore = await storage.loadBestScore();
+          document.getElementById('best-score').textContent = bestScore || 0;
+
+          // 加载统计数据
+          const stats = await storage.loadStats();
+          document.getElementById('games-played').textContent = stats.gamesPlayed || 0;
+
+          // 检查是否有保存的游戏
+          const savedGame = await storage.loadGameState();
+          if (savedGame && !savedGame.over && !savedGame.won) {
+            // 有未完成的游戏
+            document.getElementById('continue-btn').style.display = 'flex';
+            document.getElementById('continue-score').textContent = `分数: ${savedGame.score || 0}`;
+            console.log('✅ 发现保存的游戏，分数:', savedGame.score);
+          } else {
+            console.log('ℹ️ 没有保存的游戏或游戏已结束');
+          }
+
+          document.getElementById('loading').style.display = 'none';
+        } catch (error) {
+          console.error('❌ 加载游戏数据失败:', error);
+          document.getElementById('loading').textContent = '加载失败，请刷新重试';
+        }
+      }
+
+      // 等待 Clerk 初始化完成后加载数据
+      window.addEventListener('clerkReady', () => {
+        console.log('🎮 Clerk ready, loading game data');
+        loadGameData();
+      });
+
+      // 备用：3秒后如果还没初始化就直接加载
+      setTimeout(() => {
+        if (!storage) {
+          console.log('⏰ Timeout, loading game data without full auth');
+          loadGameData();
+        }
+      }, 3000);
+    })();
+  </script>
+</body>
+</html>
