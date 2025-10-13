@@ -38,9 +38,11 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 1rem;
+      padding: 1.5rem 1rem 1rem 1rem;
       flex-wrap: wrap;
       gap: 0.5rem;
+      position: relative;
+      z-index: 100;
     }
 
     .back-btn {
@@ -78,6 +80,8 @@
     .scores-container {
       display: flex;
       gap: 0.5rem;
+      position: relative;
+      z-index: 101;
     }
 
     .score-container,
@@ -140,11 +144,11 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 0.5rem 1rem 5rem 1rem;
+      padding: 1.5rem 1rem 5rem 1rem;
     }
 
     .above-game {
-      margin-bottom: 0.5rem;
+      margin-bottom: 1rem;
     }
 
     .restart-button {
