@@ -331,6 +331,19 @@ class SmartGameStorageEdgeFunction extends SmartGameStorage {
    * 获取默认统计数据
    */
   getDefaultStats() {
+    // 2048 游戏的统计数据
+    if (this.gameType === '2048') {
+      return {
+        gamesPlayed: 0,
+        gamesWon: 0,
+        highestTile: 0,
+        totalScore: 0,
+        averageScore: 0,
+        bestScore: 0
+      };
+    }
+
+    // 其他游戏的统计数据
     return {
       gamesPlayed: 0,
       gamesWon: 0,
@@ -350,6 +363,50 @@ class SmartGameStorageEdgeFunction extends SmartGameStorage {
         master: 0
       }
     };
+  }
+
+  // ===================
+  // 2048 游戏特定方法
+  // ===================
+
+  /**
+   * 保存游戏状态（2048）
+   */
+  async saveGameState(gameState) {
+    return await this.save('gameState', gameState);
+  }
+
+  /**
+   * 加载游戏状态（2048）
+   */
+  async loadGameState() {
+    const data = await this.load('gameState');
+    return data || null;
+  }
+
+  /**
+   * 清除游戏状态（2048）
+   */
+  async clearGameState() {
+    this.clearLocalData('gameState');
+    if (this.isUserLoggedIn()) {
+      await this.clearCloudData('gameState');
+    }
+  }
+
+  /**
+   * 保存最佳分数（2048）
+   */
+  async saveBestScore(score) {
+    return await this.save('bestScore', score);
+  }
+
+  /**
+   * 加载最佳分数（2048）
+   */
+  async loadBestScore() {
+    const data = await this.load('bestScore');
+    return data || 0;
   }
 }
 
