@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
+  <title>2048游戏 - 子杰之家</title>
+
+  <!-- PWA 支持 -->
+  <meta name="theme-color" content="#667eea">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="2048">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+      font-size: 18px;
+      color: white;
+    }
+
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* 头部工具栏 */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .back-btn {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 1rem;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      transition: all 0.3s ease;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .back-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+    }
+
+    .title-container {
+      flex: 1;
+      text-align: center;
+    }
+
+    .heading {
+      font-size: 2rem;
+      font-weight: 700;
+      margin: 0;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+
+    .scores-container {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .score-container,
+    .best-container {
+      position: relative;
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.2);
+      padding: 0.5rem 1rem;
+      font-size: 1.2rem;
+      font-weight: bold;
+      border-radius: 8px;
+      color: white;
+      text-align: center;
+      min-width: 80px;
+    }
+
+    .score-container:after,
+    .best-container:after {
+      position: absolute;
+      width: 100%;
+      top: -20px;
+      left: 0;
+      text-align: center;
+      font-size: 0.7rem;
+      opacity: 0.8;
+      font-weight: normal;
+    }
+
+    .score-container:after {
+      content: "分数";
+    }
+
+    .best-container:after {
+      content: "最佳";
+    }
+
+    .score-addition {
+      position: absolute;
+      right: 10px;
+      color: rgba(255, 255, 255, 0.9);
+      font-weight: bold;
+      font-size: 0.9rem;
+      animation: move-up 600ms ease-in;
+      animation-fill-mode: both;
+    }
+
+    @keyframes move-up {
+      0% {
+        top: 25px;
+        opacity: 1;
+      }
+      100% {
+        top: -50px;
+        opacity: 0;
+      }
+    }
+
+    /* 游戏容器 */
+    .game-container-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .above-game {
+      margin-bottom: 1rem;
+    }
+
+    .restart-button {
+      background: rgba(76, 175, 80, 0.8);
+      border: 2px solid rgba(76, 175, 80, 1);
+      border-radius: 8px;
+      color: white;
+      padding: 0.5rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .restart-button:hover {
+        background: rgba(76, 175, 80, 1);
+        transform: translateY(-2px);
+      }
+    }
+
+    .game-container {
+      position: relative;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 12px;
+      width: 500px;
+      height: 500px;
+      box-sizing: border-box;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .grid-container {
+      position: absolute;
+      z-index: 1;
+    }
+
+    .grid-row {
+      margin-bottom: 15px;
+    }
+
+    .grid-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .grid-row:after {
+      content: "";
+      display: block;
+      clear: both;
+    }
+
+    .grid-cell {
+      width: 106.25px;
+      height: 106.25px;
+      margin-right: 15px;
+      float: left;
+      border-radius: 6px;
+      background: rgba(238, 228, 218, 0.35);
+    }
+
+    .grid-cell:last-child {
+      margin-right: 0;
+    }
+
+    .tile-container {
+      position: absolute;
+      z-index: 2;
+    }
+
+    .tile,
+    .tile .tile-inner {
+      width: 106.25px;
+      height: 106.25px;
+      line-height: 106.25px;
+    }
+
+    .tile {
+      position: absolute;
+      transition: 100ms ease-in-out;
+      transition-property: transform;
+    }
+
+    .tile .tile-inner {
+      border-radius: 6px;
+      background: #eee4da;
+      text-align: center;
+      font-weight: bold;
+      z-index: 10;
+      font-size: 55px;
+      color: #776e65;
+    }
+
+    .tile.tile-position-1-1 { transform: translate(0px, 0px); }
+    .tile.tile-position-1-2 { transform: translate(0px, 121px); }
+    .tile.tile-position-1-3 { transform: translate(0px, 242px); }
+    .tile.tile-position-1-4 { transform: translate(0px, 363px); }
+    .tile.tile-position-2-1 { transform: translate(121px, 0px); }
+    .tile.tile-position-2-2 { transform: translate(121px, 121px); }
+    .tile.tile-position-2-3 { transform: translate(121px, 242px); }
+    .tile.tile-position-2-4 { transform: translate(121px, 363px); }
+    .tile.tile-position-3-1 { transform: translate(242px, 0px); }
+    .tile.tile-position-3-2 { transform: translate(242px, 121px); }
+    .tile.tile-position-3-3 { transform: translate(242px, 242px); }
+    .tile.tile-position-3-4 { transform: translate(242px, 363px); }
+    .tile.tile-position-4-1 { transform: translate(363px, 0px); }
+    .tile.tile-position-4-2 { transform: translate(363px, 121px); }
+    .tile.tile-position-4-3 { transform: translate(363px, 242px); }
+    .tile.tile-position-4-4 { transform: translate(363px, 363px); }
+
+    .tile-2 .tile-inner { background: #eee4da; box-shadow: 0 0 30px 10px rgba(243, 215, 116, 0), inset 0 0 0 1px rgba(255, 255, 255, 0); }
+    .tile-4 .tile-inner { background: #ede0c8; }
+    .tile-8 .tile-inner { background: #f2b179; color: #f9f6f2; }
+    .tile-16 .tile-inner { background: #f59563; color: #f9f6f2; }
+    .tile-32 .tile-inner { background: #f67c5f; color: #f9f6f2; }
+    .tile-64 .tile-inner { background: #f65e3b; color: #f9f6f2; }
+    .tile-128 .tile-inner { background: #edcf72; color: #f9f6f2; font-size: 45px; }
+    .tile-256 .tile-inner { background: #edcc61; color: #f9f6f2; font-size: 45px; }
+    .tile-512 .tile-inner { background: #edc850; color: #f9f6f2; font-size: 45px; }
+    .tile-1024 .tile-inner { background: #edc53f; color: #f9f6f2; font-size: 35px; }
+    .tile-2048 .tile-inner { background: #edc22e; color: #f9f6f2; font-size: 35px; }
+    .tile-super .tile-inner { background: #3c3a32; color: #f9f6f2; font-size: 30px; }
+
+    @keyframes appear {
+      0% { opacity: 0; transform: scale(0); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    .tile-new .tile-inner {
+      animation: appear 200ms ease 100ms;
+      animation-fill-mode: backwards;
+    }
+
+    .tile-merged .tile-inner {
+      z-index: 20;
+      animation: pop 200ms ease 100ms;
+      animation-fill-mode: backwards;
+    }
+
+    @keyframes pop {
+      0% { transform: scale(0); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+
+    .game-intro {
+      margin-bottom: 0;
+      text-align: center;
+      color: white;
+      padding: 1rem;
+      font-size: 0.95rem;
+    }
+
+    .game-explanation {
+      margin-top: 1rem;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .game-message {
+      display: none;
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      background: rgba(238, 228, 218, 0.95);
+      z-index: 100;
+      text-align: center;
+      animation: fade-in 800ms ease 1200ms;
+      animation-fill-mode: both;
+      border-radius: 12px;
+    }
+
+    .game-message p {
+      font-size: 60px;
+      font-weight: bold;
+      height: 60px;
+      line-height: 60px;
+      margin-top: 222px;
+      color: #776e65;
+    }
+
+    .game-message .lower {
+      display: block;
+      margin-top: 59px;
+    }
+
+    .game-message a {
+      display: inline-block;
+      background: #8f7a66;
+      border-radius: 6px;
+      padding: 0 20px;
+      text-decoration: none;
+      color: #f9f6f2;
+      height: 40px;
+      line-height: 42px;
+      margin-left: 9px;
+      cursor: pointer;
+    }
+
+    @media (hover: hover) and (pointer: fine) {
+      .game-message a:hover {
+        background: #9f8a76;
+      }
+    }
+
+    .game-message.game-won,
+    .game-message.game-over {
+      display: block;
+    }
+
+    @keyframes fade-in {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+
+    /* 响应式设计 */
+    @media screen and (max-width: 600px) {
+      html {
+        font-size: 15px;
+      }
+
+      body {
+        padding: 0.5rem;
+      }
+
+      .header {
+        padding: 0.5rem;
+      }
+
+      .heading {
+        font-size: 1.5rem;
+      }
+
+      .game-container {
+        margin-top: 20px;
+        width: 100%;
+        max-width: 340px;
+        height: auto;
+        padding: 10px;
+      }
+
+      .grid-cell {
+        width: 72.5px;
+        height: 72.5px;
+        margin-right: 10px;
+      }
+
+      .grid-row {
+        margin-bottom: 10px;
+      }
+
+      .tile,
+      .tile .tile-inner {
+        width: 72.5px;
+        height: 72.5px;
+        line-height: 72.5px;
+        font-size: 35px;
+      }
+
+      .tile-128 .tile-inner,
+      .tile-256 .tile-inner,
+      .tile-512 .tile-inner {
+        font-size: 30px;
+      }
+
+      .tile-1024 .tile-inner,
+      .tile-2048 .tile-inner {
+        font-size: 24px;
+      }
+
+      .tile-super .tile-inner {
+        font-size: 20px;
+      }
+
+      .tile.tile-position-1-1 { transform: translate(0px, 0px); }
+      .tile.tile-position-1-2 { transform: translate(0px, 82.5px); }
+      .tile.tile-position-1-3 { transform: translate(0px, 165px); }
+      .tile.tile-position-1-4 { transform: translate(0px, 247.5px); }
+      .tile.tile-position-2-1 { transform: translate(82.5px, 0px); }
+      .tile.tile-position-2-2 { transform: translate(82.5px, 82.5px); }
+      .tile.tile-position-2-3 { transform: translate(82.5px, 165px); }
+      .tile.tile-position-2-4 { transform: translate(82.5px, 247.5px); }
+      .tile.tile-position-3-1 { transform: translate(165px, 0px); }
+      .tile.tile-position-3-2 { transform: translate(165px, 82.5px); }
+      .tile.tile-position-3-3 { transform: translate(165px, 165px); }
+      .tile.tile-position-3-4 { transform: translate(165px, 247.5px); }
+      .tile.tile-position-4-1 { transform: translate(247.5px, 0px); }
+      .tile.tile-position-4-2 { transform: translate(247.5px, 82.5px); }
+      .tile.tile-position-4-3 { transform: translate(247.5px, 165px); }
+      .tile.tile-position-4-4 { transform: translate(247.5px, 247.5px); }
+
+      .game-message p {
+        font-size: 40px;
+        margin-top: 90px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- 头部 -->
+  <div class="header">
+    <a href="../" class="back-btn">← 返回</a>
+
+    <div class="title-container">
+      <h1 class="heading">2048</h1>
+    </div>
+
+    <div class="scores-container">
+      <div class="score-container">0</div>
+      <div class="best-container">0</div>
+    </div>
+  </div>
+
+  <!-- 游戏容器 -->
+  <div class="game-container-wrapper">
+    <div class="above-game">
+      <button class="restart-button">🔄 新游戏</button>
+    </div>
+
+    <div class="game-container">
+      <div class="game-message">
+        <p></p>
+        <div class="lower">
+          <a class="keep-playing-button">继续游戏</a>
+          <a class="retry-button">再试一次</a>
+        </div>
+      </div>
+
+      <div class="grid-container">
+        <div class="grid-row">
+          <div class="grid-cell"></div>
+          <div class="grid-cell"></div>
+          <div class="grid-cell"></div>
+          <div class="grid-cell"></div>
+        </div>
+        <div class="grid-row">
+          <div class="grid-cell"></div>
+          <div class="grid-cell"></div>
+          <div class="grid-cell"></div>
+          <div class="grid-cell"></div>
+        </div>
+        <div class="grid-row">
+          <div class="grid-cell"></div>
+          <div class="grid-cell"></div>
+          <div class="grid-cell"></div>
+          <div class="grid-cell"></div>
+        </div>
+        <div class="grid-row">
+          <div class="grid-cell"></div>
+          <div class="grid-cell"></div>
+          <div class="grid-cell"></div>
+          <div class="grid-cell"></div>
+        </div>
+      </div>
+
+      <div class="tile-container"></div>
+    </div>
+  </div>
+
+  <!-- 游戏说明 -->
+  <div class="game-intro">
+    <p class="game-explanation">
+      <strong>玩法：</strong>使用方向键或 WASD 移动方块。当两个相同数字的方块相遇时，它们会合并成一个！
+    </p>
+  </div>
+
+  <!-- Clerk SDK for SSO -->
+  <script>
+    function loadClerkSDK() {
+      const primaryScript = document.createElement('script');
+      primaryScript.crossOrigin = 'anonymous';
+      primaryScript.setAttribute('data-clerk-publishable-key', '${CLERK_PUBLISHABLE_KEY}');
+      primaryScript.src = 'https://clerk.damonxuda.site/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+      primaryScript.type = 'text/javascript';
+
+      primaryScript.onload = function() {
+        console.log('✅ Clerk SDK加载成功');
+      };
+
+      primaryScript.onerror = function() {
+        console.warn('⚠️ Clerk CDN加载失败');
+        window.clerkInitialized = true;
+        window.dispatchEvent(new CustomEvent('clerkReady'));
+      };
+
+      document.head.appendChild(primaryScript);
+    }
+
+    setTimeout(loadClerkSDK, 100);
+  </script>
+
+  <!-- Clerk 初始化 -->
+  <script>
+    window.clerkInitialized = false;
+    window.addEventListener('load', async () => {
+      if (window.Clerk) {
+        try {
+          await window.Clerk.load();
+          console.log('✅ Clerk 初始化成功');
+          window.clerkInitialized = true;
+          window.dispatchEvent(new CustomEvent('clerkReady'));
+        } catch (error) {
+          console.error('❌ Clerk 初始化失败:', error);
+          window.clerkInitialized = true;
+          window.dispatchEvent(new CustomEvent('clerkReady'));
+        }
+      } else {
+        console.error('❌ Clerk SDK 未加载');
+        window.clerkInitialized = true;
+        window.dispatchEvent(new CustomEvent('clerkReady'));
+      }
+    });
+  </script>
+
+  <!-- Supabase 客户端 -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <!-- 环境变量配置 -->
+  <script>
+    window.REACT_APP_SUPABASE_URL = 'https://qeedsnqbudbogqpcerqb.supabase.co';
+    window.REACT_APP_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlZWRzbnFidWRib2dxcGNlcnFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NjMxOTIsImV4cCI6MjA3MDAzOTE5Mn0.-hWnQwcpvXjX1dMJcNaQC7AUp8jYC9ozhgjFzSHeAGo';
+  </script>
+
+  <!-- 引入共享模块 -->
+  <script src="../shared/js/gameConfig.js"></script>
+  <script src="../shared/js/smartGameStorage.js"></script>
+
+  <!-- 引入游戏脚本 -->
+  <script src="2048.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

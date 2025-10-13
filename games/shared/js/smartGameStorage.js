@@ -833,13 +833,73 @@ class SmartNonogramStorage extends SmartGameStorage {
   }
 }
 
+// 2048游戏的存储类
+class Smart2048Storage extends SmartGameStorage {
+  constructor() {
+    super('2048');
+  }
+
+  // 保存游戏状态
+  async saveGameState(gameState) {
+    return await this.save('gameState', gameState);
+  }
+
+  // 加载游戏状态
+  async loadGameState() {
+    const data = await this.load('gameState');
+    return data || null;
+  }
+
+  // 清除游戏状态
+  async clearGameState() {
+    this.clearLocalData('gameState');
+    if (this.isUserLoggedIn()) {
+      await this.clearCloudData('gameState');
+    }
+  }
+
+  // 保存最佳分数
+  async saveBestScore(score) {
+    return await this.save('bestScore', score);
+  }
+
+  // 加载最佳分数
+  async loadBestScore() {
+    const data = await this.load('bestScore');
+    return data || 0;
+  }
+
+  // 保存游戏统计
+  async saveStats(stats) {
+    return await this.save('stats', stats);
+  }
+
+  // 加载游戏统计
+  async loadStats() {
+    const data = await this.load('stats');
+    return data || this.getDefaultStats();
+  }
+
+  getDefaultStats() {
+    return {
+      gamesPlayed: 0,
+      gamesWon: 0,
+      highestTile: 0,
+      totalScore: 0,
+      averageScore: 0,
+      bestScore: 0
+    };
+  }
+}
+
 // 导出
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { SmartGameStorage, SmartSudokuStorage, SmartNonogramStorage };
+  module.exports = { SmartGameStorage, SmartSudokuStorage, SmartNonogramStorage, Smart2048Storage };
 } else if (typeof window !== 'undefined') {
   window.SmartGameStorage = SmartGameStorage;
   window.SmartSudokuStorage = SmartSudokuStorage;
   window.SmartNonogramStorage = SmartNonogramStorage;
+  window.Smart2048Storage = Smart2048Storage;
 }
 
 console.log('🧠 智能游戏存储系统已加载');

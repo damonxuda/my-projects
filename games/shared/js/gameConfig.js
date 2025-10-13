@@ -16,7 +16,11 @@ window.GAME_CONFIG = {
       version: '1.0.0'
     },
     nonogram: {
-      name: '数织',  
+      name: '数织',
+      version: '1.0.0'
+    },
+    '2048': {
+      name: '2048',
       version: '1.0.0'
     }
   }
