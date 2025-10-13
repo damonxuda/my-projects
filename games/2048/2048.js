@@ -129,18 +129,13 @@ Grid.prototype.serialize = function () {
 };
 
 // Game Manager
-function GameManager(size, storageManager) {
+function GameManager(size, storage, previousState) {
   this.size = size;
-  this.storageManager = storageManager;
+  this.storage = storage;
   this.startTiles = 2;
 
-  this.setup();
+  this.setup(previousState);
 }
-
-GameManager.prototype.restart = function () {
-  this.storageManager.clearGameState();
-  this.setup();
-};
 
 GameManager.prototype.keepPlaying = function () {
   this.keepPlayingFlag = true;
@@ -150,9 +145,7 @@ GameManager.prototype.isGameTerminated = function () {
   return this.over || (this.won && !this.keepPlayingFlag);
 };
 
-GameManager.prototype.setup = function () {
-  var previousState = this.storageManager.getGameState();
-
+GameManager.prototype.setup = function (previousState) {
   if (previousState) {
     this.grid = new Grid(previousState.grid.size, previousState.grid.cells);
     this.score = previousState.score;
@@ -250,7 +243,7 @@ GameManager.prototype.move = function (direction) {
       this.over = true;
     }
 
-    this.storageManager.setGameState(this.serialize());
+    this.storage.saveGameState(this.serialize());
   }
 
   return moved;

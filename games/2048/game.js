@@ -2,70 +2,6 @@
 // Adapted for 子杰之家 games module with authentication and cloud sync
 
 (function() {
-  // Storage Manager with Cloud Sync
-  function StorageManager() {
-    this.gameStateKey = 'game2048State';
-    this.bestScoreKey = 'game2048BestScore';
-    this.storage = null;
-
-    // Initialize SmartGameStorage when available
-    this.initStorage();
-  }
-
-  StorageManager.prototype.initStorage = function() {
-    // Wait for SmartGameStorage to be available
-    if (window.Smart2048Storage) {
-      this.storage = new window.Smart2048Storage();
-      console.log('✅ 2048 Storage initialized with cloud sync');
-    }
-  };
-
-  StorageManager.prototype.getGameState = function() {
-    if (this.storage) {
-      // This will be async, but for now use localStorage for compatibility
-      var stateString = localStorage.getItem(this.gameStateKey);
-      return stateString ? JSON.parse(stateString) : null;
-    }
-    return null;
-  };
-
-  StorageManager.prototype.setGameState = function(gameState) {
-    if (this.storage) {
-      localStorage.setItem(this.gameStateKey, JSON.stringify(gameState));
-      // Async save to cloud
-      this.storage.saveGameState(gameState).catch(function(err) {
-        console.warn('Cloud save failed:', err);
-      });
-    } else {
-      localStorage.setItem(this.gameStateKey, JSON.stringify(gameState));
-    }
-  };
-
-  StorageManager.prototype.clearGameState = function() {
-    localStorage.removeItem(this.gameStateKey);
-    if (this.storage) {
-      this.storage.clearGameState().catch(function(err) {
-        console.warn('Cloud clear failed:', err);
-      });
-    }
-  };
-
-  StorageManager.prototype.getBestScore = function() {
-    if (this.storage) {
-      var score = localStorage.getItem(this.bestScoreKey);
-      return score ? parseInt(score, 10) : 0;
-    }
-    return 0;
-  };
-
-  StorageManager.prototype.setBestScore = function(score) {
-    localStorage.setItem(this.bestScoreKey, score);
-    if (this.storage) {
-      this.storage.saveBestScore(score).catch(function(err) {
-        console.warn('Cloud save best score failed:', err);
-      });
-    }
-  };
 
   // HTML Actuator - Renders the game state to DOM
   function HTMLActuator() {
@@ -319,64 +255,74 @@
 
   // Application Controller
   function Application() {
-    this.storageManager = new StorageManager();
+    this.storage = new window.Smart2048Storage();
     this.inputManager = new KeyboardInputManager();
     this.actuator = new HTMLActuator();
+    this.bestScore = 0;
 
     this.inputManager.on('move', this.move.bind(this));
     this.inputManager.on('restart', this.restart.bind(this));
     this.inputManager.on('keepPlaying', this.keepPlaying.bind(this));
 
-    // 检查 URL 参数决定游戏模式
-    this.checkGameMode();
-
-    this.setup();
+    // 异步初始化
+    this.init();
   }
 
-  Application.prototype.checkGameMode = function() {
+  Application.prototype.init = async function() {
+    // 检查 URL 参数决定游戏模式
+    await this.checkGameMode();
+
+    // 加载最高分
+    this.bestScore = await this.storage.loadBestScore();
+
+    // 设置游戏
+    await this.setup();
+  };
+
+  Application.prototype.checkGameMode = async function() {
     var urlParams = new URLSearchParams(window.location.search);
     var mode = urlParams.get('mode');
 
     if (mode === 'new') {
       console.log('🎮 新游戏模式 - 清除保存的状态');
-      this.storageManager.clearGameState();
+      await this.storage.clearGameState();
 
       // 更新统计数据
-      if (this.storageManager.storage) {
-        this.storageManager.storage.loadStats().then(function(stats) {
-          stats.gamesPlayed = (stats.gamesPlayed || 0) + 1;
-          return this.storageManager.storage.saveStats(stats);
-        }.bind(this)).catch(function(err) {
-          console.warn('Failed to update stats:', err);
-        });
+      try {
+        var stats = await this.storage.loadStats();
+        stats.gamesPlayed = (stats.gamesPlayed || 0) + 1;
+        await this.storage.saveStats(stats);
+      } catch (err) {
+        console.warn('Failed to update stats:', err);
       }
     } else if (mode === 'continue') {
       console.log('▶️ 继续游戏模式 - 加载保存的状态');
     }
   };
 
-  Application.prototype.setup = function() {
-    var previousState = this.storageManager.getGameState();
+  Application.prototype.setup = async function() {
+    var previousState = await this.storage.loadGameState();
 
-    this.gameManager = new GameManager(4, this.storageManager);
+    this.gameManager = new GameManager(4, this.storage, previousState);
 
     this.actuator.actuate(this.gameManager.grid, {
       score: this.gameManager.score,
       over: this.gameManager.over,
       won: this.gameManager.won,
-      bestScore: this.storageManager.getBestScore(),
+      bestScore: this.bestScore,
       terminated: this.gameManager.isGameTerminated()
     });
   };
 
   Application.prototype.restart = function() {
     this.actuator.clearMessage();
-    this.gameManager.restart();
+    this.storage.clearGameState();
+    this.gameManager = new GameManager(4, this.storage, null);
     this.actuator.actuate(this.gameManager.grid, {
       score: this.gameManager.score,
       over: this.gameManager.over,
       won: this.gameManager.won,
-      bestScore: this.storageManager.getBestScore(),
+      bestScore: this.bestScore,
       terminated: this.gameManager.isGameTerminated()
     });
   };
@@ -390,15 +336,16 @@
     var moved = this.gameManager.move(direction);
 
     if (moved) {
-      if (this.gameManager.score > this.storageManager.getBestScore()) {
-        this.storageManager.setBestScore(this.gameManager.score);
+      if (this.gameManager.score > this.bestScore) {
+        this.bestScore = this.gameManager.score;
+        this.storage.saveBestScore(this.bestScore);
       }
 
       this.actuator.actuate(this.gameManager.grid, {
         score: this.gameManager.score,
         over: this.gameManager.over,
         won: this.gameManager.won,
-        bestScore: this.storageManager.getBestScore(),
+        bestScore: this.bestScore,
         terminated: this.gameManager.isGameTerminated()
       });
     }
