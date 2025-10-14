@@ -53,40 +53,70 @@ function Page() {
             return;
         }
 
-        console.log('[N-Back Audio] Attempting to play:', audioId, 'paused:', audio.paused, 'currentTime:', audio.currentTime);
+        console.log('[N-Back Audio] Attempting to play:', audioId, 'paused:', audio.paused, 'currentTime:', audio.currentTime, 'duration:', audio.duration);
 
-        // If audio is currently playing, pause and reset properly
+        // If audio is currently playing, pause first
         if (!audio.paused) {
-            console.log('[N-Back Audio] Audio is playing, stopping first:', audioId);
+            console.log('[N-Back Audio] Audio is playing, pausing first:', audioId);
             audio.pause();
         }
 
-        // Reset to beginning
-        try {
-            audio.currentTime = 0;
-        } catch (e) {
-            console.warn('[N-Back Audio] Could not reset currentTime:', audioId, e);
+        // Check if audio is at the end or currentTime is close to duration
+        // This happens on mobile when audio finishes playing
+        var needsReload = false;
+        if (audio.duration && audio.currentTime > 0) {
+            if (Math.abs(audio.currentTime - audio.duration) < 0.1) {
+                console.log('[N-Back Audio] Audio at end, reloading:', audioId);
+                needsReload = true;
+            }
         }
 
-        // Play with promise handling
-        var playPromise = audio.play();
-
-        if (playPromise !== undefined) {
-            playPromise
-                .then(function() {
-                    console.log('[N-Back Audio] Successfully played:', audioId, 'duration:', audio.duration);
-                })
-                .catch(function(error) {
-                    console.error('[N-Back Audio] Playback failed for', audioId, ':', error);
-                    // Try to load and play again
+        // If audio needs reload or currentTime reset fails, reload the audio
+        if (needsReload) {
+            audio.load();
+            // After load, currentTime is automatically 0
+            console.log('[N-Back Audio] Reloaded audio:', audioId);
+        } else {
+            // Try to reset to beginning
+            try {
+                audio.currentTime = 0;
+                // Verify it was actually reset
+                if (audio.currentTime > 0.1) {
+                    console.warn('[N-Back Audio] currentTime reset failed, reloading:', audioId);
                     audio.load();
-                    setTimeout(function() {
-                        audio.play().catch(function(e) {
-                            console.error('[N-Back Audio] Retry failed for', audioId, ':', e);
-                        });
-                    }, 100);
-                });
+                }
+            } catch (e) {
+                console.warn('[N-Back Audio] Could not reset currentTime, reloading:', audioId, e);
+                audio.load();
+            }
         }
+
+        // Small delay after load() to ensure audio is ready
+        var playDelay = needsReload ? 50 : 0;
+
+        setTimeout(function() {
+            console.log('[N-Back Audio] Playing:', audioId, 'currentTime after reset:', audio.currentTime);
+
+            // Play with promise handling
+            var playPromise = audio.play();
+
+            if (playPromise !== undefined) {
+                playPromise
+                    .then(function() {
+                        console.log('[N-Back Audio] Successfully started:', audioId, 'duration:', audio.duration, 'currentTime:', audio.currentTime);
+                    })
+                    .catch(function(error) {
+                        console.error('[N-Back Audio] Playback failed for', audioId, ':', error);
+                        // Try to load and play again
+                        audio.load();
+                        setTimeout(function() {
+                            audio.play().catch(function(e) {
+                                console.error('[N-Back Audio] Retry failed for', audioId, ':', e);
+                            });
+                        }, 100);
+                    });
+            }
+        }, playDelay);
     };
 
 	// our list of trials
