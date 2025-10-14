@@ -53,10 +53,20 @@ function Page() {
             return;
         }
 
-        console.log('[N-Back Audio] Attempting to play:', audioId);
+        console.log('[N-Back Audio] Attempting to play:', audioId, 'paused:', audio.paused, 'currentTime:', audio.currentTime);
 
-        // Reset audio to beginning if it's already playing
-        audio.currentTime = 0;
+        // If audio is currently playing, pause and reset properly
+        if (!audio.paused) {
+            console.log('[N-Back Audio] Audio is playing, stopping first:', audioId);
+            audio.pause();
+        }
+
+        // Reset to beginning
+        try {
+            audio.currentTime = 0;
+        } catch (e) {
+            console.warn('[N-Back Audio] Could not reset currentTime:', audioId, e);
+        }
 
         // Play with promise handling
         var playPromise = audio.play();
@@ -64,7 +74,7 @@ function Page() {
         if (playPromise !== undefined) {
             playPromise
                 .then(function() {
-                    console.log('[N-Back Audio] Successfully played:', audioId);
+                    console.log('[N-Back Audio] Successfully played:', audioId, 'duration:', audio.duration);
                 })
                 .catch(function(error) {
                     console.error('[N-Back Audio] Playback failed for', audioId, ':', error);
