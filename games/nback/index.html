@@ -909,14 +909,14 @@
     </div>
 
     <!-- Audio Elements -->
-    <audio src="audio/letter1.mp3" id="letter1"></audio>
-    <audio src="audio/letter2.mp3" id="letter2"></audio>
-    <audio src="audio/letter3.mp3" id="letter3"></audio>
-    <audio src="audio/letter4.mp3" id="letter4"></audio>
-    <audio src="audio/letter5.mp3" id="letter5"></audio>
-    <audio src="audio/letter6.mp3" id="letter6"></audio>
-    <audio src="audio/letter7.mp3" id="letter7"></audio>
-    <audio src="audio/letter8.mp3" id="letter8"></audio>
+    <audio src="audio/letter1.mp3" id="letter1" preload="auto"></audio>
+    <audio src="audio/letter2.mp3" id="letter2" preload="auto"></audio>
+    <audio src="audio/letter3.mp3" id="letter3" preload="auto"></audio>
+    <audio src="audio/letter4.mp3" id="letter4" preload="auto"></audio>
+    <audio src="audio/letter5.mp3" id="letter5" preload="auto"></audio>
+    <audio src="audio/letter6.mp3" id="letter6" preload="auto"></audio>
+    <audio src="audio/letter7.mp3" id="letter7" preload="auto"></audio>
+    <audio src="audio/letter8.mp3" id="letter8" preload="auto"></audio>
 
     <!-- JavaScript -->
     <script src="js/jquery.js"></script>
@@ -1046,6 +1046,12 @@
                 window.pageInstance._starting_N = selectedDifficulty;
                 window.pageInstance._n = selectedDifficulty;
                 DisplayN(selectedDifficulty);
+
+                // 预加载音频文件（在语音模式下）
+                if (audioMode) {
+                    console.log('[N-Back] Audio mode enabled, preloading audio files...');
+                    window.pageInstance.preloadAudio();
+                }
             }
 
             // 自动开始游戏

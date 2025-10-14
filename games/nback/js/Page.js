@@ -10,6 +10,75 @@ function Page() {
 
     this.blockCreator = new BlockCreator(); // is a static class in the original silverlight app
 
+    // Audio preloading and management
+    this.audioElements = {};
+    this.audioLoaded = {};
+    this.audioLoadPromises = [];
+
+    // Initialize audio elements
+    for (var i = 1; i <= 8; i++) {
+        this.audioElements['letter' + i] = document.getElementById('letter' + i);
+        this.audioLoaded['letter' + i] = false;
+    }
+
+    // Preload all audio files
+    this.preloadAudio = function() {
+        console.log('[N-Back Audio] Starting audio preload...');
+
+        for (var key in self.audioElements) {
+            var audio = self.audioElements[key];
+
+            // Setup load event listeners
+            audio.addEventListener('canplaythrough', function() {
+                var audioId = this.id;
+                self.audioLoaded[audioId] = true;
+                console.log('[N-Back Audio] Loaded:', audioId);
+            }, { once: true });
+
+            audio.addEventListener('error', function(e) {
+                console.error('[N-Back Audio] Error loading:', this.id, e);
+            });
+
+            // Trigger load
+            audio.load();
+        }
+    };
+
+    // Safe play audio with error handling
+    this.safePlayAudio = function(audioId) {
+        var audio = self.audioElements[audioId];
+
+        if (!audio) {
+            console.warn('[N-Back Audio] Audio element not found:', audioId);
+            return;
+        }
+
+        console.log('[N-Back Audio] Attempting to play:', audioId);
+
+        // Reset audio to beginning if it's already playing
+        audio.currentTime = 0;
+
+        // Play with promise handling
+        var playPromise = audio.play();
+
+        if (playPromise !== undefined) {
+            playPromise
+                .then(function() {
+                    console.log('[N-Back Audio] Successfully played:', audioId);
+                })
+                .catch(function(error) {
+                    console.error('[N-Back Audio] Playback failed for', audioId, ':', error);
+                    // Try to load and play again
+                    audio.load();
+                    setTimeout(function() {
+                        audio.play().catch(function(e) {
+                            console.error('[N-Back Audio] Retry failed for', audioId, ':', e);
+                        });
+                    }, 100);
+                });
+        }
+    };
+
 	// our list of trials
 	this.m_Trials = [];
 
@@ -319,38 +388,38 @@ function Page() {
  				}, _stimulus_time);
  			}
  		} else {
- 			// Normal mode: Play audio
+ 			// Normal mode: Play audio using safe play method
  			switch(t.GetLetter()) {
  				case Consonant.Letter1:
- 					document.getElementById("letter1").play();
+ 					self.safePlayAudio("letter1");
  					break;
 
 				case Consonant.Letter2:
- 					document.getElementById("letter2").play();
+ 					self.safePlayAudio("letter2");
  					break;
 
 				case Consonant.Letter3:
- 					document.getElementById("letter3").play();
+ 					self.safePlayAudio("letter3");
  					break;
 
 				case Consonant.Letter4:
- 					document.getElementById("letter4").play();
+ 					self.safePlayAudio("letter4");
  					break;
 
 				case Consonant.Letter5:
- 					document.getElementById("letter5").play();
+ 					self.safePlayAudio("letter5");
  					break;
 
 				case Consonant.Letter6:
- 					document.getElementById("letter6").play();
+ 					self.safePlayAudio("letter6");
  					break;
 
 				case Consonant.Letter7:
- 					document.getElementById("letter7").play();
+ 					self.safePlayAudio("letter7");
  					break;
 
 				case Consonant.Letter8:
- 					document.getElementById("letter8").play();
+ 					self.safePlayAudio("letter8");
  					break;
 
 				default:
