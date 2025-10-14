@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0">
+    <title>消失井字棋 - 子杰之家</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <a href="../index.html" class="back-btn">← 返回</a>
+            <button class="menu-btn" id="menuBtn">菜单 ▼</button>
+        </div>
+
+        <!-- 标题 -->
+        <div class="title">
+            <h1>消失井字棋</h1>
+            <p class="subtitle">每个玩家只能保持3个棋子在棋盘上</p>
+        </div>
+
+        <!-- 游戏模式选择 -->
+        <div class="mode-selection" id="modeSelection">
+            <h2>选择游戏模式</h2>
+            <div class="mode-buttons">
+                <button class="mode-btn" data-mode="ai">
+                    <span class="mode-icon">🤖</span>
+                    <span class="mode-title">人机对战</span>
+                    <span class="mode-desc">挑战AI对手</span>
+                </button>
+                <button class="mode-btn" data-mode="pvp">
+                    <span class="mode-icon">👥</span>
+                    <span class="mode-title">双人对战</span>
+                    <span class="mode-desc">与朋友一起玩</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- AI难度选择 -->
+        <div class="difficulty-selection" id="difficultySelection" style="display: none;">
+            <h2>选择难度</h2>
+            <div class="difficulty-buttons">
+                <button class="difficulty-btn" data-difficulty="easy">
+                    <span class="difficulty-icon">😊</span>
+                    <span class="difficulty-title">简单</span>
+                    <span class="difficulty-desc">随机走法</span>
+                </button>
+                <button class="difficulty-btn" data-difficulty="medium">
+                    <span class="difficulty-icon">🤔</span>
+                    <span class="difficulty-title">中等</span>
+                    <span class="difficulty-desc">适度挑战</span>
+                </button>
+                <button class="difficulty-btn" data-difficulty="hard">
+                    <span class="difficulty-icon">😈</span>
+                    <span class="difficulty-title">困难</span>
+                    <span class="difficulty-desc">最强AI</span>
+                </button>
+            </div>
+            <button class="back-to-mode-btn" id="backToModeBtn">← 返回模式选择</button>
+        </div>
+
+        <!-- 游戏区域 -->
+        <div class="game-area" id="gameArea" style="display: none;">
+            <!-- 游戏信息 -->
+            <div class="game-info">
+                <div class="player-info player-x" id="playerXInfo">
+                    <div class="player-avatar">❌</div>
+                    <div class="player-details">
+                        <div class="player-name">玩家 X</div>
+                        <div class="player-moves" id="playerXMoves">剩余: 3步</div>
+                    </div>
+                </div>
+                <div class="vs">VS</div>
+                <div class="player-info player-o" id="playerOInfo">
+                    <div class="player-avatar">⭕</div>
+                    <div class="player-details">
+                        <div class="player-name" id="playerOName">玩家 O</div>
+                        <div class="player-moves" id="playerOMoves">剩余: 3步</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 当前回合提示 -->
+            <div class="turn-indicator" id="turnIndicator">
+                <span id="turnText">轮到 ❌ 走棋</span>
+            </div>
+
+            <!-- 棋盘 -->
+            <div class="board" id="board">
+                <div class="cell" data-index="0"></div>
+                <div class="cell" data-index="1"></div>
+                <div class="cell" data-index="2"></div>
+                <div class="cell" data-index="3"></div>
+                <div class="cell" data-index="4"></div>
+                <div class="cell" data-index="5"></div>
+                <div class="cell" data-index="6"></div>
+                <div class="cell" data-index="7"></div>
+                <div class="cell" data-index="8"></div>
+            </div>
+
+            <!-- 控制按钮 -->
+            <div class="controls">
+                <button class="control-btn" id="restartBtn">🔄 重新开始</button>
+                <button class="control-btn" id="backToSelectionBtn">← 返回选择</button>
+            </div>
+        </div>
+
+        <!-- 下拉菜单 -->
+        <div class="dropdown-menu" id="dropdownMenu" style="display: none;">
+            <a href="#" id="rulesBtn">游戏说明</a>
+            <a href="#" id="aboutBtn">关于</a>
+        </div>
+    </div>
+
+    <!-- 游戏结果模态框 -->
+    <div class="modal" id="resultModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="resultTitle">游戏结束</h3>
+            </div>
+            <div class="modal-body">
+                <div class="result-icon" id="resultIcon">🎉</div>
+                <p id="resultMessage">玩家 X 获胜！</p>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn" id="playAgainBtn">再来一局</button>
+                <button class="modal-btn secondary" id="backToMenuBtn">返回菜单</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 游戏说明模态框 -->
+    <div class="modal" id="rulesModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>游戏说明</h3>
+                <button class="close-btn" id="closeRulesBtn">×</button>
+            </div>
+            <div class="modal-body">
+                <h4>游戏规则：</h4>
+                <ul>
+                    <li><strong>目标</strong>：在3×3棋盘上连成三子（横、竖、斜）</li>
+                    <li><strong>特殊规则</strong>：每个玩家最多只能在棋盘上保持3个棋子</li>
+                    <li><strong>消失机制</strong>：当你放置第4个棋子时，你最早放置的棋子会自动消失</li>
+                    <li><strong>策略提示</strong>：需要提前规划，因为你的旧棋子会消失</li>
+                </ul>
+                <h4>游戏模式：</h4>
+                <ul>
+                    <li><strong>人机对战</strong>：与AI对手较量，有三个难度可选</li>
+                    <li><strong>双人对战</strong>：与朋友在同一设备上对战</li>
+                </ul>
+                <h4>获胜条件：</h4>
+                <p>在棋盘上形成横、竖或斜线的三连</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 关于模态框 -->
+    <div class="modal" id="aboutModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>关于</h3>
+                <button class="close-btn" id="closeAboutBtn">×</button>
+            </div>
+            <div class="modal-body">
+                <p><strong>消失井字棋</strong>是经典井字棋的创新变体。</p>
+                <p>这个版本增加了"消失"机制，每个玩家最多只能在棋盘上保持3个棋子，使游戏更具策略性和挑战性。</p>
+                <p>游戏支持人机对战和双人对战两种模式。</p>
+                <p class="copyright">© 2024 子杰之家</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
