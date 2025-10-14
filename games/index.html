@@ -7,12 +7,30 @@
       content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, minimum-scale=1.0"
     />
     <title>休闲时刻 - 子杰之家</title>
-    
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/games/manifest.json" />
+
     <!-- PWA 支持 -->
     <meta name="theme-color" content="#667eea" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="休闲时刻" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="ZJ-Games" />
+
+    <!-- iOS 图标 -->
+    <link rel="apple-touch-icon" href="/games/icons/icon-152x152.png" />
+    <link rel="apple-touch-icon" sizes="72x72" href="/games/icons/icon-72x72.png" />
+    <link rel="apple-touch-icon" sizes="96x96" href="/games/icons/icon-96x96.png" />
+    <link rel="apple-touch-icon" sizes="128x128" href="/games/icons/icon-128x128.png" />
+    <link rel="apple-touch-icon" sizes="144x144" href="/games/icons/icon-144x144.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/games/icons/icon-152x152.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/games/icons/icon-192x192.png" />
+    <link rel="apple-touch-icon" sizes="384x384" href="/games/icons/icon-384x384.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/games/icons/icon-512x512.png" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/games/icons/icon-192x192.png" />
+    <link rel="shortcut icon" href="/games/icons/icon-192x192.png" />
     
     <style>
       * {
@@ -634,6 +652,79 @@
           loginBtn.textContent = '服务异常';
           loginBtn.disabled = true;
         }
+      });
+
+      // PWA Service Worker 注册
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/games/sw.js')
+            .then((registration) => {
+              console.log('✅ PWA Service Worker 注册成功:', registration.scope);
+
+              // 检查更新
+              registration.addEventListener('updatefound', () => {
+                const newWorker = registration.installing;
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('🔄 发现新版本，请刷新页面');
+                    // 可选：显示通知让用户刷新
+                    if (confirm('发现新版本，是否立即更新？')) {
+                      newWorker.postMessage({ type: 'SKIP_WAITING' });
+                      window.location.reload();
+                    }
+                  }
+                });
+              });
+            })
+            .catch((error) => {
+              console.error('❌ PWA Service Worker 注册失败:', error);
+            });
+        });
+
+        // 监听Service Worker控制器变化
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+          }
+        });
+      }
+
+      // PWA 安装提示
+      let deferredPrompt;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        // 阻止默认的安装提示
+        e.preventDefault();
+        deferredPrompt = e;
+        console.log('💡 PWA可以安装');
+
+        // 可以在这里显示自定义的安装按钮
+        // 暂时在控制台提示用户
+        setTimeout(() => {
+          console.log('📱 提示：您可以将此应用添加到主屏幕，获得更好的体验！');
+        }, 3000);
+      });
+
+      // 如果用户点击了自定义安装按钮（未来可以添加）
+      function installPWA() {
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          deferredPrompt.userChoice.then((choiceResult) => {
+            if (choiceResult.outcome === 'accepted') {
+              console.log('✅ 用户接受了安装');
+            } else {
+              console.log('❌ 用户拒绝了安装');
+            }
+            deferredPrompt = null;
+          });
+        }
+      }
+
+      // 检测PWA是否已安装
+      window.addEventListener('appinstalled', () => {
+        console.log('🎉 PWA已成功安装到主屏幕！');
+        deferredPrompt = null;
       });
     </script>
   </body>

@@ -1,0 +1,91 @@
+{
+  "name": "ZJ-Games 休闲时刻",
+  "short_name": "ZJ-Games",
+  "description": "子杰之家休闲游戏集合 - N-Back训练、2048、华容道、数独、数织等经典益智游戏",
+  "start_url": "/games/",
+  "display": "standalone",
+  "background_color": "#667eea",
+  "theme_color": "#667eea",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/games/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/games/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/games/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/games/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/games/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/games/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/games/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/games/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games", "entertainment"],
+  "screenshots": [
+    {
+      "src": "/games/icons/screenshot-1.png",
+      "sizes": "540x720",
+      "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "N-Back训练",
+      "short_name": "N-Back",
+      "description": "双重N-Back认知训练游戏",
+      "url": "/games/nback/index.html",
+      "icons": [{ "src": "/games/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "2048",
+      "short_name": "2048",
+      "description": "经典数字合并游戏",
+      "url": "/games/2048/start.html",
+      "icons": [{ "src": "/games/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "数独",
+      "short_name": "数独",
+      "description": "经典数字逻辑游戏",
+      "url": "/games/sudoku/levels.html",
+      "icons": [{ "src": "/games/icons/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+}
