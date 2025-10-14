@@ -20,19 +20,19 @@
             <p class="subtitle">每个玩家只能保持3个棋子在棋盘上</p>
         </div>
 
-        <!-- 游戏模式选择 -->
-        <div class="mode-selection" id="modeSelection">
-            <h2>选择游戏模式</h2>
-            <div class="mode-buttons">
-                <button class="mode-btn" data-mode="ai">
-                    <span class="mode-icon">🤖</span>
-                    <span class="mode-title">人机对战</span>
-                    <span class="mode-desc">挑战AI对手</span>
+        <!-- 先后手选择 -->
+        <div class="side-selection" id="sideSelection">
+            <h2>选择先后手</h2>
+            <div class="side-buttons">
+                <button class="side-btn" data-side="X">
+                    <span class="side-icon">❌</span>
+                    <span class="side-title">先手 (X)</span>
+                    <span class="side-desc">我先走</span>
                 </button>
-                <button class="mode-btn" data-mode="pvp">
-                    <span class="mode-icon">👥</span>
-                    <span class="mode-title">双人对战</span>
-                    <span class="mode-desc">与朋友一起玩</span>
+                <button class="side-btn" data-side="O">
+                    <span class="side-icon">⭕</span>
+                    <span class="side-title">后手 (O)</span>
+                    <span class="side-desc">AI先走</span>
                 </button>
             </div>
         </div>
@@ -41,15 +41,10 @@
         <div class="difficulty-selection" id="difficultySelection" style="display: none;">
             <h2>选择难度</h2>
             <div class="difficulty-buttons">
-                <button class="difficulty-btn" data-difficulty="easy">
-                    <span class="difficulty-icon">😊</span>
-                    <span class="difficulty-title">简单</span>
-                    <span class="difficulty-desc">随机走法</span>
-                </button>
                 <button class="difficulty-btn" data-difficulty="medium">
                     <span class="difficulty-icon">🤔</span>
-                    <span class="difficulty-title">中等</span>
-                    <span class="difficulty-desc">适度挑战</span>
+                    <span class="difficulty-title">标准</span>
+                    <span class="difficulty-desc">聪明的AI</span>
                 </button>
                 <button class="difficulty-btn" data-difficulty="hard">
                     <span class="difficulty-icon">😈</span>
@@ -57,7 +52,7 @@
                     <span class="difficulty-desc">最强AI</span>
                 </button>
             </div>
-            <button class="back-to-mode-btn" id="backToModeBtn">← 返回模式选择</button>
+            <button class="back-to-side-btn" id="backToSideBtn">← 返回选择先后手</button>
         </div>
 
         <!-- 游戏区域 -->

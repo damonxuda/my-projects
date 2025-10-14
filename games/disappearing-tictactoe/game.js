@@ -2,8 +2,8 @@
 const GameState = {
     board: Array(9).fill(null), // 棋盘状态
     currentPlayer: 'X', // 当前玩家
-    gameMode: null, // 'ai' 或 'pvp'
-    difficulty: null, // 'easy', 'medium', 'hard'
+    playerSide: 'X', // 玩家选择的一方 ('X' 或 'O')
+    difficulty: null, // 'medium', 'hard'
     gameOver: false,
     winner: null,
     playerXMoves: [], // X玩家的走法历史
@@ -20,7 +20,7 @@ const WINNING_COMBINATIONS = [
 
 // DOM元素
 const elements = {
-    modeSelection: document.getElementById('modeSelection'),
+    sideSelection: document.getElementById('sideSelection'),
     difficultySelection: document.getElementById('difficultySelection'),
     gameArea: document.getElementById('gameArea'),
     board: document.getElementById('board'),
@@ -47,9 +47,9 @@ function init() {
 
 // 设置事件监听
 function setupEventListeners() {
-    // 模式选择
-    document.querySelectorAll('.mode-btn').forEach(btn => {
-        btn.addEventListener('click', () => selectMode(btn.dataset.mode));
+    // 先后手选择
+    document.querySelectorAll('.side-btn').forEach(btn => {
+        btn.addEventListener('click', () => selectSide(btn.dataset.side));
     });
 
     // 难度选择
@@ -57,10 +57,10 @@ function setupEventListeners() {
         btn.addEventListener('click', () => selectDifficulty(btn.dataset.difficulty));
     });
 
-    // 返回模式选择
-    document.getElementById('backToModeBtn').addEventListener('click', () => {
+    // 返回先后手选择
+    document.getElementById('backToSideBtn').addEventListener('click', () => {
         elements.difficultySelection.style.display = 'none';
-        elements.modeSelection.style.display = 'block';
+        elements.sideSelection.style.display = 'block';
     });
 
     // 棋盘点击
@@ -124,17 +124,11 @@ function toggleMenu() {
     menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
 }
 
-// 选择游戏模式
-function selectMode(mode) {
-    GameState.gameMode = mode;
-
-    if (mode === 'ai') {
-        elements.modeSelection.style.display = 'none';
-        elements.difficultySelection.style.display = 'block';
-    } else {
-        elements.modeSelection.style.display = 'none';
-        startGame();
-    }
+// 选择先后手
+function selectSide(side) {
+    GameState.playerSide = side;
+    elements.sideSelection.style.display = 'none';
+    elements.difficultySelection.style.display = 'block';
 }
 
 // 选择难度
@@ -146,16 +140,16 @@ function selectDifficulty(difficulty) {
 
 // 开始游戏
 function startGame() {
-    // 更新玩家O的名称
-    if (GameState.gameMode === 'ai') {
-        elements.playerOName.textContent = 'AI 对手';
-    } else {
-        elements.playerOName.textContent = '玩家 O';
-    }
-
     elements.gameArea.style.display = 'block';
     resetGameState();
     updateUI();
+
+    // 如果玩家选择后手(O)，AI先走
+    if (GameState.playerSide === 'O') {
+        setTimeout(() => {
+            aiMove();
+        }, 500);
+    }
 }
 
 // 重置游戏状态
@@ -180,8 +174,8 @@ function handleCellClick(index) {
         return;
     }
 
-    // AI模式下，O是AI，不能点击
-    if (GameState.gameMode === 'ai' && GameState.currentPlayer === 'O') {
+    // 不是玩家的回合，不能点击
+    if (GameState.currentPlayer !== GameState.playerSide) {
         return;
     }
 
@@ -235,8 +229,8 @@ function makeMove(index) {
     GameState.currentPlayer = player === 'X' ? 'O' : 'X';
     updateUI();
 
-    // AI走棋
-    if (GameState.gameMode === 'ai' && GameState.currentPlayer === 'O' && !GameState.gameOver) {
+    // AI走棋（如果轮到AI）
+    if (GameState.currentPlayer !== GameState.playerSide && !GameState.gameOver) {
         setTimeout(() => {
             aiMove();
         }, 500);
@@ -247,16 +241,10 @@ function makeMove(index) {
 function aiMove() {
     let move;
 
-    switch (GameState.difficulty) {
-        case 'easy':
-            move = getRandomMove();
-            break;
-        case 'medium':
-            move = getMediumMove();
-            break;
-        case 'hard':
-            move = getBestMove();
-            break;
+    if (GameState.difficulty === 'medium') {
+        move = getMediumMove();
+    } else {
+        move = getBestMove();
     }
 
     if (move !== -1) {
@@ -264,23 +252,34 @@ function aiMove() {
     }
 }
 
-// 简单AI：随机走法
-function getRandomMove() {
+// 中等AI：有一定策略
+function getMediumMove() {
+    const aiPlayer = GameState.currentPlayer;
+    const humanPlayer = aiPlayer === 'X' ? 'O' : 'X';
+
+    // 1. 检查能否获胜
+    const winMove = findWinningMove(aiPlayer);
+    if (winMove !== -1) return winMove;
+
+    // 2. 检查必须阻止对手
+    const blockMove = findWinningMove(humanPlayer);
+    if (blockMove !== -1) return blockMove;
+
+    // 3. 占中心
+    if (GameState.board[4] === null) return 4;
+
+    // 4. 占角落
+    const corners = [0, 2, 6, 8].filter(i => GameState.board[i] === null);
+    if (corners.length > 0) {
+        return corners[Math.floor(Math.random() * corners.length)];
+    }
+
+    // 5. 随机选择
     const availableMoves = getAvailableMoves();
-    if (availableMoves.length === 0) return -1;
     return availableMoves[Math.floor(Math.random() * availableMoves.length)];
 }
 
-// 中等AI：有一定策略
-function getMediumMove() {
-    // 30%概率使用最佳走法，70%随机
-    if (Math.random() < 0.3) {
-        return getBestMove();
-    }
-    return getRandomMove();
-}
-
-// 困难AI：Minimax算法
+// 困难AI：使用完整评估
 function getBestMove() {
     let bestScore = -Infinity;
     let bestMove = -1;
@@ -294,7 +293,35 @@ function getBestMove() {
         }
     }
 
-    return bestMove !== -1 ? bestMove : getRandomMove();
+    return bestMove !== -1 ? bestMove : getMediumMove();
+}
+
+// 找到获胜的走法
+function findWinningMove(player) {
+    const moves = player === 'X' ? GameState.playerXMoves : GameState.playerOMoves;
+
+    for (let i = 0; i < 9; i++) {
+        if (GameState.board[i] === null) {
+            // 模拟这一步
+            const tempBoard = [...GameState.board];
+            const tempMoves = [...moves];
+
+            // 如果已经有3个棋子，移除最早的
+            if (tempMoves.length >= GameState.MAX_MOVES_PER_PLAYER) {
+                const oldestMove = tempMoves.shift();
+                tempBoard[oldestMove] = null;
+            }
+
+            tempBoard[i] = player;
+
+            // 检查是否获胜
+            if (checkWinnerForBoard(tempBoard, player)) {
+                return i;
+            }
+        }
+    }
+
+    return -1;
 }
 
 // 评估走法
@@ -424,20 +451,12 @@ function updateUI() {
 function showResult() {
     let icon, message;
 
-    if (GameState.winner === 'X') {
+    if (GameState.winner === GameState.playerSide) {
         icon = '🎉';
-        message = '恭喜！玩家 X 获胜！';
-    } else if (GameState.winner === 'O') {
-        if (GameState.gameMode === 'ai') {
-            icon = '🤖';
-            message = 'AI 对手获胜！再接再厉！';
-        } else {
-            icon = '🎊';
-            message = '恭喜！玩家 O 获胜！';
-        }
+        message = '恭喜！你获胜了！';
     } else {
-        icon = '🤝';
-        message = '平局！';
+        icon = '🤖';
+        message = 'AI获胜！再接再厉！';
     }
 
     elements.resultIcon.textContent = icon;
@@ -449,13 +468,20 @@ function showResult() {
 function restartGame() {
     resetGameState();
     updateUI();
+
+    // 如果玩家选择后手(O)，AI先走
+    if (GameState.playerSide === 'O') {
+        setTimeout(() => {
+            aiMove();
+        }, 500);
+    }
 }
 
 // 返回选择界面
 function backToSelection() {
     elements.gameArea.style.display = 'none';
-    elements.modeSelection.style.display = 'block';
-    GameState.gameMode = null;
+    elements.sideSelection.style.display = 'block';
+    GameState.playerSide = 'X';
     GameState.difficulty = null;
 }
 

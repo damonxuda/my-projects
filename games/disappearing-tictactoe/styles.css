@@ -62,8 +62,8 @@ body {
     opacity: 0.9;
 }
 
-/* 模式选择 */
-.mode-selection, .difficulty-selection {
+/* 选择界面 */
+.side-selection, .difficulty-selection {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 16px;
     padding: 30px;
@@ -71,20 +71,20 @@ body {
     margin-bottom: 20px;
 }
 
-.mode-selection h2, .difficulty-selection h2 {
+.side-selection h2, .difficulty-selection h2 {
     text-align: center;
     margin-bottom: 25px;
     font-size: 1.5rem;
 }
 
-.mode-buttons, .difficulty-buttons {
+.side-buttons, .difficulty-buttons {
     display: flex;
     gap: 20px;
     flex-wrap: wrap;
     justify-content: center;
 }
 
-.mode-btn, .difficulty-btn {
+.side-btn, .difficulty-btn {
     background: rgba(255, 255, 255, 0.15);
     border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: 12px;
@@ -100,28 +100,28 @@ body {
     gap: 10px;
 }
 
-.mode-btn:hover, .difficulty-btn:hover {
+.side-btn:hover, .difficulty-btn:hover {
     background: rgba(255, 255, 255, 0.25);
     border-color: rgba(255, 255, 255, 0.5);
     transform: translateY(-4px);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
-.mode-icon, .difficulty-icon {
+.side-icon, .difficulty-icon {
     font-size: 3rem;
 }
 
-.mode-title, .difficulty-title {
+.side-title, .difficulty-title {
     font-size: 1.2rem;
     font-weight: bold;
 }
 
-.mode-desc, .difficulty-desc {
+.side-desc, .difficulty-desc {
     font-size: 0.9rem;
     opacity: 0.8;
 }
 
-.back-to-mode-btn {
+.back-to-side-btn {
     background: rgba(255, 255, 255, 0.2);
     border: 1px solid rgba(255, 255, 255, 0.3);
     color: white;
@@ -136,7 +136,7 @@ body {
     margin-right: auto;
 }
 
-.back-to-mode-btn:hover {
+.back-to-side-btn:hover {
     background: rgba(255, 255, 255, 0.3);
 }
 
