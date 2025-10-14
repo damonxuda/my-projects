@@ -23,8 +23,6 @@ function Page() {
 
     // Preload all audio files
     this.preloadAudio = function() {
-        console.log('[N-Back Audio] Starting audio preload...');
-
         for (var key in self.audioElements) {
             var audio = self.audioElements[key];
 
@@ -32,7 +30,6 @@ function Page() {
             audio.addEventListener('canplaythrough', function() {
                 var audioId = this.id;
                 self.audioLoaded[audioId] = true;
-                console.log('[N-Back Audio] Loaded:', audioId);
             }, { once: true });
 
             audio.addEventListener('error', function(e) {
@@ -49,15 +46,11 @@ function Page() {
         var audio = self.audioElements[audioId];
 
         if (!audio) {
-            console.warn('[N-Back Audio] Audio element not found:', audioId);
             return;
         }
 
-        console.log('[N-Back Audio] Attempting to play:', audioId, 'paused:', audio.paused, 'currentTime:', audio.currentTime, 'duration:', audio.duration);
-
         // If audio is currently playing, pause first
         if (!audio.paused) {
-            console.log('[N-Back Audio] Audio is playing, pausing first:', audioId);
             audio.pause();
         }
 
@@ -66,7 +59,6 @@ function Page() {
         var needsReload = false;
         if (audio.duration && audio.currentTime > 0) {
             if (Math.abs(audio.currentTime - audio.duration) < 0.1) {
-                console.log('[N-Back Audio] Audio at end, reloading:', audioId);
                 needsReload = true;
             }
         }
@@ -74,19 +66,15 @@ function Page() {
         // If audio needs reload or currentTime reset fails, reload the audio
         if (needsReload) {
             audio.load();
-            // After load, currentTime is automatically 0
-            console.log('[N-Back Audio] Reloaded audio:', audioId);
         } else {
             // Try to reset to beginning
             try {
                 audio.currentTime = 0;
                 // Verify it was actually reset
                 if (audio.currentTime > 0.1) {
-                    console.warn('[N-Back Audio] currentTime reset failed, reloading:', audioId);
                     audio.load();
                 }
             } catch (e) {
-                console.warn('[N-Back Audio] Could not reset currentTime, reloading:', audioId, e);
                 audio.load();
             }
         }
@@ -95,23 +83,18 @@ function Page() {
         var playDelay = needsReload ? 50 : 0;
 
         setTimeout(function() {
-            console.log('[N-Back Audio] Playing:', audioId, 'currentTime after reset:', audio.currentTime);
-
             // Play with promise handling
             var playPromise = audio.play();
 
             if (playPromise !== undefined) {
                 playPromise
-                    .then(function() {
-                        console.log('[N-Back Audio] Successfully started:', audioId, 'duration:', audio.duration, 'currentTime:', audio.currentTime);
-                    })
                     .catch(function(error) {
-                        console.error('[N-Back Audio] Playback failed for', audioId, ':', error);
+                        console.error('[N-Back Audio] Playback failed:', error);
                         // Try to load and play again
                         audio.load();
                         setTimeout(function() {
                             audio.play().catch(function(e) {
-                                console.error('[N-Back Audio] Retry failed for', audioId, ':', e);
+                                console.error('[N-Back Audio] Retry failed:', e);
                             });
                         }, 100);
                     });
