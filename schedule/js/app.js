@@ -137,46 +137,69 @@ const ScheduleUtils = {
 
 // 数据库操作管理器
 const DatabaseManager = {
+  // 获取用户 OpenID（Web 应用使用固定 OpenID）
+  getUserOpenId() {
+    return 'onKxEvh0ZCq29ioSHCH1rD0hKrpc';
+  },
+
   async loadAllSchedules() {
     try {
-      console.log('从Supabase加载统一格式数据...');
-      
-      const { data, error } = await window.supabase
-        .from(getTableName('schedules'))  // 使用动态表名
-        .select('*')
-        .order('date')
-        .order('start_time');
-        
-      if (error) {
-        console.error('从Supabase加载数据失败:', error);
-        return { success: false, error: error.message };
+      console.log('从 Edge Function 加载课程数据...');
+
+      // 调用 get-schedule Edge Function
+      const response = await fetch(`${window.supabaseUrl}/functions/v1/get-schedule`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': window.supabaseKey,
+          'Authorization': `Bearer ${window.supabaseKey}`,
+          'x-wx-openid': this.getUserOpenId()
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Edge Function 调用失败:', response.status, errorText);
+        return { success: false, error: `HTTP ${response.status}` };
       }
 
-      console.log('从Supabase加载了', data?.length || 0, '条课程记录');
+      const data = await response.json();
+      console.log('从 Edge Function 加载了', data?.length || 0, '条课程记录');
       return { success: true, data: data || [] };
     } catch (error) {
-      console.error('加载Supabase数据异常:', error);
+      console.error('加载课程数据异常:', error);
       return { success: false, error: error.message };
     }
   },
 
   async saveSchedule(schedule) {
     try {
-      const { data, error } = await window.supabase
-        .from(getTableName('schedules'))  // 使用动态表名
-        .insert({
-          ...schedule,
-          user_id: 'onKxEvh0ZCq29ioSHCH1rD0hKrpc'  // 添加你的 OpenID
-        })
-        .select()
-        .single();
+      console.log('通过 Edge Function 保存课程...');
 
-      if (error) {
-        console.error('保存到Supabase失败:', error);
-        return { success: false, error: error.message };
+      // 调用 save-schedule Edge Function（插入新记录）
+      const response = await fetch(`${window.supabaseUrl}/functions/v1/save-schedule`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': window.supabaseKey,
+          'Authorization': `Bearer ${window.supabaseKey}`,
+          'x-wx-openid': this.getUserOpenId()
+        },
+        body: JSON.stringify({
+          date: schedule.date,
+          schedule_data: schedule
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Edge Function 保存失败:', response.status, errorText);
+        return { success: false, error: `HTTP ${response.status}` };
       }
 
-      return { success: true, data: data };
+      const data = await response.json();
+      console.log('✅ Edge Function 保存成功');
+      return { success: true, data: data[0] || data };
     } catch (error) {
       console.error('保存课程异常:', error);
       return { success: false, error: error.message };
@@ -185,22 +208,33 @@ const DatabaseManager = {
 
   async updateSchedule(id, updates) {
     try {
-      const { data, error } = await window.supabase
-        .from(getTableName('schedules'))  // 使用动态表名
-        .update({
-          ...updates,
-          user_id: 'onKxEvh0ZCq29ioSHCH1rD0hKrpc'  // 确保 user_id 一致
-        })
-        .eq('id', id)
-        .select()
-        .single();
+      console.log('通过 Edge Function 更新课程...');
 
-      if (error) {
-        console.error('更新Supabase失败:', error);
-        return { success: false, error: error.message };
+      // 调用 save-schedule Edge Function（更新现有记录）
+      const response = await fetch(`${window.supabaseUrl}/functions/v1/save-schedule`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': window.supabaseKey,
+          'Authorization': `Bearer ${window.supabaseKey}`,
+          'x-wx-openid': this.getUserOpenId()
+        },
+        body: JSON.stringify({
+          id: id,
+          date: updates.date,
+          schedule_data: updates
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Edge Function 更新失败:', response.status, errorText);
+        return { success: false, error: `HTTP ${response.status}` };
       }
 
-      return { success: true, data: data };
+      const data = await response.json();
+      console.log('✅ Edge Function 更新成功');
+      return { success: true, data: data[0] || data };
     } catch (error) {
       console.error('更新课程异常:', error);
       return { success: false, error: error.message };
@@ -209,16 +243,27 @@ const DatabaseManager = {
 
   async deleteSchedule(id) {
     try {
-      const { error } = await window.supabase
-        .from(getTableName('schedules'))  // 使用动态表名
-        .delete()
-        .eq('id', id);
-        
-      if (error) {
-        console.error('删除Supabase数据失败:', error);
-        return { success: false, error: error.message };
+      console.log('通过 Edge Function 删除课程...');
+
+      // 调用 delete-schedule Edge Function
+      const response = await fetch(`${window.supabaseUrl}/functions/v1/delete-schedule?id=${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': window.supabaseKey,
+          'Authorization': `Bearer ${window.supabaseKey}`,
+          'x-wx-openid': this.getUserOpenId()
+        }
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Edge Function 删除失败:', response.status, errorText);
+        return { success: false, error: `HTTP ${response.status}` };
       }
 
+      const result = await response.json();
+      console.log('✅ Edge Function 删除成功');
       return { success: true };
     } catch (error) {
       console.error('删除课程异常:', error);
