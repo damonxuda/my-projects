@@ -27,3 +27,6 @@ tmp/
 
 # 小程序项目（独立Git仓库，不需要主仓库管理）
 WeChatProjects/
+
+# 小游戏项目（独立Git仓库，用于测试账号开发）
+WeChatMiniGames/
