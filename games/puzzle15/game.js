@@ -451,11 +451,6 @@ class Puzzle15Game {
     // 显示加载中
     content.innerHTML = '<div class="hint-loading">分析中...</div>';
 
-    // 阻止页面滚动
-    document.body.style.overflow = 'hidden';
-    document.body.style.position = 'fixed';
-    document.body.style.width = '100%';
-
     // 使用setTimeout让UI先更新
     setTimeout(() => {
       this.calculateAndDisplayHint(content);
@@ -588,11 +583,6 @@ class Puzzle15Game {
   closeHint() {
     const panel = document.getElementById('hintPanel');
     panel.classList.remove('show');
-
-    // 恢复页面滚动
-    document.body.style.overflow = '';
-    document.body.style.position = '';
-    document.body.style.width = '';
   }
 }
 
