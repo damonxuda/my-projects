@@ -448,15 +448,6 @@ class Puzzle15Game {
     // 显示面板
     panel.classList.add('show');
 
-    // 阻止背景滚动（但不影响提示面板内部滚动）
-    this.preventBackgroundScroll = (e) => {
-      // 如果触摸事件不是在提示面板内，则阻止默认行为
-      if (!panel.contains(e.target)) {
-        e.preventDefault();
-      }
-    };
-    document.addEventListener('touchmove', this.preventBackgroundScroll, { passive: false });
-
     // 显示加载中
     content.innerHTML = '<div class="hint-loading">分析中...</div>';
 
@@ -595,12 +586,6 @@ class Puzzle15Game {
   closeHint() {
     const panel = document.getElementById('hintPanel');
     panel.classList.remove('show');
-
-    // 移除背景滚动阻止
-    if (this.preventBackgroundScroll) {
-      document.removeEventListener('touchmove', this.preventBackgroundScroll);
-      this.preventBackgroundScroll = null;
-    }
   }
 }
 
