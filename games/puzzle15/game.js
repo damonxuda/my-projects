@@ -536,10 +536,10 @@ class Puzzle15Game {
 
     // 展开/收起按钮
     const actionsHTML = `
-      <div class="hint-actions">
+      <div class="hint-actions" onclick="event.stopPropagation(); ${stepsToShow < totalSteps ? 'game.showAllSteps();' : 'game.showLessSteps();'}">
         ${stepsToShow < totalSteps ?
-          `<div class="hint-toggle" onclick="event.stopPropagation(); game.showAllSteps();">⊕</div>` :
-          `<div class="hint-toggle" onclick="event.stopPropagation(); game.showLessSteps();">⊖</div>`
+          `<div class="hint-toggle">▼</div>` :
+          `<div class="hint-toggle">▲</div>`
         }
       </div>
     `;
