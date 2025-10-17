@@ -493,9 +493,7 @@ class Puzzle15Game {
   // 数字转显示格式
   numberToEmoji(num) {
     // 直接返回普通数字，保证所有数字风格一致
-    // 个位数前面加空格，使十位数在个位数的位置
-    const numStr = num.toString();
-    return numStr.length === 1 ? ' ' + numStr : numStr;
+    return num.toString();
   }
 
   // 方向转箭头
@@ -521,7 +519,7 @@ class Puzzle15Game {
       const arrow = this.directionToArrow(move.directionText);
 
       stepsHTML += `
-        <div class="hint-step">${numEmoji} ${arrow}</div>
+        <div class="hint-step"><span class="hint-num">${numEmoji}</span> ${arrow}</div>
       `;
     }
 
