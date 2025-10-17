@@ -450,15 +450,11 @@ class Puzzle15Game {
     const panel = document.getElementById('hintPanel');
     const content = document.getElementById('hintContent');
 
-    // 保存当前滚动位置
-    this.scrollY = window.scrollY;
-
     // 显示面板
     panel.classList.add('show');
 
-    // 锁定背景滚动，保持当前滚动位置
+    // 锁定背景滚动
     document.body.classList.add('hint-open');
-    document.body.style.top = `-${this.scrollY}px`;
 
     // 显示加载中
     content.innerHTML = '<div class="hint-loading">分析中...</div>';
@@ -599,10 +595,8 @@ class Puzzle15Game {
     const panel = document.getElementById('hintPanel');
     panel.classList.remove('show');
 
-    // 恢复背景滚动和滚动位置
+    // 恢复背景滚动
     document.body.classList.remove('hint-open');
-    document.body.style.top = '';
-    window.scrollTo(0, this.scrollY || 0);
   }
 }
 
