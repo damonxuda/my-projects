@@ -309,8 +309,20 @@ jobs:
               envsubst < "$file" > "$file.tmp" && mv "$file.tmp" "$file"
             done
 
+            # 部署HTML文件（不缓存）
+            echo "📤 Deploying HTML files with no-cache headers..."
+            find ./games -name "*.html" -type f | while read file; do
+              s3_path="s3://damonxuda-projects/${file#./}"
+              aws s3 cp "$file" "$s3_path" \
+                --cache-control "no-cache, no-store, must-revalidate" \
+                --metadata-directive REPLACE
+            done
+
+            # 部署其他文件（正常缓存）
+            echo "📤 Deploying other files..."
             aws s3 sync ./games/ s3://damonxuda-projects/games/ \
               --delete \
+              --exclude "*.html" \
               --exclude ".DS_Store"
             echo "✅ Games directory deployed with environment variables"
           else
