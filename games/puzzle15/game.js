@@ -448,6 +448,9 @@ class Puzzle15Game {
     // 显示面板
     panel.classList.add('show');
 
+    // 阻止背景滚动
+    document.body.style.overflow = 'hidden';
+
     // 显示加载中
     content.innerHTML = '<div class="hint-loading">分析中...</div>';
 
@@ -586,6 +589,9 @@ class Puzzle15Game {
   closeHint() {
     const panel = document.getElementById('hintPanel');
     panel.classList.remove('show');
+
+    // 恢复背景滚动
+    document.body.style.overflow = '';
   }
 }
 
