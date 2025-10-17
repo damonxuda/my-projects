@@ -519,7 +519,7 @@ class Puzzle15Game {
       const arrow = this.directionToArrow(move.directionText);
 
       stepsHTML += `
-        <div class="hint-step">${numEmoji} ${arrow}</div>
+        <div class="hint-step"><span class="hint-num">${numEmoji}</span>${arrow}</div>
       `;
     }
 
