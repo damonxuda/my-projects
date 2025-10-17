@@ -530,29 +530,16 @@ class Puzzle15Game {
       const arrow = this.directionToArrow(move.directionText);
 
       stepsHTML += `
-        <div class="hint-step">
-          <span class="hint-step-number">${i + 1}.</span>${numEmoji} ${arrow}
-        </div>
+        <div class="hint-step">${numEmoji} ${arrow}</div>
       `;
     }
 
-    // 如果还有更多步骤，显示"查看更多"
-    let showMoreHTML = '';
-    if (stepsToShow < totalSteps) {
-      const remaining = totalSteps - stepsToShow;
-      showMoreHTML = `
-        <div class="hint-show-more" onclick="game.showMoreSteps(${stepsToShow + 3})">
-          ▼ 还有${remaining}步
-        </div>
-      `;
-    }
-
-    // 操作按钮
+    // 展开/收起按钮
     const actionsHTML = `
       <div class="hint-actions">
         ${stepsToShow < totalSteps ?
-          `<button class="hint-action-btn" onclick="game.showAllSteps()">全部</button>` :
-          `<button class="hint-action-btn" onclick="game.showLessSteps()">收起</button>`
+          `<button class="hint-action-btn" onclick="event.stopPropagation(); game.showAllSteps();">展开</button>` :
+          `<button class="hint-action-btn" onclick="event.stopPropagation(); game.showLessSteps();">收起</button>`
         }
       </div>
     `;
@@ -562,7 +549,6 @@ class Puzzle15Game {
       <div class="hint-steps-list">
         ${stepsHTML}
       </div>
-      ${showMoreHTML}
       ${actionsHTML}
     `;
   }
