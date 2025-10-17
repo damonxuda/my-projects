@@ -335,19 +335,20 @@ jobs:
 
           # 检查 games 是否变化（包含在 root_files_changed 中）
           if [[ "${{ steps.changes.outputs.root_files_changed }}" == "true" ]] || [[ "${{ steps.changes.outputs.force_deploy }}" == "true" ]]; then
-            if git diff --name-only HEAD~1 HEAD | grep -q '^games/' || [[ "${{ steps.changes.outputs.force_deploy }}" == "true" ]]; then
-              PATHS="$PATHS /games/*"
-              echo "  ✅ 将清除 /games/* 缓存"
-            fi
+            # 使用更宽松的检查：只要 root_files_changed 就清除 games
+            PATHS="$PATHS /games/*"
+            echo "  ✅ 将清除 /games/* 缓存"
           fi
 
           # 如果有需要清除的路径，创建 invalidation
           if [ -n "$PATHS" ]; then
             echo "🚀 创建 CloudFront invalidation..."
+            echo "📋 清除路径: $PATHS"
             aws cloudfront create-invalidation \
               --distribution-id $CLOUDFRONT_DISTRIBUTION_ID \
               --paths $PATHS
             echo "✅ CloudFront 缓存清除请求已提交"
+            echo "⏳ 注意：CloudFront invalidation 可能需要几分钟生效"
           else
             echo "ℹ️ 无需清除缓存"
           fi
