@@ -490,21 +490,9 @@ class Puzzle15Game {
     this.renderHintSteps(content, 3);
   }
 
-  // 数字转带圆圈符号
+  // 数字转显示格式
   numberToEmoji(num) {
-    // 带圆圈的数字 Unicode 符号 (1-20 使用统一样式)
-    const circledNumbers = [
-      '⓪', // 0
-      '①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩', // 1-10
-      '⑪', '⑫', '⑬', '⑭', '⑮', '⑯', '⑰', '⑱', '⑲', '⑳'  // 11-20
-    ];
-
-    // 0-20 使用圆圈数字
-    if (num >= 0 && num <= 20) {
-      return circledNumbers[num];
-    }
-
-    // 21+ 使用普通数字（避免字体不一致）
+    // 直接返回普通数字，保证所有数字风格一致
     return num.toString();
   }
 
