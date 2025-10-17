@@ -440,63 +440,48 @@ class Puzzle15Game {
 
   // 计算并显示提示
   calculateAndDisplayHint(content) {
-    // 如果已有解法，且棋盘状态未变，继续使用当前解法
-    if (!this.currentSolution) {
-      const currentBoard = this.engine.getBoard();
-      const result = this.solver.solve(currentBoard);
-
-      if (!result.success) {
-        content.innerHTML = `
-          <div class="hint-error">
-            <strong>❌ ${result.message}</strong>
-          </div>
-        `;
-        return;
-      }
-
-      this.currentSolution = result.path;
-      this.solutionStepIndex = 0;
-    }
-
-    // 更新步骤索引，跳过已完成的步骤
     const currentBoard = this.engine.getBoard();
-    this.updateSolutionIndex(currentBoard);
 
-    // 获取下一步提示
-    const hint = this.solver.getNextHint(
-      currentBoard,
-      this.currentSolution.slice(this.solutionStepIndex)
-    );
+    // 计算两种解法
+    const optimalResult = this.solver.solve(currentBoard);
+    const greedyResult = this.solver.solveGreedy(currentBoard);
 
-    if (!hint) {
+    // 如果A*求解失败
+    if (!optimalResult.success) {
       content.innerHTML = `
-        <div class="hint-strategy">
-          <div class="hint-strategy-title">🎉 完成！</div>
-          <div class="hint-strategy-text">恭喜，已经完成拼图！</div>
+        <div class="hint-error">
+          <strong>❌ ${optimalResult.message}</strong>
         </div>
       `;
       return;
     }
 
-    // 生成策略说明
-    const strategy = this.solver.generateStrategy(
-      this.currentSolution.slice(this.solutionStepIndex),
-      this.levelConfig.size
-    );
+    // 如果已经完成
+    if (optimalResult.path.length === 0) {
+      content.innerHTML = `
+        <div class="hint-solution">
+          <div class="hint-solution-title">🎉 已完成！</div>
+          <div class="hint-solution-steps">恭喜，拼图已经完成！</div>
+        </div>
+      `;
+      return;
+    }
 
-    // 显示提示内容
+    // 转换为步骤描述
+    const optimalSteps = this.solver.pathToSteps(optimalResult.path);
+    const greedySteps = greedyResult.success ?
+      this.solver.pathToSteps(greedyResult.path) :
+      optimalSteps; // 如果贪心失败，就显示相同的
+
+    // 显示两种解法
     content.innerHTML = `
-      <div class="hint-strategy">
-        <div class="hint-strategy-title">📋 总体策略</div>
-        <div class="hint-strategy-text">${strategy}</div>
+      <div class="hint-solution-greedy">
+        <div class="hint-solution-title">🎓 易理解（共${greedyResult.success ? greedyResult.steps : optimalResult.steps}步）</div>
+        <div class="hint-solution-steps">${greedySteps}</div>
       </div>
-      <div class="hint-next-move">
-        <div class="hint-next-title">
-          👉 下一步建议
-        </div>
-        <div class="hint-next-text">
-          ${hint.description}
-        </div>
+      <div class="hint-solution">
+        <div class="hint-solution-title">⚡ 步骤少（共${optimalResult.steps}步）</div>
+        <div class="hint-solution-steps">${optimalSteps}</div>
       </div>
     `;
   }
