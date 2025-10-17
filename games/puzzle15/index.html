@@ -421,38 +421,80 @@
         justify-content: center;
       }
 
-      .hint-panel .hint-solution {
-        background: #f0f4ff;
-        padding: 1rem;
-        border-radius: 8px;
+      .hint-panel .hint-summary {
+        text-align: center;
+        font-size: 1.1rem;
+        color: #667eea;
+        font-weight: 700;
         margin-bottom: 1rem;
-        border-left: 4px solid #667eea;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #eee;
       }
 
-      .hint-panel .hint-solution-title {
+      .hint-panel .hint-steps-list {
+        max-height: 50vh;
+        overflow-y: auto;
+      }
+
+      .hint-panel .hint-step {
+        padding: 0.8rem 1rem;
+        margin-bottom: 0.5rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border-left: 4px solid #667eea;
+        font-size: 1rem;
+        color: #333;
+        transition: all 0.2s ease;
+      }
+
+      .hint-panel .hint-step:hover {
+        background: #e9ecef;
+        transform: translateX(4px);
+      }
+
+      .hint-panel .hint-step-number {
         font-weight: 700;
         color: #667eea;
-        margin-bottom: 0.5rem;
-        font-size: 1.1rem;
+        margin-right: 0.5rem;
       }
 
-      .hint-panel .hint-solution-steps {
-        line-height: 1.8;
-        color: #333;
-        font-size: 0.95rem;
-        word-wrap: break-word;
-      }
-
-      .hint-panel .hint-solution-greedy {
-        background: #fff9e6;
+      .hint-panel .hint-show-more {
+        text-align: center;
         padding: 1rem;
-        border-radius: 8px;
-        margin-bottom: 1rem;
-        border-left: 4px solid #ffd93d;
+        color: #667eea;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s ease;
       }
 
-      .hint-panel .hint-solution-greedy .hint-solution-title {
-        color: #f39c12;
+      .hint-panel .hint-show-more:hover {
+        color: #5568d3;
+        background: #f8f9fa;
+        border-radius: 8px;
+      }
+
+      .hint-panel .hint-actions {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #eee;
+      }
+
+      .hint-panel .hint-action-btn {
+        flex: 1;
+        padding: 0.6rem;
+        border: none;
+        border-radius: 8px;
+        background: #667eea;
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .hint-panel .hint-action-btn:hover {
+        background: #5568d3;
       }
 
       .hint-panel .hint-loading {

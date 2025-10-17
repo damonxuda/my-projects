@@ -348,32 +348,6 @@ class PuzzleSolver {
     };
   }
 
-  /**
-   * 贪心算法求解（按行完成）
-   * 暂时使用A*结果，后续优化
-   * @param {number[][]} initialBoard - 初始棋盘状态
-   * @returns {Object} 求解结果 {success, path, message}
-   */
-  solveGreedy(initialBoard) {
-    // 暂时返回A*结果作为占位
-    // TODO: 实现真正的贪心算法（按行完成）
-    return this.solve(initialBoard);
-  }
-
-  /**
-   * 将路径转换为简洁的步骤描述
-   * @param {Array} path - 移动路径
-   * @returns {string} 步骤描述（如 "1上 → 2左 → 3下"）
-   */
-  pathToSteps(path) {
-    if (!path || path.length === 0) return '已完成';
-
-    const steps = path.map(move => {
-      return `${move.tileValue}${move.directionText}`;
-    });
-
-    return steps.join(' → ');
-  }
 }
 
 // 导出

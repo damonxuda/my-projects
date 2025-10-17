@@ -442,48 +442,98 @@ class Puzzle15Game {
   calculateAndDisplayHint(content) {
     const currentBoard = this.engine.getBoard();
 
-    // 计算两种解法
-    const optimalResult = this.solver.solve(currentBoard);
-    const greedyResult = this.solver.solveGreedy(currentBoard);
+    // 使用A*算法求解
+    const result = this.solver.solve(currentBoard);
 
-    // 如果A*求解失败
-    if (!optimalResult.success) {
+    // 如果求解失败
+    if (!result.success) {
       content.innerHTML = `
         <div class="hint-error">
-          <strong>❌ ${optimalResult.message}</strong>
+          <strong>❌ ${result.message}</strong>
         </div>
       `;
       return;
     }
 
     // 如果已经完成
-    if (optimalResult.path.length === 0) {
+    if (result.path.length === 0) {
       content.innerHTML = `
-        <div class="hint-solution">
-          <div class="hint-solution-title">🎉 已完成！</div>
-          <div class="hint-solution-steps">恭喜，拼图已经完成！</div>
-        </div>
+        <div class="hint-summary">🎉 已完成！</div>
+        <div style="text-align: center; color: #666;">恭喜，拼图已经完成！</div>
       `;
       return;
     }
 
-    // 转换为步骤描述
-    const optimalSteps = this.solver.pathToSteps(optimalResult.path);
-    const greedySteps = greedyResult.success ?
-      this.solver.pathToSteps(greedyResult.path) :
-      optimalSteps; // 如果贪心失败，就显示相同的
+    // 保存完整路径
+    this.currentSolution = result.path;
 
-    // 显示两种解法
-    content.innerHTML = `
-      <div class="hint-solution-greedy">
-        <div class="hint-solution-title">🎓 易理解（共${greedyResult.success ? greedyResult.steps : optimalResult.steps}步）</div>
-        <div class="hint-solution-steps">${greedySteps}</div>
-      </div>
-      <div class="hint-solution">
-        <div class="hint-solution-title">⚡ 步骤少（共${optimalResult.steps}步）</div>
-        <div class="hint-solution-steps">${optimalSteps}</div>
+    // 默认显示前3步
+    this.renderHintSteps(content, 3);
+  }
+
+  // 渲染提示步骤
+  renderHintSteps(content, showCount) {
+    const totalSteps = this.currentSolution.length;
+    const stepsToShow = Math.min(showCount, totalSteps);
+
+    let stepsHTML = '';
+    for (let i = 0; i < stepsToShow; i++) {
+      const move = this.currentSolution[i];
+      stepsHTML += `
+        <div class="hint-step">
+          <span class="hint-step-number">第${i + 1}步：</span>
+          移动 ${move.tileValue} 向${move.directionText}
+        </div>
+      `;
+    }
+
+    // 如果还有更多步骤，显示"查看更多"
+    let showMoreHTML = '';
+    if (stepsToShow < totalSteps) {
+      const remaining = totalSteps - stepsToShow;
+      showMoreHTML = `
+        <div class="hint-show-more" onclick="game.showMoreSteps(${stepsToShow + 3})">
+          ▶ 查看更多 (还有${remaining}步)
+        </div>
+      `;
+    }
+
+    // 操作按钮
+    const actionsHTML = `
+      <div class="hint-actions">
+        ${stepsToShow < totalSteps ?
+          `<button class="hint-action-btn" onclick="game.showAllSteps()">全部展开</button>` :
+          `<button class="hint-action-btn" onclick="game.showLessSteps()">全部折叠</button>`
+        }
       </div>
     `;
+
+    content.innerHTML = `
+      <div class="hint-summary">共需 ${totalSteps} 步完成</div>
+      <div class="hint-steps-list">
+        ${stepsHTML}
+      </div>
+      ${showMoreHTML}
+      ${actionsHTML}
+    `;
+  }
+
+  // 显示更多步骤
+  showMoreSteps(count) {
+    const content = document.getElementById('hintContent');
+    this.renderHintSteps(content, count);
+  }
+
+  // 显示所有步骤
+  showAllSteps() {
+    const content = document.getElementById('hintContent');
+    this.renderHintSteps(content, this.currentSolution.length);
+  }
+
+  // 折叠到只显示3步
+  showLessSteps() {
+    const content = document.getElementById('hintContent');
+    this.renderHintSteps(content, 3);
   }
 
   // 更新解法步骤索引（跳过已完成的步骤）
