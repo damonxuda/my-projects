@@ -493,7 +493,9 @@ class Puzzle15Game {
   // 数字转显示格式
   numberToEmoji(num) {
     // 直接返回普通数字，保证所有数字风格一致
-    return num.toString();
+    // 个位数前面加空格，使十位数在个位数的位置
+    const numStr = num.toString();
+    return numStr.length === 1 ? ' ' + numStr : numStr;
   }
 
   // 方向转箭头
