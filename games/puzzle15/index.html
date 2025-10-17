@@ -368,6 +368,123 @@
           background: #e0e0e0;
         }
       }
+
+      /* 提示面板 */
+      .hint-panel {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        color: #333;
+        padding: 1.5rem;
+        border-radius: 16px 16px 0 0;
+        box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.2);
+        transform: translateY(100%);
+        transition: transform 0.3s ease;
+        z-index: 900;
+        max-height: 50vh;
+        overflow-y: auto;
+      }
+
+      .hint-panel.show {
+        transform: translateY(0);
+      }
+
+      .hint-panel .hint-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #eee;
+      }
+
+      .hint-panel .hint-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #667eea;
+        margin: 0;
+      }
+
+      .hint-panel .close-btn {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: #999;
+        cursor: pointer;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .hint-panel .hint-strategy {
+        background: #f0f4ff;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        border-left: 4px solid #667eea;
+      }
+
+      .hint-panel .hint-strategy-title {
+        font-weight: 700;
+        color: #667eea;
+        margin-bottom: 0.5rem;
+      }
+
+      .hint-panel .hint-strategy-text {
+        line-height: 1.6;
+        color: #555;
+      }
+
+      .hint-panel .hint-next-move {
+        background: #fff9e6;
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid #ffd93d;
+      }
+
+      .hint-panel .hint-next-title {
+        font-weight: 700;
+        color: #f39c12;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .hint-panel .hint-next-text {
+        line-height: 1.6;
+        color: #555;
+        font-size: 1.1rem;
+      }
+
+      .hint-panel .hint-loading {
+        text-align: center;
+        padding: 2rem;
+        color: #999;
+      }
+
+      .hint-panel .hint-error {
+        background: #ffebee;
+        padding: 1rem;
+        border-radius: 8px;
+        color: #c62828;
+        border-left: 4px solid #c62828;
+      }
+
+      .btn-hint {
+        background: rgba(255, 193, 7, 0.8);
+      }
+
+      @media (hover: hover) and (pointer: fine) {
+        .btn-hint:hover {
+          background: rgba(255, 193, 7, 1);
+        }
+      }
     </style>
   </head>
   <body>
@@ -406,7 +523,19 @@
       <div class="controls">
         <button class="btn btn-danger" id="resetBtn">🔄 重置</button>
         <button class="btn" id="undoBtn">↩️ 撤销</button>
+        <button class="btn btn-hint" id="hintBtn">💡 提示</button>
         <button class="btn btn-primary" id="levelsBtn">📋 关卡</button>
+      </div>
+    </div>
+
+    <!-- 提示面板 -->
+    <div class="hint-panel" id="hintPanel">
+      <div class="hint-header">
+        <h3 class="hint-title">💡 智能提示</h3>
+        <button class="close-btn" id="closeHintBtn">✕</button>
+      </div>
+      <div id="hintContent">
+        <div class="hint-loading">正在分析棋盘...</div>
       </div>
     </div>
 
@@ -507,6 +636,7 @@
     <script src="../shared/js/smartGameStorage-edge-function.js"></script>
     <script src="puzzle15.js"></script>
     <script src="levels.js"></script>
+    <script src="solver.js"></script>
     <script src="game.js"></script>
   </body>
 </html>

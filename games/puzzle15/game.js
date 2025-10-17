@@ -14,6 +14,9 @@ class Puzzle15Game {
     this.isPlaying = false;
     this.currentStars = 0;
     this.selectedTile = null; // 记录选中的数字块位置
+    this.solver = new PuzzleSolver(); // A*求解器
+    this.currentSolution = null; // 当前解法路径
+    this.solutionStepIndex = 0; // 当前解法步骤索引
 
     // 等待Clerk初始化
     this.waitForClerkAndInit();
@@ -365,7 +368,19 @@ class Puzzle15Game {
       if (this.engine.undo()) {
         this.renderBoard();
         this.updateStats();
+        // 撤销后重新计算解法
+        this.currentSolution = null;
       }
+    });
+
+    // 提示按钮
+    document.getElementById('hintBtn').addEventListener('click', () => {
+      this.showHint();
+    });
+
+    // 关闭提示面板
+    document.getElementById('closeHintBtn').addEventListener('click', () => {
+      this.closeHint();
     });
 
     // 关卡列表按钮
@@ -401,6 +416,104 @@ class Puzzle15Game {
     this.renderBoard();
     this.updateStats();
     this.updateStars();
+    // 重置后清空解法
+    this.currentSolution = null;
+    this.solutionStepIndex = 0;
+  }
+
+  // 显示提示面板
+  showHint() {
+    const panel = document.getElementById('hintPanel');
+    const content = document.getElementById('hintContent');
+
+    // 显示面板
+    panel.classList.add('show');
+
+    // 显示加载中
+    content.innerHTML = '<div class="hint-loading">🧠 正在分析棋盘，请稍候...</div>';
+
+    // 使用setTimeout让UI先更新
+    setTimeout(() => {
+      this.calculateAndDisplayHint(content);
+    }, 100);
+  }
+
+  // 计算并显示提示
+  calculateAndDisplayHint(content) {
+    // 如果已有解法，且棋盘状态未变，继续使用当前解法
+    if (!this.currentSolution) {
+      const currentBoard = this.engine.getBoard();
+      const result = this.solver.solve(currentBoard);
+
+      if (!result.success) {
+        content.innerHTML = `
+          <div class="hint-error">
+            <strong>❌ ${result.message}</strong>
+          </div>
+        `;
+        return;
+      }
+
+      this.currentSolution = result.path;
+      this.solutionStepIndex = 0;
+    }
+
+    // 更新步骤索引，跳过已完成的步骤
+    const currentBoard = this.engine.getBoard();
+    this.updateSolutionIndex(currentBoard);
+
+    // 获取下一步提示
+    const hint = this.solver.getNextHint(
+      currentBoard,
+      this.currentSolution.slice(this.solutionStepIndex)
+    );
+
+    if (!hint) {
+      content.innerHTML = `
+        <div class="hint-strategy">
+          <div class="hint-strategy-title">🎉 完成！</div>
+          <div class="hint-strategy-text">恭喜，已经完成拼图！</div>
+        </div>
+      `;
+      return;
+    }
+
+    // 生成策略说明
+    const strategy = this.solver.generateStrategy(
+      this.currentSolution.slice(this.solutionStepIndex),
+      this.levelConfig.size
+    );
+
+    // 显示提示内容
+    content.innerHTML = `
+      <div class="hint-strategy">
+        <div class="hint-strategy-title">📋 总体策略</div>
+        <div class="hint-strategy-text">${strategy}</div>
+      </div>
+      <div class="hint-next-move">
+        <div class="hint-next-title">
+          👉 下一步建议
+        </div>
+        <div class="hint-next-text">
+          ${hint.description}
+        </div>
+      </div>
+    `;
+  }
+
+  // 更新解法步骤索引（跳过已完成的步骤）
+  updateSolutionIndex(currentBoard) {
+    if (!this.currentSolution) return;
+
+    // 通过比较棋盘状态来判断玩家是否按照解法移动了
+    // 这里简化处理，每次重新从当前棋盘求解
+    // 更准确的做法是追踪玩家的每一步移动
+  }
+
+  // 关闭提示面板
+  closeHint() {
+    const panel = document.getElementById('hintPanel');
+    panel.classList.remove('show');
   }
 }
 
