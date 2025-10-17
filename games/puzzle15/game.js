@@ -379,9 +379,14 @@ class Puzzle15Game {
       this.toggleHint();
     });
 
+    // 提示面板：阻止触摸事件冒泡到背景
+    const hintPanel = document.getElementById('hintPanel');
+    hintPanel.addEventListener('touchmove', (e) => {
+      e.stopPropagation();
+    }, { passive: true });
+
     // 点击其他地方关闭提示
     document.addEventListener('click', (e) => {
-      const hintPanel = document.getElementById('hintPanel');
       const hintBtn = document.getElementById('hintBtn');
 
       if (hintPanel.classList.contains('show') &&
@@ -445,11 +450,15 @@ class Puzzle15Game {
     const panel = document.getElementById('hintPanel');
     const content = document.getElementById('hintContent');
 
+    // 保存当前滚动位置
+    this.scrollY = window.scrollY;
+
     // 显示面板
     panel.classList.add('show');
 
-    // 阻止背景滚动
-    document.body.style.overflow = 'hidden';
+    // 锁定背景滚动，保持当前滚动位置
+    document.body.classList.add('hint-open');
+    document.body.style.top = `-${this.scrollY}px`;
 
     // 显示加载中
     content.innerHTML = '<div class="hint-loading">分析中...</div>';
@@ -590,8 +599,10 @@ class Puzzle15Game {
     const panel = document.getElementById('hintPanel');
     panel.classList.remove('show');
 
-    // 恢复背景滚动
-    document.body.style.overflow = '';
+    // 恢复背景滚动和滚动位置
+    document.body.classList.remove('hint-open');
+    document.body.style.top = '';
+    window.scrollTo(0, this.scrollY || 0);
   }
 }
 
