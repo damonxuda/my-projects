@@ -371,126 +371,86 @@
 
       /* 提示面板 */
       .hint-panel {
-        position: fixed;
-        bottom: 0;
+        position: absolute;
+        top: 100%;
         left: 0;
-        right: 0;
         background: white;
         color: #333;
-        padding: 1.5rem;
-        border-radius: 16px 16px 0 0;
-        box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.2);
-        transform: translateY(100%);
-        transition: transform 0.3s ease;
-        z-index: 900;
-        max-height: 50vh;
+        padding: 0.8rem;
+        border-radius: 0 0 12px 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        display: none;
+        z-index: 1000;
+        min-width: 100%;
+        max-height: 300px;
         overflow-y: auto;
       }
 
       .hint-panel.show {
-        transform: translateY(0);
+        display: block;
       }
 
-      .hint-panel .hint-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid #eee;
-      }
-
-      .hint-panel .hint-title {
-        font-size: 1.3rem;
-        font-weight: 700;
-        color: #667eea;
-        margin: 0;
-      }
-
-      .hint-panel .close-btn {
-        background: none;
-        border: none;
-        font-size: 1.5rem;
-        color: #999;
-        cursor: pointer;
-        padding: 0;
-        width: 30px;
-        height: 30px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+      /* 提示按钮需要相对定位 */
+      .btn-hint {
+        position: relative;
       }
 
       .hint-panel .hint-summary {
-        text-align: center;
-        font-size: 1.1rem;
+        font-size: 0.75rem;
         color: #667eea;
-        font-weight: 700;
-        margin-bottom: 1rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid #eee;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        text-align: center;
       }
 
       .hint-panel .hint-steps-list {
-        max-height: 50vh;
-        overflow-y: auto;
+        font-size: 0.9rem;
+        line-height: 1.6;
       }
 
       .hint-panel .hint-step {
-        padding: 0.8rem 1rem;
-        margin-bottom: 0.5rem;
-        background: #f8f9fa;
-        border-radius: 8px;
-        border-left: 4px solid #667eea;
-        font-size: 1rem;
+        padding: 0.3rem 0;
         color: #333;
-        transition: all 0.2s ease;
-      }
-
-      .hint-panel .hint-step:hover {
-        background: #e9ecef;
-        transform: translateX(4px);
+        white-space: nowrap;
       }
 
       .hint-panel .hint-step-number {
-        font-weight: 700;
         color: #667eea;
-        margin-right: 0.5rem;
+        font-weight: 600;
+        margin-right: 0.3rem;
       }
 
       .hint-panel .hint-show-more {
         text-align: center;
-        padding: 1rem;
+        padding: 0.5rem 0;
         color: #667eea;
         cursor: pointer;
         font-weight: 600;
-        transition: all 0.2s ease;
+        font-size: 0.85rem;
+        border-top: 1px solid #eee;
+        margin-top: 0.5rem;
       }
 
       .hint-panel .hint-show-more:hover {
         color: #5568d3;
-        background: #f8f9fa;
-        border-radius: 8px;
       }
 
       .hint-panel .hint-actions {
-        display: flex;
-        gap: 0.5rem;
-        margin-top: 1rem;
-        padding-top: 1rem;
+        text-align: center;
+        padding-top: 0.5rem;
         border-top: 1px solid #eee;
+        margin-top: 0.5rem;
       }
 
       .hint-panel .hint-action-btn {
-        flex: 1;
-        padding: 0.6rem;
+        padding: 0.4rem 0.8rem;
         border: none;
-        border-radius: 8px;
+        border-radius: 6px;
         background: #667eea;
         color: white;
         font-weight: 600;
         cursor: pointer;
-        transition: all 0.2s ease;
+        font-size: 0.75rem;
       }
 
       .hint-panel .hint-action-btn:hover {
@@ -558,19 +518,16 @@
       <div class="controls">
         <button class="btn btn-danger" id="resetBtn">🔄 重置</button>
         <button class="btn" id="undoBtn">↩️ 撤销</button>
-        <button class="btn btn-hint" id="hintBtn">💡 提示</button>
+        <button class="btn btn-hint" id="hintBtn">
+          💡 提示
+          <!-- 提示面板 -->
+          <div class="hint-panel" id="hintPanel">
+            <div id="hintContent">
+              <div class="hint-loading">分析中...</div>
+            </div>
+          </div>
+        </button>
         <button class="btn btn-primary" id="levelsBtn">📋 关卡</button>
-      </div>
-    </div>
-
-    <!-- 提示面板 -->
-    <div class="hint-panel" id="hintPanel">
-      <div class="hint-header">
-        <h3 class="hint-title">💡 智能提示</h3>
-        <button class="close-btn" id="closeHintBtn">✕</button>
-      </div>
-      <div id="hintContent">
-        <div class="hint-loading">正在分析棋盘...</div>
       </div>
     </div>
 

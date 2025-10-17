@@ -374,13 +374,21 @@ class Puzzle15Game {
     });
 
     // 提示按钮
-    document.getElementById('hintBtn').addEventListener('click', () => {
-      this.showHint();
+    document.getElementById('hintBtn').addEventListener('click', (e) => {
+      e.stopPropagation(); // 阻止事件冒泡
+      this.toggleHint();
     });
 
-    // 关闭提示面板
-    document.getElementById('closeHintBtn').addEventListener('click', () => {
-      this.closeHint();
+    // 点击其他地方关闭提示
+    document.addEventListener('click', (e) => {
+      const hintPanel = document.getElementById('hintPanel');
+      const hintBtn = document.getElementById('hintBtn');
+
+      if (hintPanel.classList.contains('show') &&
+          !hintPanel.contains(e.target) &&
+          !hintBtn.contains(e.target)) {
+        this.closeHint();
+      }
     });
 
     // 关卡列表按钮
@@ -421,6 +429,17 @@ class Puzzle15Game {
     this.solutionStepIndex = 0;
   }
 
+  // 切换提示面板
+  toggleHint() {
+    const panel = document.getElementById('hintPanel');
+
+    if (panel.classList.contains('show')) {
+      this.closeHint();
+    } else {
+      this.showHint();
+    }
+  }
+
   // 显示提示面板
   showHint() {
     const panel = document.getElementById('hintPanel');
@@ -430,7 +449,7 @@ class Puzzle15Game {
     panel.classList.add('show');
 
     // 显示加载中
-    content.innerHTML = '<div class="hint-loading">🧠 正在分析棋盘，请稍候...</div>';
+    content.innerHTML = '<div class="hint-loading">分析中...</div>';
 
     // 使用setTimeout让UI先更新
     setTimeout(() => {
@@ -471,6 +490,34 @@ class Puzzle15Game {
     this.renderHintSteps(content, 3);
   }
 
+  // 数字转emoji
+  numberToEmoji(num) {
+    const emojiMap = {
+      0: '0️⃣', 1: '1️⃣', 2: '2️⃣', 3: '3️⃣', 4: '4️⃣',
+      5: '5️⃣', 6: '6️⃣', 7: '7️⃣', 8: '8️⃣', 9: '9️⃣', 10: '🔟'
+    };
+
+    if (num <= 10) {
+      return emojiMap[num];
+    }
+
+    // 10以上的数字，拆分成个位数字
+    const tens = Math.floor(num / 10);
+    const ones = num % 10;
+    return emojiMap[tens] + emojiMap[ones];
+  }
+
+  // 方向转箭头
+  directionToArrow(direction) {
+    const arrowMap = {
+      '上': '↑',
+      '下': '↓',
+      '左': '←',
+      '右': '→'
+    };
+    return arrowMap[direction] || direction;
+  }
+
   // 渲染提示步骤
   renderHintSteps(content, showCount) {
     const totalSteps = this.currentSolution.length;
@@ -479,10 +526,12 @@ class Puzzle15Game {
     let stepsHTML = '';
     for (let i = 0; i < stepsToShow; i++) {
       const move = this.currentSolution[i];
+      const numEmoji = this.numberToEmoji(move.tileValue);
+      const arrow = this.directionToArrow(move.directionText);
+
       stepsHTML += `
         <div class="hint-step">
-          <span class="hint-step-number">第${i + 1}步：</span>
-          移动 ${move.tileValue} 向${move.directionText}
+          <span class="hint-step-number">${i + 1}.</span>${numEmoji} ${arrow}
         </div>
       `;
     }
@@ -493,7 +542,7 @@ class Puzzle15Game {
       const remaining = totalSteps - stepsToShow;
       showMoreHTML = `
         <div class="hint-show-more" onclick="game.showMoreSteps(${stepsToShow + 3})">
-          ▶ 查看更多 (还有${remaining}步)
+          ▼ 还有${remaining}步
         </div>
       `;
     }
@@ -502,14 +551,14 @@ class Puzzle15Game {
     const actionsHTML = `
       <div class="hint-actions">
         ${stepsToShow < totalSteps ?
-          `<button class="hint-action-btn" onclick="game.showAllSteps()">全部展开</button>` :
-          `<button class="hint-action-btn" onclick="game.showLessSteps()">全部折叠</button>`
+          `<button class="hint-action-btn" onclick="game.showAllSteps()">全部</button>` :
+          `<button class="hint-action-btn" onclick="game.showLessSteps()">收起</button>`
         }
       </div>
     `;
 
     content.innerHTML = `
-      <div class="hint-summary">共需 ${totalSteps} 步完成</div>
+      <div class="hint-summary">共${totalSteps}步</div>
       <div class="hint-steps-list">
         ${stepsHTML}
       </div>
