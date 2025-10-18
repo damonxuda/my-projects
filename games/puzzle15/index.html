@@ -406,18 +406,22 @@
       }
 
       .hint-panel .hint-step {
-        padding: 0.2rem 0.5rem 0.2rem 0;
+        padding: 0.2rem 0;
         color: #333;
         white-space: nowrap;
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
+        text-align: right;
       }
 
       .hint-panel .hint-step .hint-num {
         display: inline-block;
+        min-width: 2ch;
         text-align: right;
-        margin-right: 0.5rem;
+      }
+
+      .hint-panel .hint-step .hint-num::after {
+        content: '';
+        display: inline-block;
+        width: 0.5rem;
       }
 
       .hint-panel .hint-actions {
