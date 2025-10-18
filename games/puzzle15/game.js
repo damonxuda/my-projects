@@ -518,11 +518,11 @@ class Puzzle15Game {
       const numEmoji = this.numberToEmoji(move.tileValue);
       const arrow = this.directionToArrow(move.directionText);
 
-      // 上下箭头空2格，左右箭头空1格
-      const spacing = (arrow === '↑' || arrow === '↓') ? '&nbsp;&nbsp;' : '&nbsp;';
+      // 个位数后面2个空格，两位数后面1个空格
+      const numSpacing = move.tileValue < 10 ? '&nbsp;&nbsp;' : '&nbsp;';
 
       stepsHTML += `
-        <div class="hint-step"><span class="hint-num">${numEmoji}</span>${spacing}${arrow}</div>
+        <div class="hint-step">${numEmoji}${numSpacing}${arrow}</div>
       `;
     }
 
