@@ -518,9 +518,8 @@ class Puzzle15Game {
       const numEmoji = this.numberToEmoji(move.tileValue);
       const arrow = this.directionToArrow(move.directionText);
 
-      // 上下箭头需要空格，左右箭头不需要
-      const needSpace = arrow === '↑' || arrow === '↓';
-      const spacing = needSpace ? ' ' : '';
+      // 上下箭头空2格，左右箭头空1格
+      const spacing = (arrow === '↑' || arrow === '↓') ? '&nbsp;&nbsp;' : '&nbsp;';
 
       stepsHTML += `
         <div class="hint-step"><span class="hint-num">${numEmoji}</span>${spacing}${arrow}</div>
