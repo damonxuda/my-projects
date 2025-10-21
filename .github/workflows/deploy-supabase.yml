@@ -22,34 +22,10 @@ jobs:
         with:
           deno-version: v1.x
 
-      - name: Install Supabase CLI
-        run: |
-          echo "📥 Installing Supabase CLI..."
-          # 使用官方安装脚本
-          curl -fsSL https://github.com/supabase/cli/releases/download/v1.123.4/supabase_1.123.4_linux_amd64.deb -o supabase.deb
-          sudo dpkg -i supabase.deb
-          supabase --version
-
-      - name: Link to Supabase project
-        working-directory: ./backend/supabase
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-        run: |
-          echo "🔗 Linking to Supabase project..."
-          echo "Project ref: ${{ secrets.SUPABASE_PROJECT_REF }}"
-          # 使用环境变量 SUPABASE_DB_PASSWORD 实现非交互式链接
-          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-
-          echo "Checking if config was created..."
-          ls -la .supabase/ 2>/dev/null || echo "No .supabase directory"
-          if [ -f ".supabase/config.toml" ]; then
-            echo "✅ Config file created successfully"
-            cat .supabase/config.toml
-          else
-            echo "ERROR: Config file not created!"
-            exit 1
-          fi
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
 
       - name: Deploy Edge Functions
         working-directory: ./backend/supabase
@@ -64,8 +40,8 @@ jobs:
               func_name=$(basename "$func_dir")
               echo "📦 Deploying function: $func_name"
 
-              # 部署单个函数
-              supabase functions deploy "$func_name" --no-verify-jwt
+              # 使用 --project-ref 直接部署，无需先 link
+              supabase functions deploy "$func_name" --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
 
               echo "✅ $func_name deployed successfully!"
             fi
@@ -78,7 +54,7 @@ jobs:
         run: |
           echo "🧪 Verifying deployment..."
           # 列出所有已部署的函数
-          supabase functions list
+          supabase functions list --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
 
           echo "✅ Deployment verification completed!"
 
