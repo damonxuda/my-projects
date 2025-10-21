@@ -9,3 +9,8 @@ verify_jwt = false
 # 因为使用 Clerk JWT 而不是 Supabase JWT
 [functions.game-progress]
 verify_jwt = false
+
+# Game Levels Function - 禁用 JWT 验证
+# 公开访问，无需认证即可获取关卡数据
+[functions.game-levels]
+verify_jwt = false

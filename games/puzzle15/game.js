@@ -64,7 +64,7 @@ class Puzzle15Game {
     this.levelNumber = parseInt(urlParams.get('level')) || 1;
 
     // 加载关卡
-    this.loadLevel();
+    await this.loadLevel();
 
     // 初始化事件监听
     this.initEventListeners();
@@ -73,10 +73,18 @@ class Puzzle15Game {
     await this.loadProgress();
   }
 
-  loadLevel() {
+  async loadLevel() {
     try {
-      // 生成关卡配置
-      this.levelConfig = levelGenerator.generateLevel(this.difficulty, this.levelNumber);
+      // 从 MongoDB 加载关卡配置（如果失败会自动降级到本地生成）
+      console.log('[puzzle15] 加载关卡: game=puzzle15, difficulty=' + this.difficulty + ', level=' + this.levelNumber);
+
+      const levels = await window.levelLoaderEdgeFunction.loadLevels('puzzle15', this.difficulty);
+      this.levelConfig = window.levelLoaderEdgeFunction.getLevel(levels, this.levelNumber);
+
+      if (!this.levelConfig) {
+        throw new Error('未找到关卡数据: ' + this.levelNumber);
+      }
+
       console.log('[puzzle15] 关卡配置:', {
         difficulty: this.difficulty,
         level: this.levelNumber,

@@ -58,13 +58,15 @@ jobs:
 
           echo "✅ Deployment verification completed!"
 
-      - name: Set environment variables (if needed)
+      - name: Set environment variables
         working-directory: ./backend/supabase
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
-          echo "🔧 Setting environment variables for functions..."
+          echo "🔧 Setting environment variables for Edge Functions..."
 
-          # 示例：为函数设置环境变量
-          # supabase secrets set OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-          # supabase secrets set CLERK_SECRET_KEY=${{ secrets.CLERK_SECRET_KEY }}
+          # 为游戏函数设置 MongoDB 连接信息
+          supabase secrets set MONGODB_ATLAS_URI="${{ secrets.MONGODB_ATLAS_URI }}" --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+          supabase secrets set MONGODB_DB_NAME="${{ secrets.MONGODB_DB_NAME }}" --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
 
-          echo "Environment variables configured!"
+          echo "✅ MongoDB environment variables configured!"

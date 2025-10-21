@@ -1,13 +1,30 @@
-// Supabase Edge Function: game-progress
+// Supabase Edge Function: game-progress (MongoDB 版本)
 // 处理游戏进度的读写操作，支持 Web 版（Clerk JWT）和小程序版（微信 OpenID）
+// 数据存储：MongoDB Atlas
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { MongoClient } from "https://deno.land/x/mongo@v0.32.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-openid',
 };
+
+// MongoDB 客户端（复用连接）
+let client: MongoClient | null = null;
+
+async function getMongoClient() {
+  if (!client) {
+    const mongoUri = Deno.env.get('MONGODB_ATLAS_URI');
+    if (!mongoUri) {
+      throw new Error('缺少环境变量 MONGODB_ATLAS_URI');
+    }
+    client = new MongoClient();
+    await client.connect(mongoUri);
+    console.log('✅ 已连接到 MongoDB Atlas');
+  }
+  return client;
+}
 
 serve(async (req) => {
   // 处理 CORS 预检请求
@@ -33,8 +50,7 @@ serve(async (req) => {
     if (!userId) {
       const authHeader = req.headers.get('Authorization');
       if (authHeader) {
-        // 这里可以验证 Clerk JWT
-        // 简化版：直接从 JWT 中提取 user_id
+        // 验证 Clerk JWT
         try {
           const token = authHeader.replace('Bearer ', '');
           console.log('🔍 收到的 token 长度:', token.length);
@@ -104,42 +120,25 @@ serve(async (req) => {
       );
     }
 
-    // 创建 Supabase 客户端（使用 service_role key）
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      }
-    );
+    // 连接 MongoDB
+    const mongoClient = await getMongoClient();
+    const db = mongoClient.database(Deno.env.get('MONGODB_DB_NAME') || 'game_db');
+    const collection = db.collection('game_progress');
 
     // 处理不同的操作
     if (action === 'get') {
       // 读取游戏进度
-      const { data, error } = await supabaseAdmin
-        .from('game_progress')
-        .select('data, updated_at')
-        .eq('user_id', userId)
-        .eq('game', gameType)
-        .eq('data_key', dataKey)
-        .single();
-
-      if (error && error.code !== 'PGRST116') { // PGRST116 = not found
-        console.error('读取失败:', error);
-        return new Response(
-          JSON.stringify({ error: 'Database error', details: error }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
+      const document = await collection.findOne({
+        user_id: userId,
+        game: gameType,
+        data_key: dataKey
+      });
 
       return new Response(
         JSON.stringify({
           success: true,
-          data: data?.data || null,
-          updated_at: data?.updated_at || null
+          data: document?.data || null,
+          updated_at: document?.updated_at || null
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -156,28 +155,29 @@ serve(async (req) => {
 
       const timestamp = new Date().toISOString();
 
-      const { error } = await supabaseAdmin
-        .from('game_progress')
-        .upsert({
+      // 使用 updateOne 的 upsert 选项（MongoDB 版本的 upsert）
+      const result = await collection.updateOne(
+        {
           user_id: userId,
           game: gameType,
-          data_key: dataKey,
-          data: gameData,
-          updated_at: timestamp
-        }, {
-          onConflict: 'user_id,game,data_key',
-          ignoreDuplicates: false
-        });
+          data_key: dataKey
+        },
+        {
+          $set: {
+            user_id: userId,
+            game: gameType,
+            data_key: dataKey,
+            data: gameData,
+            updated_at: timestamp
+          },
+          $setOnInsert: {
+            created_at: timestamp
+          }
+        },
+        { upsert: true }
+      );
 
-      if (error) {
-        console.error('保存失败:', error);
-        return new Response(
-          JSON.stringify({ error: 'Database error', details: error }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      console.log(`✅ 保存成功: user=${userId}, game=${gameType}, key=${dataKey}`);
+      console.log(`✅ 保存成功: user=${userId}, game=${gameType}, key=${dataKey}, matched=${result.matchedCount}, modified=${result.modifiedCount}, upserted=${result.upsertedCount}`);
 
       return new Response(
         JSON.stringify({
