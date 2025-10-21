@@ -52,7 +52,7 @@ jobs:
               echo "📦 Deploying function: $func_name"
 
               # 部署单个函数
-              supabase functions deploy "$func_name" --no-verify-jwt
+              supabase functions deploy "$func_name" --no-verify-jwt --debug
 
               echo "✅ $func_name deployed successfully!"
             fi
