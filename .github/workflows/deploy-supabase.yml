@@ -36,7 +36,18 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           echo "🔗 Linking to Supabase project..."
-          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+          echo "Project ref: ${{ secrets.SUPABASE_PROJECT_REF }}"
+          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }} --debug
+
+          echo "Checking if config was created..."
+          ls -la .supabase/ 2>/dev/null || echo "No .supabase directory"
+          if [ -f ".supabase/config.toml" ]; then
+            echo "Config file content:"
+            cat .supabase/config.toml
+          else
+            echo "ERROR: Config file not created!"
+            exit 1
+          fi
 
       - name: Deploy Edge Functions
         working-directory: ./backend/supabase
