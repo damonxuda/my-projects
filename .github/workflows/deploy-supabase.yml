@@ -34,15 +34,17 @@ jobs:
         working-directory: ./backend/supabase
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
           echo "🔗 Linking to Supabase project..."
           echo "Project ref: ${{ secrets.SUPABASE_PROJECT_REF }}"
-          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }} --debug
+          # 使用环境变量 SUPABASE_DB_PASSWORD 实现非交互式链接
+          supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
 
           echo "Checking if config was created..."
           ls -la .supabase/ 2>/dev/null || echo "No .supabase directory"
           if [ -f ".supabase/config.toml" ]; then
-            echo "Config file content:"
+            echo "✅ Config file created successfully"
             cat .supabase/config.toml
           else
             echo "ERROR: Config file not created!"
@@ -63,7 +65,7 @@ jobs:
               echo "📦 Deploying function: $func_name"
 
               # 部署单个函数
-              supabase functions deploy "$func_name" --no-verify-jwt --debug
+              supabase functions deploy "$func_name" --no-verify-jwt
 
               echo "✅ $func_name deployed successfully!"
             fi
