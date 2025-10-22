@@ -930,6 +930,20 @@
     <script src="js/BlockCreator.js"></script>
     <script src="js/Trial.js"></script>
     <script src="js/App.js"></script>
+
+    <!-- Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <!-- Supabase 配置 -->
+    <script>
+        window.REACT_APP_SUPABASE_URL = '{{SUPABASE_URL}}';
+        window.REACT_APP_SUPABASE_ANON_KEY = '{{SUPABASE_ANON_KEY}}';
+    </script>
+
+    <!-- 游戏通用模块 -->
+    <script src="../shared/js/gameConfig.js"></script>
+    <script src="../shared/js/smartGameStorage.js"></script>
+
     <script src="js/History.js"></script>
 
     <script>

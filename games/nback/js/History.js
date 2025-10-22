@@ -15,11 +15,47 @@ function storageAvailable(type) {
 	}
 }
 
+// 初始化游戏存储管理器
+var gameStorage = null;
+try {
+	gameStorage = new SmartGameStorage('nback');
+} catch (e) {
+	console.warn('[N-Back] SmartGameStorage初始化失败:', e);
+}
+
 // adds a completed session to a user's history
 // if local storage is available, and the save toggle is on
-function addSessionToHistory(date, meanN) {
+async function addSessionToHistory(date, meanN) {
+	// 1. 保存历史记录到本地（用于显示历史列表）
 	if(storageAvailable('localStorage') && $("#save-toggle").prop('checked')) {
 		localStorage.setItem(date, meanN);
+	}
+
+	// 2. 使用SmartGameStorage保存游戏进度（自动处理本地/云端同步）
+	if (gameStorage && $("#save-toggle").prop('checked')) {
+		try {
+			console.log('[N-Back] 保存游戏进度:', { meanN });
+
+			// 从localStorage获取当前N级别，如果没有则使用meanN
+			let currentN = meanN;
+			if (typeof getCurrentLevel === 'function') {
+				const savedN = getCurrentLevel();
+				if (savedN) {
+					currentN = savedN;
+				}
+			}
+
+			// 保存游戏进度数据
+			await gameStorage.save('progress', {
+				current_n: currentN,
+				last_score: meanN,
+				updated_at: new Date().toISOString()
+			});
+
+			console.log('[N-Back] ✅ 游戏进度保存成功');
+		} catch (error) {
+			console.error('[N-Back] ❌ 保存游戏进度失败:', error);
+		}
 	}
 }
 
