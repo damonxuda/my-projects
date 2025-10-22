@@ -1,7 +1,7 @@
 // Supabase Edge Function: game-progress (MongoDB 版本)
 // 处理游戏进度的读写操作，支持 Web 版（Clerk JWT）和小程序版（微信 OpenID）
 // 数据存储：MongoDB Atlas
-// Updated: 2025-10-22 - Switch to standard MongoDB connection (non-SRV)
+// Updated: 2025-10-22 - Fix MongoDB connection string with correct hostnames
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { MongoClient } from "https://deno.land/x/mongo@v0.32.0/mod.ts";
