@@ -1,7 +1,7 @@
 // Supabase Edge Function: game-progress (MongoDB 版本)
 // 处理游戏进度的读写操作，支持 Web 版（Clerk JWT）和小程序版（微信 OpenID）
 // 数据存储：MongoDB Atlas
-// Updated: 2025-10-22 - Fix MongoDB connection string with correct hostnames
+// 重要：连接字符串必须包含 authMechanism=SCRAM-SHA-1 参数以支持 Deno MongoDB 驱动
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { MongoClient } from "https://deno.land/x/mongo@v0.32.0/mod.ts";
@@ -20,13 +20,6 @@ async function getMongoClient() {
     if (!mongoUri) {
       throw new Error('缺少环境变量 MONGODB_ATLAS_URI');
     }
-
-    // 调试日志：显示连接字符串格式（隐藏密码）
-    const uriForLog = mongoUri.replace(/:([^@]+)@/, ':***@');
-    console.log('🔍 MongoDB URI format:', uriForLog.substring(0, 100) + '...');
-    console.log('🔍 URI starts with:', mongoUri.substring(0, 15));
-    console.log('🔍 URI contains emf1cz9:', mongoUri.includes('emf1cz9'));
-
     client = new MongoClient();
     await client.connect(mongoUri);
     console.log('✅ 已连接到 MongoDB Atlas');
