@@ -20,6 +20,13 @@ async function getMongoClient() {
     if (!mongoUri) {
       throw new Error('缺少环境变量 MONGODB_ATLAS_URI');
     }
+
+    // 调试日志：显示连接字符串格式（隐藏密码）
+    const uriForLog = mongoUri.replace(/:([^@]+)@/, ':***@');
+    console.log('🔍 MongoDB URI format:', uriForLog.substring(0, 100) + '...');
+    console.log('🔍 URI starts with:', mongoUri.substring(0, 15));
+    console.log('🔍 URI contains emf1cz9:', mongoUri.includes('emf1cz9'));
+
     client = new MongoClient();
     await client.connect(mongoUri);
     console.log('✅ 已连接到 MongoDB Atlas');
