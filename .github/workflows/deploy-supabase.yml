@@ -66,7 +66,7 @@ jobs:
           echo "🔧 Setting environment variables for Edge Functions..."
 
           # 为游戏函数设置 MongoDB 连接信息
-          supabase secrets set MONGODB_ATLAS_URI="${{ secrets.MONGODB_ATLAS_URI }}" --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
-          supabase secrets set MONGODB_DB_NAME="${{ secrets.MONGODB_DB_NAME }}" --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+          supabase secrets set MONGODB_ATLAS_URI='${{ secrets.MONGODB_ATLAS_URI }}' --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+          supabase secrets set MONGODB_DB_NAME='${{ secrets.MONGODB_DB_NAME }}' --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
 
           echo "✅ MongoDB environment variables configured!"
