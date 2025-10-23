@@ -15,12 +15,12 @@ function storageAvailable(type) {
 	}
 }
 
-// 初始化游戏存储管理器
+// 初始化游戏存储管理器（通过 Edge Function 连接 Supabase）
 var gameStorage = null;
 try {
-	gameStorage = new SmartGameStorage('nback');
+	gameStorage = new SmartGameStorageEdgeFunction('nback');
 } catch (e) {
-	console.warn('[N-Back] SmartGameStorage初始化失败:', e);
+	console.warn('[N-Back] SmartGameStorageEdgeFunction初始化失败:', e);
 }
 
 // adds a completed session to a user's history
