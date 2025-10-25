@@ -50,18 +50,17 @@ class SmartGameStorage {
       try {
         const cloudSuccess = await this.saveToCloud(key, data, timestamp);
         if (!cloudSuccess) {
+          // 失败加入队列，等待30秒定时器重试（不立即重试）
           this.addToSyncQueue('save', key, data, timestamp);
-          setTimeout(() => this.processSyncQueue(), 1000);
         }
       } catch (error) {
         console.error(`❌ [${this.gameType}] 云端保存出错:`, error);
+        // 失败加入队列，等待30秒定时器重试（不立即重试）
         this.addToSyncQueue('save', key, data, timestamp);
-        setTimeout(() => this.processSyncQueue(), 1000);
       }
     } else if (isLoggedIn) {
-      // 注册用户离线或其他情况 - 加入同步队列
+      // 注册用户离线或其他情况 - 加入同步队列，等待30秒定时器重试
       this.addToSyncQueue('save', key, data, timestamp);
-      setTimeout(() => this.processSyncQueue(), 2000);
     }
 
     return true;

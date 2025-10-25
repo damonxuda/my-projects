@@ -23,34 +23,52 @@ class SmartGameStorageEdgeFunction extends SmartGameStorage {
       throw new Error('无法获取认证 token - Clerk 可能还未初始化完成');
     }
 
-    const response = await fetch(this.edgeFunctionUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': this.getSupabaseAnonKey(),
-        'Authorization': `Bearer ${token}` // Clerk JWT
-      },
-      body: JSON.stringify({
-        action,
-        gameType: this.gameType,
-        gameData: data,
-        dataKey: key
-      })
-    });
+    // 设置 5 秒超时控制
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      let errorData;
-      try {
-        errorData = JSON.parse(errorText);
-      } catch (e) {
-        errorData = { message: errorText };
+    try {
+      const response = await fetch(this.edgeFunctionUrl, {
+        method: 'POST',
+        signal: controller.signal,  // 添加超时控制
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': this.getSupabaseAnonKey(),
+          'Authorization': `Bearer ${token}` // Clerk JWT
+        },
+        body: JSON.stringify({
+          action,
+          gameType: this.gameType,
+          gameData: data,
+          dataKey: key
+        })
+      });
+
+      clearTimeout(timeoutId);  // 清除超时定时器
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (e) {
+          errorData = { message: errorText };
+        }
+        console.error(`❌ [Edge Function] ${action} 失败:`, errorData.message || errorText);
+        throw new Error(errorData.message || `Edge Function call failed (${response.status})`);
       }
-      console.error(`❌ [Edge Function] ${action} 失败:`, errorData.message || errorText);
-      throw new Error(errorData.message || `Edge Function call failed (${response.status})`);
-    }
 
-    return await response.json();
+      return await response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);  // 确保清除超时定时器
+
+      // 处理超时错误
+      if (error.name === 'AbortError') {
+        throw new Error(`请求超时（5秒无响应）`);
+      }
+
+      throw error;
+    }
   }
 
   /**
