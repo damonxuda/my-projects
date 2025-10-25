@@ -17,10 +17,32 @@ function storageAvailable(type) {
 
 // 初始化游戏存储管理器（通过 Edge Function 连接）
 var gameStorage = null;
-try {
-	gameStorage = new SmartGameStorageEdgeFunction('nback');
-} catch (e) {
-	console.warn('[N-Back] SmartGameStorageEdgeFunction初始化失败:', e);
+
+// 存储初始化函数（等待 Clerk 准备好）
+function initGameStorage() {
+	try {
+		gameStorage = new SmartGameStorageEdgeFunction('nback');
+		console.log('✅ [N-Back] SmartGameStorageEdgeFunction 初始化成功');
+	} catch (e) {
+		console.warn('[N-Back] SmartGameStorageEdgeFunction 初始化失败:', e);
+	}
+}
+
+// 检查 Clerk 是否已经初始化
+if (window.Clerk?.user) {
+	// Clerk 已初始化，直接初始化存储
+	initGameStorage();
+} else {
+	// 等待 Clerk 初始化完成事件
+	window.addEventListener('clerkReady', initGameStorage, { once: true });
+
+	// 设置超时保护，避免永久等待（5秒后以游客模式继续）
+	setTimeout(function() {
+		if (!gameStorage) {
+			console.warn('⚠️ [N-Back] Clerk 初始化超时，以游客模式继续');
+			initGameStorage();
+		}
+	}, 5000);
 }
 
 // adds a completed session to a user's history
