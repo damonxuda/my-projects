@@ -260,8 +260,13 @@ class SudokuLevelsPage {
   updateOverallStats() {
     let totalCompleted = 0;
 
-    Object.values(this.progress).forEach(difficultyProgress => {
-      totalCompleted += difficultyProgress.completed_levels ? difficultyProgress.completed_levels.length : 0;
+    // 只遍历已知的难度级别，避免遍历到其他属性
+    const difficulties = ['easy', 'medium', 'hard', 'expert', 'master'];
+    difficulties.forEach(difficulty => {
+      const difficultyProgress = this.progress[difficulty];
+      if (difficultyProgress && difficultyProgress.completed_levels) {
+        totalCompleted += difficultyProgress.completed_levels.length;
+      }
     });
 
     this.elements.overallStats.textContent = `${totalCompleted}/250`;
