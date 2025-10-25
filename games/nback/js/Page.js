@@ -336,6 +336,9 @@ function Page() {
                 saveCurrentLevel(self._n);
             }
 
+            // save progress to cloud (after each block)
+            addSessionToHistory(Date.now(), self._n);
+
             // reset start button to show block has ended
             startButton.value = "Start";
             startButton.textContent = "开始";
