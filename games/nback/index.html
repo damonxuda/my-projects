@@ -940,6 +940,70 @@
         window.REACT_APP_SUPABASE_ANON_KEY = '${REACT_APP_SUPABASE_ANON_KEY}';
     </script>
 
+    <!-- Clerk SDK 加载 -->
+    <script>
+      function loadClerkSDK() {
+        const primaryScript = document.createElement('script');
+        primaryScript.crossOrigin = 'anonymous';
+        primaryScript.setAttribute('data-clerk-publishable-key', '${CLERK_PUBLISHABLE_KEY}');
+        primaryScript.src = 'https://clerk.damonxuda.site/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+        primaryScript.type = 'text/javascript';
+
+        primaryScript.onload = function() {
+          console.log('✅ [N-Back] Clerk SDK加载成功');
+        };
+
+        primaryScript.onerror = function() {
+          console.warn('⚠️ [N-Back] 主Clerk CDN失败，尝试备用CDN...');
+          const fallbackScript = document.createElement('script');
+          fallbackScript.crossOrigin = 'anonymous';
+          fallbackScript.setAttribute('data-clerk-publishable-key', '${CLERK_PUBLISHABLE_KEY}');
+          fallbackScript.src = 'https://unpkg.com/@clerk/clerk-js@latest/dist/clerk.browser.js';
+          fallbackScript.type = 'text/javascript';
+
+          fallbackScript.onload = function() {
+            console.log('✅ [N-Back] Clerk SDK加载成功 (备用)');
+          };
+
+          fallbackScript.onerror = function() {
+            console.error('❌ [N-Back] Clerk加载失败，以离线模式继续');
+            window.clerkInitialized = true;
+            window.dispatchEvent(new CustomEvent('clerkReady'));
+          };
+
+          document.head.appendChild(fallbackScript);
+        };
+
+        document.head.appendChild(primaryScript);
+      }
+
+      setTimeout(loadClerkSDK, 100);
+    </script>
+
+    <!-- Clerk 初始化 -->
+    <script>
+      window.clerkInitialized = false;
+      window.addEventListener('load', async () => {
+        if (window.Clerk) {
+          try {
+            await window.Clerk.load();
+            console.log('✅ [N-Back] Clerk 初始化成功');
+
+            window.clerkInitialized = true;
+            window.dispatchEvent(new CustomEvent('clerkReady'));
+          } catch (error) {
+            console.error('❌ [N-Back] Clerk 初始化失败:', error);
+            window.clerkInitialized = true;
+            window.dispatchEvent(new CustomEvent('clerkReady'));
+          }
+        } else {
+          console.error('❌ [N-Back] Clerk SDK 未加载');
+          window.clerkInitialized = true;
+          window.dispatchEvent(new CustomEvent('clerkReady'));
+        }
+      });
+    </script>
+
     <!-- 游戏通用模块 -->
     <script src="../shared/js/gameConfig.js"></script>
     <script src="../shared/js/smartGameStorage.js"></script>
