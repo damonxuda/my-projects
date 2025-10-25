@@ -910,7 +910,8 @@
                 isAuthenticated: true,
                 authSource: 'token-parsed',
                 tokenExpiry: payload.exp,
-                parsedAt: Date.now()
+                parsedAt: Date.now(),
+                originalSessionToken: sessionToken  // 保存原始token供Edge Function使用
               };
 
 
