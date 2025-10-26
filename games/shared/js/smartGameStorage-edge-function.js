@@ -244,8 +244,6 @@ class SmartGameStorageEdgeFunction extends SmartGameStorage {
       // 保存进度
       await this.saveProgress(progress);
 
-      console.log(`✅ [${this.gameType}] Level ${levelNumber} (${difficulty}) completion recorded with ${stars} stars`);
-
     } catch (error) {
       console.error(`❌ [${this.gameType}] Failed to update level record:`, error);
       throw error;

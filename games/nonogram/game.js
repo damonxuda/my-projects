@@ -862,10 +862,6 @@ class NonogramGame {
         stars
       );
 
-      // 强制同步到云端
-      console.log('🔄 数织关卡完成，强制同步到云端');
-      await this.storage.forceSyncNow();
-
       this.elements.levelCompleteInfo.style.display = 'block';
     } catch (error) {
       console.error('Failed to save progress:', error);

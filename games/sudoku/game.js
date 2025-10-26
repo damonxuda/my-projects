@@ -664,81 +664,13 @@ class SudokuGame {
         return;
       }
 
-      // 检查updateLevelRecord方法是否存在
-      if (typeof this.storage.updateLevelRecord !== 'function') {
-        console.error('❌ updateLevelRecord方法不存在!', typeof this.storage.updateLevelRecord);
-        console.log('Storage methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(this.storage)));
-        return;
-      }
-
-      // 使用与数织游戏相同的进度保存机制
-      console.log('🚀 调用 updateLevelRecord...');
-
-      // 首先尝试直接调用父类方法
-      if (typeof this.storage.updateLevelRecord === 'function') {
-        const result = await this.storage.updateLevelRecord(
-          difficulty,
-          level,
-          timeInSeconds,
-          stars
-        );
-        console.log('✅ updateLevelRecord 结果:', result);
-      } else {
-        // 如果方法不存在，手动实现相同的逻辑
-        console.log('⚠️ updateLevelRecord方法不存在，使用手动实现');
-        const progress = await this.storage.loadProgress();
-
-        // 确保进度结构存在
-        if (!progress[difficulty]) {
-          progress[difficulty] = {
-            current_level: 1,
-            completed_levels: [],
-            level_records: {}
-          };
-        }
-
-        // 更新关卡记录
-        const record = progress[difficulty].level_records[level] || { attempts: 0 };
-        record.attempts++;
-        record.completed = true;
-        record.best_time = record.best_time ? Math.min(record.best_time, timeInSeconds) : timeInSeconds;
-        record.best_stars = record.best_stars ? Math.max(record.best_stars, stars) : stars;
-        record.last_completed = new Date().toISOString();
-
-        // 添加到已完成关卡列表
-        if (!progress[difficulty].completed_levels.includes(level)) {
-          progress[difficulty].completed_levels.push(level);
-        }
-
-        // 解锁下一关
-        progress[difficulty].current_level = Math.max(
-          progress[difficulty].current_level,
-          Math.min(50, level + 1)
-        );
-
-        // 保存进度
-        await this.storage.saveProgress(progress);
-        console.log('✅ 手动保存进度完成');
-      }
-
-      console.log('✅ 关卡记录更新成功，开始强制同步...');
-
-      // 强制同步到云端（与数织游戏保持一致）
-      console.log('🔄 数独关卡完成，强制同步到云端');
-      if (typeof this.storage.forceSyncNow === 'function') {
-        const syncResult = await this.storage.forceSyncNow();
-        console.log('✅ forceSyncNow 结果:', syncResult);
-      } else {
-        console.log('⚠️ forceSyncNow方法不存在，跳过云端同步');
-      }
-
-      console.log(`✅ Sudoku Level ${level} completion recorded with ${stars} stars`);
-
-      // 验证数据是否真的保存了
-      const savedProgress = await this.storage.loadProgress();
-      console.log('🔍 验证保存的进度:', savedProgress);
-      const levelRecord = savedProgress?.[difficulty]?.level_records?.[level];
-      console.log(`🔍 Level ${level} 的记录:`, levelRecord);
+      // 使用 SmartGameStorageEdgeFunction 的 updateLevelRecord 方法
+      await this.storage.updateLevelRecord(
+        difficulty,
+        level,
+        timeInSeconds,
+        stars
+      );
 
     } catch (error) {
       console.error('❌ Failed to record level completion:', error);
