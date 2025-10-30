@@ -52,6 +52,7 @@
             control-panel="none"
             background="none"
             visualization="3D"
+            tempo-scale="0.5"
           ></twisty-player>
         </div>
 
@@ -96,9 +97,17 @@
           <div class="formula-display" id="formulaDisplay" style="display: none;">
             <h3>🔤 公式</h3>
             <div class="formula" id="formulaText"></div>
-            <button id="executeBtn" class="btn btn-primary">
-              ▶️ 演示公式
-            </button>
+            <div class="formula-step-info" id="formulaStepInfo" style="text-align: center; margin: 10px 0; font-size: 0.9rem; color: #666;">
+              点击"准备演示"开始
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+              <button id="prepareBtn" class="btn btn-secondary">
+                🔄 准备演示
+              </button>
+              <button id="nextStepBtn" class="btn btn-primary" disabled>
+                准备演示
+              </button>
+            </div>
           </div>
 
           <!-- 提示信息 -->

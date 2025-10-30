@@ -4,6 +4,8 @@ class RubiksCubeGame {
   constructor() {
     this.tutorial = new TutorialManager();
     this.cubePlayer = null;
+    this.formulaSteps = [];  // 当前公式的步骤数组
+    this.currentFormulaStep = 0;  // 当前执行到第几步
     this.init();
   }
 
@@ -65,9 +67,14 @@ class RubiksCubeGame {
       this.completeCurrentLevel();
     });
 
-    // 演示公式
-    document.getElementById('executeBtn').addEventListener('click', () => {
-      this.executeFormula();
+    // 准备公式演示
+    document.getElementById('prepareBtn').addEventListener('click', () => {
+      this.prepareFormulaDemo();
+    });
+
+    // 执行下一步
+    document.getElementById('nextStepBtn').addEventListener('click', () => {
+      this.executeNextStep();
     });
 
     // 重置魔方
@@ -126,6 +133,22 @@ class RubiksCubeGame {
     if (step.formula) {
       document.getElementById('formulaDisplay').style.display = 'block';
       document.getElementById('formulaText').textContent = step.formula;
+
+      // 重置公式演示状态
+      this.formulaSteps = [];
+      this.currentFormulaStep = 0;
+
+      // 重置按钮文字
+      const nextStepBtn = document.getElementById('nextStepBtn');
+      if (nextStepBtn) {
+        nextStepBtn.textContent = '准备演示';
+        nextStepBtn.disabled = true;
+      }
+
+      const stepInfoEl = document.getElementById('formulaStepInfo');
+      if (stepInfoEl) {
+        stepInfoEl.textContent = '点击"准备演示"开始';
+      }
     } else {
       document.getElementById('formulaDisplay').style.display = 'none';
     }
@@ -154,6 +177,96 @@ class RubiksCubeGame {
     document.getElementById('nextBtn').style.display = 'block';
   }
 
+  // 解析公式字符串为步骤数组
+  parseFormula(formula) {
+    if (!formula) return [];
+    // 按空格分割，过滤空字符串
+    return formula.trim().split(/\s+/).filter(s => s.length > 0);
+  }
+
+  // 准备公式演示（重置到初始状态）
+  prepareFormulaDemo() {
+    const step = this.tutorial.getCurrentStep();
+    if (!step.formula) return;
+
+    // 解析公式
+    this.formulaSteps = this.parseFormula(step.formula);
+    this.currentFormulaStep = 0;
+
+    // 重置魔方到初始状态
+    this.resetCube();
+
+    // 更新按钮状态
+    this.updateFormulaButtons();
+
+    console.log(`📝 公式已准备: ${step.formula} (共${this.formulaSteps.length}步)`);
+  }
+
+  // 执行下一步公式
+  async executeNextStep() {
+    if (this.currentFormulaStep >= this.formulaSteps.length) {
+      console.log('✅ 公式演示完成');
+      return;
+    }
+
+    try {
+      const currentMove = this.formulaSteps[this.currentFormulaStep];
+      console.log(`▶️ 执行第${this.currentFormulaStep + 1}步: ${currentMove}`);
+
+      // 执行当前步骤
+      this.cubePlayer.alg = currentMove;
+      await this.cubePlayer.experimentalGetPlayer().play();
+
+      this.currentFormulaStep++;
+      this.updateFormulaButtons();
+
+      this.tutorial.incrementPractice();
+      this.updateStats();
+    } catch (e) {
+      console.error('执行步骤失败:', e);
+    }
+  }
+
+  // 更新公式按钮状态
+  updateFormulaButtons() {
+    const step = this.tutorial.getCurrentStep();
+    if (!step.formula) return;
+
+    const stepInfoEl = document.getElementById('formulaStepInfo');
+    const nextStepBtn = document.getElementById('nextStepBtn');
+
+    if (this.formulaSteps.length === 0) {
+      // 还没准备
+      if (stepInfoEl) {
+        stepInfoEl.textContent = '点击"准备演示"开始';
+      }
+      if (nextStepBtn) {
+        nextStepBtn.textContent = '准备演示';
+        nextStepBtn.disabled = true;
+      }
+    } else if (this.currentFormulaStep >= this.formulaSteps.length) {
+      // 已完成
+      if (stepInfoEl) {
+        stepInfoEl.textContent = `✅ 演示完成！（共 ${this.formulaSteps.length} 步）`;
+      }
+      if (nextStepBtn) {
+        nextStepBtn.textContent = '✅ 已完成';
+        nextStepBtn.disabled = true;
+      }
+    } else {
+      // 进行中
+      const currentMove = this.formulaSteps[this.currentFormulaStep];
+      if (stepInfoEl) {
+        stepInfoEl.textContent = `第 ${this.currentFormulaStep + 1} 步 / 共 ${this.formulaSteps.length} 步`;
+      }
+      if (nextStepBtn) {
+        nextStepBtn.textContent = `▶️ 执行: ${currentMove}`;
+        nextStepBtn.disabled = false;
+      }
+    }
+  }
+
+  // 旧的一次性播放功能（保留，以防需要）
   async executeFormula() {
     const step = this.tutorial.getCurrentStep();
     if (!step.formula) return;
