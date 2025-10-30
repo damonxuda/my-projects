@@ -248,11 +248,11 @@ async function buildJobSettings(inputKey, outputPrefix, settings) {
               SpatialAdaptiveQuantization: "ENABLED",
               TemporalAdaptiveQuantization: "ENABLED",
               FlickerAdaptiveQuantization: "DISABLED",
-              EntropyEncoding: "CABAC",
+              EntropyEncoding: "CAVLC",  // Baseline Profile只支持CAVLC
               Bitrate: mobileBitrate, // 智能调整的码率
               FramerateControl: "SPECIFIED",
               RateControlMode: "CBR",
-              CodecProfile: "MAIN",
+              CodecProfile: "BASELINE",  // 改用Baseline Profile提高兼容性
               Telecine: "NONE",
               MinIInterval: 0,
               AdaptiveQuantization: "HIGH",
@@ -264,7 +264,7 @@ async function buildJobSettings(inputKey, outputPrefix, settings) {
               UnregisteredSeiTimecode: "DISABLED",
               GopSizeUnits: "FRAMES",
               ParControl: "INITIALIZE_FROM_SOURCE",
-              NumberBFramesBetweenReferenceFrames: 2,
+              NumberBFramesBetweenReferenceFrames: 0,  // Baseline Profile不支持B帧
               RepeatPps: "DISABLED",
               FramerateNumerator: 24, // 降低帧率到24fps
               FramerateDenominator: 1,
@@ -381,11 +381,11 @@ function buildVideoDescription(settings) {
         SpatialAdaptiveQuantization: "ENABLED",
         TemporalAdaptiveQuantization: "ENABLED",
         FlickerAdaptiveQuantization: "DISABLED",
-        EntropyEncoding: "CABAC",
+        EntropyEncoding: "CAVLC",  // Baseline Profile只支持CAVLC，不支持CABAC
         Bitrate: resolution.bitrate,
         FramerateControl: "SPECIFIED",
         RateControlMode: "CBR",
-        CodecProfile: "MAIN",
+        CodecProfile: "BASELINE",  // 改用Baseline Profile提高桌面浏览器兼容性
         Telecine: "NONE",
         MinIInterval: 0,
         AdaptiveQuantization: "HIGH",
@@ -397,7 +397,7 @@ function buildVideoDescription(settings) {
         UnregisteredSeiTimecode: "DISABLED",
         GopSizeUnits: "FRAMES",
         ParControl: "INITIALIZE_FROM_SOURCE",
-        NumberBFramesBetweenReferenceFrames: 2,
+        NumberBFramesBetweenReferenceFrames: 0,  // Baseline Profile不支持B帧
         RepeatPps: "DISABLED",
         FramerateNumerator: 30,
         FramerateDenominator: 1,
