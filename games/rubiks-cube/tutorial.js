@@ -10,7 +10,31 @@ class TutorialManager {
       practiceCount: 0
     };
 
+    // 初始化云端存储系统
+    this.gameStorage = null;
+    this.initGameStorage();
+
     this.loadProgress();
+  }
+
+  // 初始化游戏存储
+  async initGameStorage() {
+    // 等待 Clerk 初始化完成
+    if (!window.clerkInitialized) {
+      await new Promise(resolve => {
+        window.addEventListener('clerkReady', resolve, { once: true });
+      });
+    }
+
+    try {
+      this.gameStorage = new SmartGameStorageEdgeFunction('rubiks-cube');
+      console.log('✅ [魔方] SmartGameStorageEdgeFunction 初始化成功');
+
+      // 加载云端进度（如果有）
+      await this.loadProgressFromCloud();
+    } catch (e) {
+      console.warn('[魔方] SmartGameStorageEdgeFunction 初始化失败:', e);
+    }
   }
 
   // 获取当前关卡
@@ -111,18 +135,34 @@ class TutorialManager {
     return Math.floor(elapsed / 60000);  // 转换为分钟
   }
 
-  // 保存进度到 localStorage
-  saveProgress() {
+  // 保存进度（本地 + 云端）
+  async saveProgress() {
     const progress = {
       currentLevel: this.currentLevel,
       currentStep: this.currentStep,
       completedLevels: Array.from(this.completedLevels),
       stats: this.stats
     };
-    localStorage.setItem('rubiksTutorialProgress', JSON.stringify(progress));
+
+    // 保存到本地
+    try {
+      localStorage.setItem('rubiksTutorialProgress', JSON.stringify(progress));
+    } catch (e) {
+      console.error('[魔方] 本地保存失败:', e);
+    }
+
+    // 保存到云端
+    if (this.gameStorage) {
+      try {
+        await this.gameStorage.save('progress', progress);
+        console.log('✅ [魔方] 进度已同步到云端');
+      } catch (e) {
+        console.warn('[魔方] 云端保存失败:', e);
+      }
+    }
   }
 
-  // 加载进度
+  // 加载进度（本地）
   loadProgress() {
     try {
       const saved = localStorage.getItem('rubiksTutorialProgress');
@@ -135,14 +175,46 @@ class TutorialManager {
           startTime: Date.now(),
           practiceCount: 0
         };
+        console.log('✅ [魔方] 本地进度已加载');
       }
     } catch (e) {
-      console.error('加载进度失败:', e);
+      console.error('[魔方] 加载本地进度失败:', e);
     }
   }
 
-  // 重置进度
-  resetProgress() {
+  // 从云端加载进度
+  async loadProgressFromCloud() {
+    if (!this.gameStorage) return;
+
+    try {
+      const cloudProgress = await this.gameStorage.load('progress');
+      if (cloudProgress) {
+        this.currentLevel = cloudProgress.currentLevel || 0;
+        this.currentStep = cloudProgress.currentStep || 0;
+        this.completedLevels = new Set(cloudProgress.completedLevels || []);
+        this.stats = cloudProgress.stats || {
+          startTime: Date.now(),
+          practiceCount: 0
+        };
+
+        // 更新本地缓存
+        localStorage.setItem('rubiksTutorialProgress', JSON.stringify(cloudProgress));
+        console.log('✅ [魔方] 云端进度已加载');
+
+        // 通知游戏更新 UI
+        if (window.game) {
+          window.game.renderUI();
+          window.game.renderLevelList();
+          window.game.updateStats();
+        }
+      }
+    } catch (e) {
+      console.warn('[魔方] 加载云端进度失败:', e);
+    }
+  }
+
+  // 重置进度（本地 + 云端）
+  async resetProgress() {
     this.currentLevel = 0;
     this.currentStep = 0;
     this.completedLevels.clear();
@@ -150,7 +222,19 @@ class TutorialManager {
       startTime: Date.now(),
       practiceCount: 0
     };
+
+    // 清除本地
     localStorage.removeItem('rubiksTutorialProgress');
+
+    // 清除云端
+    if (this.gameStorage) {
+      try {
+        await this.gameStorage.clearCloudData('progress');
+        console.log('✅ [魔方] 云端进度已清除');
+      } catch (e) {
+        console.warn('[魔方] 清除云端进度失败:', e);
+      }
+    }
   }
 }
 

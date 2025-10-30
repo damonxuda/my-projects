@@ -7,8 +7,31 @@
   <link rel="stylesheet" href="styles.css">
   <!-- 使用 cubing.js 的 twisty player -->
   <script src="https://cdn.cubing.net/js/cubing/twisty" type="module"></script>
+
+  <!-- Clerk SDK for authentication -->
+  <script crossorigin="anonymous" data-clerk-publishable-key="${CLERK_PUBLISHABLE_KEY}" src="https://clerk.damonxuda.site/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" type="text/javascript"></script>
+
+  <!-- Supabase SDK -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 </head>
 <body>
+  <!-- 用户认证界面 -->
+  <div class="auth-section" id="auth-section">
+    <div class="auth-status" id="auth-status">正在加载...</div>
+
+    <!-- 未登录状态 -->
+    <div id="auth-login-view" style="display: none;">
+      <button class="auth-button login" id="login-btn">🔐 登录</button>
+    </div>
+
+    <!-- 已登录状态 -->
+    <div id="auth-user-view" style="display: none;">
+      <div class="auth-user-info">
+        <div class="auth-user-avatar" id="user-avatar" title="点击查看用户菜单">👤</div>
+      </div>
+    </div>
+  </div>
+
   <div class="container">
     <!-- 头部 -->
     <header class="header">
@@ -144,6 +167,231 @@
       </div>
     </div>
   </div>
+
+  <!-- 游戏通用模块 -->
+  <script src="../shared/js/gameConfig.js"></script>
+  <script src="../shared/js/smartGameStorage.js"></script>
+  <script src="../shared/js/smartGameStorage-edge-function.js"></script>
+
+  <!-- Clerk 认证初始化 -->
+  <script>
+    // Clerk 初始化（魔方游戏）
+    window.clerkInitialized = false;
+
+    async function initializeClerkForGames() {
+      console.log('🎮 [魔方] 开始初始化 Clerk...');
+
+      if (!window.Clerk) {
+        console.error('❌ [魔方] Clerk SDK 未加载');
+        window.clerkInitialized = true;
+        window.dispatchEvent(new CustomEvent('clerkReady'));
+        return;
+      }
+
+      try {
+        await window.Clerk.load({
+          domain: window.location.hostname,
+          cookieDomain: window.location.hostname.startsWith('localhost')
+            ? 'localhost'
+            : `.${window.location.hostname}`,
+          cookiePath: '/',
+          allowOrigins: [
+            window.location.origin,
+            `${window.location.protocol}//${window.location.hostname}`,
+            `${window.location.protocol}//${window.location.hostname}/quiz`,
+            `${window.location.protocol}//${window.location.hostname}/admin`,
+            `${window.location.protocol}//${window.location.hostname}/videos`,
+            `${window.location.protocol}//${window.location.hostname}/games`
+          ],
+          sessionSyncing: true
+        });
+
+        console.log('✅ [魔方] Clerk 初始化完成');
+
+        // 如果已登录，创建 mockClerkUser 供存储系统使用
+        if (window.Clerk.user && window.Clerk.session) {
+          const token = await window.Clerk.session.getToken();
+          window.mockClerkUser = {
+            id: window.Clerk.user.id,
+            firstName: window.Clerk.user.firstName,
+            lastName: window.Clerk.user.lastName,
+            emailAddresses: window.Clerk.user.emailAddresses,
+            imageUrl: window.Clerk.user.imageUrl,
+            hasImage: window.Clerk.user.hasImage,
+            isAuthenticated: true,
+            originalSessionToken: token
+          };
+          console.log('✅ [魔方] mockClerkUser 已创建');
+        }
+
+        // 更新认证 UI
+        updateAuthUI();
+
+        // 监听认证状态变化
+        window.Clerk.addListener(async ({ user, session }) => {
+          console.log('[魔方] Clerk 状态变化:', user ? '已登录' : '未登录');
+
+          if (user && session) {
+            const token = await session.getToken();
+            window.mockClerkUser = {
+              id: user.id,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              emailAddresses: user.emailAddresses,
+              imageUrl: user.imageUrl,
+              hasImage: user.hasImage,
+              isAuthenticated: true,
+              originalSessionToken: token
+            };
+          } else {
+            window.mockClerkUser = null;
+          }
+
+          updateAuthUI();
+        });
+
+      } catch (error) {
+        console.error('❌ [魔方] Clerk 初始化失败:', error);
+      } finally {
+        window.clerkInitialized = true;
+        window.dispatchEvent(new CustomEvent('clerkReady'));
+        console.log('✅ [魔方] Clerk 初始化流程完成');
+      }
+    }
+
+    // 更新认证 UI
+    function updateAuthUI() {
+      const authStatus = document.getElementById('auth-status');
+      const authLoginView = document.getElementById('auth-login-view');
+      const authUserView = document.getElementById('auth-user-view');
+      const loginBtn = document.getElementById('login-btn');
+      const userAvatar = document.getElementById('user-avatar');
+
+      const isSignedIn = !!(window.Clerk && window.Clerk.user);
+      const user = window.Clerk?.user;
+
+      if (isSignedIn && user) {
+        authStatus.textContent = '已登录';
+        authLoginView.style.display = 'none';
+        authUserView.style.display = 'block';
+
+        // 显示用户头像
+        if (user.imageUrl && user.hasImage) {
+          userAvatar.innerHTML = `<img src="${user.imageUrl}" alt="用户头像" />`;
+        } else if (user.firstName || user.lastName) {
+          const firstName = user.firstName || '';
+          const lastName = user.lastName || '';
+          const fullName = (firstName + ' ' + lastName).trim();
+          const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&size=48&background=667eea&color=fff&bold=true&rounded=true`;
+          userAvatar.innerHTML = `<img src="${avatarUrl}" alt="用户头像" />`;
+        } else if (user.primaryEmailAddress?.emailAddress) {
+          const email = user.primaryEmailAddress.emailAddress;
+          const emailPrefix = email.split('@')[0];
+          const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(emailPrefix)}&size=48&background=764ba2&color=fff&bold=true&rounded=true&length=1`;
+          userAvatar.innerHTML = `<img src="${avatarUrl}" alt="用户头像" />`;
+        } else {
+          userAvatar.innerHTML = '👤';
+        }
+      } else {
+        authStatus.textContent = '未登录';
+        authLoginView.style.display = 'block';
+        authUserView.style.display = 'none';
+      }
+    }
+
+    // 登录按钮事件
+    document.getElementById('login-btn')?.addEventListener('click', async () => {
+      try {
+        await window.Clerk.openSignIn();
+      } catch (error) {
+        console.error('[魔方] 登录失败:', error);
+        alert('登录失败，请稍后重试');
+      }
+    });
+
+    // 头像点击事件
+    document.getElementById('user-avatar')?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      showUserMenu(e);
+    });
+
+    // 用户菜单
+    function showUserMenu(event) {
+      const existingMenu = document.getElementById('user-menu');
+      if (existingMenu) existingMenu.remove();
+
+      const menu = document.createElement('div');
+      menu.id = 'user-menu';
+      menu.innerHTML = `
+        <div style="
+          position: fixed;
+          top: ${event.clientY + 10}px;
+          left: ${event.clientX - 100}px;
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          border-radius: 8px;
+          padding: 0.5rem 0;
+          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+          z-index: 10000;
+          color: #333;
+          font-size: 0.85rem;
+          min-width: 130px;
+        ">
+          <div class="menu-item" data-action="profile" style="padding: 0.6rem 1rem; cursor: pointer; transition: background 0.2s;">
+            📝 编辑资料
+          </div>
+          <div class="menu-item" data-action="logout" style="padding: 0.6rem 1rem; cursor: pointer; transition: background 0.2s;">
+            🚪 登出
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(menu);
+
+      menu.querySelectorAll('.menu-item').forEach(item => {
+        item.addEventListener('mouseenter', () => {
+          item.style.background = 'rgba(0, 0, 0, 0.1)';
+        });
+        item.addEventListener('mouseleave', () => {
+          item.style.background = 'transparent';
+        });
+      });
+
+      menu.addEventListener('click', async (e) => {
+        const action = e.target.getAttribute('data-action');
+        menu.remove();
+
+        if (action === 'profile') {
+          try {
+            await window.Clerk.openUserProfile();
+          } catch (error) {
+            alert('无法打开用户资料编辑');
+          }
+        } else if (action === 'logout') {
+          if (confirm('确定要登出吗？')) {
+            try {
+              await window.Clerk.signOut();
+              updateAuthUI();
+            } catch (error) {
+              console.error('[魔方] 登出失败:', error);
+              alert('登出失败');
+            }
+          }
+        }
+      });
+
+      setTimeout(() => {
+        document.addEventListener('click', function closeMenu() {
+          menu.remove();
+          document.removeEventListener('click', closeMenu);
+        });
+      }, 100);
+    }
+
+    // 页面加载完成后初始化
+    window.addEventListener('DOMContentLoaded', initializeClerkForGames);
+  </script>
 
   <script src="levels.js"></script>
   <script src="tutorial.js"></script>
