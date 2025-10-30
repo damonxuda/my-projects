@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>魔方新手训练营 - 从零开始学魔方</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- 使用 cubing.js 的 twisty player -->
+  <script src="https://cdn.cubing.net/js/cubing/twisty" type="module"></script>
+</head>
+<body>
+  <div class="container">
+    <!-- 头部 -->
+    <header class="header">
+      <h1>🎯 魔方新手训练营</h1>
+      <p class="subtitle">一步一步学会还原三阶魔方</p>
+    </header>
+
+    <!-- 主要内容区 -->
+    <main class="main-content">
+      <!-- 左侧：魔方显示 -->
+      <div class="cube-section">
+        <div class="cube-container">
+          <twisty-player
+            id="cube"
+            puzzle="3x3x3"
+            hint-facelets="none"
+            back-view="none"
+            control-panel="none"
+            background="none"
+            visualization="3D"
+          ></twisty-player>
+        </div>
+
+        <!-- 控制按钮 -->
+        <div class="controls">
+          <button id="resetBtn" class="btn btn-secondary">
+            🔄 重置魔方
+          </button>
+          <button id="scrambleBtn" class="btn btn-secondary">
+            🎲 随机打乱
+          </button>
+        </div>
+      </div>
+
+      <!-- 右侧：教学内容 -->
+      <div class="tutorial-section">
+        <!-- 进度指示器 -->
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="level-info">
+          <span id="currentLevel">第1关</span>
+          <span id="levelProgress">1/8</span>
+        </div>
+
+        <!-- 教学内容卡片 -->
+        <div class="tutorial-card">
+          <h2 id="tutorialTitle">欢迎来到魔方训练营！</h2>
+
+          <div id="tutorialContent" class="tutorial-content">
+            <p>你将通过8个关卡，逐步学会还原三阶魔方。</p>
+            <p>让我们从认识魔方开始吧！</p>
+          </div>
+
+          <!-- 当前步骤说明 -->
+          <div class="step-info" id="stepInfo">
+            <h3>📝 当前任务</h3>
+            <p id="stepDescription">点击"开始学习"进入第一关</p>
+          </div>
+
+          <!-- 公式显示 -->
+          <div class="formula-display" id="formulaDisplay" style="display: none;">
+            <h3>🔤 公式</h3>
+            <div class="formula" id="formulaText"></div>
+            <button id="executeBtn" class="btn btn-primary">
+              ▶️ 演示公式
+            </button>
+          </div>
+
+          <!-- 提示信息 -->
+          <div class="hint-box" id="hintBox" style="display: none;">
+            <h3>💡 提示</h3>
+            <p id="hintText"></p>
+          </div>
+
+          <!-- 操作按钮 -->
+          <div class="action-buttons">
+            <button id="prevBtn" class="btn btn-secondary" style="display: none;">
+              ⬅️ 上一步
+            </button>
+            <button id="startBtn" class="btn btn-primary btn-large">
+              🚀 开始学习
+            </button>
+            <button id="nextBtn" class="btn btn-primary" style="display: none;">
+              ➡️ 下一步
+            </button>
+            <button id="completeBtn" class="btn btn-success" style="display: none;">
+              ✅ 完成本关
+            </button>
+          </div>
+        </div>
+
+        <!-- 成绩统计 -->
+        <div class="stats-card">
+          <h3>📊 学习进度</h3>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <span class="stat-label">已完成关卡</span>
+              <span class="stat-value" id="completedLevels">0/8</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">学习时间</span>
+              <span class="stat-value" id="studyTime">0分钟</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">练习次数</span>
+              <span class="stat-value" id="practiceCount">0次</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- 底部导航 -->
+    <nav class="level-nav">
+      <h3>关卡列表</h3>
+      <div class="level-list" id="levelList"></div>
+    </nav>
+
+    <!-- 完成关卡弹窗 -->
+    <div class="modal" id="completeModal" style="display: none;">
+      <div class="modal-content">
+        <h2>🎉 恭喜完成！</h2>
+        <p id="completeMessage"></p>
+        <div class="modal-buttons">
+          <button id="continueBtn" class="btn btn-primary">
+            继续下一关 ➡️
+          </button>
+          <button id="closeModalBtn" class="btn btn-secondary">
+            返回
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="levels.js"></script>
+  <script src="tutorial.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
