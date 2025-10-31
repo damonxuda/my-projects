@@ -8,6 +8,7 @@ on:
       - 'quiz/**'
       - 'videos/**'
       - 'admin/**'
+      - 'trading/**'
       - 'schedule/**'
       - 'auth-clerk/**'
       - 'shared/**'
@@ -38,6 +39,7 @@ jobs:
             quiz/package-lock.json
             videos/package-lock.json
             admin/package-lock.json
+            trading/package-lock.json
             auth-clerk/package-lock.json
 
       # 3. 配置 AWS CLI
@@ -54,8 +56,8 @@ jobs:
         run: |
           echo "🔍 检测项目变化..."
 
-          # 检测每个项目的变化（添加admin）
-          for project in schedule auth-clerk shared quiz videos admin; do
+          # 检测每个项目的变化（添加admin + trading）
+          for project in schedule auth-clerk shared quiz videos admin trading; do
             if git diff --name-only HEAD~1 HEAD | grep -q "^${project}/"; then
               echo "${project//-/_}_changed=true" >> $GITHUB_OUTPUT
               echo "✅ ${project} project has changes"
@@ -65,12 +67,13 @@ jobs:
             fi
           done
 
-          # 依赖关系处理（修正变量名 + admin）
+          # 依赖关系处理（修正变量名 + admin + trading）
           if [[ "$(cat $GITHUB_OUTPUT | grep -E 'auth_clerk_changed=true|shared_changed=true')" ]]; then
             echo "quiz_changed=true" >> $GITHUB_OUTPUT
             echo "videos_changed=true" >> $GITHUB_OUTPUT
             echo "admin_changed=true" >> $GITHUB_OUTPUT
-            echo "🔄 Dependencies changed, forcing Quiz, Videos and Admin rebuild"
+            echo "trading_changed=true" >> $GITHUB_OUTPUT
+            echo "🔄 Dependencies changed, forcing Quiz, Videos, Admin and Trading rebuild"
           fi
 
           # 检测根目录文件变化
@@ -252,6 +255,45 @@ jobs:
           echo "✅ Admin deployed"
           echo "📁 Admin: https://damonxuda.site/admin/"
 
+      # 8.5. 构建并部署 Trading 项目（LLM Trading Observer - 管理员专属）
+      - name: Install Trading Dependencies
+        if: steps.changes.outputs.trading_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        run: |
+          echo "📦 Installing Trading dependencies..."
+          if [ -d "./trading" ]; then
+            cd trading && npm ci
+            cd ../auth-clerk && npm ci
+            echo "✅ Trading dependencies installed"
+          else
+            echo "⚠️ Trading directory not found"
+          fi
+
+      - name: Build Trading Application
+        if: steps.changes.outputs.trading_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        working-directory: ./trading
+        env:
+          CI: false
+        run: |
+          echo "🔧 Setting environment variables..."
+          echo "REACT_APP_CLERK_PUBLISHABLE_KEY=${{ secrets.REACT_APP_CLERK_PUBLISHABLE_KEY }}" >> .env.production
+          echo "REACT_APP_ADMIN_EMAILS=${{ secrets.REACT_APP_ADMIN_EMAILS }}" >> .env.production
+          echo "REACT_APP_TRADING_API_URL=${{ secrets.REACT_APP_TRADING_API_URL }}" >> .env.production
+          echo "GENERATE_SOURCEMAP=false" >> .env.production
+
+          echo "🏗️ Building Trading React application..."
+          npm run build
+
+      - name: Deploy Trading to S3
+        if: steps.changes.outputs.trading_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        run: |
+          echo "☁️ Deploying Trading to S3..."
+          aws s3 rm s3://damonxuda-projects/trading/ --recursive
+          aws s3 sync ./trading/build/ s3://damonxuda-projects/trading/ \
+            --cache-control "no-cache, no-store, must-revalidate" \
+            --exclude ".DS_Store"
+          echo "✅ Trading deployed"
+          echo "📁 Trading: https://damonxuda.site/trading/"
+
       # 9. 验证部署和Clerk认证
       - name: Verify Clerk Authentication Setup
         run: |
@@ -265,6 +307,9 @@ jobs:
           echo ""
           echo "🔍 3. 检查 Admin 文件:"
           aws s3 ls s3://damonxuda-projects/admin/ --recursive || echo "Admin files not found"
+          echo ""
+          echo "🔍 4. 检查 Trading 文件:"
+          aws s3 ls s3://damonxuda-projects/trading/ --recursive || echo "Trading files not found"
 
       # 10. 部署根目录文件和games目录
       - name: Deploy root files
@@ -382,6 +427,9 @@ jobs:
           echo "=== Admin ==="
           aws s3 ls s3://damonxuda-projects/admin/ --recursive | head -3 || echo "❌ Admin not found"
 
+          echo "=== Trading ==="
+          aws s3 ls s3://damonxuda-projects/trading/ --recursive | head -3 || echo "❌ Trading not found"
+
       # 13. 部署成功报告
       - name: Deploy Success Report
         run: |
@@ -394,6 +442,7 @@ jobs:
           echo "   Quiz: ${{ steps.changes.outputs.quiz_changed }}"
           echo "   Videos: ${{ steps.changes.outputs.videos_changed }}"
           echo "   Admin: ${{ steps.changes.outputs.admin_changed }}"
+          echo "   Trading: ${{ steps.changes.outputs.trading_changed }}"
           echo "   强制部署: ${{ steps.changes.outputs.force_deploy }}"
           echo ""
           echo "🌐 项目访问地址:"
@@ -401,5 +450,6 @@ jobs:
           echo "   🧠 Quiz: https://damonxuda.site/quiz/"
           echo "   🎬 Videos: https://damonxuda.site/videos/"
           echo "   🛡️ Admin: https://damonxuda.site/admin/"
+          echo "   📊 Trading: https://damonxuda.site/trading/"
           echo ""
           echo "✅ 部署完成！所有项目现已部署到 damonxuda-projects bucket!"

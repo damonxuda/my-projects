@@ -1,0 +1,17 @@
+{
+  "name": "llm-trading-lambda",
+  "version": "1.0.0",
+  "description": "AWS Lambda function for LLM trading decisions",
+  "type": "module",
+  "main": "index.mjs",
+  "scripts": {
+    "test": "node index.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
