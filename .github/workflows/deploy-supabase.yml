@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - 'backend/supabase/functions/**'
+      - 'backend/supabase/config.toml'
       - '.github/workflows/deploy-supabase.yml'
   workflow_dispatch:
 

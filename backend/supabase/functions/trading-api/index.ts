@@ -1,6 +1,7 @@
 // Supabase Edge Function: trading-api
 // 用途：LLM交易观察系统的安全API层
 // 只允许管理员访问交易数据
+// 使用 Clerk JWT 进行身份验证
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
