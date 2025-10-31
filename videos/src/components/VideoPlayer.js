@@ -367,7 +367,6 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
               ref={videoRef}
               src={videoUrl}
               controls
-              crossOrigin="anonymous"
               className="responsive-video"
               onError={async (e) => {
                 const errorCode = e.target.error?.code;
