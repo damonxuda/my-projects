@@ -14,3 +14,9 @@ verify_jwt = false
 # 公开访问，无需认证即可获取关卡数据
 [functions.game-levels]
 verify_jwt = false
+
+# Trading API Function - 禁用 JWT 验证
+# 因为使用 Clerk JWT 而不是 Supabase JWT
+# 权限验证在函数内部通过 Clerk token 完成
+[functions.trading-api]
+verify_jwt = false
