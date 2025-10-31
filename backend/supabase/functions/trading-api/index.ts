@@ -52,6 +52,27 @@ serve(async (req) => {
     console.log(`✅ Admin verified: ${userEmail}`)
 
     // ============================================
+    // DEBUG ENDPOINT (临时调试用，生产环境应删除)
+    // ============================================
+    if (req.method === 'GET' && path === '/debug') {
+      const adminEmailsEnv = Deno.env.get('ADMIN_EMAILS') || ''
+      return new Response(
+        JSON.stringify({
+          success: true,
+          debug: {
+            tokenReceived: !!clerkToken,
+            tokenLength: clerkToken?.length,
+            userEmail: userEmail,
+            isAdmin: isAdmin,
+            adminEmailsConfigured: adminEmailsEnv.split(',').map(e => e.trim()),
+            timestamp: new Date().toISOString()
+          }
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // ============================================
     // 2. 初始化 Supabase 客户端（使用 service_role）
     // ============================================
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
