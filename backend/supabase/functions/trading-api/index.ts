@@ -195,14 +195,27 @@ async function verifyClerkToken(token: string): Promise<string | null> {
     // 简化版本：直接解析 JWT（生产环境应该验证签名）
     const parts = token.split('.')
     if (parts.length !== 3) {
+      console.log('Token is not JWT format, might be session ID')
       return null
     }
 
-    const payload = JSON.parse(atob(parts[1]))
+    // Base64url decode (替换 - 和 _ 字符)
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const padding = '='.repeat((4 - base64.length % 4) % 4)
+    const payload = JSON.parse(atob(base64 + padding))
+
+    console.log('JWT payload keys:', Object.keys(payload))
 
     // 从 payload 中提取用户邮箱
-    // Clerk JWT 结构：{ sub: "user_xxx", email: "xxx@xxx.com", ... }
-    return payload.email || payload.primary_email_address || null
+    // Clerk JWT 可能的字段：email, email_addresses, primaryEmailAddress
+    const userEmail = payload.email ||
+                     payload.primary_email_address ||
+                     payload.email_addresses?.[0] ||
+                     payload.emailAddresses?.[0]?.emailAddress ||
+                     null
+
+    console.log('Extracted email from JWT:', userEmail)
+    return userEmail
 
   } catch (error) {
     console.error('Token verification failed:', error)
