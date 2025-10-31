@@ -251,6 +251,11 @@
           <div class="button-title">⚙️ 系统管理</div>
           <div class="access-badge private">🔐 需要登录</div>
         </a>
+
+        <a href="/trading/" class="nav-button private" id="trading-link" style="display: none;">
+          <div class="button-title">📊 量化交易</div>
+          <div class="access-badge private">🛡️ 管理员专属</div>
+        </a>
       </div>
 
       <!-- 用户认证界面 -->
@@ -279,6 +284,8 @@
     <script crossorigin="anonymous" data-clerk-publishable-key="${CLERK_PUBLISHABLE_KEY}" src="https://clerk.damonxuda.site/npm/@clerk/clerk-js@latest/dist/clerk.browser.js" type="text/javascript"></script>
 
     <script>
+      // Admin emails configuration (replaced during build)
+      const ADMIN_EMAILS = '${ADMIN_EMAILS}'.split(',').map(e => e.trim());
 
       // 主页面认证和跨模块跳转逻辑
       window.addEventListener('load', async () => {
@@ -293,6 +300,7 @@
         const quizLink = document.getElementById('quiz-link');
         const videosLink = document.getElementById('videos-link');
         const adminLink = document.getElementById('admin-link');
+        const tradingLink = document.getElementById('trading-link');
 
 
         // 更新UI状态
@@ -333,12 +341,25 @@
               userAvatar.innerHTML = '👤';
             }
 
-            console.log('👤 用户已登录:', user.primaryEmailAddress?.emailAddress);
+            // 检查是否为管理员，显示Trading按钮
+            const userEmail = user.primaryEmailAddress?.emailAddress;
+            const isAdmin = userEmail && ADMIN_EMAILS.includes(userEmail);
+            if (tradingLink) {
+              tradingLink.style.display = isAdmin ? 'block' : 'none';
+            }
+
+            console.log('👤 用户已登录:', userEmail);
+            console.log('🛡️ 管理员状态:', isAdmin);
           } else {
             // 未登录状态
             authStatus.textContent = '未登录';
             authLoginView.style.display = 'block';
             authUserView.style.display = 'none';
+
+            // 隐藏Trading按钮
+            if (tradingLink) {
+              tradingLink.style.display = 'none';
+            }
 
             console.log('🔓 用户未登录');
           }
@@ -633,6 +654,16 @@
               // 直接跳转，卫星应用会自动同步认证状态
               console.log('🚀 跳转到Admin模块 (Clerk SSO)');
               window.location.href = '/admin/';
+            });
+          }
+
+          // Trading链接 - 使用Clerk官方SSO机制 (仅管理员可见)
+          if (tradingLink) {
+            tradingLink.addEventListener('click', async (e) => {
+              e.preventDefault();
+              // 直接跳转，卫星应用会自动同步认证状态
+              console.log('🚀 跳转到Trading模块 (Clerk SSO)');
+              window.location.href = '/trading/';
             });
           }
 
