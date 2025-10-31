@@ -6,7 +6,7 @@ import PerformanceChart from './PerformanceChart';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 
 const TradingDashboard = () => {
-  const { getCachedToken } = useAuth();
+  const { getCachedToken, user } = useAuth();
 
   // 状态管理
   const [portfolios, setPortfolios] = useState([]);
@@ -24,10 +24,15 @@ const TradingDashboard = () => {
       setLoading(true);
       setError(null);
 
-      // 获取 Clerk token
+      // 获取 Clerk token 和用户邮箱
       const token = await getCachedToken();
       if (!token) {
         throw new Error('未能获取认证token');
+      }
+
+      const userEmail = user?.primaryEmailAddress?.emailAddress;
+      if (!userEmail) {
+        throw new Error('未能获取用户邮箱');
       }
 
       // 并行请求 portfolios 和 decisions
@@ -35,12 +40,14 @@ const TradingDashboard = () => {
         fetch(`${TRADING_API_URL}/portfolios`, {
           headers: {
             'clerk-token': token,
+            'x-user-email': userEmail,
             'Content-Type': 'application/json'
           }
         }),
         fetch(`${TRADING_API_URL}/decisions?limit=50`, {
           headers: {
             'clerk-token': token,
+            'x-user-email': userEmail,
             'Content-Type': 'application/json'
           }
         })

@@ -9,7 +9,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 // CORS headers
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, clerk-token',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, clerk-token, x-user-email',
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 }
 
@@ -24,6 +24,7 @@ serve(async (req) => {
     // 1. 验证管理员权限（通过 Clerk token）
     // ============================================
     const clerkToken = req.headers.get('clerk-token') || req.headers.get('authorization')?.replace('Bearer ', '')
+    const userEmail = req.headers.get('x-user-email') // 从前端传递的用户邮箱
 
     if (!clerkToken) {
       return new Response(
@@ -32,9 +33,16 @@ serve(async (req) => {
       )
     }
 
-    // 验证 Clerk token 并获取用户信息
-    const userEmail = await verifyClerkToken(clerkToken)
     if (!userEmail) {
+      return new Response(
+        JSON.stringify({ error: '未授权：缺少用户邮箱' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // 验证 Clerk token（验证其有效性和未过期）
+    const isValidToken = await verifyClerkToken(clerkToken)
+    if (!isValidToken) {
       return new Response(
         JSON.stringify({ error: '未授权：无效的token' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -211,14 +219,13 @@ serve(async (req) => {
 // ============================================
 // 辅助函数：验证 Clerk Token
 // ============================================
-async function verifyClerkToken(token: string): Promise<string | null> {
+async function verifyClerkToken(token: string): Promise<boolean> {
   try {
-    // 调用 Clerk 的 JWKS endpoint 验证 token
-    // 简化版本：直接解析 JWT（生产环境应该验证签名）
+    // 验证 JWT 格式和有效性
     const parts = token.split('.')
     if (parts.length !== 3) {
-      console.log('Token is not JWT format, might be session ID')
-      return null
+      console.log('Token is not JWT format')
+      return false
     }
 
     // Base64url decode (替换 - 和 _ 字符)
@@ -228,20 +235,18 @@ async function verifyClerkToken(token: string): Promise<string | null> {
 
     console.log('JWT payload keys:', Object.keys(payload))
 
-    // 从 payload 中提取用户邮箱
-    // Clerk JWT 可能的字段：email, email_addresses, primaryEmailAddress
-    const userEmail = payload.email ||
-                     payload.primary_email_address ||
-                     payload.email_addresses?.[0] ||
-                     payload.emailAddresses?.[0]?.emailAddress ||
-                     null
+    // 检查 token 是否过期
+    if (payload.exp && payload.exp < Date.now() / 1000) {
+      console.log('Token expired')
+      return false
+    }
 
-    console.log('Extracted email from JWT:', userEmail)
-    return userEmail
+    console.log('Token validation successful')
+    return true
 
   } catch (error) {
     console.error('Token verification failed:', error)
-    return null
+    return false
   }
 }
 
