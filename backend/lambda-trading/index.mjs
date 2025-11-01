@@ -234,6 +234,11 @@ async function getBenchmarkDecision(benchmarkName, marketData, portfolio) {
     if (benchmarkName === 'gdlc') {
         // GDLC策略：追踪Grayscale CoinDesk Crypto 5 ETF真实价格
         try {
+            // 调试：检查yahoo Finance对象
+            console.log('🔍 yahooFinance type:', typeof yahooFinance);
+            console.log('🔍 yahooFinance keys:', Object.keys(yahooFinance));
+            console.log('🔍 yahooFinance.quote type:', typeof yahooFinance.quote);
+
             const quote = await yahooFinance.quote('GDLC');
             const price = quote.regularMarketPrice;
 
