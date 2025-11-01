@@ -1,7 +1,7 @@
-// AWS Lambda Function: LLM Trading Decision Maker
-// 用途：定时调用 Gemini API 进行交易决策，并保存到 Supabase
+// AWS Lambda Function: Multi-LLM Trading Decision Maker
+// 用途：定时调用多个 LLM API（Gemini, Claude）进行交易决策，并保存到 Supabase
 // 触发：CloudWatch Events (每小时一次)
-// 环境变量：GEMINI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+// 环境变量：GEMINI_API_KEY, CLAUDE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
 import { createClient } from '@supabase/supabase-js';
 
@@ -9,57 +9,89 @@ import { createClient } from '@supabase/supabase-js';
 // 环境变量配置
 // ============================================
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 // Supabase 客户端
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
+// 配置要运行的 LLM agents
+const AGENTS = [
+    { name: 'gemini', enabled: !!GEMINI_API_KEY },
+    { name: 'claude', enabled: !!CLAUDE_API_KEY }
+].filter(agent => agent.enabled);
+
 // ============================================
 // Lambda Handler
 // ============================================
 export const handler = async (event) => {
-    console.log('🚀 LLM Trading Decision Maker started');
+    console.log('🚀 Multi-LLM Trading Decision Maker started');
+    console.log(`Active agents: ${AGENTS.map(a => a.name).join(', ')}`);
     console.log('Event:', JSON.stringify(event, null, 2));
 
+    const results = [];
+
     try {
-        // 1. 获取市场数据
+        // 1. 获取市场数据（所有 agents 共享）
         const marketData = await fetchMarketData();
         console.log('📊 Market Data:', marketData);
 
-        // 2. 获取当前虚拟账户状态
-        const portfolio = await getCurrentPortfolio('gemini');
-        console.log('💰 Current Portfolio:', portfolio);
+        // 2. 对每个 agent 执行交易决策
+        for (const agent of AGENTS) {
+            console.log(`\n========== Processing ${agent.name.toUpperCase()} ==========`);
 
-        // 3. 调用 Gemini API 获取决策
-        const decision = await askGemini(marketData, portfolio);
-        console.log('🤖 Gemini Decision:', decision);
+            try {
+                // 2.1 获取当前虚拟账户状态
+                const portfolio = await getCurrentPortfolio(agent.name);
+                console.log(`💰 ${agent.name} Portfolio:`, portfolio);
 
-        // 4. 模拟执行交易，更新账户
-        const newPortfolio = simulateTrade(portfolio, decision, marketData);
-        console.log('💼 New Portfolio:', newPortfolio);
+                // 2.2 调用 LLM API 获取决策
+                const decision = await askLLM(agent.name, marketData, portfolio);
+                console.log(`🤖 ${agent.name} Decision:`, decision);
 
-        // 5. 保存决策和账户状态到 Supabase
-        await saveDecision('gemini', decision, marketData, newPortfolio.total_value);
-        await savePortfolio(newPortfolio);
+                // 2.3 模拟执行交易，更新账户
+                const newPortfolio = simulateTrade(portfolio, decision, marketData);
+                console.log(`💼 ${agent.name} New Portfolio:`, newPortfolio);
+
+                // 2.4 保存决策和账户状态到 Supabase
+                await saveDecision(agent.name, decision, marketData, newPortfolio.total_value);
+                await savePortfolio(newPortfolio);
+
+                results.push({
+                    agent: agent.name,
+                    success: true,
+                    decision: decision,
+                    portfolio: newPortfolio
+                });
+
+            } catch (agentError) {
+                console.error(`❌ ${agent.name} failed:`, agentError);
+                results.push({
+                    agent: agent.name,
+                    success: false,
+                    error: agentError.message
+                });
+            }
+        }
 
         return {
             statusCode: 200,
             body: JSON.stringify({
                 success: true,
-                message: 'Trading decision completed',
-                decision: decision,
-                portfolio: newPortfolio
+                message: 'Multi-agent trading decisions completed',
+                results: results
             })
         };
 
     } catch (error) {
-        console.error('❌ Error:', error);
+        console.error('❌ Fatal Error:', error);
         return {
             statusCode: 500,
             body: JSON.stringify({
                 success: false,
-                error: error.message
+                error: error.message,
+                results: results
             })
         };
     }
@@ -143,7 +175,21 @@ async function getCurrentPortfolio(agentName) {
 }
 
 // ============================================
-// 3. 调用 Gemini API 获取决策
+// 3. LLM API 路由函数
+// ============================================
+async function askLLM(agentName, marketData, portfolio) {
+    switch (agentName) {
+        case 'gemini':
+            return await askGemini(marketData, portfolio);
+        case 'claude':
+            return await askClaude(marketData, portfolio);
+        default:
+            throw new Error(`Unknown agent: ${agentName}`);
+    }
+}
+
+// ============================================
+// 3.1 调用 Gemini API 获取决策
 // ============================================
 async function askGemini(marketData, portfolio) {
     const prompt = `你是一个专业的加密货币交易员。请基于以下信息做出交易决策。
@@ -174,7 +220,7 @@ ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.chan
 
     try {
         const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
             {
                 method: 'POST',
                 headers: {
@@ -188,17 +234,29 @@ ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.chan
                     }],
                     generationConfig: {
                         temperature: 0.7,
-                        maxOutputTokens: 500
+                        maxOutputTokens: 2000  // 增加token限制以容纳思考tokens
                     }
                 })
             }
         );
 
+        const data = await response.json();
+
+        // DEBUG: 打印完整响应
+        console.log('Gemini API full response:', JSON.stringify(data, null, 2));
+
+        // 检查API响应
         if (!response.ok) {
+            console.error('Gemini API error - status:', response.status);
             throw new Error(`Gemini API error: ${response.status}`);
         }
 
-        const data = await response.json();
+        // 检查返回数据结构
+        if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+            console.error('Invalid response structure. Available keys:', Object.keys(data));
+            throw new Error('Invalid response from Gemini API');
+        }
+
         const text = data.candidates[0].content.parts[0].text;
 
         // 提取 JSON（可能被markdown包裹）
@@ -218,6 +276,105 @@ ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.chan
 
     } catch (error) {
         console.error('Gemini API failed:', error);
+        // 降级：返回保守的 hold 决策
+        return {
+            action: 'hold',
+            asset: null,
+            amount: 0,
+            reason: 'API调用失败，保持持有'
+        };
+    }
+}
+
+// ============================================
+// 3.2 调用 Claude API 获取决策
+// ============================================
+async function askClaude(marketData, portfolio) {
+    const prompt = `你是一个专业的加密货币交易员。请基于以下信息做出交易决策。
+
+【当前市场数据】
+BTC价格: $${marketData.BTC.price.toFixed(2)} (24h变化: ${marketData.BTC.change_24h.toFixed(2)}%)
+ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.change_24h.toFixed(2)}%)
+
+【你的账户状态】
+现金: $${portfolio.cash.toFixed(2)}
+持仓: ${JSON.stringify(portfolio.holdings)}
+总资产: $${portfolio.total_value.toFixed(2)}
+盈亏: ${portfolio.pnl?.toFixed(2) || 0}$ (${portfolio.pnl_percentage?.toFixed(2) || 0}%)
+
+【交易规则】
+1. 你只能交易 BTC 和 ETH
+2. 单笔交易不超过总资产的 30%
+3. 必须保留至少 20% 现金
+4. 可以选择：买入、卖出、持有
+
+请返回 JSON 格式的决策（不要包含任何其他文字）：
+{
+    "action": "buy/sell/hold",
+    "asset": "BTC/ETH/null",
+    "amount": 数量,
+    "reason": "决策理由（中文，1-2句话）"
+}`;
+
+    try {
+        const response = await fetch(
+            'https://api.anthropic.com/v1/messages',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-api-key': CLAUDE_API_KEY,
+                    'anthropic-version': '2023-06-01'
+                },
+                body: JSON.stringify({
+                    model: 'claude-sonnet-4-20250514',
+                    max_tokens: 2000,
+                    temperature: 0.7,
+                    messages: [{
+                        role: 'user',
+                        content: prompt
+                    }]
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        // DEBUG: 打印完整响应
+        console.log('Claude API full response:', JSON.stringify(data, null, 2));
+
+        // 检查API响应
+        if (!response.ok) {
+            console.error('Claude API error - status:', response.status);
+            console.error('Claude API error details:', data);
+            throw new Error(`Claude API error: ${response.status}`);
+        }
+
+        // 检查返回数据结构
+        if (!data.content || !data.content[0] || !data.content[0].text) {
+            console.error('Invalid response structure. Available keys:', Object.keys(data));
+            throw new Error('Invalid response from Claude API');
+        }
+
+        const text = data.content[0].text;
+
+        // 提取 JSON（可能被markdown包裹）
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+            throw new Error('Claude response is not valid JSON');
+        }
+
+        const decision = JSON.parse(jsonMatch[0]);
+
+        // 验证决策格式
+        if (!decision.action || !['buy', 'sell', 'hold'].includes(decision.action)) {
+            throw new Error('Invalid decision action');
+        }
+
+        return decision;
+
+    } catch (error) {
+        console.error('Claude API failed:', error);
         // 降级：返回保守的 hold 决策
         return {
             action: 'hold',
