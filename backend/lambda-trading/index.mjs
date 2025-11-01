@@ -562,7 +562,7 @@ ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.chan
                     'Authorization': `Bearer ${OPENAI_API_KEY}`
                 },
                 body: JSON.stringify({
-                    model: 'gpt-4o-mini',
+                    model: 'gpt-4o',
                     messages: [{
                         role: 'user',
                         content: prompt

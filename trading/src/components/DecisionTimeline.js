@@ -25,7 +25,6 @@ const DecisionTimeline = ({ decisions }) => {
   // Agent 图标
   const agentIcons = {
     gemini: '🔷',
-    gpt4: '🟢',
     claude: '🟣',
     grok: '🟠',
     openai: '🟢'

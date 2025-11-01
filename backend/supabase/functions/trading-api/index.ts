@@ -134,7 +134,7 @@ serve(async (req) => {
       // 获取每个agent的最新状态
       if (!agent) {
         // 返回所有agent的最新状态
-        const agents = ['gemini', 'gpt4', 'claude', 'grok', 'openai'] // 可以从环境变量读取
+        const agents = ['gemini', 'claude', 'grok', 'openai'] // 可以从环境变量读取
         const portfolios = []
 
         for (const agentName of agents) {

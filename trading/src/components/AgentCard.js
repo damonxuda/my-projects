@@ -7,7 +7,6 @@ const AgentCard = ({ portfolio }) => {
   // Agent 显示名称和颜色
   const agentInfo = {
     gemini: { name: 'Gemini', color: 'blue', icon: '🔷' },
-    gpt4: { name: 'GPT-4', color: 'green', icon: '🟢' },
     claude: { name: 'Claude', color: 'purple', icon: '🟣' },
     grok: { name: 'Grok', color: 'orange', icon: '🟠' },
     openai: { name: 'OpenAI', color: 'green', icon: '🟢' }
