@@ -215,8 +215,10 @@ ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.chan
 【交易规则】
 1. 你只能交易 BTC 和 ETH
 2. 单笔交易不超过总资产的 30%
-3. 必须保留至少 20% 现金
-4. 可以选择：买入、卖出、持有
+3. 单笔交易至少 $10（低于此金额不交易）
+4. 必须保留至少 20% 现金
+5. 每笔交易收取 0.1% 手续费
+6. 可以选择：买入、卖出、持有
 
 请返回 JSON 格式的决策（不要包含任何其他文字）：
 {
@@ -324,8 +326,10 @@ ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.chan
 【交易规则】
 1. 你只能交易 BTC 和 ETH
 2. 单笔交易不超过总资产的 30%
-3. 必须保留至少 20% 现金
-4. 可以选择：买入、卖出、持有
+3. 单笔交易至少 $10（低于此金额不交易）
+4. 必须保留至少 20% 现金
+5. 每笔交易收取 0.1% 手续费
+6. 可以选择：买入、卖出、持有
 
 请返回 JSON 格式的决策（不要包含任何其他文字）：
 {
@@ -433,8 +437,10 @@ ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.chan
 【交易规则】
 1. 你只能交易 BTC 和 ETH
 2. 单笔交易不超过总资产的 30%
-3. 必须保留至少 20% 现金
-4. 可以选择：买入、卖出、持有
+3. 单笔交易至少 $10（低于此金额不交易）
+4. 必须保留至少 20% 现金
+5. 每笔交易收取 0.1% 手续费
+6. 可以选择：买入、卖出、持有
 
 请返回 JSON 格式的决策（不要包含任何其他文字）：
 {
@@ -541,8 +547,10 @@ ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.chan
 【交易规则】
 1. 你只能交易 BTC 和 ETH
 2. 单笔交易不超过总资产的 30%
-3. 必须保留至少 20% 现金
-4. 可以选择：买入、卖出、持有
+3. 单笔交易至少 $10（低于此金额不交易）
+4. 必须保留至少 20% 现金
+5. 每笔交易收取 0.1% 手续费
+6. 可以选择：买入、卖出、持有
 
 请返回 JSON 格式的决策（不要包含任何其他文字）：
 {
@@ -634,6 +642,9 @@ ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.chan
 // 4. 模拟交易执行
 // ============================================
 function simulateTrade(portfolio, decision, marketData) {
+    const TRADING_FEE_RATE = 0.001; // 0.1% 手续费（对标 Binance）
+    const MIN_TRADE_VALUE = 10; // 最小交易金额 $10（对标交易所门槛）
+
     const newPortfolio = JSON.parse(JSON.stringify(portfolio)); // 深拷贝
 
     if (decision.action === 'hold') {
@@ -647,28 +658,54 @@ function simulateTrade(portfolio, decision, marketData) {
     const asset = decision.asset;
     const amount = decision.amount;
     const price = marketData[asset].price;
+    const tradeValue = amount * price;
+
+    // 检查最小交易金额门槛
+    if (tradeValue < MIN_TRADE_VALUE) {
+        console.warn(`⚠️ Trade value $${tradeValue.toFixed(2)} below minimum $${MIN_TRADE_VALUE}, converting to HOLD`);
+        // 转为持有，只更新总价值
+        newPortfolio.total_value = calculateTotalValue(newPortfolio, marketData);
+        newPortfolio.pnl = newPortfolio.total_value - 10000;
+        newPortfolio.pnl_percentage = (newPortfolio.pnl / 10000) * 100;
+        return newPortfolio;
+    }
 
     if (decision.action === 'buy') {
         const cost = amount * price;
-        if (cost > newPortfolio.cash) {
+        const fee = cost * TRADING_FEE_RATE;
+        const totalCost = cost + fee;
+
+        if (totalCost > newPortfolio.cash) {
             console.warn('⚠️ Insufficient cash, adjusting amount');
-            // 调整为可买数量
-            const adjustedAmount = newPortfolio.cash / price * 0.95; // 留5%余量
-            newPortfolio.cash -= adjustedAmount * price;
+            // 调整为可买数量（扣除手续费后）
+            const adjustedAmount = (newPortfolio.cash / (price * (1 + TRADING_FEE_RATE))) * 0.95; // 留5%余量
+            const adjustedCost = adjustedAmount * price;
+            const adjustedFee = adjustedCost * TRADING_FEE_RATE;
+            newPortfolio.cash -= (adjustedCost + adjustedFee);
             newPortfolio.holdings[asset] = (newPortfolio.holdings[asset] || 0) + adjustedAmount;
+            console.log(`💰 Buy adjusted: ${adjustedAmount.toFixed(6)} ${asset}, cost $${adjustedCost.toFixed(2)}, fee $${adjustedFee.toFixed(2)}`);
         } else {
-            newPortfolio.cash -= cost;
+            newPortfolio.cash -= totalCost;
             newPortfolio.holdings[asset] = (newPortfolio.holdings[asset] || 0) + amount;
+            console.log(`💰 Buy: ${amount.toFixed(6)} ${asset}, cost $${cost.toFixed(2)}, fee $${fee.toFixed(2)}`);
         }
     } else if (decision.action === 'sell') {
         const currentHolding = newPortfolio.holdings[asset] || 0;
+        const revenue = amount * price;
+        const fee = revenue * TRADING_FEE_RATE;
+        const netRevenue = revenue - fee;
+
         if (amount > currentHolding) {
             console.warn('⚠️ Insufficient holdings, selling all');
-            newPortfolio.cash += currentHolding * price;
+            const actualRevenue = currentHolding * price;
+            const actualFee = actualRevenue * TRADING_FEE_RATE;
+            newPortfolio.cash += (actualRevenue - actualFee);
             newPortfolio.holdings[asset] = 0;
+            console.log(`💰 Sell all: ${currentHolding.toFixed(6)} ${asset}, revenue $${actualRevenue.toFixed(2)}, fee $${actualFee.toFixed(2)}`);
         } else {
-            newPortfolio.cash += amount * price;
+            newPortfolio.cash += netRevenue;
             newPortfolio.holdings[asset] -= amount;
+            console.log(`💰 Sell: ${amount.toFixed(6)} ${asset}, revenue $${revenue.toFixed(2)}, fee $${fee.toFixed(2)}`);
         }
     }
 
