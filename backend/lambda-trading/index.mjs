@@ -1,6 +1,7 @@
 // AWS Lambda Function: LLM Trading Decision Maker
 // 用途：定时调用 Gemini API 进行交易决策，并保存到 Supabase
 // 触发：CloudWatch Events (每小时一次)
+// IAM策略已更新，支持GitHub Actions自动部署
 
 import { createClient } from '@supabase/supabase-js';
 
