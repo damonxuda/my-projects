@@ -157,6 +157,33 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Create Lambda Layer with dependencies
+        working-directory: ./backend/lambda-trading
+        run: |
+          echo "📦 Creating Lambda Layer with dependencies..."
+
+          # 创建Layer目录结构
+          mkdir -p layer/nodejs
+
+          # 安装依赖到Layer
+          cp package.json layer/nodejs/
+          cd layer/nodejs
+          npm install --production
+          cd ../..
+
+          # 打包Layer
+          cd layer
+          zip -r ../layer.zip nodejs
+          cd ..
+
+          ls -lh layer.zip
+          echo "✅ Layer size: $(ls -lh layer.zip | awk '{print $5}')"
+
       - name: Create deployment package (code only, no node_modules)
         working-directory: ./backend/lambda-trading
         run: |
@@ -175,6 +202,23 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Publish Lambda Layer
+        working-directory: ./backend/lambda-trading
+        run: |
+          echo "📤 Publishing Lambda Layer..."
+
+          LAYER_VERSION=$(aws lambda publish-layer-version \
+            --layer-name trading-dependencies \
+            --description "Dependencies for Trading Lambda (包含 yahoo-finance2)" \
+            --zip-file fileb://layer.zip \
+            --compatible-runtimes nodejs20.x \
+            --region ${{ secrets.AWS_REGION }} \
+            --query 'Version' \
+            --output text)
+
+          echo "✅ Published Layer version: ${LAYER_VERSION}"
+          echo "LAYER_VERSION=${LAYER_VERSION}" >> $GITHUB_ENV
 
       - name: Upload to S3
         working-directory: ./backend/lambda-trading
@@ -209,39 +253,22 @@ jobs:
           aws lambda wait function-updated \
             --function-name TRADING_LAMBDA
 
-          # 更新环境变量
-          echo "🔧 Updating environment variables..."
+          # 更新Lambda Layer到最新版本
+          echo "🔗 Updating Lambda Layer to version ${LAYER_VERSION}..."
+          LAYER_ARN="arn:aws:lambda:${{ secrets.AWS_REGION }}:730335478220:layer:trading-dependencies:${LAYER_VERSION}"
+
           aws lambda update-function-configuration \
             --function-name TRADING_LAMBDA \
+            --layers "${LAYER_ARN}" \
             --environment "Variables={GEMINI_API_KEY=${GEMINI_API_KEY},CLAUDE_API_KEY=${CLAUDE_API_KEY},GROK_API_KEY=${GROK_API_KEY},OPENAI_API_KEY=${OPENAI_API_KEY},SUPABASE_URL=${SUPABASE_URL},SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}}"
 
           # 等待配置更新完成
           aws lambda wait function-updated \
             --function-name TRADING_LAMBDA
 
-          # 更新 EventBridge 触发规则（每小时1次：第45分钟）
-          echo "⏰ Updating EventBridge schedule rule..."
-          aws events put-rule \
-            --name trading-lambda-hourly \
-            --schedule-expression "cron(45 * * * ? *)" \
-            --description "Trigger LLM Trading Lambda once per hour (at :45)" \
-            --region ${{ secrets.AWS_REGION }}
-
-          # 绑定Lambda函数为触发目标
-          echo "🔗 Binding Lambda function as target..."
-          aws events put-targets \
-            --rule trading-lambda-hourly \
-            --targets "Id=1,Arn=arn:aws:lambda:${{ secrets.AWS_REGION }}:730335478220:function:TRADING_LAMBDA" \
-            --region ${{ secrets.AWS_REGION }}
-
-          # 添加EventBridge调用Lambda的权限（忽略已存在错误）
-          echo "🔐 Adding Lambda invoke permission..."
-          aws lambda add-permission \
-            --function-name TRADING_LAMBDA \
-            --statement-id EventBridgeTradingLambda \
-            --action 'lambda:InvokeFunction' \
-            --principal events.amazonaws.com \
-            --source-arn arn:aws:events:${{ secrets.AWS_REGION }}:730335478220:rule/trading-lambda-hourly \
-            --region ${{ secrets.AWS_REGION }} 2>/dev/null || echo "Permission already exists, skipping..."
+          # 🚫 定时触发已禁用（等调试完成后再启用）
+          # echo "⏰ Updating EventBridge schedule rule..."
+          # aws events put-rule ...
 
           echo "✅ TRADING_LAMBDA deployed successfully!"
+          echo "⚠️  定时触发已禁用，需要手动invoke测试"
