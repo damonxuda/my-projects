@@ -26,7 +26,8 @@ const DecisionTimeline = ({ decisions }) => {
   const agentIcons = {
     gemini: '🔷',
     gpt4: '🟢',
-    claude: '🟣'
+    claude: '🟣',
+    grok: '🟠'
   };
 
   // Action 配置
