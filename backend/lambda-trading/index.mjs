@@ -163,9 +163,9 @@ async function getCurrentPortfolio(agentName) {
         if (!data) {
             return {
                 agent_name: agentName,
-                cash: 10000.00,
+                cash: 50000.00,
                 holdings: {},
-                total_value: 10000.00,
+                total_value: 50000.00,
                 pnl: 0.00,
                 pnl_percentage: 0.00
             };
@@ -650,8 +650,8 @@ function simulateTrade(portfolio, decision, marketData) {
     if (decision.action === 'hold') {
         // 只更新total_value（根据当前市场价格）
         newPortfolio.total_value = calculateTotalValue(newPortfolio, marketData);
-        newPortfolio.pnl = newPortfolio.total_value - 10000;
-        newPortfolio.pnl_percentage = (newPortfolio.pnl / 10000) * 100;
+        newPortfolio.pnl = newPortfolio.total_value - 50000;
+        newPortfolio.pnl_percentage = (newPortfolio.pnl / 50000) * 100;
         return newPortfolio;
     }
 
@@ -665,8 +665,8 @@ function simulateTrade(portfolio, decision, marketData) {
         console.warn(`⚠️ Trade value $${tradeValue.toFixed(2)} below minimum $${MIN_TRADE_VALUE}, converting to HOLD`);
         // 转为持有，只更新总价值
         newPortfolio.total_value = calculateTotalValue(newPortfolio, marketData);
-        newPortfolio.pnl = newPortfolio.total_value - 10000;
-        newPortfolio.pnl_percentage = (newPortfolio.pnl / 10000) * 100;
+        newPortfolio.pnl = newPortfolio.total_value - 50000;
+        newPortfolio.pnl_percentage = (newPortfolio.pnl / 50000) * 100;
         return newPortfolio;
     }
 
@@ -711,8 +711,8 @@ function simulateTrade(portfolio, decision, marketData) {
 
     // 计算新的总价值
     newPortfolio.total_value = calculateTotalValue(newPortfolio, marketData);
-    newPortfolio.pnl = newPortfolio.total_value - 10000;
-    newPortfolio.pnl_percentage = (newPortfolio.pnl / 10000) * 100;
+    newPortfolio.pnl = newPortfolio.total_value - 50000;
+    newPortfolio.pnl_percentage = (newPortfolio.pnl / 50000) * 100;
 
     return newPortfolio;
 }
