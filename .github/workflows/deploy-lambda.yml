@@ -190,6 +190,8 @@ jobs:
       - name: Deploy to Lambda
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+          GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
           SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
@@ -210,7 +212,7 @@ jobs:
           echo "🔧 Updating environment variables..."
           aws lambda update-function-configuration \
             --function-name TRADING_LAMBDA \
-            --environment "Variables={GEMINI_API_KEY=${GEMINI_API_KEY},SUPABASE_URL=${SUPABASE_URL},SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}}"
+            --environment "Variables={GEMINI_API_KEY=${GEMINI_API_KEY},CLAUDE_API_KEY=${CLAUDE_API_KEY},GROK_API_KEY=${GROK_API_KEY},SUPABASE_URL=${SUPABASE_URL},SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}}"
 
           # 等待配置更新完成
           aws lambda wait function-updated \
