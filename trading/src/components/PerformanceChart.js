@@ -14,7 +14,8 @@ const PerformanceChart = ({ portfolios }) => {
     GEMINI: '#3B82F6',  // blue
     GPT4: '#10B981',    // green
     CLAUDE: '#8B5CF6',  // purple
-    GROK: '#F97316'     // orange
+    GROK: '#F97316',    // orange
+    OPENAI: '#10B981'   // green (same as GPT4)
   };
 
   // 自定义 Tooltip

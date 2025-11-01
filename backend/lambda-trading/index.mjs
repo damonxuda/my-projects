@@ -1,7 +1,7 @@
 // AWS Lambda Function: Multi-LLM Trading Decision Maker
-// 用途：定时调用多个 LLM API（Gemini, Claude）进行交易决策，并保存到 Supabase
+// 用途：定时调用多个 LLM API（Gemini, Claude, Grok, OpenAI）进行交易决策，并保存到 Supabase
 // 触发：CloudWatch Events (每小时一次)
-// 环境变量：GEMINI_API_KEY, CLAUDE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+// 环境变量：GEMINI_API_KEY, CLAUDE_API_KEY, GROK_API_KEY, OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
 import { createClient } from '@supabase/supabase-js';
 
@@ -11,6 +11,7 @@ import { createClient } from '@supabase/supabase-js';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 const GROK_API_KEY = process.env.GROK_API_KEY;
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -21,7 +22,8 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 const AGENTS = [
     { name: 'gemini', enabled: !!GEMINI_API_KEY },
     { name: 'claude', enabled: !!CLAUDE_API_KEY },
-    { name: 'grok', enabled: !!GROK_API_KEY }
+    { name: 'grok', enabled: !!GROK_API_KEY },
+    { name: 'openai', enabled: !!OPENAI_API_KEY }
 ].filter(agent => agent.enabled);
 
 // ============================================
@@ -187,6 +189,8 @@ async function askLLM(agentName, marketData, portfolio) {
             return await askClaude(marketData, portfolio);
         case 'grok':
             return await askGrok(marketData, portfolio);
+        case 'openai':
+            return await askOpenAI(marketData, portfolio);
         default:
             throw new Error(`Unknown agent: ${agentName}`);
     }
@@ -508,6 +512,114 @@ ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.chan
 
     } catch (error) {
         console.error('Grok API failed:', error);
+        // 降级：返回保守的 hold 决策
+        return {
+            action: 'hold',
+            asset: null,
+            amount: 0,
+            reason: 'API调用失败，保持持有'
+        };
+    }
+}
+
+// ============================================
+// 3.4 调用 OpenAI API 获取决策
+// ============================================
+async function askOpenAI(marketData, portfolio) {
+    const prompt = `你是一个专业的加密货币交易员。请基于以下信息做出交易决策。
+
+【当前市场数据】
+BTC价格: $${marketData.BTC.price.toFixed(2)} (24h变化: ${marketData.BTC.change_24h.toFixed(2)}%)
+ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.change_24h.toFixed(2)}%)
+
+【你的账户状态】
+现金: $${portfolio.cash.toFixed(2)}
+持仓: ${JSON.stringify(portfolio.holdings)}
+总资产: $${portfolio.total_value.toFixed(2)}
+盈亏: ${portfolio.pnl?.toFixed(2) || 0}$ (${portfolio.pnl_percentage?.toFixed(2) || 0}%)
+
+【交易规则】
+1. 你只能交易 BTC 和 ETH
+2. 单笔交易不超过总资产的 30%
+3. 必须保留至少 20% 现金
+4. 可以选择：买入、卖出、持有
+
+请返回 JSON 格式的决策（不要包含任何其他文字）：
+{
+    "action": "buy/sell/hold",
+    "asset": "BTC/ETH/null",
+    "amount": 数量,
+    "reason": "决策理由（中文，1-2句话）"
+}`;
+
+    try {
+        const response = await fetch(
+            'https://api.openai.com/v1/chat/completions',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${OPENAI_API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: 'gpt-4o-mini',
+                    messages: [{
+                        role: 'user',
+                        content: prompt
+                    }],
+                    temperature: 0.7,
+                    max_tokens: 2000
+                })
+            }
+        );
+
+        const data = await response.json();
+
+        // DEBUG: 打印完整响应
+        console.log('OpenAI API full response:', JSON.stringify(data, null, 2));
+
+        // 检查API响应
+        if (!response.ok) {
+            console.error('OpenAI API error - status:', response.status);
+            console.error('OpenAI API error details:', data);
+            throw new Error(`OpenAI API error: ${response.status}`);
+        }
+
+        // 检查返回数据结构
+        if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+            console.error('Invalid response structure. Available keys:', Object.keys(data));
+            throw new Error('Invalid response from OpenAI API');
+        }
+
+        const text = data.choices[0].message.content;
+
+        // 📊 记录 Token 使用量（用于建立经验值）
+        if (data.usage) {
+            console.log('📊 OpenAI Token Usage:', {
+                prompt: data.usage.prompt_tokens,
+                completion: data.usage.completion_tokens,
+                total: data.usage.total_tokens,
+                maxAllowed: 2000
+            });
+        }
+
+        // 提取 JSON（可能被markdown包裹）
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+            throw new Error('OpenAI response is not valid JSON');
+        }
+
+        const decision = JSON.parse(jsonMatch[0]);
+
+        // 验证决策格式
+        if (!decision.action || !['buy', 'sell', 'hold'].includes(decision.action)) {
+            throw new Error('Invalid decision action');
+        }
+
+        return decision;
+
+    } catch (error) {
+        console.error('OpenAI API failed:', error);
         // 降级：返回保守的 hold 决策
         return {
             action: 'hold',

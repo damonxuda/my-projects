@@ -27,7 +27,8 @@ const DecisionTimeline = ({ decisions }) => {
     gemini: '🔷',
     gpt4: '🟢',
     claude: '🟣',
-    grok: '🟠'
+    grok: '🟠',
+    openai: '🟢'
   };
 
   // Action 配置
