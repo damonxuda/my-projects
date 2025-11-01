@@ -11,6 +11,7 @@ on:
     paths:
       - 'backend/lambda-video-management/**'
       - 'backend/lambda-user-management/**'
+      - 'backend/lambda-trading/**'
       - 'lambda-subtitle/**'
       - '.github/workflows/deploy-lambda.yml'  # workflow 自身修改也触发
   workflow_dispatch: # 允许手动触发
@@ -147,3 +148,72 @@ jobs:
             --function-name user_management
 
           echo "✅ user_management deployed successfully!"
+
+  deploy-trading:
+    runs-on: ubuntu-latest
+    # Trading lambda 使用 Lambda Layer 管理依赖
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create deployment package (code only, no node_modules)
+        working-directory: ./backend/lambda-trading
+        run: |
+          echo "📦 Creating Trading Lambda package..."
+          echo "⚠️  Using Lambda Layer for dependencies - NOT including node_modules"
+
+          # 只打包代码文件
+          zip -r function.zip index.mjs -x "*.DS_Store" "node_modules/*" "*.zip"
+
+          ls -lh function.zip
+          echo "✅ Package size: $(ls -lh function.zip | awk '{print $5}')"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Upload to S3
+        working-directory: ./backend/lambda-trading
+        run: |
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          S3_KEY="lambda-deploy/TRADING_LAMBDA-${TIMESTAMP}.zip"
+
+          echo "📤 Uploading to S3: s3://damonxuda-video-files/${S3_KEY}"
+          aws s3 cp function.zip s3://damonxuda-video-files/${S3_KEY}
+
+          echo "S3_KEY=${S3_KEY}" >> $GITHUB_ENV
+
+      - name: Deploy to Lambda
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          echo "🚀 Deploying TRADING_LAMBDA..."
+          echo "📦 Using S3 key: ${{ env.S3_KEY }}"
+
+          # 更新函数代码
+          aws lambda update-function-code \
+            --function-name TRADING_LAMBDA \
+            --s3-bucket damonxuda-video-files \
+            --s3-key ${{ env.S3_KEY }}
+
+          # 等待函数更新完成
+          aws lambda wait function-updated \
+            --function-name TRADING_LAMBDA
+
+          # 更新环境变量
+          echo "🔧 Updating environment variables..."
+          aws lambda update-function-configuration \
+            --function-name TRADING_LAMBDA \
+            --environment "Variables={GEMINI_API_KEY=${GEMINI_API_KEY},SUPABASE_URL=${SUPABASE_URL},SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}}"
+
+          # 等待配置更新完成
+          aws lambda wait function-updated \
+            --function-name TRADING_LAMBDA
+
+          echo "✅ TRADING_LAMBDA deployed successfully!"
