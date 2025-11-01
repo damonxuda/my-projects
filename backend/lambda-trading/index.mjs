@@ -4,7 +4,10 @@
 // 环境变量：GEMINI_API_KEY, CLAUDE_API_KEY, GROK_API_KEY, OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
 import { createClient } from '@supabase/supabase-js';
-import yahooFinance from 'yahoo-finance2';
+import YahooFinanceClass from 'yahoo-finance2';
+
+// v3版本需要实例化
+const yahooFinance = new YahooFinanceClass();
 
 // ============================================
 // 环境变量配置
@@ -234,11 +237,6 @@ async function getBenchmarkDecision(benchmarkName, marketData, portfolio) {
     if (benchmarkName === 'gdlc') {
         // GDLC策略：追踪Grayscale CoinDesk Crypto 5 ETF真实价格
         try {
-            // 调试：检查yahoo Finance对象
-            console.log('🔍 yahooFinance type:', typeof yahooFinance);
-            console.log('🔍 yahooFinance keys:', Object.keys(yahooFinance));
-            console.log('🔍 yahooFinance.quote type:', typeof yahooFinance.quote);
-
             const quote = await yahooFinance.quote('GDLC');
             const price = quote.regularMarketPrice;
 
