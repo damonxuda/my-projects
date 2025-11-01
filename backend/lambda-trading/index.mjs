@@ -450,7 +450,7 @@ ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.chan
                     'Authorization': `Bearer ${GROK_API_KEY}`
                 },
                 body: JSON.stringify({
-                    model: 'grok-beta',
+                    model: 'grok-2-1212',
                     messages: [{
                         role: 'user',
                         content: prompt
