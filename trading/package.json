@@ -1,7 +1,7 @@
 {
   "name": "trading",
   "version": "1.0.0",
-  "description": "LLM Trading Observer - Admin only module",
+  "description": "LLM Trading Observer - Multi-Agent Trading System",
   "private": true,
   "homepage": "/trading",
   "dependencies": {
