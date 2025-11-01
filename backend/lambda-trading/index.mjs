@@ -346,7 +346,7 @@ ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.chan
                     'anthropic-version': '2023-06-01'
                 },
                 body: JSON.stringify({
-                    model: 'claude-sonnet-4-20250514',
+                    model: 'claude-sonnet-4-5-20250929',
                     max_tokens: 2000,
                     temperature: 0.7,
                     messages: [{
@@ -454,7 +454,7 @@ ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.chan
                     'Authorization': `Bearer ${GROK_API_KEY}`
                 },
                 body: JSON.stringify({
-                    model: 'grok-2-1212',
+                    model: 'grok-3',
                     messages: [{
                         role: 'user',
                         content: prompt
