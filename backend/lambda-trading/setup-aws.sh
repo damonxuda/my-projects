@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# ⚠️ 【已弃用 - DEPRECATED】
+# 此脚本仅供历史参考，不再使用。
+# 所有部署现在通过 GitHub Actions 自动化：.github/workflows/deploy-lambda.yml
+# 请使用 `git push` 进行部署，以保持配置变更的历史记录。
+#
 # AWS Lambda Trading 函数一键设置脚本
 # 用途：创建Lambda Layer、Lambda函数和CloudWatch Events定时触发器
 
