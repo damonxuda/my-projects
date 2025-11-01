@@ -9,7 +9,9 @@ const AgentCard = ({ portfolio }) => {
     gemini: { name: 'Gemini', color: 'blue', icon: '🔷' },
     claude: { name: 'Claude', color: 'purple', icon: '🟣' },
     grok: { name: 'Grok', color: 'orange', icon: '🟠' },
-    openai: { name: 'OpenAI', color: 'green', icon: '🟢' }
+    openai: { name: 'OpenAI', color: 'green', icon: '🟢' },
+    gdlc: { name: 'GDLC', color: 'yellow', icon: '📊' },
+    equal_weight: { name: 'Equal Weight', color: 'gray', icon: '⚖️' }
   };
 
   const info = agentInfo[agent_name] || { name: agent_name, color: 'gray', icon: '⚪' };

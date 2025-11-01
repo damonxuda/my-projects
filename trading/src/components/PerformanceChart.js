@@ -14,7 +14,9 @@ const PerformanceChart = ({ portfolios }) => {
     GEMINI: '#3B82F6',  // blue
     CLAUDE: '#8B5CF6',  // purple
     GROK: '#F97316',    // orange
-    OPENAI: '#10B981'   // green
+    OPENAI: '#10B981',  // green
+    GDLC: '#EAB308',    // yellow
+    EQUAL_WEIGHT: '#6B7280'  // gray
   };
 
   // 自定义 Tooltip

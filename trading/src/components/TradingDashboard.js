@@ -146,7 +146,7 @@ const TradingDashboard = () => {
       </div>
 
       {/* Agent 性能卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {portfolios
           .sort((a, b) => b.pnl_percentage - a.pnl_percentage)
           .map(portfolio => (

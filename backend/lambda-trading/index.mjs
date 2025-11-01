@@ -18,12 +18,14 @@ const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 // Supabase 客户端
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-// 配置要运行的 LLM agents
+// 配置要运行的 LLM agents + 基准策略
 const AGENTS = [
-    { name: 'gemini', enabled: !!GEMINI_API_KEY },
-    { name: 'claude', enabled: !!CLAUDE_API_KEY },
-    { name: 'grok', enabled: !!GROK_API_KEY },
-    { name: 'openai', enabled: !!OPENAI_API_KEY }
+    { name: 'gemini', type: 'llm', enabled: !!GEMINI_API_KEY },
+    { name: 'claude', type: 'llm', enabled: !!CLAUDE_API_KEY },
+    { name: 'grok', type: 'llm', enabled: !!GROK_API_KEY },
+    { name: 'openai', type: 'llm', enabled: !!OPENAI_API_KEY },
+    { name: 'gdlc', type: 'benchmark', enabled: true },  // GDLC市值加权ETF基准
+    { name: 'equal_weight', type: 'benchmark', enabled: true }  // 等权重持有基准
 ].filter(agent => agent.enabled);
 
 // ============================================
@@ -50,9 +52,15 @@ export const handler = async (event) => {
                 const portfolio = await getCurrentPortfolio(agent.name);
                 console.log(`💰 ${agent.name} Portfolio:`, portfolio);
 
-                // 2.2 调用 LLM API 获取决策
-                const decision = await askLLM(agent.name, marketData, portfolio);
-                console.log(`🤖 ${agent.name} Decision:`, decision);
+                // 2.2 获取决策（LLM或基准策略）
+                let decision;
+                if (agent.type === 'benchmark') {
+                    decision = await getBenchmarkDecision(agent.name, marketData, portfolio);
+                    console.log(`📊 ${agent.name} Benchmark Decision:`, decision);
+                } else {
+                    decision = await askLLM(agent.name, marketData, portfolio);
+                    console.log(`🤖 ${agent.name} Decision:`, decision);
+                }
 
                 // 2.3 模拟执行交易，更新账户
                 const newPortfolio = simulateTrade(portfolio, decision, marketData);
@@ -203,7 +211,68 @@ async function getCurrentPortfolio(agentName) {
 }
 
 // ============================================
-// 3. LLM API 路由函数
+// 3. 基准策略决策函数
+// ============================================
+async function getBenchmarkDecision(benchmarkName, marketData, portfolio) {
+    // 基准策略：Buy and Hold（买入后持有不动）
+    // 只在初始状态时买入，之后一直持有
+
+    const isInitialState = portfolio.cash === 50000 && Object.keys(portfolio.holdings).length === 0;
+
+    if (!isInitialState) {
+        // 非初始状态，持有不动
+        return {
+            action: 'hold',
+            asset: null,
+            amount: 0,
+            reason: `基准策略：买入后持有（Buy & Hold）`
+        };
+    }
+
+    // 初始状态：按策略分配资金买入
+    if (benchmarkName === 'gdlc') {
+        // GDLC策略：模拟Grayscale CoinDesk Crypto 5 ETF的市值加权
+        // 实际GDLC持仓：BTC 73.52%, ETH 16.16%, XRP 5.05%, SOL 3.83%, ADA 1.44%
+        // 我们没有ADA，按比例调整为：BTC 74.5%, ETH 16.4%, XRP 5.1%, SOL 3.9%
+
+        return {
+            action: 'buy_basket',  // 特殊标记：一次性买入多个币种
+            basket: {
+                BTC: 0.745,   // 74.5%
+                ETH: 0.164,   // 16.4%
+                XRP: 0.051,   // 5.1%
+                SOL: 0.039    // 3.9%
+            },
+            reason: 'GDLC基准：按市值加权初始买入（BTC 74.5%, ETH 16.4%, XRP 5.1%, SOL 3.9%）'
+        };
+
+    } else if (benchmarkName === 'equal_weight') {
+        // Equal Weight策略：6个币种平均分配
+        return {
+            action: 'buy_basket',
+            basket: {
+                BTC: 1/6,    // 16.67%
+                ETH: 1/6,
+                SOL: 1/6,
+                BNB: 1/6,
+                DOGE: 1/6,
+                XRP: 1/6
+            },
+            reason: '等权重基准：6个币种平均分配初始买入（各16.67%）'
+        };
+    }
+
+    // 未知基准策略，返回持有
+    return {
+        action: 'hold',
+        asset: null,
+        amount: 0,
+        reason: '未知基准策略'
+    };
+}
+
+// ============================================
+// 4. LLM API 路由函数
 // ============================================
 async function askLLM(agentName, marketData, portfolio) {
     switch (agentName) {
@@ -692,6 +761,35 @@ function simulateTrade(portfolio, decision, marketData) {
         newPortfolio.total_value = calculateTotalValue(newPortfolio, marketData);
         newPortfolio.pnl = newPortfolio.total_value - 50000;
         newPortfolio.pnl_percentage = (newPortfolio.pnl / 50000) * 100;
+        return newPortfolio;
+    }
+
+    // 处理基准策略的批量买入
+    if (decision.action === 'buy_basket') {
+        const basket = decision.basket;
+        let totalCost = 0;
+
+        // 遍历篮子中的每个币种，计算买入数量和成本
+        for (const [asset, weight] of Object.entries(basket)) {
+            const allocationAmount = newPortfolio.cash * weight;  // 分配的现金
+            const price = marketData[asset].price;
+            const amount = allocationAmount / price;  // 买入数量
+            const cost = amount * price;
+            const fee = cost * TRADING_FEE_RATE;
+
+            newPortfolio.holdings[asset] = (newPortfolio.holdings[asset] || 0) + amount;
+            totalCost += (cost + fee);
+
+            console.log(`📊 Buy ${asset}: ${amount.toFixed(6)} units at $${price.toFixed(2)}, cost $${cost.toFixed(2)}, fee $${fee.toFixed(2)}`);
+        }
+
+        newPortfolio.cash -= totalCost;
+
+        // 计算新的总价值
+        newPortfolio.total_value = calculateTotalValue(newPortfolio, marketData);
+        newPortfolio.pnl = newPortfolio.total_value - 50000;
+        newPortfolio.pnl_percentage = (newPortfolio.pnl / 50000) * 100;
+
         return newPortfolio;
     }
 
