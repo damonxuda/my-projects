@@ -234,7 +234,7 @@ ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.chan
                     }],
                     generationConfig: {
                         temperature: 0.7,
-                        maxOutputTokens: 2000  // 增加token限制以容纳思考tokens
+                        maxOutputTokens: 4000  // 增加token限制以容纳思考tokens（Gemini 2.5可能用1999 tokens思考）
                     }
                 })
             }
