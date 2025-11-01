@@ -5,7 +5,7 @@ import { User, Lock } from 'lucide-react';
 import './App.css';
 
 // LLM Trading Observer - 大语言模型量化交易观察系统 (Admin only)
-// 交易观察系统主组件
+// 交易观察系统主组件 - Multi-Agent Trading System
 const TradingApp = () => {
   const { user, loading: authLoading, isAdmin } = useAuth();
 
