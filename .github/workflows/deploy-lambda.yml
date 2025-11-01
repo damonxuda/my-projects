@@ -219,12 +219,12 @@ jobs:
           aws lambda wait function-updated \
             --function-name TRADING_LAMBDA
 
-          # 更新 EventBridge 触发规则（每小时1次：第10分钟）
+          # 更新 EventBridge 触发规则（每小时1次：第45分钟）
           echo "⏰ Updating EventBridge schedule rule..."
           aws events put-rule \
             --name trading-lambda-hourly \
-            --schedule-expression "cron(10 * * * ? *)" \
-            --description "Trigger LLM Trading Lambda once per hour (at :10)" \
+            --schedule-expression "cron(45 * * * ? *)" \
+            --description "Trigger LLM Trading Lambda once per hour (at :45)" \
             --region ${{ secrets.AWS_REGION }}
 
           # 绑定Lambda函数为触发目标
