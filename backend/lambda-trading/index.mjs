@@ -769,18 +769,21 @@ function simulateTrade(portfolio, decision, marketData) {
         const basket = decision.basket;
         let totalCost = 0;
 
-        // 遍历篮子中的每个币种，计算买入数量和成本
+        // 遍历篮子中的每个币种，计算买入数量和成本（扣除手续费后）
         for (const [asset, weight] of Object.entries(basket)) {
-            const allocationAmount = newPortfolio.cash * weight;  // 分配的现金
+            // 分配金额要考虑手续费，让最终花费（含手续费）等于分配金额
+            const targetAmount = newPortfolio.cash * weight;  // 目标花费金额（含手续费）
+            const allocationAmount = targetAmount / (1 + TRADING_FEE_RATE);  // 实际可买入金额（扣除手续费）
+
             const price = marketData[asset].price;
             const amount = allocationAmount / price;  // 买入数量
-            const cost = amount * price;
-            const fee = cost * TRADING_FEE_RATE;
+            const cost = amount * price;  // 实际成本
+            const fee = cost * TRADING_FEE_RATE;  // 手续费
 
             newPortfolio.holdings[asset] = (newPortfolio.holdings[asset] || 0) + amount;
             totalCost += (cost + fee);
 
-            console.log(`📊 Buy ${asset}: ${amount.toFixed(6)} units at $${price.toFixed(2)}, cost $${cost.toFixed(2)}, fee $${fee.toFixed(2)}`);
+            console.log(`📊 Buy ${asset}: ${amount.toFixed(6)} units at $${price.toFixed(2)}, cost $${cost.toFixed(2)}, fee $${fee.toFixed(2)}, total $${(cost + fee).toFixed(2)}`);
         }
 
         newPortfolio.cash -= totalCost;
