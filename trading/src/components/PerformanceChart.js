@@ -13,7 +13,8 @@ const PerformanceChart = ({ portfolios }) => {
   const agentColors = {
     GEMINI: '#3B82F6',  // blue
     GPT4: '#10B981',    // green
-    CLAUDE: '#8B5CF6'   // purple
+    CLAUDE: '#8B5CF6',  // purple
+    GROK: '#F97316'     // orange
   };
 
   // 自定义 Tooltip

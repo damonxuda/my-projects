@@ -375,9 +375,9 @@ jobs:
             echo "ℹ️ No games directory found"
           fi
 
-      # 11. CloudFront 缓存清除（仅 /schedule 和 /games）
+      # 11. CloudFront 缓存清除（/schedule, /games, /trading）
       - name: Invalidate CloudFront Cache
-        if: steps.changes.outputs.schedule_changed == 'true' || steps.changes.outputs.root_files_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
+        if: steps.changes.outputs.schedule_changed == 'true' || steps.changes.outputs.trading_changed == 'true' || steps.changes.outputs.root_files_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
         env:
           CLOUDFRONT_DISTRIBUTION_ID: E3JLLPNZWYQBZQ
         run: |
@@ -389,6 +389,12 @@ jobs:
           if [[ "${{ steps.changes.outputs.schedule_changed }}" == "true" ]] || [[ "${{ steps.changes.outputs.force_deploy }}" == "true" ]]; then
             PATHS="$PATHS /schedule/*"
             echo "  ✅ 将清除 /schedule/* 缓存"
+          fi
+
+          # 检查 trading 是否变化
+          if [[ "${{ steps.changes.outputs.trading_changed }}" == "true" ]] || [[ "${{ steps.changes.outputs.force_deploy }}" == "true" ]]; then
+            PATHS="$PATHS /trading/*"
+            echo "  ✅ 将清除 /trading/* 缓存"
           fi
 
           # 检查 games 是否变化（包含在 root_files_changed 中）

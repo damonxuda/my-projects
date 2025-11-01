@@ -8,7 +8,8 @@ const AgentCard = ({ portfolio }) => {
   const agentInfo = {
     gemini: { name: 'Gemini', color: 'blue', icon: '🔷' },
     gpt4: { name: 'GPT-4', color: 'green', icon: '🟢' },
-    claude: { name: 'Claude', color: 'purple', icon: '🟣' }
+    claude: { name: 'Claude', color: 'purple', icon: '🟣' },
+    grok: { name: 'Grok', color: 'orange', icon: '🟠' }
   };
 
   const info = agentInfo[agent_name] || { name: agent_name, color: 'gray', icon: '⚪' };
