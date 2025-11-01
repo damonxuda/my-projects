@@ -227,4 +227,21 @@ jobs:
             --description "Trigger LLM Trading Lambda once per hour (at :10)" \
             --region ${{ secrets.AWS_REGION }}
 
+          # 绑定Lambda函数为触发目标
+          echo "🔗 Binding Lambda function as target..."
+          aws events put-targets \
+            --rule trading-lambda-hourly \
+            --targets "Id=1,Arn=arn:aws:lambda:${{ secrets.AWS_REGION }}:730335478220:function:TRADING_LAMBDA" \
+            --region ${{ secrets.AWS_REGION }}
+
+          # 添加EventBridge调用Lambda的权限（忽略已存在错误）
+          echo "🔐 Adding Lambda invoke permission..."
+          aws lambda add-permission \
+            --function-name TRADING_LAMBDA \
+            --statement-id EventBridgeTradingLambda \
+            --action 'lambda:InvokeFunction' \
+            --principal events.amazonaws.com \
+            --source-arn arn:aws:events:${{ secrets.AWS_REGION }}:730335478220:rule/trading-lambda-hourly \
+            --region ${{ secrets.AWS_REGION }} 2>/dev/null || echo "Permission already exists, skipping..."
+
           echo "✅ TRADING_LAMBDA deployed successfully!"
