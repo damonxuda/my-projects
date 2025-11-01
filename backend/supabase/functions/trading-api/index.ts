@@ -21,6 +21,12 @@ serve(async (req) => {
 
   try {
     // ============================================
+    // 0. 解析URL路径（需要最先执行，用于路由判断）
+    // ============================================
+    const url = new URL(req.url)
+    const path = url.pathname.replace('/trading-api', '')
+
+    // ============================================
     // 1. 验证管理员权限（通过 Clerk token）
     // ============================================
     const clerkToken = req.headers.get('clerk-token') || req.headers.get('authorization')?.replace('Bearer ', '')
@@ -94,9 +100,6 @@ serve(async (req) => {
     // ============================================
     // 3. 处理不同的API请求
     // ============================================
-    const url = new URL(req.url)
-    const path = url.pathname.replace('/trading-api', '')
-
     // GET /decisions - 获取交易决策列表
     if (req.method === 'GET' && path === '/decisions') {
       const agent = url.searchParams.get('agent') // 可选：筛选特定agent
