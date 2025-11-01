@@ -84,7 +84,7 @@ const DecisionTimeline = ({ decisions }) => {
                     <span className={`font-semibold ${config.textColor}`}>
                       {config.label}
                     </span>
-                    {item.decision.asset && (
+                    {item.decision.asset && item.decision.asset !== 'null' && (
                       <span className="font-mono text-sm bg-white px-2 py-0.5 rounded border border-gray-300">
                         {item.decision.asset}
                       </span>
