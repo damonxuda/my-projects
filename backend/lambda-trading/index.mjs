@@ -259,6 +259,17 @@ ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.chan
 
         const text = data.candidates[0].content.parts[0].text;
 
+        // 📊 记录 Token 使用量（用于建立经验值）
+        if (data.usageMetadata) {
+            console.log('📊 Gemini Token Usage:', {
+                prompt: data.usageMetadata.promptTokenCount,
+                output: data.usageMetadata.candidatesTokenCount,
+                thoughts: data.usageMetadata.thoughtsTokenCount || 0,
+                total: data.usageMetadata.totalTokenCount,
+                maxAllowed: 4000
+            });
+        }
+
         // 提取 JSON（可能被markdown包裹）
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         if (!jsonMatch) {
@@ -357,6 +368,16 @@ ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.chan
         }
 
         const text = data.content[0].text;
+
+        // 📊 记录 Token 使用量（用于建立经验值）
+        if (data.usage) {
+            console.log('📊 Claude Token Usage:', {
+                input: data.usage.input_tokens,
+                output: data.usage.output_tokens,
+                total: data.usage.input_tokens + data.usage.output_tokens,
+                maxAllowed: 2000
+            });
+        }
 
         // 提取 JSON（可能被markdown包裹）
         const jsonMatch = text.match(/\{[\s\S]*\}/);
