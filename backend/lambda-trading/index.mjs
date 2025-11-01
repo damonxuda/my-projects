@@ -4,6 +4,7 @@
 // 环境变量：GEMINI_API_KEY, CLAUDE_API_KEY, GROK_API_KEY, OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
 import { createClient } from '@supabase/supabase-js';
+import yahooFinance from 'yahoo-finance2';
 
 // ============================================
 // 环境变量配置
@@ -63,7 +64,7 @@ export const handler = async (event) => {
                 }
 
                 // 2.3 模拟执行交易，更新账户
-                const newPortfolio = simulateTrade(portfolio, decision, marketData);
+                const newPortfolio = await simulateTrade(portfolio, decision, marketData);
                 console.log(`💼 ${agent.name} New Portfolio:`, newPortfolio);
 
                 // 2.4 保存决策和账户状态到 Supabase
@@ -214,8 +215,8 @@ async function getCurrentPortfolio(agentName) {
 // 3. 基准策略决策函数
 // ============================================
 async function getBenchmarkDecision(benchmarkName, marketData, portfolio) {
-    // 基准策略：Buy and Hold（买入后持有不动）
-    // 只在初始状态时买入，之后一直持有
+    // 基准策略：追踪真实ETF价格（Buy and Hold）
+    // 只在初始状态时买入ETF份额，之后持有不动
 
     const isInitialState = portfolio.cash === 50000 && Object.keys(portfolio.holdings).length === 0;
 
@@ -229,37 +230,60 @@ async function getBenchmarkDecision(benchmarkName, marketData, portfolio) {
         };
     }
 
-    // 初始状态：按策略分配资金买入
+    // 初始状态：买入真实ETF份额
     if (benchmarkName === 'gdlc') {
-        // GDLC策略：模拟Grayscale CoinDesk Crypto 5 ETF的市值加权
-        // 实际GDLC持仓：BTC 73.52%, ETH 16.16%, XRP 5.05%, SOL 3.83%, ADA 1.44%
-        // 我们没有ADA，按比例调整为：BTC 74.5%, ETH 16.4%, XRP 5.1%, SOL 3.9%
+        // GDLC策略：追踪Grayscale CoinDesk Crypto 5 ETF真实价格
+        try {
+            const quote = await yahooFinance.quote('GDLC');
+            const price = quote.regularMarketPrice;
 
-        return {
-            action: 'buy_basket',  // 特殊标记：一次性买入多个币种
-            basket: {
-                BTC: 0.745,   // 74.5%
-                ETH: 0.164,   // 16.4%
-                XRP: 0.051,   // 5.1%
-                SOL: 0.039    // 3.9%
-            },
-            reason: 'GDLC基准：按市值加权初始买入（BTC 74.5%, ETH 16.4%, XRP 5.1%, SOL 3.9%）'
-        };
+            if (!price) {
+                throw new Error('Failed to get GDLC price');
+            }
+
+            return {
+                action: 'buy_etf',  // 特殊标记：买入ETF份额
+                ticker: 'GDLC',
+                price: price,
+                reason: `GDLC基准：买入真实ETF份额 ($${price.toFixed(2)}/份)`
+            };
+        } catch (error) {
+            console.error('Failed to fetch GDLC price:', error);
+            // 降级：返回持有
+            return {
+                action: 'hold',
+                asset: null,
+                amount: 0,
+                reason: 'GDLC价格获取失败，保持持有'
+            };
+        }
 
     } else if (benchmarkName === 'equal_weight') {
-        // Equal Weight策略：6个币种平均分配
-        return {
-            action: 'buy_basket',
-            basket: {
-                BTC: 1/6,    // 16.67%
-                ETH: 1/6,
-                SOL: 1/6,
-                BNB: 1/6,
-                DOGE: 1/6,
-                XRP: 1/6
-            },
-            reason: '等权重基准：6个币种平均分配初始买入（各16.67%）'
-        };
+        // Equal Weight策略：追踪Bitwise 10 Crypto Index Fund (BITW)
+        try {
+            const quote = await yahooFinance.quote('BITW');
+            const price = quote.regularMarketPrice;
+
+            if (!price) {
+                throw new Error('Failed to get BITW price');
+            }
+
+            return {
+                action: 'buy_etf',
+                ticker: 'BITW',
+                price: price,
+                reason: `BITW基准：买入真实ETF份额 ($${price.toFixed(2)}/份)`
+            };
+        } catch (error) {
+            console.error('Failed to fetch BITW price:', error);
+            // 降级：返回持有
+            return {
+                action: 'hold',
+                asset: null,
+                amount: 0,
+                reason: 'BITW价格获取失败，保持持有'
+            };
+        }
     }
 
     // 未知基准策略，返回持有
@@ -750,7 +774,7 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
 // ============================================
 // 4. 模拟交易执行
 // ============================================
-function simulateTrade(portfolio, decision, marketData) {
+async function simulateTrade(portfolio, decision, marketData) {
     const TRADING_FEE_RATE = 0.001; // 0.1% 手续费（对标 Binance）
     const MIN_TRADE_VALUE = 10; // 最小交易金额 $10（对标交易所门槛）
 
@@ -758,38 +782,34 @@ function simulateTrade(portfolio, decision, marketData) {
 
     if (decision.action === 'hold') {
         // 只更新total_value（根据当前市场价格）
-        newPortfolio.total_value = calculateTotalValue(newPortfolio, marketData);
+        newPortfolio.total_value = await calculateTotalValue(newPortfolio, marketData);
         newPortfolio.pnl = newPortfolio.total_value - 50000;
         newPortfolio.pnl_percentage = (newPortfolio.pnl / 50000) * 100;
         return newPortfolio;
     }
 
-    // 处理基准策略的批量买入
-    if (decision.action === 'buy_basket') {
-        const basket = decision.basket;
-        let totalCost = 0;
+    // 处理基准策略的ETF买入
+    if (decision.action === 'buy_etf') {
+        const ticker = decision.ticker;
+        const pricePerShare = decision.price;
 
-        // 遍历篮子中的每个币种，计算买入数量和成本（扣除手续费后）
-        for (const [asset, weight] of Object.entries(basket)) {
-            // 分配金额要考虑手续费，让最终花费（含手续费）等于分配金额
-            const targetAmount = newPortfolio.cash * weight;  // 目标花费金额（含手续费）
-            const allocationAmount = targetAmount / (1 + TRADING_FEE_RATE);  // 实际可买入金额（扣除手续费）
+        // 计算可买入份额（扣除手续费）
+        const availableCash = newPortfolio.cash / (1 + TRADING_FEE_RATE);
+        const shares = availableCash / pricePerShare;
+        const cost = shares * pricePerShare;
+        const fee = cost * TRADING_FEE_RATE;
+        const totalCost = cost + fee;
 
-            const price = marketData[asset].price;
-            const amount = allocationAmount / price;  // 买入数量
-            const cost = amount * price;  // 实际成本
-            const fee = cost * TRADING_FEE_RATE;  // 手续费
-
-            newPortfolio.holdings[asset] = (newPortfolio.holdings[asset] || 0) + amount;
-            totalCost += (cost + fee);
-
-            console.log(`📊 Buy ${asset}: ${amount.toFixed(6)} units at $${price.toFixed(2)}, cost $${cost.toFixed(2)}, fee $${fee.toFixed(2)}, total $${(cost + fee).toFixed(2)}`);
-        }
-
+        // 存储ETF份额（使用特殊键名）
+        const etfKey = `${ticker}_SHARES`;
+        newPortfolio.holdings[etfKey] = shares;
+        newPortfolio.holdings[`${ticker}_INIT_PRICE`] = pricePerShare;  // 记录初始价格用于追踪
         newPortfolio.cash -= totalCost;
 
-        // 计算新的总价值
-        newPortfolio.total_value = calculateTotalValue(newPortfolio, marketData);
+        console.log(`📊 Buy ETF ${ticker}: ${shares.toFixed(2)} shares at $${pricePerShare.toFixed(2)}/share, cost $${cost.toFixed(2)}, fee $${fee.toFixed(2)}, total $${totalCost.toFixed(2)}`);
+
+        // 计算新的总价值（初始买入时，价值就是成本）
+        newPortfolio.total_value = cost;  // 不包含手续费（已损失）
         newPortfolio.pnl = newPortfolio.total_value - 50000;
         newPortfolio.pnl_percentage = (newPortfolio.pnl / 50000) * 100;
 
@@ -805,7 +825,7 @@ function simulateTrade(portfolio, decision, marketData) {
     if (tradeValue < MIN_TRADE_VALUE) {
         console.warn(`⚠️ Trade value $${tradeValue.toFixed(2)} below minimum $${MIN_TRADE_VALUE}, converting to HOLD`);
         // 转为持有，只更新总价值
-        newPortfolio.total_value = calculateTotalValue(newPortfolio, marketData);
+        newPortfolio.total_value = await calculateTotalValue(newPortfolio, marketData);
         newPortfolio.pnl = newPortfolio.total_value - 50000;
         newPortfolio.pnl_percentage = (newPortfolio.pnl / 50000) * 100;
         return newPortfolio;
@@ -851,22 +871,49 @@ function simulateTrade(portfolio, decision, marketData) {
     }
 
     // 计算新的总价值
-    newPortfolio.total_value = calculateTotalValue(newPortfolio, marketData);
+    newPortfolio.total_value = await calculateTotalValue(newPortfolio, marketData);
     newPortfolio.pnl = newPortfolio.total_value - 50000;
     newPortfolio.pnl_percentage = (newPortfolio.pnl / 50000) * 100;
 
     return newPortfolio;
 }
 
-// 计算总资产价值
-function calculateTotalValue(portfolio, marketData) {
+// 计算总资产价值（支持ETF和加密货币）
+async function calculateTotalValue(portfolio, marketData) {
     let total = portfolio.cash;
 
-    Object.keys(portfolio.holdings).forEach(asset => {
+    for (const asset of Object.keys(portfolio.holdings)) {
         const amount = portfolio.holdings[asset];
-        const price = marketData[asset]?.price || 0;
-        total += amount * price;
-    });
+
+        // 检查是否是ETF份额
+        if (asset.endsWith('_SHARES')) {
+            const ticker = asset.replace('_SHARES', '');
+            try {
+                const quote = await yahooFinance.quote(ticker);
+                const currentPrice = quote.regularMarketPrice;
+                if (currentPrice) {
+                    total += amount * currentPrice;
+                    console.log(`📊 ETF ${ticker}: ${amount.toFixed(2)} shares × $${currentPrice.toFixed(2)} = $${(amount * currentPrice).toFixed(2)}`);
+                }
+            } catch (error) {
+                console.error(`Failed to get ${ticker} price for valuation:`, error);
+                // 降级：使用初始价格
+                const initPriceKey = `${ticker}_INIT_PRICE`;
+                const initPrice = portfolio.holdings[initPriceKey] || 0;
+                total += amount * initPrice;
+                console.warn(`⚠️ Using init price for ${ticker}: $${initPrice.toFixed(2)}`);
+            }
+        }
+        // 跳过初始价格记录键
+        else if (asset.endsWith('_INIT_PRICE')) {
+            continue;
+        }
+        // 加密货币持仓
+        else {
+            const price = marketData[asset]?.price || 0;
+            total += amount * price;
+        }
+    }
 
     return total;
 }

@@ -8,7 +8,8 @@
     "test": "node index.mjs"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0"
+    "@supabase/supabase-js": "^2.39.0",
+    "yahoo-finance2": "^2.14.4"
   },
   "devDependencies": {},
   "engines": {
