@@ -108,7 +108,7 @@ async function fetchMarketData() {
     try {
         const response = await fetch(
             'https://api.coingecko.com/api/v3/simple/price?' +
-            'ids=bitcoin,ethereum&' +
+            'ids=bitcoin,ethereum,solana,binancecoin,dogecoin,ripple&' +
             'vs_currencies=usd&' +
             'include_24hr_change=true&' +
             'include_24hr_vol=true&' +
@@ -133,6 +133,30 @@ async function fetchMarketData() {
                 change_24h: data.ethereum.usd_24h_change,
                 volume_24h: data.ethereum.usd_24h_vol,
                 market_cap: data.ethereum.usd_market_cap
+            },
+            SOL: {
+                price: data.solana.usd,
+                change_24h: data.solana.usd_24h_change,
+                volume_24h: data.solana.usd_24h_vol,
+                market_cap: data.solana.usd_market_cap
+            },
+            BNB: {
+                price: data.binancecoin.usd,
+                change_24h: data.binancecoin.usd_24h_change,
+                volume_24h: data.binancecoin.usd_24h_vol,
+                market_cap: data.binancecoin.usd_market_cap
+            },
+            DOGE: {
+                price: data.dogecoin.usd,
+                change_24h: data.dogecoin.usd_24h_change,
+                volume_24h: data.dogecoin.usd_24h_vol,
+                market_cap: data.dogecoin.usd_market_cap
+            },
+            XRP: {
+                price: data.ripple.usd,
+                change_24h: data.ripple.usd_24h_change,
+                volume_24h: data.ripple.usd_24h_vol,
+                market_cap: data.ripple.usd_market_cap
             },
             timestamp: new Date().toISOString()
         };
@@ -205,6 +229,10 @@ async function askGemini(marketData, portfolio) {
 【当前市场数据】
 BTC价格: $${marketData.BTC.price.toFixed(2)} (24h变化: ${marketData.BTC.change_24h.toFixed(2)}%)
 ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.change_24h.toFixed(2)}%)
+SOL价格: $${marketData.SOL.price.toFixed(2)} (24h变化: ${marketData.SOL.change_24h.toFixed(2)}%)
+BNB价格: $${marketData.BNB.price.toFixed(2)} (24h变化: ${marketData.BNB.change_24h.toFixed(2)}%)
+DOGE价格: $${marketData.DOGE.price.toFixed(4)} (24h变化: ${marketData.DOGE.change_24h.toFixed(2)}%)
+XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.change_24h.toFixed(2)}%)
 
 【你的账户状态】
 现金: $${portfolio.cash.toFixed(2)}
@@ -213,7 +241,7 @@ ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.chan
 盈亏: ${portfolio.pnl?.toFixed(2) || 0}$ (${portfolio.pnl_percentage?.toFixed(2) || 0}%)
 
 【交易规则】
-1. 你只能交易 BTC 和 ETH
+1. 你只能交易 BTC, ETH, SOL, BNB, DOGE, XRP（对标Alpha Arena比赛币种，现货交易无杠杆）
 2. 单笔交易不超过总资产的 30%
 3. 单笔交易至少 $10（低于此金额不交易）
 4. 必须保留至少 20% 现金
@@ -223,7 +251,7 @@ ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.chan
 请返回 JSON 格式的决策（不要包含任何其他文字）：
 {
     "action": "buy/sell/hold",
-    "asset": "BTC/ETH/null",
+    "asset": "BTC/ETH/SOL/BNB/DOGE/XRP/null",
     "amount": 数量,
     "reason": "决策理由（中文，1-2句话）"
 }`;
@@ -316,6 +344,10 @@ async function askClaude(marketData, portfolio) {
 【当前市场数据】
 BTC价格: $${marketData.BTC.price.toFixed(2)} (24h变化: ${marketData.BTC.change_24h.toFixed(2)}%)
 ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.change_24h.toFixed(2)}%)
+SOL价格: $${marketData.SOL.price.toFixed(2)} (24h变化: ${marketData.SOL.change_24h.toFixed(2)}%)
+BNB价格: $${marketData.BNB.price.toFixed(2)} (24h变化: ${marketData.BNB.change_24h.toFixed(2)}%)
+DOGE价格: $${marketData.DOGE.price.toFixed(4)} (24h变化: ${marketData.DOGE.change_24h.toFixed(2)}%)
+XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.change_24h.toFixed(2)}%)
 
 【你的账户状态】
 现金: $${portfolio.cash.toFixed(2)}
@@ -324,7 +356,7 @@ ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.chan
 盈亏: ${portfolio.pnl?.toFixed(2) || 0}$ (${portfolio.pnl_percentage?.toFixed(2) || 0}%)
 
 【交易规则】
-1. 你只能交易 BTC 和 ETH
+1. 你只能交易 BTC, ETH, SOL, BNB, DOGE, XRP（对标Alpha Arena比赛币种，现货交易无杠杆）
 2. 单笔交易不超过总资产的 30%
 3. 单笔交易至少 $10（低于此金额不交易）
 4. 必须保留至少 20% 现金
@@ -334,7 +366,7 @@ ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.chan
 请返回 JSON 格式的决策（不要包含任何其他文字）：
 {
     "action": "buy/sell/hold",
-    "asset": "BTC/ETH/null",
+    "asset": "BTC/ETH/SOL/BNB/DOGE/XRP/null",
     "amount": 数量,
     "reason": "决策理由（中文，1-2句话）"
 }`;
@@ -427,6 +459,10 @@ async function askGrok(marketData, portfolio) {
 【当前市场数据】
 BTC价格: $${marketData.BTC.price.toFixed(2)} (24h变化: ${marketData.BTC.change_24h.toFixed(2)}%)
 ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.change_24h.toFixed(2)}%)
+SOL价格: $${marketData.SOL.price.toFixed(2)} (24h变化: ${marketData.SOL.change_24h.toFixed(2)}%)
+BNB价格: $${marketData.BNB.price.toFixed(2)} (24h变化: ${marketData.BNB.change_24h.toFixed(2)}%)
+DOGE价格: $${marketData.DOGE.price.toFixed(4)} (24h变化: ${marketData.DOGE.change_24h.toFixed(2)}%)
+XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.change_24h.toFixed(2)}%)
 
 【你的账户状态】
 现金: $${portfolio.cash.toFixed(2)}
@@ -435,7 +471,7 @@ ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.chan
 盈亏: ${portfolio.pnl?.toFixed(2) || 0}$ (${portfolio.pnl_percentage?.toFixed(2) || 0}%)
 
 【交易规则】
-1. 你只能交易 BTC 和 ETH
+1. 你只能交易 BTC, ETH, SOL, BNB, DOGE, XRP（对标Alpha Arena比赛币种，现货交易无杠杆）
 2. 单笔交易不超过总资产的 30%
 3. 单笔交易至少 $10（低于此金额不交易）
 4. 必须保留至少 20% 现金
@@ -445,7 +481,7 @@ ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.chan
 请返回 JSON 格式的决策（不要包含任何其他文字）：
 {
     "action": "buy/sell/hold",
-    "asset": "BTC/ETH/null",
+    "asset": "BTC/ETH/SOL/BNB/DOGE/XRP/null",
     "amount": 数量,
     "reason": "决策理由（中文，1-2句话）"
 }`;
@@ -537,6 +573,10 @@ async function askOpenAI(marketData, portfolio) {
 【当前市场数据】
 BTC价格: $${marketData.BTC.price.toFixed(2)} (24h变化: ${marketData.BTC.change_24h.toFixed(2)}%)
 ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.change_24h.toFixed(2)}%)
+SOL价格: $${marketData.SOL.price.toFixed(2)} (24h变化: ${marketData.SOL.change_24h.toFixed(2)}%)
+BNB价格: $${marketData.BNB.price.toFixed(2)} (24h变化: ${marketData.BNB.change_24h.toFixed(2)}%)
+DOGE价格: $${marketData.DOGE.price.toFixed(4)} (24h变化: ${marketData.DOGE.change_24h.toFixed(2)}%)
+XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.change_24h.toFixed(2)}%)
 
 【你的账户状态】
 现金: $${portfolio.cash.toFixed(2)}
@@ -545,7 +585,7 @@ ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.chan
 盈亏: ${portfolio.pnl?.toFixed(2) || 0}$ (${portfolio.pnl_percentage?.toFixed(2) || 0}%)
 
 【交易规则】
-1. 你只能交易 BTC 和 ETH
+1. 你只能交易 BTC, ETH, SOL, BNB, DOGE, XRP（对标Alpha Arena比赛币种，现货交易无杠杆）
 2. 单笔交易不超过总资产的 30%
 3. 单笔交易至少 $10（低于此金额不交易）
 4. 必须保留至少 20% 现金
@@ -555,7 +595,7 @@ ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.chan
 请返回 JSON 格式的决策（不要包含任何其他文字）：
 {
     "action": "buy/sell/hold",
-    "asset": "BTC/ETH/null",
+    "asset": "BTC/ETH/SOL/BNB/DOGE/XRP/null",
     "amount": 数量,
     "reason": "决策理由（中文，1-2句话）"
 }`;
