@@ -5,15 +5,15 @@ const PerformanceChart = ({ portfolios }) => {
   // 固定显示顺序：OpenAI → Gemini → Claude → Grok → BITW → GDLC
   const displayOrder = ['OPENAI', 'GEMINI', 'CLAUDE', 'GROK', 'EQUAL_WEIGHT', 'GDLC'];
 
-  // 创建portfolio查找映射
+  // 创建portfolio查找映射（使用小写key）
   const portfolioMap = {};
   portfolios.forEach(p => {
-    portfolioMap[p.agent_name.toUpperCase()] = p;
+    portfolioMap[p.agent_name.toLowerCase()] = p;
   });
 
   // 按固定顺序构建图表数据
   const chartData = displayOrder.map(name => {
-    const p = portfolioMap[name];
+    const p = portfolioMap[name.toLowerCase()];
     return {
       name: name === 'EQUAL_WEIGHT' ? 'BITW' : name,  // 显示时用BITW代替EQUAL_WEIGHT
       pnl_percentage: parseFloat(p?.pnl_percentage?.toFixed(2) || 0),
