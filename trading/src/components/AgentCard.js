@@ -19,7 +19,7 @@ const AgentCard = ({ portfolio }) => {
 
     // Grok
     grok_standard: { name: 'Grok 2', color: 'orange', icon: '🟠' },
-    grok_mini: { name: 'Grok 2 mini', color: 'orange', icon: '🟧' },
+    grok_mini: { name: 'Grok 3 mini', color: 'orange', icon: '🟧' },
 
     // ETF
     gdlc: { name: 'GDLC', color: 'yellow', icon: '📊' },

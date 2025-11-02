@@ -432,7 +432,7 @@ async function askLLM(agentName, marketData, portfolio) {
         case 'grok_standard':
             return await askGrok(marketData, portfolio, 'grok-2-1212');
         case 'grok_mini':
-            return await askGrok(marketData, portfolio, 'grok-2-mini-1212');
+            return await askGrok(marketData, portfolio, 'grok-3-mini');
 
         default:
             throw new Error(`Unknown agent: ${agentName}`);
