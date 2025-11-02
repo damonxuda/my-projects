@@ -145,13 +145,28 @@ const TradingDashboard = () => {
         </button>
       </div>
 
-      {/* Agent 性能卡片 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-        {portfolios
-          .sort((a, b) => b.pnl_percentage - a.pnl_percentage)
-          .map(portfolio => (
-            <AgentCard key={portfolio.agent_name} portfolio={portfolio} />
-          ))}
+      {/* Agent 性能卡片 - 2行3列固定布局 */}
+      {/* 第一行: OpenAI, Gemini, Claude */}
+      {/* 第二行: Grok, BITW, GDLC */}
+      <div className="grid grid-cols-3 gap-4">
+        {(() => {
+          // 固定显示顺序
+          const displayOrder = ['openai', 'gemini', 'claude', 'grok', 'equal_weight', 'gdlc'];
+
+          // 创建portfolio查找映射
+          const portfolioMap = {};
+          portfolios.forEach(p => {
+            portfolioMap[p.agent_name.toLowerCase()] = p;
+          });
+
+          // 按固定顺序渲染卡片
+          return displayOrder
+            .map(agentName => portfolioMap[agentName])
+            .filter(portfolio => portfolio) // 过滤掉不存在的agent
+            .map(portfolio => (
+              <AgentCard key={portfolio.agent_name} portfolio={portfolio} />
+            ));
+        })()}
       </div>
 
       {/* 性能走势图 */}
