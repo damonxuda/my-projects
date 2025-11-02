@@ -18,7 +18,7 @@ const PerformanceChart = ({ portfolios }) => {
     'GEMINI_FLASH': 'Gemini 2.5 Flash',
     'CLAUDE_STANDARD': 'Sonnet 4.5',
     'CLAUDE_MINI': 'Haiku 4.5',
-    'GROK_STANDARD': 'Grok 2',
+    'GROK_STANDARD': 'Grok 4',
     'GROK_MINI': 'Grok 3 mini',
     'EQUAL_WEIGHT': 'BITW',
     'GDLC': 'GDLC'

@@ -18,7 +18,7 @@ const AgentCard = ({ portfolio }) => {
     claude_mini: { name: 'Haiku 4.5', color: 'purple', icon: '🟪' },
 
     // Grok
-    grok_standard: { name: 'Grok 2', color: 'orange', icon: '🟠' },
+    grok_standard: { name: 'Grok 4', color: 'orange', icon: '🟠' },
     grok_mini: { name: 'Grok 3 mini', color: 'orange', icon: '🟧' },
 
     // ETF

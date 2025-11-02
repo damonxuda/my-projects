@@ -22,12 +22,24 @@ const DecisionTimeline = ({ decisions }) => {
     });
   };
 
-  // Agent 图标
+  // Agent 图标 (9个agents)
   const agentIcons = {
-    gemini: '🔷',
-    claude: '🟣',
-    grok: '🟠',
-    openai: '🟢',
+    // OpenAI
+    openai_standard: '🟢',
+    openai_mini: '🟩',
+
+    // Gemini
+    gemini_flash: '🔷',
+
+    // Claude
+    claude_standard: '🟣',
+    claude_mini: '🟪',
+
+    // Grok
+    grok_standard: '🟠',
+    grok_mini: '🟧',
+
+    // ETF
     gdlc: '📊',
     equal_weight: '⚖️'
   };
