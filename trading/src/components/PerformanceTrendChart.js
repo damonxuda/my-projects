@@ -15,9 +15,9 @@ const PerformanceTrendChart = ({ historyData }) => {
     'equal_weight': '#6B7280'        // gray-500
   };
 
-  // 添加初始点（t=0，所有agent都是50000）
+  // 添加初始点（round=0，所有agent都是50000）
   const initialPoint = {
-    timestamp: 'Start',
+    round: 0,
     openai_standard: 50000,
     openai_mini: 50000,
     gemini_flash: 50000,
@@ -96,10 +96,10 @@ const PerformanceTrendChart = ({ historyData }) => {
       <h2 className="text-xl font-bold text-gray-900 mb-4">账户价值趋势</h2>
 
       <ResponsiveContainer width="100%" height={400}>
-        <LineChart data={historyData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+        <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
           <XAxis
-            dataKey="timestamp"
+            dataKey="round"
             tick={false}
             axisLine={{ stroke: '#d1d5db' }}
             label={{ value: '时间 →', position: 'insideRight', style: { fontSize: 12, fill: '#6b7280' } }}

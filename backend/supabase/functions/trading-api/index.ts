@@ -182,18 +182,27 @@ serve(async (req) => {
         throw error
       }
 
-      // 格式化数据：按时间戳分组，每个时间点包含所有agents的值
-      const timeMap: any = {}
+      // 按时间分组：将5分钟内的记录归为同一轮采样
+      const roundMap: any = {}
+      let currentRound = 0
+      let lastTimestamp = 0
 
       portfolios?.forEach((p: any) => {
-        const timestamp = p.created_at
-        if (!timeMap[timestamp]) {
-          timeMap[timestamp] = { timestamp }
+        const timestamp = new Date(p.created_at).getTime()
+
+        // 如果距离上次采样超过5分钟（300000ms），开始新一轮
+        if (timestamp - lastTimestamp > 300000) {
+          currentRound++
+          lastTimestamp = timestamp
         }
-        timeMap[timestamp][p.agent_name] = parseFloat(p.total_value)
+
+        if (!roundMap[currentRound]) {
+          roundMap[currentRound] = { round: currentRound }
+        }
+        roundMap[currentRound][p.agent_name] = parseFloat(p.total_value)
       })
 
-      const history = Object.values(timeMap)
+      const history = Object.values(roundMap)
 
       return new Response(
         JSON.stringify({ success: true, history }),
