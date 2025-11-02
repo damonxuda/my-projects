@@ -414,7 +414,7 @@ async function askLLM(agentName, marketData, portfolio) {
     switch (agentName) {
         // OpenAI
         case 'openai_standard':
-            return await askOpenAI(marketData, portfolio, 'gpt-4o');
+            return await askOpenAI(marketData, portfolio, 'gpt-5');
         case 'openai_mini':
             return await askOpenAI(marketData, portfolio, 'gpt-4o-mini');
 

@@ -168,9 +168,9 @@ const TradingDashboard = () => {
       </div>
 
       {/* Agent 性能卡片 - 3行3列固定布局 */}
-      {/* 第一行: GPT-4o, GPT-4o mini, Gemini 2.5 Flash */}
-      {/* 第二行: Sonnet 4.5, Haiku 4.5, Grok 2 */}
-      {/* 第三行: Grok 2 mini, BITW, GDLC */}
+      {/* 第一行: GPT-5, GPT-4o mini, Gemini 2.5 Flash */}
+      {/* 第二行: Sonnet 4.5, Haiku 4.5, Grok 4 */}
+      {/* 第三行: Grok 3 mini, BITW, GDLC */}
       <div className="grid grid-cols-3 gap-4">
         {(() => {
           // 固定显示顺序：每个厂商的标准型+轻量级，然后是2个ETF

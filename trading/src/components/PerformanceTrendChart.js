@@ -34,7 +34,7 @@ const PerformanceTrendChart = ({ historyData }) => {
 
   // 模型显示名称
   const agentNames = {
-    'openai_standard': 'GPT-4o',
+    'openai_standard': 'GPT-5',
     'openai_mini': 'GPT-4o mini',
     'gemini_flash': 'Gemini 2.5 Flash',
     'claude_standard': 'Sonnet 4.5',

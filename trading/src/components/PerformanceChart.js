@@ -13,7 +13,7 @@ const PerformanceChart = ({ portfolios }) => {
 
   // 模型显示名称映射
   const displayNames = {
-    'OPENAI_STANDARD': 'GPT-4o',
+    'OPENAI_STANDARD': 'GPT-5',
     'OPENAI_MINI': 'GPT-4o mini',
     'GEMINI_FLASH': 'Gemini 2.5 Flash',
     'CLAUDE_STANDARD': 'Sonnet 4.5',

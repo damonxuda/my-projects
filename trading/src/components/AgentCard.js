@@ -7,7 +7,7 @@ const AgentCard = ({ portfolio, marketData }) => {
   // Agent 显示名称和颜色 (8个AI模型 + 2个ETF)
   const agentInfo = {
     // OpenAI
-    openai_standard: { name: 'GPT-4o', color: 'green', icon: '🟢' },
+    openai_standard: { name: 'GPT-5', color: 'green', icon: '🟢' },
     openai_mini: { name: 'GPT-4o mini', color: 'green', icon: '🟩' },
 
     // Gemini
