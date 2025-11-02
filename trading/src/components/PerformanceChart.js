@@ -2,15 +2,25 @@ import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 
 const PerformanceChart = ({ portfolios }) => {
-  // 固定显示顺序：GPT-4o → Gemini 2.0 Flash → Claude 3.5 Sonnet → Grok 2 → BITW → GDLC
-  const displayOrder = ['OPENAI', 'GEMINI', 'CLAUDE', 'GROK', 'EQUAL_WEIGHT', 'GDLC'];
+  // 固定显示顺序：按厂商分组，每厂商标准型在前，轻量级在后，ETF在最右边
+  const displayOrder = [
+    'OPENAI_STANDARD', 'OPENAI_MINI',
+    'GEMINI_THINKING', 'GEMINI_FLASH',
+    'CLAUDE_STANDARD', 'CLAUDE_MINI',
+    'GROK_STANDARD', 'GROK_MINI',
+    'EQUAL_WEIGHT', 'GDLC'
+  ];
 
   // 模型显示名称映射
   const displayNames = {
-    'OPENAI': 'GPT-4o mini',
-    'GEMINI': 'Gemini 2.5 Flash',
-    'CLAUDE': 'Haiku 4.5',
-    'GROK': 'Grok 2 mini',
+    'OPENAI_STANDARD': 'GPT-4o',
+    'OPENAI_MINI': 'GPT-4o mini',
+    'GEMINI_THINKING': 'Gemini 2.0 Flash Thinking',
+    'GEMINI_FLASH': 'Gemini 2.5 Flash',
+    'CLAUDE_STANDARD': 'Sonnet 4.5',
+    'CLAUDE_MINI': 'Haiku 4.5',
+    'GROK_STANDARD': 'Grok 2',
+    'GROK_MINI': 'Grok 2 mini',
     'EQUAL_WEIGHT': 'BITW',
     'GDLC': 'GDLC'
   };

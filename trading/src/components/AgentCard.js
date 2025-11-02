@@ -4,12 +4,25 @@ import { TrendingUp, TrendingDown, DollarSign, Wallet } from 'lucide-react';
 const AgentCard = ({ portfolio }) => {
   const { agent_name, total_value, cash, holdings, pnl, pnl_percentage } = portfolio;
 
-  // Agent 显示名称和颜色
+  // Agent 显示名称和颜色 (8个AI模型 + 2个ETF)
   const agentInfo = {
-    gemini: { name: 'Gemini 2.5 Flash', color: 'blue', icon: '🔷' },
-    claude: { name: 'Haiku 4.5', color: 'purple', icon: '🟣' },
-    grok: { name: 'Grok 2 mini', color: 'orange', icon: '🟠' },
-    openai: { name: 'GPT-4o mini', color: 'green', icon: '🟢' },
+    // OpenAI
+    openai_standard: { name: 'GPT-4o', color: 'green', icon: '🟢' },
+    openai_mini: { name: 'GPT-4o mini', color: 'green', icon: '🟩' },
+
+    // Gemini
+    gemini_thinking: { name: 'Gemini 2.0 Flash Thinking', color: 'blue', icon: '🔷' },
+    gemini_flash: { name: 'Gemini 2.5 Flash', color: 'blue', icon: '🔹' },
+
+    // Claude
+    claude_standard: { name: 'Sonnet 4.5', color: 'purple', icon: '🟣' },
+    claude_mini: { name: 'Haiku 4.5', color: 'purple', icon: '🟪' },
+
+    // Grok
+    grok_standard: { name: 'Grok 2', color: 'orange', icon: '🟠' },
+    grok_mini: { name: 'Grok 2 mini', color: 'orange', icon: '🟧' },
+
+    // ETF
     gdlc: { name: 'GDLC', color: 'yellow', icon: '📊' },
     equal_weight: { name: 'BITW', color: 'gray', icon: '⚖️' }
   };

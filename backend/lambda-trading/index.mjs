@@ -23,13 +23,27 @@ const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
 // 配置要运行的 LLM agents + 基准策略
+// 新架构：每家厂商2个模型（标准型 + 轻量级）+ 2个ETF基准
 const AGENTS = [
-    { name: 'gemini', type: 'llm', enabled: !!GEMINI_API_KEY },
-    { name: 'claude', type: 'llm', enabled: !!CLAUDE_API_KEY },
-    { name: 'grok', type: 'llm', enabled: !!GROK_API_KEY },
-    { name: 'openai', type: 'llm', enabled: !!OPENAI_API_KEY },
-    { name: 'gdlc', type: 'benchmark', enabled: true },  // GDLC市值加权ETF基准
-    { name: 'equal_weight', type: 'benchmark', enabled: true }  // 等权重持有基准
+    // OpenAI (2个)
+    { name: 'openai_standard', type: 'llm', enabled: !!OPENAI_API_KEY },  // GPT-4o
+    { name: 'openai_mini', type: 'llm', enabled: !!OPENAI_API_KEY },      // GPT-4o mini
+
+    // Gemini (2个)
+    { name: 'gemini_thinking', type: 'llm', enabled: !!GEMINI_API_KEY },  // Gemini 2.0 Flash Thinking
+    { name: 'gemini_flash', type: 'llm', enabled: !!GEMINI_API_KEY },     // Gemini 2.5 Flash
+
+    // Claude (2个)
+    { name: 'claude_standard', type: 'llm', enabled: !!CLAUDE_API_KEY },  // Sonnet 4.5
+    { name: 'claude_mini', type: 'llm', enabled: !!CLAUDE_API_KEY },      // Haiku 4.5
+
+    // Grok (2个)
+    { name: 'grok_standard', type: 'llm', enabled: !!GROK_API_KEY },      // Grok 2
+    { name: 'grok_mini', type: 'llm', enabled: !!GROK_API_KEY },          // Grok 2 mini
+
+    // ETF基准 (2个)
+    { name: 'gdlc', type: 'benchmark', enabled: true },                   // GDLC市值加权ETF基准
+    { name: 'equal_weight', type: 'benchmark', enabled: true }            // BITW等权重ETF基准
 ].filter(agent => agent.enabled);
 
 // ============================================
@@ -399,14 +413,30 @@ async function getBenchmarkDecision(benchmarkName, marketData, portfolio) {
 // ============================================
 async function askLLM(agentName, marketData, portfolio) {
     switch (agentName) {
-        case 'gemini':
-            return await askGemini(marketData, portfolio);
-        case 'claude':
-            return await askClaude(marketData, portfolio);
-        case 'grok':
-            return await askGrok(marketData, portfolio);
-        case 'openai':
-            return await askOpenAI(marketData, portfolio);
+        // OpenAI
+        case 'openai_standard':
+            return await askOpenAI(marketData, portfolio, 'gpt-4o');
+        case 'openai_mini':
+            return await askOpenAI(marketData, portfolio, 'gpt-4o-mini');
+
+        // Gemini
+        case 'gemini_thinking':
+            return await askGemini(marketData, portfolio, 'gemini-2.0-flash-thinking-exp');
+        case 'gemini_flash':
+            return await askGemini(marketData, portfolio, 'gemini-2.5-flash');
+
+        // Claude
+        case 'claude_standard':
+            return await askClaude(marketData, portfolio, 'claude-sonnet-4-5-20250929');
+        case 'claude_mini':
+            return await askClaude(marketData, portfolio, 'claude-haiku-4-5');
+
+        // Grok
+        case 'grok_standard':
+            return await askGrok(marketData, portfolio, 'grok-2-1212');
+        case 'grok_mini':
+            return await askGrok(marketData, portfolio, 'grok-2-mini-1212');
+
         default:
             throw new Error(`Unknown agent: ${agentName}`);
     }
@@ -415,7 +445,9 @@ async function askLLM(agentName, marketData, portfolio) {
 // ============================================
 // 3.1 调用 Gemini API 获取决策
 // ============================================
-async function askGemini(marketData, portfolio) {
+
+// Gemini API (支持多个模型)
+async function askGemini(marketData, portfolio, model = 'gemini-2.5-flash') {
     const prompt = `你是一个专业的加密货币交易员。请基于以下信息做出交易决策。
 
 【当前市场数据】
@@ -450,7 +482,7 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
 
     try {
         const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
             {
                 method: 'POST',
                 headers: {
@@ -464,7 +496,7 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
                     }],
                     generationConfig: {
                         temperature: 0.7,
-                        maxOutputTokens: 4000  // 增加token限制以容纳思考tokens（Gemini 2.5可能用1999 tokens思考）
+                        maxOutputTokens: 8000  // 增加token限制以容纳思考tokens（Gemini 2.0 Thinking可能需要更多）
                     }
                 })
             }
@@ -530,7 +562,7 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
 // ============================================
 // 3.2 调用 Claude API 获取决策
 // ============================================
-async function askClaude(marketData, portfolio) {
+async function askClaude(marketData, portfolio, model = 'claude-haiku-4-5') {
     const prompt = `你是一个专业的加密货币交易员。请基于以下信息做出交易决策。
 
 【当前市场数据】
@@ -574,7 +606,7 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
                     'anthropic-version': '2023-06-01'
                 },
                 body: JSON.stringify({
-                    model: 'claude-haiku-4-5',
+                    model: model,
                     max_tokens: 2000,
                     temperature: 0.7,
                     messages: [{
@@ -645,7 +677,7 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
 // ============================================
 // 3.3 调用 Grok API 获取决策
 // ============================================
-async function askGrok(marketData, portfolio) {
+async function askGrok(marketData, portfolio, model = 'grok-2-mini-1212') {
     const prompt = `你是一个专业的加密货币交易员。请基于以下信息做出交易决策。
 
 【当前市场数据】
@@ -688,7 +720,7 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
                     'Authorization': `Bearer ${GROK_API_KEY}`
                 },
                 body: JSON.stringify({
-                    model: 'grok-3-mini',
+                    model: model,
                     messages: [{
                         role: 'user',
                         content: prompt
@@ -759,7 +791,7 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
 // ============================================
 // 3.4 调用 OpenAI API 获取决策
 // ============================================
-async function askOpenAI(marketData, portfolio) {
+async function askOpenAI(marketData, portfolio, model = 'gpt-4o-mini') {
     const prompt = `你是一个专业的加密货币交易员。请基于以下信息做出交易决策。
 
 【当前市场数据】
@@ -802,7 +834,7 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
                     'Authorization': `Bearer ${OPENAI_API_KEY}`
                 },
                 body: JSON.stringify({
-                    model: 'gpt-4o-mini',
+                    model: model,
                     messages: [{
                         role: 'user',
                         content: prompt
