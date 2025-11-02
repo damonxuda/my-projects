@@ -137,20 +137,37 @@ const DecisionTimeline = ({ decisions }) => {
                   {/* 市场快照（如果有）*/}
                   {item.market_data && (
                     <div className="mt-2 flex space-x-4 text-xs text-gray-600">
-                      {item.market_data.BTC && (
+                      {/* 显示交易资产的价格（如果有） */}
+                      {item.decision.asset && item.decision.asset !== 'null' && item.market_data[item.decision.asset] && (
+                        <span className="font-semibold">
+                          {item.decision.asset}: ${
+                            item.market_data[item.decision.asset].price >= 1
+                              ? item.market_data[item.decision.asset].price.toFixed(2)
+                              : item.market_data[item.decision.asset].price.toFixed(4)
+                          }
+                          {item.market_data[item.decision.asset].change_24h !== undefined && (
+                            <span className={item.market_data[item.decision.asset].change_24h >= 0 ? 'text-green-600' : 'text-red-600'}>
+                              {' '}({item.market_data[item.decision.asset].change_24h.toFixed(2)}%)
+                            </span>
+                          )}
+                        </span>
+                      )}
+                      {/* 显示BTC作为参考（如果不是交易资产） */}
+                      {item.market_data.BTC && item.decision.asset !== 'BTC' && (
                         <span>
                           BTC: ${item.market_data.BTC.price?.toFixed(0) || 'N/A'}
-                          {item.market_data.BTC.change_24h && (
+                          {item.market_data.BTC.change_24h !== undefined && (
                             <span className={item.market_data.BTC.change_24h >= 0 ? 'text-green-600' : 'text-red-600'}>
                               {' '}({item.market_data.BTC.change_24h.toFixed(2)}%)
                             </span>
                           )}
                         </span>
                       )}
-                      {item.market_data.ETH && (
+                      {/* 显示ETH作为参考（如果不是交易资产） */}
+                      {item.market_data.ETH && item.decision.asset !== 'ETH' && (
                         <span>
                           ETH: ${item.market_data.ETH.price?.toFixed(0) || 'N/A'}
-                          {item.market_data.ETH.change_24h && (
+                          {item.market_data.ETH.change_24h !== undefined && (
                             <span className={item.market_data.ETH.change_24h >= 0 ? 'text-green-600' : 'text-red-600'}>
                               {' '}({item.market_data.ETH.change_24h.toFixed(2)}%)
                             </span>

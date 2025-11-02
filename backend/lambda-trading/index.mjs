@@ -709,7 +709,7 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
 
     try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
+        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60秒超时
 
         const response = await fetch(
             'https://api.x.ai/v1/chat/completions',
@@ -781,7 +781,7 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
 
     } catch (error) {
         if (error.name === 'AbortError') {
-            console.error('Grok API timeout (30s)');
+            console.error('Grok API timeout (60s)');
         } else {
             console.error('Grok API failed:', error);
         }
@@ -790,7 +790,7 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
             action: 'hold',
             asset: null,
             amount: 0,
-            reason: error.name === 'AbortError' ? 'API超时（30秒），保持持有' : 'API调用失败，保持持有'
+            reason: error.name === 'AbortError' ? 'API超时（60秒），保持持有' : 'API调用失败，保持持有'
         };
     }
 }
@@ -1080,8 +1080,8 @@ async function calculateTotalValue(portfolio, marketData) {
                 console.warn(`⚠️ Using init price for ${ticker}: $${initPrice.toFixed(2)}`);
             }
         }
-        // 跳过初始价格记录键
-        else if (asset.endsWith('_INIT_PRICE')) {
+        // 跳过ETF元数据字段
+        else if (asset.endsWith('_INIT_PRICE') || asset.endsWith('_LAST_DIV_CHECK')) {
             continue;
         }
         // 加密货币持仓
