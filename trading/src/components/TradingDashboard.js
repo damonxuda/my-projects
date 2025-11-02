@@ -12,6 +12,7 @@ const TradingDashboard = () => {
   const [portfolios, setPortfolios] = useState([]);
   const [decisions, setDecisions] = useState([]);
   const [historyData, setHistoryData] = useState([]);
+  const [marketData, setMarketData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
@@ -75,6 +76,14 @@ const TradingDashboard = () => {
 
       if (decisionsData.success) {
         setDecisions(decisionsData.decisions || []);
+
+        // 从最新的决策中提取市场数据（用于显示实时价格）
+        if (decisionsData.decisions && decisionsData.decisions.length > 0) {
+          const latestDecision = decisionsData.decisions[0];
+          if (latestDecision.market_data) {
+            setMarketData(latestDecision.market_data);
+          }
+        }
       }
 
       if (historyDataRes.success) {
@@ -184,7 +193,11 @@ const TradingDashboard = () => {
             .map(agentName => portfolioMap[agentName])
             .filter(portfolio => portfolio) // 过滤掉不存在的agent
             .map(portfolio => (
-              <AgentCard key={portfolio.agent_name} portfolio={portfolio} />
+              <AgentCard
+                key={portfolio.agent_name}
+                portfolio={portfolio}
+                marketData={marketData}
+              />
             ));
         })()}
       </div>

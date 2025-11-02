@@ -1017,6 +1017,17 @@ async function simulateTrade(portfolio, decision, marketData) {
         }
     } else if (decision.action === 'sell') {
         const currentHolding = newPortfolio.holdings[asset] || 0;
+
+        // 检查是否有持仓可以卖出
+        if (currentHolding === 0) {
+            console.warn(`⚠️ Cannot sell ${asset}: No holdings. Converting to HOLD.`);
+            // 转为持有，只更新总价值
+            newPortfolio.total_value = await calculateTotalValue(newPortfolio, marketData);
+            newPortfolio.pnl = newPortfolio.total_value - 50000;
+            newPortfolio.pnl_percentage = (newPortfolio.pnl / 50000) * 100;
+            return newPortfolio;
+        }
+
         const revenue = amount * price;
         const fee = revenue * TRADING_FEE_RATE;
         const netRevenue = revenue - fee;

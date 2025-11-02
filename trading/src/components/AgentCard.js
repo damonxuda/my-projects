@@ -1,7 +1,7 @@
 import React from 'react';
 import { TrendingUp, TrendingDown, DollarSign, Wallet } from 'lucide-react';
 
-const AgentCard = ({ portfolio }) => {
+const AgentCard = ({ portfolio, marketData }) => {
   const { agent_name, total_value, cash, holdings, pnl, pnl_percentage } = portfolio;
 
   // Agent 显示名称和颜色 (8个AI模型 + 2个ETF)
@@ -94,16 +94,43 @@ const AgentCard = ({ portfolio }) => {
         {Object.keys(holdings).length > 0 ? (
           <div className="space-y-1">
             <span className="text-xs text-gray-500">持仓:</span>
-            {Object.entries(holdings).map(([asset, amount]) => (
-              amount > 0 && (
-                <div key={asset} className="flex justify-between items-center text-sm">
-                  <span className="text-gray-600">{asset}</span>
-                  <span className="font-mono text-gray-900">
-                    {amount.toFixed(4)}
-                  </span>
-                </div>
-              )
-            ))}
+            {Object.entries(holdings)
+              .filter(([asset, amount]) => {
+                // 过滤掉ETF元数据字段（_SHARES, _INIT_PRICE, _LAST_DIV_CHECK）
+                // 只显示加密货币持仓（BTC, ETH, SOL, BNB, DOGE, XRP）
+                const isMetadataField = asset.includes('_SHARES') ||
+                                       asset.includes('_INIT_PRICE') ||
+                                       asset.includes('_LAST_DIV_CHECK');
+                return !isMetadataField && amount > 0;
+              })
+              .map(([asset, amount]) => {
+                // 计算持仓价值（如果有市场数据）
+                const price = marketData && marketData[asset] ? marketData[asset].price : null;
+                const value = price ? amount * price : null;
+
+                return (
+                  <div key={asset} className="flex justify-between items-center text-sm">
+                    <div className="flex flex-col">
+                      <span className="text-gray-600">{asset}</span>
+                      {price && (
+                        <span className="text-xs text-gray-400">
+                          @${price >= 1 ? price.toFixed(2) : price.toFixed(4)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <span className="font-mono text-gray-900">
+                        {amount.toFixed(4)}
+                      </span>
+                      {value && (
+                        <span className="text-xs text-gray-500">
+                          ≈ ${value.toFixed(2)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
           </div>
         ) : (
           <div className="text-xs text-gray-400 italic">无持仓</div>
