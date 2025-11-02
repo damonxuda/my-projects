@@ -708,6 +708,9 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
 }`;
 
     try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30秒超时
+
         const response = await fetch(
             'https://api.x.ai/v1/chat/completions',
             {
@@ -724,9 +727,12 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
                     }],
                     temperature: 0.7,
                     max_tokens: 2000
-                })
+                }),
+                signal: controller.signal
             }
         );
+
+        clearTimeout(timeoutId);
 
         const data = await response.json();
 
@@ -774,13 +780,17 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
         return decision;
 
     } catch (error) {
-        console.error('Grok API failed:', error);
+        if (error.name === 'AbortError') {
+            console.error('Grok API timeout (30s)');
+        } else {
+            console.error('Grok API failed:', error);
+        }
         // 降级：返回保守的 hold 决策
         return {
             action: 'hold',
             asset: null,
             amount: 0,
-            reason: 'API调用失败，保持持有'
+            reason: error.name === 'AbortError' ? 'API超时（30秒），保持持有' : 'API调用失败，保持持有'
         };
     }
 }
