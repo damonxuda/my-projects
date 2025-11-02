@@ -472,10 +472,12 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
 请返回 JSON 格式的决策（不要包含任何其他文字）：
 {
     "action": "buy/sell/hold",
-    "asset": "BTC/ETH/SOL/BNB/DOGE/XRP/null",
+    "asset": "资产代码（buy/sell时填币种如BTC；hold时填null不带引号）",
     "amount": 数量,
     "reason": "决策理由（中文，1-2句话）"
-}`;
+}
+
+注意：hold时asset必须填 null（不是字符串"null"）`;
 
     try {
         const response = await fetch(
@@ -587,10 +589,12 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
 请返回 JSON 格式的决策（不要包含任何其他文字）：
 {
     "action": "buy/sell/hold",
-    "asset": "BTC/ETH/SOL/BNB/DOGE/XRP/null",
+    "asset": "资产代码（buy/sell时填币种如BTC；hold时填null不带引号）",
     "amount": 数量,
     "reason": "决策理由（中文，1-2句话）"
-}`;
+}
+
+注意：hold时asset必须填 null（不是字符串"null"）`;
 
     try {
         const response = await fetch(
@@ -702,10 +706,12 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
 请返回 JSON 格式的决策（不要包含任何其他文字）：
 {
     "action": "buy/sell/hold",
-    "asset": "BTC/ETH/SOL/BNB/DOGE/XRP/null",
+    "asset": "资产代码（buy/sell时填币种如BTC；hold时填null不带引号）",
     "amount": 数量,
     "reason": "决策理由（中文，1-2句话）"
-}`;
+}
+
+注意：hold时asset必须填 null（不是字符串"null"）`;
 
     try {
         const controller = new AbortController();
@@ -826,10 +832,12 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
 请返回 JSON 格式的决策（不要包含任何其他文字）：
 {
     "action": "buy/sell/hold",
-    "asset": "BTC/ETH/SOL/BNB/DOGE/XRP/null",
+    "asset": "资产代码（buy/sell时填币种如BTC；hold时填null不带引号）",
     "amount": 数量,
     "reason": "决策理由（中文，1-2句话）"
-}`;
+}
+
+注意：hold时asset必须填 null（不是字符串"null"）`;
 
     try {
         const response = await fetch(
