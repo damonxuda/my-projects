@@ -7,10 +7,10 @@ const PerformanceChart = ({ portfolios }) => {
 
   // 模型显示名称映射
   const displayNames = {
-    'OPENAI': 'GPT-4o',
+    'OPENAI': 'GPT-4o mini',
     'GEMINI': 'Gemini 2.5 Flash',
-    'CLAUDE': 'Sonnet 4.5',
-    'GROK': 'Grok 2',
+    'CLAUDE': 'Haiku 4.5',
+    'GROK': 'Grok 2 mini',
     'EQUAL_WEIGHT': 'BITW',
     'GDLC': 'GDLC'
   };

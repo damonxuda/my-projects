@@ -574,7 +574,7 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
                     'anthropic-version': '2023-06-01'
                 },
                 body: JSON.stringify({
-                    model: 'claude-sonnet-4-5-20250929',
+                    model: 'claude-haiku-4-5',
                     max_tokens: 2000,
                     temperature: 0.7,
                     messages: [{
