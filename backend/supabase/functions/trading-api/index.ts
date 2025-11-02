@@ -133,8 +133,11 @@ serve(async (req) => {
 
       // 获取每个agent的最新状态
       if (!agent) {
-        // 返回所有agent的最新状态
-        const agents = ['gemini', 'claude', 'grok', 'openai'] // 可以从环境变量读取
+        // 返回所有agent的最新状态（包括LLM和基准策略）
+        const agents = [
+          'gemini', 'claude', 'grok', 'openai',  // LLM agents
+          'gdlc', 'equal_weight'                  // 基准策略
+        ]
         const portfolios = []
 
         for (const agentName of agents) {

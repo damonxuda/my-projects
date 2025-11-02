@@ -2,12 +2,28 @@ import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 
 const PerformanceChart = ({ portfolios }) => {
-  // 准备图表数据
-  const chartData = portfolios.map(p => ({
+  // 分组：LLM agents 和 基准策略
+  const llmAgents = ['GEMINI', 'CLAUDE', 'GROK', 'OPENAI'];
+  const benchmarks = ['GDLC', 'EQUAL_WEIGHT'];
+
+  // 准备图表数据并分组排序
+  const portfolioData = portfolios.map(p => ({
     name: p.agent_name.toUpperCase(),
     pnl_percentage: parseFloat(p.pnl_percentage?.toFixed(2) || 0),
-    total_value: parseFloat(p.total_value || 0)
-  })).sort((a, b) => b.pnl_percentage - a.pnl_percentage); // 按收益率排序
+    total_value: parseFloat(p.total_value || 0),
+    isBenchmark: benchmarks.includes(p.agent_name.toUpperCase())
+  }));
+
+  // 分别对LLM和基准排序，然后合并（LLM在前，基准在后）
+  const llmData = portfolioData
+    .filter(p => llmAgents.includes(p.name))
+    .sort((a, b) => b.pnl_percentage - a.pnl_percentage);
+
+  const benchmarkData = portfolioData
+    .filter(p => benchmarks.includes(p.name))
+    .sort((a, b) => b.pnl_percentage - a.pnl_percentage);
+
+  const chartData = [...llmData, ...benchmarkData];
 
   // Agent 颜色
   const agentColors = {

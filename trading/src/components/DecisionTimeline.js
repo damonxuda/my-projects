@@ -60,9 +60,20 @@ const DecisionTimeline = ({ decisions }) => {
     }
   };
 
+  // 过滤基准策略的普通决策，只保留特殊事件（如分红、配股）
+  const filteredDecisions = decisions.filter(item => {
+    const isBenchmark = ['gdlc', 'equal_weight'].includes(item.agent_name);
+    if (!isBenchmark) return true; // LLM决策全部显示
+
+    // 基准策略：只显示特殊事件（未来如dividend_reinvest, stock_split等）
+    // 过滤掉buy_etf（初始买入）和hold（持有）
+    const isSpecialEvent = !['buy_etf', 'hold'].includes(item.decision.action);
+    return isSpecialEvent;
+  });
+
   return (
     <div className="space-y-3 max-h-[600px] overflow-y-auto">
-      {decisions.map((item, index) => {
+      {filteredDecisions.map((item, index) => {
         const config = actionConfig[item.decision.action] || actionConfig.hold;
         const Icon = config.icon;
 
