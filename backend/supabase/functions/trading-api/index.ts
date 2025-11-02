@@ -133,32 +133,16 @@ serve(async (req) => {
 
       // 获取每个agent的最新状态
       if (!agent) {
-        // 动态获取所有agent的最新状态（无需硬编码列表）
-        // 先获取数据库里所有不同的agent_name
-        const { data: agentNames } = await supabase
-          .from('llm_trading_portfolios')
-          .select('agent_name')
+        // 使用优化的PostgreSQL函数，单次查询获取所有agent的最新状态
+        const { data: portfolios, error } = await supabase
+          .rpc('get_latest_portfolios')
 
-        const uniqueAgents = [...new Set(agentNames?.map(a => a.agent_name) || [])]
-        const portfolios = []
-
-        // 获取每个agent的最新记录
-        for (const agentName of uniqueAgents) {
-          const { data } = await supabase
-            .from('llm_trading_portfolios')
-            .select('*')
-            .eq('agent_name', agentName)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single()
-
-          if (data) {
-            portfolios.push(data)
-          }
+        if (error) {
+          throw error
         }
 
         return new Response(
-          JSON.stringify({ success: true, portfolios }),
+          JSON.stringify({ success: true, portfolios: portfolios || [] }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       } else {
