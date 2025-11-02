@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../../auth-clerk/src';
 import AgentCard from './AgentCard';
 import DecisionTimeline from './DecisionTimeline';
-import PerformanceChart from './PerformanceChart';
+import PerformanceTrendChart from './PerformanceTrendChart';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 
 const TradingDashboard = () => {
@@ -11,6 +11,7 @@ const TradingDashboard = () => {
   // 状态管理
   const [portfolios, setPortfolios] = useState([]);
   const [decisions, setDecisions] = useState([]);
+  const [historyData, setHistoryData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
@@ -35,8 +36,8 @@ const TradingDashboard = () => {
         throw new Error('未能获取用户邮箱');
       }
 
-      // 并行请求 portfolios 和 decisions
-      const [portfoliosRes, decisionsRes] = await Promise.all([
+      // 并行请求 portfolios, decisions 和 history
+      const [portfoliosRes, decisionsRes, historyRes] = await Promise.all([
         fetch(`${TRADING_API_URL}/portfolios`, {
           headers: {
             'clerk-token': token,
@@ -50,15 +51,23 @@ const TradingDashboard = () => {
             'x-user-email': userEmail,
             'Content-Type': 'application/json'
           }
+        }),
+        fetch(`${TRADING_API_URL}/history?hours=240`, {
+          headers: {
+            'clerk-token': token,
+            'x-user-email': userEmail,
+            'Content-Type': 'application/json'
+          }
         })
       ]);
 
-      if (!portfoliosRes.ok || !decisionsRes.ok) {
+      if (!portfoliosRes.ok || !decisionsRes.ok || !historyRes.ok) {
         throw new Error('API请求失败');
       }
 
       const portfoliosData = await portfoliosRes.json();
       const decisionsData = await decisionsRes.json();
+      const historyDataRes = await historyRes.json();
 
       if (portfoliosData.success) {
         setPortfolios(portfoliosData.portfolios || []);
@@ -66,6 +75,10 @@ const TradingDashboard = () => {
 
       if (decisionsData.success) {
         setDecisions(decisionsData.decisions || []);
+      }
+
+      if (historyDataRes.success) {
+        setHistoryData(historyDataRes.history || []);
       }
 
       setLastUpdate(new Date());
@@ -176,12 +189,9 @@ const TradingDashboard = () => {
         })()}
       </div>
 
-      {/* 性能走势图 */}
-      {portfolios.length > 0 && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">收益率对比</h3>
-          <PerformanceChart portfolios={portfolios} />
-        </div>
+      {/* 账户价值趋势图 */}
+      {historyData.length > 0 && (
+        <PerformanceTrendChart historyData={historyData} />
       )}
 
       {/* 决策时间线 */}

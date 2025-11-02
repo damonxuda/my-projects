@@ -166,6 +166,41 @@ serve(async (req) => {
       }
     }
 
+    // GET /history - 获取所有agents的历史数据（用于趋势图）
+    if (req.method === 'GET' && path === '/history') {
+      const hours = parseInt(url.searchParams.get('hours') || '240') // 默认10天 = 240小时
+      const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString()
+
+      // 获取指定时间范围内的所有portfolio记录
+      const { data: portfolios, error } = await supabase
+        .from('llm_trading_portfolios')
+        .select('agent_name, total_value, created_at')
+        .gte('created_at', since)
+        .order('created_at', { ascending: true })
+
+      if (error) {
+        throw error
+      }
+
+      // 格式化数据：按时间戳分组，每个时间点包含所有agents的值
+      const timeMap: any = {}
+
+      portfolios?.forEach((p: any) => {
+        const timestamp = p.created_at
+        if (!timeMap[timestamp]) {
+          timeMap[timestamp] = { timestamp }
+        }
+        timeMap[timestamp][p.agent_name] = parseFloat(p.total_value)
+      })
+
+      const history = Object.values(timeMap)
+
+      return new Response(
+        JSON.stringify({ success: true, history }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // GET /stats - 获取统计数据
     if (req.method === 'GET' && path === '/stats') {
       // 返回每个agent的汇总统计

@@ -1,0 +1,107 @@
+import React from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
+const PerformanceTrendChart = ({ historyData }) => {
+  // Agent 颜色配置 - 每个模型一个颜色
+  const agentColors = {
+    'openai_standard': '#10B981',    // green-500
+    'openai_mini': '#34D399',        // green-400
+    'gemini_flash': '#3B82F6',       // blue-500
+    'claude_standard': '#8B5CF6',    // purple-500
+    'claude_mini': '#A78BFA',        // purple-400
+    'grok_standard': '#F97316',      // orange-500
+    'grok_mini': '#FB923C',          // orange-400
+    'gdlc': '#EAB308',               // yellow-500
+    'equal_weight': '#6B7280'        // gray-500
+  };
+
+  // 模型显示名称
+  const agentNames = {
+    'openai_standard': 'GPT-4o',
+    'openai_mini': 'GPT-4o mini',
+    'gemini_flash': 'Gemini 2.5 Flash',
+    'claude_standard': 'Sonnet 4.5',
+    'claude_mini': 'Haiku 4.5',
+    'grok_standard': 'Grok 4',
+    'grok_mini': 'Grok 3 mini',
+    'gdlc': 'GDLC',
+    'equal_weight': 'BITW'
+  };
+
+  // 自定义 Tooltip
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-3 border border-gray-200 rounded shadow-lg">
+          <p className="text-sm font-semibold text-gray-900 mb-2">{label}</p>
+          {payload
+            .sort((a, b) => b.value - a.value) // 按值排序
+            .map((entry, index) => (
+              <p key={index} className="text-xs" style={{ color: entry.color }}>
+                {entry.name}: ${entry.value?.toFixed(2) || '0.00'}
+              </p>
+            ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // 格式化时间轴标签
+  const formatXAxis = (timestamp) => {
+    const date = new Date(timestamp);
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const hour = date.getHours();
+
+    // 如果是0点，显示日期；否则只显示小时
+    if (hour === 0) {
+      return `${month}/${day}`;
+    }
+    return `${hour}:00`;
+  };
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <h2 className="text-xl font-bold text-gray-900 mb-4">账户价值趋势</h2>
+
+      <ResponsiveContainer width="100%" height={400}>
+        <LineChart data={historyData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <XAxis
+            dataKey="timestamp"
+            tickFormatter={formatXAxis}
+            tick={{ fontSize: 12, fill: '#6b7280' }}
+            axisLine={{ stroke: '#d1d5db' }}
+          />
+          <YAxis
+            label={{ value: '账户价值 ($)', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: '#6b7280' } }}
+            tick={{ fontSize: 12, fill: '#6b7280' }}
+            axisLine={{ stroke: '#d1d5db' }}
+          />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend
+            wrapperStyle={{ fontSize: 12 }}
+            formatter={(value) => agentNames[value] || value}
+          />
+
+          {/* 为每个 agent 画一条线 */}
+          {Object.keys(agentColors).map((agent) => (
+            <Line
+              key={agent}
+              type="monotone"
+              dataKey={agent}
+              stroke={agentColors[agent]}
+              strokeWidth={2}
+              dot={false}
+              name={agent}
+              connectNulls={true}
+            />
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
+export default PerformanceTrendChart;
