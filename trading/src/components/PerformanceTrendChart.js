@@ -47,19 +47,37 @@ const PerformanceTrendChart = ({ historyData }) => {
     return null;
   };
 
-  // 格式化时间轴标签
-  const formatXAxis = (timestamp) => {
-    const date = new Date(timestamp);
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    const hour = date.getHours();
+  // 计算Y轴范围（根据所有数据的最大最小值）
+  const calculateYAxisDomain = () => {
+    let min = Infinity;
+    let max = -Infinity;
 
-    // 如果是0点，显示日期；否则只显示小时
-    if (hour === 0) {
-      return `${month}/${day}`;
+    historyData.forEach((point) => {
+      Object.keys(agentColors).forEach((agent) => {
+        const value = point[agent];
+        if (value !== undefined && value !== null) {
+          min = Math.min(min, value);
+          max = Math.max(max, value);
+        }
+      });
+    });
+
+    // 如果没有有效数据，使用默认范围
+    if (min === Infinity || max === -Infinity) {
+      return [0, 50000];
     }
-    return `${hour}:00`;
+
+    // 计算波动范围并留10%余量
+    const range = max - min;
+    const margin = range * 0.1 || 1000; // 至少1000的余量
+
+    return [
+      Math.floor(min - margin),
+      Math.ceil(max + margin)
+    ];
   };
+
+  const yAxisDomain = calculateYAxisDomain();
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -70,11 +88,12 @@ const PerformanceTrendChart = ({ historyData }) => {
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
           <XAxis
             dataKey="timestamp"
-            tickFormatter={formatXAxis}
-            tick={{ fontSize: 12, fill: '#6b7280' }}
+            tick={false}
             axisLine={{ stroke: '#d1d5db' }}
+            label={{ value: '时间 →', position: 'insideRight', style: { fontSize: 12, fill: '#6b7280' } }}
           />
           <YAxis
+            domain={yAxisDomain}
             label={{ value: '账户价值 ($)', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: '#6b7280' } }}
             tick={{ fontSize: 12, fill: '#6b7280' }}
             axisLine={{ stroke: '#d1d5db' }}
