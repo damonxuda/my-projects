@@ -133,14 +133,17 @@ serve(async (req) => {
 
       // 获取每个agent的最新状态
       if (!agent) {
-        // 返回所有agent的最新状态（包括LLM和基准策略）
-        const agents = [
-          'gemini', 'claude', 'grok', 'openai',  // LLM agents
-          'gdlc', 'equal_weight'                  // 基准策略
-        ]
+        // 动态获取所有agent的最新状态（无需硬编码列表）
+        // 先获取数据库里所有不同的agent_name
+        const { data: agentNames } = await supabase
+          .from('llm_trading_portfolios')
+          .select('agent_name')
+
+        const uniqueAgents = [...new Set(agentNames?.map(a => a.agent_name) || [])]
         const portfolios = []
 
-        for (const agentName of agents) {
+        // 获取每个agent的最新记录
+        for (const agentName of uniqueAgents) {
           const { data } = await supabase
             .from('llm_trading_portfolios')
             .select('*')
