@@ -145,16 +145,16 @@ const TradingDashboard = () => {
         </button>
       </div>
 
-      {/* Agent 性能卡片 - 3行4列固定布局 */}
-      {/* 第一行: GPT-4o, GPT-4o mini, Gemini Thinking, Gemini Flash */}
-      {/* 第二行: Sonnet 4.5, Haiku 4.5, Grok 2, Grok 2 mini */}
-      {/* 第三行: BITW, GDLC, (空), (空) */}
-      <div className="grid grid-cols-4 gap-4">
+      {/* Agent 性能卡片 - 3行3列固定布局 */}
+      {/* 第一行: GPT-4o, GPT-4o mini, Gemini 2.5 Flash */}
+      {/* 第二行: Sonnet 4.5, Haiku 4.5, Grok 2 */}
+      {/* 第三行: Grok 2 mini, BITW, GDLC */}
+      <div className="grid grid-cols-3 gap-4">
         {(() => {
           // 固定显示顺序：每个厂商的标准型+轻量级，然后是2个ETF
           const displayOrder = [
             'openai_standard', 'openai_mini',
-            'gemini_thinking', 'gemini_flash',
+            'gemini_flash',  // Gemini只有1个模型
             'claude_standard', 'claude_mini',
             'grok_standard', 'grok_mini',
             'equal_weight', 'gdlc'

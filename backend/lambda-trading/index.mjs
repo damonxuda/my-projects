@@ -29,8 +29,7 @@ const AGENTS = [
     { name: 'openai_standard', type: 'llm', enabled: !!OPENAI_API_KEY },  // GPT-4o
     { name: 'openai_mini', type: 'llm', enabled: !!OPENAI_API_KEY },      // GPT-4o mini
 
-    // Gemini (2个)
-    { name: 'gemini_thinking', type: 'llm', enabled: !!GEMINI_API_KEY },  // Gemini 2.0 Flash Thinking
+    // Gemini (1个) - 免费API只使用2.5 Flash
     { name: 'gemini_flash', type: 'llm', enabled: !!GEMINI_API_KEY },     // Gemini 2.5 Flash
 
     // Claude (2个)
@@ -420,8 +419,6 @@ async function askLLM(agentName, marketData, portfolio) {
             return await askOpenAI(marketData, portfolio, 'gpt-4o-mini');
 
         // Gemini
-        case 'gemini_thinking':
-            return await askGemini(marketData, portfolio, 'gemini-2.0-flash-thinking-exp');
         case 'gemini_flash':
             return await askGemini(marketData, portfolio, 'gemini-2.5-flash');
 

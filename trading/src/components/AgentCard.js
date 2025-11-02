@@ -11,8 +11,7 @@ const AgentCard = ({ portfolio }) => {
     openai_mini: { name: 'GPT-4o mini', color: 'green', icon: '🟩' },
 
     // Gemini
-    gemini_thinking: { name: 'Gemini 2.0 Flash Thinking', color: 'blue', icon: '🔷' },
-    gemini_flash: { name: 'Gemini 2.5 Flash', color: 'blue', icon: '🔹' },
+    gemini_flash: { name: 'Gemini 2.5 Flash', color: 'blue', icon: '🔷' },
 
     // Claude
     claude_standard: { name: 'Sonnet 4.5', color: 'purple', icon: '🟣' },
