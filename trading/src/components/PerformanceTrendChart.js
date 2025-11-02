@@ -15,6 +15,23 @@ const PerformanceTrendChart = ({ historyData }) => {
     'equal_weight': '#6B7280'        // gray-500
   };
 
+  // 添加初始点（t=0，所有agent都是50000）
+  const initialPoint = {
+    timestamp: 'Start',
+    openai_standard: 50000,
+    openai_mini: 50000,
+    gemini_flash: 50000,
+    claude_standard: 50000,
+    claude_mini: 50000,
+    grok_standard: 50000,
+    grok_mini: 50000,
+    gdlc: 50000,
+    equal_weight: 50000
+  };
+
+  // 合并初始点和历史数据
+  const chartData = [initialPoint, ...historyData];
+
   // 模型显示名称
   const agentNames = {
     'openai_standard': 'GPT-4o',
@@ -47,12 +64,12 @@ const PerformanceTrendChart = ({ historyData }) => {
     return null;
   };
 
-  // 计算Y轴范围（根据所有数据的最大最小值）
+  // 计算Y轴范围（根据所有数据的最大最小值，包括初始点50000）
   const calculateYAxisDomain = () => {
-    let min = Infinity;
-    let max = -Infinity;
+    let min = 50000;  // 初始值
+    let max = 50000;  // 初始值
 
-    historyData.forEach((point) => {
+    chartData.forEach((point) => {
       Object.keys(agentColors).forEach((agent) => {
         const value = point[agent];
         if (value !== undefined && value !== null) {
@@ -61,11 +78,6 @@ const PerformanceTrendChart = ({ historyData }) => {
         }
       });
     });
-
-    // 如果没有有效数据，使用默认范围
-    if (min === Infinity || max === -Infinity) {
-      return [0, 50000];
-    }
 
     // 计算波动范围并留10%余量
     const range = max - min;
@@ -104,11 +116,10 @@ const PerformanceTrendChart = ({ historyData }) => {
             formatter={(value) => agentNames[value] || value}
           />
 
-          {/* 为每个 agent 画一条线 */}
+          {/* 为每个 agent 画一条线 - 使用直线连接离散点 */}
           {Object.keys(agentColors).map((agent) => (
             <Line
               key={agent}
-              type="monotone"
               dataKey={agent}
               stroke={agentColors[agent]}
               strokeWidth={2}
