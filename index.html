@@ -247,13 +247,13 @@
           <div class="access-badge public">🌍 公开访问</div>
         </a>
 
-        <a href="/admin/" class="nav-button private" id="admin-link">
-          <div class="button-title">⚙️ 系统管理</div>
-          <div class="access-badge private">🔐 需要登录</div>
+        <a href="/trading/" class="nav-button private" id="trading-link" style="display: none;">
+          <div class="button-title">📊 量化大赛</div>
+          <div class="access-badge private">🛡️ 管理员专属</div>
         </a>
 
-        <a href="/trading/" class="nav-button private" id="trading-link" style="display: none;">
-          <div class="button-title">📊 量化交易</div>
+        <a href="/admin/" class="nav-button private" id="admin-link" style="display: none;">
+          <div class="button-title">⚙️ 系统管理</div>
           <div class="access-badge private">🛡️ 管理员专属</div>
         </a>
       </div>
@@ -341,12 +341,16 @@
               userAvatar.innerHTML = '👤';
             }
 
-            // 检查是否为管理员，控制 Trading 按钮显示
+            // 检查是否为管理员，控制 Trading 和 Admin 按钮显示
             const userEmail = user.primaryEmailAddress?.emailAddress;
             const isAdmin = userEmail && ADMIN_EMAILS.includes(userEmail);
 
             if (tradingLink) {
               tradingLink.style.display = isAdmin ? 'block' : 'none';
+            }
+
+            if (adminLink) {
+              adminLink.style.display = isAdmin ? 'block' : 'none';
             }
 
             console.log('👤 用户已登录:', userEmail);
@@ -357,9 +361,13 @@
             authLoginView.style.display = 'block';
             authUserView.style.display = 'none';
 
-            // 隐藏 Trading 按钮
+            // 隐藏 Trading 和 Admin 按钮
             if (tradingLink) {
               tradingLink.style.display = 'none';
+            }
+
+            if (adminLink) {
+              adminLink.style.display = 'none';
             }
 
             console.log('🔓 用户未登录');
