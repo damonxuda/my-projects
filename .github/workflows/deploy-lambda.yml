@@ -267,8 +267,30 @@ jobs:
             --function-name TRADING_LAMBDA
 
           # 🚫 定时触发已禁用（等调试完成后再启用）
-          # echo "⏰ Updating EventBridge schedule rule..."
-          # aws events put-rule ...
+          echo "⏰ Setting up EventBridge schedule rule..."
+
+          # 创建或更新EventBridge规则：每小时第20分钟触发
+          aws events put-rule \
+            --name trading-lambda-hourly-schedule \
+            --description "Trigger Trading Lambda every hour at :20 minutes" \
+            --schedule-expression "cron(20 * * * ? *)" \
+            --state ENABLED \
+            --region ${{ secrets.AWS_REGION }}
+
+          # 添加Lambda权限（如果不存在）
+          aws lambda add-permission \
+            --function-name TRADING_LAMBDA \
+            --statement-id EventBridgeInvokeTradingLambda \
+            --action 'lambda:InvokeFunction' \
+            --principal events.amazonaws.com \
+            --source-arn "arn:aws:events:${{ secrets.AWS_REGION }}:730335478220:rule/trading-lambda-hourly-schedule" \
+            --region ${{ secrets.AWS_REGION }} 2>/dev/null || echo "Permission already exists"
+
+          # 添加目标
+          aws events put-targets \
+            --rule trading-lambda-hourly-schedule \
+            --targets "Id"="1","Arn"="arn:aws:lambda:${{ secrets.AWS_REGION }}:730335478220:function:TRADING_LAMBDA" \
+            --region ${{ secrets.AWS_REGION }}
 
           echo "✅ TRADING_LAMBDA deployed successfully!"
-          echo "⚠️  定时触发已禁用，需要手动invoke测试"
+          echo "⏰ EventBridge schedule: Every hour at :20 minutes (cron: 20 * * * ? *)"
