@@ -57,6 +57,14 @@ const DecisionTimeline = ({ decisions }) => {
       borderColor: 'border-gray-200',
       textColor: 'text-gray-800',
       label: '持有'
+    },
+    dividend_reinvest: {
+      icon: ArrowUpCircle,
+      color: 'blue',
+      bgColor: 'bg-blue-50',
+      borderColor: 'border-blue-200',
+      textColor: 'text-blue-800',
+      label: '分红再投资'
     }
   };
 
@@ -65,7 +73,7 @@ const DecisionTimeline = ({ decisions }) => {
     const isBenchmark = ['gdlc', 'equal_weight'].includes(item.agent_name);
     if (!isBenchmark) return true; // LLM决策全部显示
 
-    // 基准策略：只显示特殊事件（未来如dividend_reinvest, stock_split等）
+    // 基准策略：只显示特殊事件（如dividend_reinvest, stock_split等）
     // 过滤掉buy_etf（初始买入）和hold（持有）
     const isSpecialEvent = !['buy_etf', 'hold'].includes(item.decision.action);
     return isSpecialEvent;

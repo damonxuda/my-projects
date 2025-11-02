@@ -220,6 +220,92 @@ async function getCurrentPortfolio(agentName) {
 }
 
 // ============================================
+// 2.5 检查并处理ETF分红再投资
+// ============================================
+async function checkAndReinvestDividends(portfolio, ticker) {
+    try {
+        const sharesKey = `${ticker}_SHARES`;
+        const lastDivCheckKey = `${ticker}_LAST_DIV_CHECK`;
+
+        // 检查是否持有该ETF
+        if (!portfolio.holdings[sharesKey] || portfolio.holdings[sharesKey] <= 0) {
+            return null;
+        }
+
+        const currentShares = portfolio.holdings[sharesKey];
+        const lastCheckTimestamp = portfolio.holdings[lastDivCheckKey] || 0;
+
+        // 获取分红历史（yahoo-finance2 v3 API）
+        // 注意：yahoo-finance2 的 quoteSummary 或 chart 可能提供分红数据
+        // 这里使用 quoteSummary 获取 dividendHistory 或 defaultKeyStatistics
+        const quote = await yahooFinance.quoteSummary(ticker, {
+            modules: ['summaryDetail', 'defaultKeyStatistics']
+        });
+
+        // 检查是否有分红率数据
+        const dividendYield = quote.summaryDetail?.dividendYield;
+        const dividendRate = quote.summaryDetail?.dividendRate; // 年度分红金额
+
+        if (!dividendRate || dividendRate === 0) {
+            console.log(`📊 ${ticker}: 无分红数据或分红为0`);
+            return null;
+        }
+
+        // 计算自上次检查以来的时间（小时）
+        const nowTimestamp = Date.now();
+        const hoursSinceLastCheck = (nowTimestamp - lastCheckTimestamp) / (1000 * 3600);
+
+        // 模拟分红发放：假设按季度发放（每90天）
+        // 如果自上次检查已过90天，则认为有一次分红
+        const DIVIDEND_FREQUENCY_DAYS = 90;
+        const daysSinceLastCheck = hoursSinceLastCheck / 24;
+
+        if (daysSinceLastCheck < DIVIDEND_FREQUENCY_DAYS && lastCheckTimestamp > 0) {
+            // 距离上次检查不足90天，无新分红
+            return null;
+        }
+
+        // 有新分红！计算分红金额
+        // dividendRate 是年度分红，季度分红 = dividendRate / 4
+        const quarterlyDividendPerShare = dividendRate / 4;
+        const totalDividend = quarterlyDividendPerShare * currentShares;
+
+        if (totalDividend < 0.01) {
+            console.log(`📊 ${ticker}: 分红金额过小 ($${totalDividend.toFixed(4)})，忽略`);
+            return null;
+        }
+
+        console.log(`💰 ${ticker} 分红事件: ${currentShares.toFixed(2)}股 × $${quarterlyDividendPerShare.toFixed(4)}/股 = $${totalDividend.toFixed(2)}`);
+
+        // 获取当前股价用于再投资
+        const currentQuote = await yahooFinance.quote(ticker);
+        const currentPrice = currentQuote.regularMarketPrice;
+
+        if (!currentPrice || currentPrice <= 0) {
+            throw new Error(`Invalid current price for ${ticker}`);
+        }
+
+        // 返回分红再投资决策
+        return {
+            action: 'dividend_reinvest',
+            ticker: ticker,
+            dividend_amount: totalDividend,
+            current_price: currentPrice,
+            shares_to_buy: totalDividend / currentPrice,
+            current_shares: currentShares,
+            dividend_per_share: quarterlyDividendPerShare,
+            reason: `${ticker}季度分红 $${quarterlyDividendPerShare.toFixed(4)}/股，自动再投资购买 ${(totalDividend / currentPrice).toFixed(4)} 股`,
+            timestamp: nowTimestamp
+        };
+
+    } catch (error) {
+        console.error(`Failed to check dividends for ${ticker}:`, error);
+        // 分红检查失败不影响主流程，返回null
+        return null;
+    }
+}
+
+// ============================================
 // 3. 基准策略决策函数
 // ============================================
 async function getBenchmarkDecision(benchmarkName, marketData, portfolio) {
@@ -229,7 +315,16 @@ async function getBenchmarkDecision(benchmarkName, marketData, portfolio) {
     const isInitialState = portfolio.cash === 50000 && Object.keys(portfolio.holdings).length === 0;
 
     if (!isInitialState) {
-        // 非初始状态：Buy & Hold，不再产生任何交易决策
+        // 非初始状态：检查是否有分红需要再投资
+        const ticker = benchmarkName === 'gdlc' ? 'GDLC' : 'BITW';
+        const dividendDecision = await checkAndReinvestDividends(portfolio, ticker);
+
+        if (dividendDecision) {
+            // 有分红需要再投资，返回决策
+            return dividendDecision;
+        }
+
+        // 无分红事件：Buy & Hold，不再产生任何交易决策
         // 返回null表示无需记录决策（但仍需更新portfolio以反映ETF价格变化）
         return null;
     }
@@ -809,12 +904,38 @@ async function simulateTrade(portfolio, decision, marketData) {
         const etfKey = `${ticker}_SHARES`;
         newPortfolio.holdings[etfKey] = shares;
         newPortfolio.holdings[`${ticker}_INIT_PRICE`] = pricePerShare;  // 记录初始价格用于追踪
+        newPortfolio.holdings[`${ticker}_LAST_DIV_CHECK`] = Date.now();  // 初始化分红检查时间戳
         newPortfolio.cash -= totalCost;
 
         console.log(`📊 Buy ETF ${ticker}: ${shares.toFixed(2)} shares at $${pricePerShare.toFixed(2)}/share, cost $${cost.toFixed(2)}, fee $${fee.toFixed(2)}, total $${totalCost.toFixed(2)}`);
 
         // 计算新的总价值（初始买入时，价值就是成本）
         newPortfolio.total_value = cost;  // 不包含手续费（已损失）
+        newPortfolio.pnl = newPortfolio.total_value - 50000;
+        newPortfolio.pnl_percentage = (newPortfolio.pnl / 50000) * 100;
+
+        return newPortfolio;
+    }
+
+    // 处理ETF分红再投资
+    if (decision.action === 'dividend_reinvest') {
+        const ticker = decision.ticker;
+        const dividendAmount = decision.dividend_amount;
+        const currentPrice = decision.current_price;
+        const newShares = decision.shares_to_buy;
+
+        // 分红直接转为新股份，无需现金交易（分红已直接再投资）
+        const sharesKey = `${ticker}_SHARES`;
+        const lastDivCheckKey = `${ticker}_LAST_DIV_CHECK`;
+
+        newPortfolio.holdings[sharesKey] += newShares;
+        newPortfolio.holdings[lastDivCheckKey] = decision.timestamp;  // 更新分红检查时间戳
+
+        console.log(`💰 Dividend Reinvest ${ticker}: $${dividendAmount.toFixed(2)} dividend → ${newShares.toFixed(4)} shares at $${currentPrice.toFixed(2)}/share`);
+        console.log(`📊 ${ticker} 总持仓: ${decision.current_shares.toFixed(4)} + ${newShares.toFixed(4)} = ${newPortfolio.holdings[sharesKey].toFixed(4)} 股`);
+
+        // 计算新的总价值
+        newPortfolio.total_value = await calculateTotalValue(newPortfolio, marketData);
         newPortfolio.pnl = newPortfolio.total_value - 50000;
         newPortfolio.pnl_percentage = (newPortfolio.pnl / 50000) * 100;
 

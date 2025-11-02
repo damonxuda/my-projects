@@ -1,7 +1,7 @@
 {
   "name": "llm-trading-lambda",
-  "version": "1.0.1",
-  "description": "AWS Lambda function for LLM trading decisions with ETF price tracking",
+  "version": "1.0.2",
+  "description": "AWS Lambda function for LLM trading decisions with ETF price tracking and dividend reinvestment",
   "type": "module",
   "main": "index.mjs",
   "scripts": {
