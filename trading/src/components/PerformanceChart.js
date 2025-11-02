@@ -2,8 +2,18 @@ import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 
 const PerformanceChart = ({ portfolios }) => {
-  // 固定显示顺序：OpenAI → Gemini → Claude → Grok → BITW → GDLC
+  // 固定显示顺序：GPT-4o → Gemini 2.0 Flash → Claude 3.5 Sonnet → Grok 2 → BITW → GDLC
   const displayOrder = ['OPENAI', 'GEMINI', 'CLAUDE', 'GROK', 'EQUAL_WEIGHT', 'GDLC'];
+
+  // 模型显示名称映射
+  const displayNames = {
+    'OPENAI': 'GPT-4o',
+    'GEMINI': 'Gemini 2.0 Flash',
+    'CLAUDE': 'Claude 3.5 Sonnet',
+    'GROK': 'Grok 2',
+    'EQUAL_WEIGHT': 'BITW',
+    'GDLC': 'GDLC'
+  };
 
   // 创建portfolio查找映射（使用小写key）
   const portfolioMap = {};
@@ -15,7 +25,7 @@ const PerformanceChart = ({ portfolios }) => {
   const chartData = displayOrder.map(name => {
     const p = portfolioMap[name.toLowerCase()];
     return {
-      name: name === 'EQUAL_WEIGHT' ? 'BITW' : name,  // 显示时用BITW代替EQUAL_WEIGHT
+      name: displayNames[name],  // 使用映射后的显示名称
       pnl_percentage: parseFloat(p?.pnl_percentage?.toFixed(2) || 0),
       total_value: parseFloat(p?.total_value || 0)
     };
