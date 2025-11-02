@@ -71,7 +71,12 @@ export const handler = async (event) => {
                 console.log(`💼 ${agent.name} New Portfolio:`, newPortfolio);
 
                 // 2.4 保存决策和账户状态到 Supabase
-                await saveDecision(agent.name, decision, marketData, newPortfolio.total_value);
+                // 基准策略Buy & Hold后decision为null，无需记录决策，只更新portfolio
+                if (decision !== null) {
+                    await saveDecision(agent.name, decision, marketData, newPortfolio.total_value);
+                } else {
+                    console.log(`📊 ${agent.name} Buy & Hold策略：无需记录决策，仅更新portfolio`);
+                }
                 await savePortfolio(newPortfolio);
 
                 results.push({
@@ -224,13 +229,9 @@ async function getBenchmarkDecision(benchmarkName, marketData, portfolio) {
     const isInitialState = portfolio.cash === 50000 && Object.keys(portfolio.holdings).length === 0;
 
     if (!isInitialState) {
-        // 非初始状态，持有不动
-        return {
-            action: 'hold',
-            asset: null,
-            amount: 0,
-            reason: `基准策略：买入后持有（Buy & Hold）`
-        };
+        // 非初始状态：Buy & Hold，不再产生任何交易决策
+        // 返回null表示无需记录决策（但仍需更新portfolio以反映ETF价格变化）
+        return null;
     }
 
     // 初始状态：买入真实ETF份额
@@ -783,8 +784,9 @@ async function simulateTrade(portfolio, decision, marketData) {
 
     const newPortfolio = JSON.parse(JSON.stringify(portfolio)); // 深拷贝
 
-    if (decision.action === 'hold') {
-        // 只更新total_value（根据当前市场价格）
+    // 基准策略Buy & Hold：decision为null时，只更新portfolio不做交易
+    if (decision === null || decision.action === 'hold') {
+        // 只更新total_value（根据当前市场价格或ETF价格）
         newPortfolio.total_value = await calculateTotalValue(newPortfolio, marketData);
         newPortfolio.pnl = newPortfolio.total_value - 50000;
         newPortfolio.pnl_percentage = (newPortfolio.pnl / 50000) * 100;
