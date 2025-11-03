@@ -12,6 +12,7 @@ const PerformanceTrendChart = ({ historyData }) => {
     'claude_mini': '#A78BFA',        // purple-400
     'grok_standard': '#F97316',      // orange-500
     'grok_mini': '#FB923C',          // orange-400
+    'deepseek_r1': '#DC2626',        // red-600
     'gdlc': '#EAB308',               // yellow-500
     'equal_weight': '#6B7280'        // gray-500
   };
@@ -27,6 +28,7 @@ const PerformanceTrendChart = ({ historyData }) => {
     claude_mini: 50000,
     grok_standard: 50000,
     grok_mini: 50000,
+    deepseek_r1: 50000,
     gdlc: 50000,
     equal_weight: 50000
   };
@@ -44,6 +46,7 @@ const PerformanceTrendChart = ({ historyData }) => {
     'claude_mini': 'Haiku 4.5',
     'grok_standard': 'Grok 4',
     'grok_mini': 'Grok 3 mini',
+    'deepseek_r1': 'DeepSeek R1',
     'gdlc': 'GDLC',
     'equal_weight': 'BITW'
   };

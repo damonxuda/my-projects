@@ -4,7 +4,7 @@ import { TrendingUp, TrendingDown, DollarSign, Wallet } from 'lucide-react';
 const AgentCard = ({ portfolio, marketData }) => {
   const { agent_name, total_value, cash, holdings, pnl, pnl_percentage } = portfolio;
 
-  // Agent 显示名称和颜色 (8个AI模型 + 2个ETF)
+  // Agent 显示名称和颜色 (9个AI模型 + 2个ETF)
   const agentInfo = {
     // OpenAI
     openai_standard: { name: 'GPT-5', color: 'green', icon: '🟢' },
@@ -21,6 +21,9 @@ const AgentCard = ({ portfolio, marketData }) => {
     // Grok
     grok_standard: { name: 'Grok 4', color: 'orange', icon: '🟠' },
     grok_mini: { name: 'Grok 3 mini', color: 'orange', icon: '🟧' },
+
+    // DeepSeek
+    deepseek_r1: { name: 'DeepSeek R1', color: 'red', icon: '🔴' },
 
     // ETF
     gdlc: { name: 'GDLC', color: 'yellow', icon: '📊' },

@@ -8,6 +8,7 @@ const PerformanceChart = ({ portfolios }) => {
     'GEMINI_FLASH', 'GEMINI_PRO',
     'CLAUDE_STANDARD', 'CLAUDE_MINI',
     'GROK_STANDARD', 'GROK_MINI',
+    'DEEPSEEK_R1',
     'EQUAL_WEIGHT', 'GDLC'
   ];
 
@@ -21,6 +22,7 @@ const PerformanceChart = ({ portfolios }) => {
     'CLAUDE_MINI': 'Haiku 4.5',
     'GROK_STANDARD': 'Grok 4',
     'GROK_MINI': 'Grok 3 mini',
+    'DEEPSEEK_R1': 'DeepSeek R1',
     'EQUAL_WEIGHT': 'BITW',
     'GDLC': 'GDLC'
   };
