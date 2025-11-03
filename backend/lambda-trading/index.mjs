@@ -1779,16 +1779,26 @@ async function saveDecision(agentName, decision, marketData, portfolioValue) {
             const buyCount = decision.actions.filter(a => a.action === 'buy').length;
             const sellCount = decision.actions.filter(a => a.action === 'sell').length;
 
+            // 前端只认识 'buy'/'sell'/'hold'，根据实际操作选择显示的action
+            let displayAction = 'hold';
+            if (buyCount > 0 && sellCount > 0) {
+                displayAction = 'buy';  // 既有买又有卖，优先显示买入（调仓通常是为了买入新标的）
+            } else if (buyCount > 0) {
+                displayAction = 'buy';
+            } else if (sellCount > 0) {
+                displayAction = 'sell';
+            }
+
             decisionToSave = {
                 ...decision,
                 // 添加兼容字段：前端会读取这个action字段
-                action: 'rebalance',  // 标记为组合调仓
+                action: displayAction,  // 使用前端认识的action值
                 asset: `${decision.actions.length} assets`,  // 显示操作了多少资产
                 summary: `买入${buyCount}笔, 卖出${sellCount}笔`,  // 操作摘要
                 // 保留原始的actions数组和overall_reason
             };
 
-            console.log(`💾 Saving multi-asset decision: ${buyCount} buys, ${sellCount} sells`);
+            console.log(`💾 Saving multi-asset decision: ${buyCount} buys, ${sellCount} sells (display as: ${displayAction})`);
         }
 
         const { error } = await supabase
