@@ -1408,10 +1408,8 @@ async function askGrok(marketData, portfolio, historicalData, technicalIndicator
     const maxAttempts = isFlagship ? 2 : 1;  // 旗舰重试1次, 轻量不重试
     const modelDisplayName = isFlagship ? 'Grok 4' : 'Grok 3 mini';
 
-    // 旗舰型使用多资产prompt，轻量级使用单资产prompt
-    const prompt = isFlagship
-        ? buildMultiAssetTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData)
-        : buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
+    // 所有Grok模型都使用多资产交易prompt
+    const prompt = buildMultiAssetTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
 
     try {
         const response = await fetchWithTimeoutAndRetry(
@@ -1500,10 +1498,8 @@ async function askOpenAI(marketData, portfolio, historicalData, technicalIndicat
     const maxAttempts = isFlagship ? 2 : 1;  // 旗舰重试1次, 轻量不重试
     const modelDisplayName = isFlagship ? 'GPT-4.1' : 'GPT-4o mini';
 
-    // 旗舰型使用多资产prompt，轻量级使用单资产prompt
-    const prompt = isFlagship
-        ? buildMultiAssetTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData)
-        : buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
+    // 所有OpenAI模型都使用多资产交易prompt
+    const prompt = buildMultiAssetTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
 
     try {
         // 构建请求体，GPT-4.1和GPT-4o mini都使用标准配置
