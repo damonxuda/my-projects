@@ -1771,11 +1771,31 @@ async function calculateTotalValue(portfolio, marketData) {
 // ============================================
 async function saveDecision(agentName, decision, marketData, portfolioValue) {
     try {
+        // 为多资产决策添加兼容字段（让前端能正确显示）
+        let decisionToSave = decision;
+
+        if (decision && decision.actions && Array.isArray(decision.actions)) {
+            // 多资产决策：添加摘要字段供前端显示
+            const buyCount = decision.actions.filter(a => a.action === 'buy').length;
+            const sellCount = decision.actions.filter(a => a.action === 'sell').length;
+
+            decisionToSave = {
+                ...decision,
+                // 添加兼容字段：前端会读取这个action字段
+                action: 'rebalance',  // 标记为组合调仓
+                asset: `${decision.actions.length} assets`,  // 显示操作了多少资产
+                summary: `买入${buyCount}笔, 卖出${sellCount}笔`,  // 操作摘要
+                // 保留原始的actions数组和overall_reason
+            };
+
+            console.log(`💾 Saving multi-asset decision: ${buyCount} buys, ${sellCount} sells`);
+        }
+
         const { error } = await supabase
             .from('llm_trading_decisions')
             .insert({
                 agent_name: agentName,
-                decision: decision,
+                decision: decisionToSave,
                 market_data: marketData,
                 portfolio_value: portfolioValue
             });
