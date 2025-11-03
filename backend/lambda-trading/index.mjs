@@ -5,6 +5,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import YahooFinanceClass from 'yahoo-finance2';
+import { RSI, MACD, SMA, BollingerBands } from 'technicalindicators';
 
 // v3版本需要实例化
 const yahooFinance = new YahooFinanceClass();
@@ -66,6 +67,22 @@ export const handler = async (event) => {
         const marketData = await fetchMarketData();
         console.log('📊 Market Data:', marketData);
 
+        // 1.1 获取历史OHLC数据和技术指标（所有 agents 共享）
+        console.log('📈 Fetching historical OHLC data...');
+        const historicalData = await fetchHistoricalOHLC();
+
+        // 1.2 计算每个币种的技术指标
+        const technicalIndicators = {};
+        for (const [symbol, ohlc] of Object.entries(historicalData)) {
+            const indicators = calculateTechnicalIndicators(ohlc);
+            if (indicators) {
+                technicalIndicators[symbol] = indicators;
+                console.log(`📊 ${symbol} indicators calculated:`, indicators);
+            } else {
+                console.warn(`⚠️ ${symbol} insufficient data for indicators`);
+            }
+        }
+
         // 2. 对每个 agent 执行交易决策
         for (const agent of AGENTS) {
             console.log(`\n========== Processing ${agent.name.toUpperCase()} ==========`);
@@ -81,7 +98,7 @@ export const handler = async (event) => {
                     decision = await getBenchmarkDecision(agent.name, marketData, portfolio);
                     console.log(`📊 ${agent.name} Benchmark Decision:`, decision);
                 } else {
-                    decision = await askLLM(agent.name, marketData, portfolio);
+                    decision = await askLLM(agent.name, marketData, portfolio, historicalData, technicalIndicators);
                     console.log(`🤖 ${agent.name} Decision:`, decision);
                 }
 
@@ -199,6 +216,156 @@ async function fetchMarketData() {
     } catch (error) {
         console.error('Failed to fetch market data:', error);
         throw error;
+    }
+}
+
+// ============================================
+// 1.1 获取历史OHLC数据（过去7天）
+// ============================================
+async function fetchHistoricalOHLC() {
+    const coinIds = {
+        'BTC': 'bitcoin',
+        'ETH': 'ethereum',
+        'SOL': 'solana',
+        'BNB': 'binancecoin',
+        'DOGE': 'dogecoin',
+        'XRP': 'ripple'
+    };
+
+    const historicalData = {};
+
+    try {
+        // CoinGecko免费API限制：每分钟50次调用
+        // 串行调用以避免触及速率限制
+        for (const [symbol, coinId] of Object.entries(coinIds)) {
+            try {
+                // 获取过去7天的OHLC数据（vs_currency=usd, days=7）
+                const response = await fetch(
+                    `https://api.coingecko.com/api/v3/coins/${coinId}/ohlc?vs_currency=usd&days=7`
+                );
+
+                if (!response.ok) {
+                    throw new Error(`CoinGecko OHLC API error for ${symbol}: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // CoinGecko返回格式：[[timestamp, open, high, low, close], ...]
+                // 转换为更易读的格式
+                const ohlc = data.map(candle => ({
+                    timestamp: candle[0],
+                    date: new Date(candle[0]).toISOString().split('T')[0],
+                    open: candle[1],
+                    high: candle[2],
+                    low: candle[3],
+                    close: candle[4]
+                }));
+
+                historicalData[symbol] = ohlc;
+                console.log(`📊 Fetched ${ohlc.length} OHLC candles for ${symbol}`);
+
+                // 添加小延迟避免API限流（50次/分钟 = 1.2秒/次，保守使用1.5秒）
+                await new Promise(resolve => setTimeout(resolve, 1500));
+
+            } catch (error) {
+                console.error(`Failed to fetch OHLC for ${symbol}:`, error);
+                // 失败时返回空数组，不影响其他币种
+                historicalData[symbol] = [];
+            }
+        }
+
+        return historicalData;
+    } catch (error) {
+        console.error('Failed to fetch historical OHLC:', error);
+        throw error;
+    }
+}
+
+// ============================================
+// 1.2 计算技术指标
+// ============================================
+function calculateTechnicalIndicators(ohlcData) {
+    try {
+        if (!ohlcData || ohlcData.length === 0) {
+            return null;
+        }
+
+        // 提取收盘价序列（用于RSI、MACD、MA计算）
+        const closePrices = ohlcData.map(candle => candle.close);
+        const highPrices = ohlcData.map(candle => candle.high);
+        const lowPrices = ohlcData.map(candle => candle.low);
+
+        // 需要至少14个数据点才能计算RSI(14)
+        if (closePrices.length < 14) {
+            console.warn(`Insufficient data for indicators: ${closePrices.length} < 14`);
+            return null;
+        }
+
+        // 1. RSI(14) - 相对强弱指数
+        const rsiValues = RSI.calculate({
+            values: closePrices,
+            period: 14
+        });
+        const currentRSI = rsiValues[rsiValues.length - 1];
+
+        // 2. MACD(12,26,9) - 趋势指标
+        const macdValues = MACD.calculate({
+            values: closePrices,
+            fastPeriod: 12,
+            slowPeriod: 26,
+            signalPeriod: 9,
+            SimpleMAOscillator: false,
+            SimpleMASignal: false
+        });
+        const currentMACD = macdValues[macdValues.length - 1];
+
+        // 3. 移动平均线 MA(7) 和 MA(25)
+        const ma7Values = SMA.calculate({
+            values: closePrices,
+            period: 7
+        });
+        const ma7 = ma7Values[ma7Values.length - 1];
+
+        // MA(25)需要至少25个数据点
+        let ma25 = null;
+        if (closePrices.length >= 25) {
+            const ma25Values = SMA.calculate({
+                values: closePrices,
+                period: 25
+            });
+            ma25 = ma25Values[ma25Values.length - 1];
+        }
+
+        // 4. 布林带 Bollinger Bands(20,2)
+        let bollingerBands = null;
+        if (closePrices.length >= 20) {
+            const bbValues = BollingerBands.calculate({
+                values: closePrices,
+                period: 20,
+                stdDev: 2
+            });
+            const currentBB = bbValues[bbValues.length - 1];
+            bollingerBands = {
+                upper: currentBB.upper,
+                middle: currentBB.middle,
+                lower: currentBB.lower
+            };
+        }
+
+        return {
+            rsi: currentRSI || null,
+            macd: currentMACD ? {
+                value: currentMACD.MACD,
+                signal: currentMACD.signal,
+                histogram: currentMACD.histogram
+            } : null,
+            ma7: ma7 || null,
+            ma25: ma25,
+            bollinger: bollingerBands
+        };
+    } catch (error) {
+        console.error('Failed to calculate technical indicators:', error);
+        return null;
     }
 }
 
@@ -422,18 +589,18 @@ async function getBenchmarkDecision(benchmarkName, marketData, portfolio) {
  * @param {object} options - fetch options
  * @param {number} timeoutMs - 超时时间（毫秒）
  * @param {string} modelName - 模型名称（用于日志）
+ * @param {number} maxAttempts - 最大尝试次数（默认2次=重试1次）
  * @returns {Promise<Response>}
  */
-async function fetchWithTimeoutAndRetry(url, options, timeoutMs, modelName) {
+async function fetchWithTimeoutAndRetry(url, options, timeoutMs, modelName, maxAttempts = 2) {
     let lastError = null;
 
-    // 尝试2次（首次 + 重试1次）
-    for (let attempt = 1; attempt <= 2; attempt++) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-            console.log(`[${modelName}] Attempt ${attempt}/2 - Timeout: ${timeoutMs}ms`);
+            console.log(`[${modelName}] Attempt ${attempt}/${maxAttempts} - Timeout: ${timeoutMs}ms`);
 
             const response = await fetch(url, {
                 ...options,
@@ -447,86 +614,136 @@ async function fetchWithTimeoutAndRetry(url, options, timeoutMs, modelName) {
             lastError = error;
 
             if (error.name === 'AbortError') {
-                console.error(`[${modelName}] Attempt ${attempt}/2 - Timeout after ${timeoutMs}ms`);
+                console.error(`[${modelName}] Attempt ${attempt}/${maxAttempts} - Timeout after ${timeoutMs}ms`);
 
-                // 如果是第一次尝试且超时，立即重试
-                if (attempt === 1) {
+                // 如果还有重试机会，立即重试
+                if (attempt < maxAttempts) {
                     console.log(`[${modelName}] Retrying immediately...`);
                     continue;
                 }
             } else {
                 // 非超时错误，直接抛出不重试
-                console.error(`[${modelName}] Attempt ${attempt}/2 - Error:`, error.message);
+                console.error(`[${modelName}] Attempt ${attempt}/${maxAttempts} - Error:`, error.message);
                 throw error;
             }
         }
     }
 
-    // 2次都失败，抛出最后一个错误
+    // 所有尝试都失败，抛出最后一个错误
     throw lastError;
 }
 
 // ============================================
-// 4. LLM API 路由函数
+// 4. 构建交易提示词（包含历史数据和技术指标）
 // ============================================
-async function askLLM(agentName, marketData, portfolio) {
-    switch (agentName) {
-        // OpenAI
-        case 'openai_standard':
-            return await askOpenAI(marketData, portfolio, 'gpt-5');
-        case 'openai_mini':
-            return await askOpenAI(marketData, portfolio, 'gpt-4o-mini');
+function buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators) {
+    // 格式化历史K线数据（只显示最近3天，避免prompt过长）
+    const formatOHLC = (symbol) => {
+        const ohlc = historicalData[symbol] || [];
+        if (ohlc.length === 0) return '无历史数据';
 
-        // Gemini
-        case 'gemini_flash':
-            return await askGemini(marketData, portfolio, 'gemini-2.5-flash');
-        case 'gemini_pro':
-            return await askGeminiPro(marketData, portfolio);
+        // 只取最近3天
+        const recent = ohlc.slice(-3);
+        return recent.map(candle =>
+            `  ${candle.date}: 开$${candle.open.toFixed(2)} 高$${candle.high.toFixed(2)} 低$${candle.low.toFixed(2)} 收$${candle.close.toFixed(2)}`
+        ).join('\n');
+    };
 
-        // Claude
-        case 'claude_standard':
-            return await askClaude(marketData, portfolio, 'claude-sonnet-4-5-20250929');
-        case 'claude_mini':
-            return await askClaude(marketData, portfolio, 'claude-haiku-4-5');
+    // 格式化技术指标
+    const formatIndicators = (symbol) => {
+        const indicators = technicalIndicators[symbol];
+        if (!indicators) return '  数据不足，无法计算指标';
 
-        // Grok
-        case 'grok_standard':
-            return await askGrok(marketData, portfolio, 'grok-4-0709');
-        case 'grok_mini':
-            return await askGrok(marketData, portfolio, 'grok-3-mini');
+        let lines = [];
 
-        // DeepSeek
-        case 'deepseek_r1':
-            return await askDeepSeekR1(marketData, portfolio);
+        if (indicators.rsi !== null) {
+            const rsiStatus = indicators.rsi > 70 ? '超买⚠️' : indicators.rsi < 30 ? '超卖⚠️' : '中性';
+            lines.push(`  RSI(14): ${indicators.rsi.toFixed(2)} (${rsiStatus})`);
+        }
 
-        default:
-            throw new Error(`Unknown agent: ${agentName}`);
-    }
-}
+        if (indicators.macd) {
+            const trend = indicators.macd.histogram > 0 ? '多头📈' : '空头📉';
+            lines.push(`  MACD: ${indicators.macd.value.toFixed(2)} (信号线: ${indicators.macd.signal.toFixed(2)}, ${trend})`);
+        }
 
-// ============================================
-// 3.1 调用 Gemini API 获取决策
-// ============================================
+        if (indicators.ma7 !== null) {
+            lines.push(`  MA(7): $${indicators.ma7.toFixed(2)}`);
+        }
 
-// Gemini API (支持多个模型)
-async function askGemini(marketData, portfolio, model = 'gemini-2.5-flash') {
-    const prompt = `你是一个专业的加密货币交易员。请基于以下信息做出交易决策。
+        if (indicators.ma25 !== null) {
+            const crossStatus = indicators.ma7 > indicators.ma25 ? '金叉📈(上涨趋势)' : '死叉📉(下跌趋势)';
+            lines.push(`  MA(25): $${indicators.ma25.toFixed(2)} (${crossStatus})`);
+        }
 
-【当前市场数据】
-BTC价格: $${marketData.BTC.price.toFixed(2)} (24h变化: ${marketData.BTC.change_24h.toFixed(2)}%)
-ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.change_24h.toFixed(2)}%)
-SOL价格: $${marketData.SOL.price.toFixed(2)} (24h变化: ${marketData.SOL.change_24h.toFixed(2)}%)
-BNB价格: $${marketData.BNB.price.toFixed(2)} (24h变化: ${marketData.BNB.change_24h.toFixed(2)}%)
-DOGE价格: $${marketData.DOGE.price.toFixed(4)} (24h变化: ${marketData.DOGE.change_24h.toFixed(2)}%)
-XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.change_24h.toFixed(2)}%)
+        if (indicators.bollinger) {
+            const bb = indicators.bollinger;
+            const currentPrice = marketData[symbol].price;
+            let position = '';
+            if (currentPrice > bb.upper) position = '(突破上轨，可能回调)';
+            else if (currentPrice < bb.lower) position = '(跌破下轨，可能反弹)';
+            else position = '(在通道内)';
 
-【你的账户状态】
+            lines.push(`  布林带: 上$${bb.upper.toFixed(2)} 中$${bb.middle.toFixed(2)} 下$${bb.lower.toFixed(2)} ${position}`);
+        }
+
+        return lines.join('\n');
+    };
+
+    return `你是一个专业的加密货币量化交易员。请基于以下市场数据、历史K线和技术指标做出交易决策。
+
+=== 当前市场数据 ===
+BTC: $${marketData.BTC.price.toFixed(2)} (24h: ${marketData.BTC.change_24h.toFixed(2)}%)
+ETH: $${marketData.ETH.price.toFixed(2)} (24h: ${marketData.ETH.change_24h.toFixed(2)}%)
+SOL: $${marketData.SOL.price.toFixed(2)} (24h: ${marketData.SOL.change_24h.toFixed(2)}%)
+BNB: $${marketData.BNB.price.toFixed(2)} (24h: ${marketData.BNB.change_24h.toFixed(2)}%)
+DOGE: $${marketData.DOGE.price.toFixed(4)} (24h: ${marketData.DOGE.change_24h.toFixed(2)}%)
+XRP: $${marketData.XRP.price.toFixed(4)} (24h: ${marketData.XRP.change_24h.toFixed(2)}%)
+
+=== 历史K线数据（最近3天） ===
+BTC:
+${formatOHLC('BTC')}
+
+ETH:
+${formatOHLC('ETH')}
+
+SOL:
+${formatOHLC('SOL')}
+
+BNB:
+${formatOHLC('BNB')}
+
+DOGE:
+${formatOHLC('DOGE')}
+
+XRP:
+${formatOHLC('XRP')}
+
+=== 技术指标 ===
+BTC:
+${formatIndicators('BTC')}
+
+ETH:
+${formatIndicators('ETH')}
+
+SOL:
+${formatIndicators('SOL')}
+
+BNB:
+${formatIndicators('BNB')}
+
+DOGE:
+${formatIndicators('DOGE')}
+
+XRP:
+${formatIndicators('XRP')}
+
+=== 你的账户状态 ===
 现金: $${portfolio.cash.toFixed(2)}
 持仓: ${JSON.stringify(portfolio.holdings)}
 总资产: $${portfolio.total_value.toFixed(2)}
 盈亏: ${portfolio.pnl?.toFixed(2) || 0}$ (${portfolio.pnl_percentage?.toFixed(2) || 0}%)
 
-【交易规则】
+=== 交易规则 ===
 1. 你只能交易 BTC, ETH, SOL, BNB, DOGE, XRP（对标Alpha Arena比赛币种，现货交易无杠杆）
 2. 单笔交易不超过总资产的 30%
 3. 单笔交易至少 $10（低于此金额不交易）
@@ -543,9 +760,61 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
 }
 
 注意：hold时asset必须填 null（不是字符串"null"）`;
+}
+
+// ============================================
+// 5. LLM API 路由函数
+// ============================================
+async function askLLM(agentName, marketData, portfolio, historicalData, technicalIndicators) {
+    switch (agentName) {
+        // OpenAI
+        case 'openai_standard':
+            return await askOpenAI(marketData, portfolio, historicalData, technicalIndicators, 'gpt-4.1');
+        case 'openai_mini':
+            return await askOpenAI(marketData, portfolio, historicalData, technicalIndicators, 'gpt-4o-mini');
+
+        // Gemini
+        case 'gemini_flash':
+            return await askGemini(marketData, portfolio, historicalData, technicalIndicators, 'gemini-2.5-flash');
+        case 'gemini_pro':
+            return await askGeminiPro(marketData, portfolio, historicalData, technicalIndicators);
+
+        // Claude
+        case 'claude_standard':
+            return await askClaude(marketData, portfolio, historicalData, technicalIndicators, 'claude-sonnet-4-5-20250929');
+        case 'claude_mini':
+            return await askClaude(marketData, portfolio, historicalData, technicalIndicators, 'claude-haiku-4-5');
+
+        // Grok
+        case 'grok_standard':
+            return await askGrok(marketData, portfolio, historicalData, technicalIndicators, 'grok-4-0709');
+        case 'grok_mini':
+            return await askGrok(marketData, portfolio, historicalData, technicalIndicators, 'grok-3-mini');
+
+        // DeepSeek
+        case 'deepseek_r1':
+            return await askDeepSeekR1(marketData, portfolio, historicalData, technicalIndicators);
+
+        default:
+            throw new Error(`Unknown agent: ${agentName}`);
+    }
+}
+
+// ============================================
+// 3.1 调用 Gemini API 获取决策
+// ============================================
+
+// Gemini API (支持多个模型)
+async function askGemini(marketData, portfolio, historicalData, technicalIndicators, model = 'gemini-2.5-flash') {
+    // 轻量级Flash：60秒超时，不重试
+    const timeoutMs = 60000;
+    const maxAttempts = 1;
+    const modelDisplayName = 'Gemini 2.5 Flash';
+
+    const prompt = buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators);
 
     try {
-        const response = await fetch(
+        const response = await fetchWithTimeoutAndRetry(
             `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
             {
                 method: 'POST',
@@ -563,7 +832,10 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
                         maxOutputTokens: 8000  // 增加token限制以容纳思考tokens（Gemini 2.0 Thinking可能需要更多）
                     }
                 })
-            }
+            },
+            timeoutMs,
+            modelDisplayName,
+            maxAttempts
         );
 
         const data = await response.json();
@@ -612,71 +884,59 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
         return decision;
 
     } catch (error) {
-        console.error('Gemini API failed:', error);
-        // 降级：返回保守的 hold 决策
-        return {
-            action: 'hold',
-            asset: null,
-            amount: 0,
-            reason: 'API调用失败，保持持有'
-        };
+        if (error.name === 'AbortError') {
+            console.error(`[${modelDisplayName}] API timeout after ${maxAttempts} attempt(s)`);
+            return {
+                action: 'hold',
+                asset: null,
+                amount: 0,
+                reason: 'API超时，保持持有'
+            };
+        } else {
+            console.error(`[${modelDisplayName}] API failed:`, error);
+            return {
+                action: 'hold',
+                asset: null,
+                amount: 0,
+                reason: 'API调用失败，保持持有'
+            };
+        }
     }
 }
 
 // ============================================
 // 3.1.1 调用 Gemini Pro API (通过代理商)
 // ============================================
-async function askGeminiPro(marketData, portfolio) {
-    const prompt = `你是一个专业的加密货币交易员。请基于以下信息做出交易决策。
+async function askGeminiPro(marketData, portfolio, historicalData, technicalIndicators) {
+    // 旗舰型Pro：120秒超时，重试1次
+    const timeoutMs = 120000;
+    const maxAttempts = 2;
+    const modelDisplayName = 'Gemini 2.5 Pro';
 
-【当前市场数据】
-BTC价格: $${marketData.BTC.price.toFixed(2)} (24h变化: ${marketData.BTC.change_24h.toFixed(2)}%)
-ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.change_24h.toFixed(2)}%)
-SOL价格: $${marketData.SOL.price.toFixed(2)} (24h变化: ${marketData.SOL.change_24h.toFixed(2)}%)
-BNB价格: $${marketData.BNB.price.toFixed(2)} (24h变化: ${marketData.BNB.change_24h.toFixed(2)}%)
-DOGE价格: $${marketData.DOGE.price.toFixed(4)} (24h变化: ${marketData.DOGE.change_24h.toFixed(2)}%)
-XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.change_24h.toFixed(2)}%)
-
-【你的账户状态】
-现金: $${portfolio.cash.toFixed(2)}
-持仓: ${JSON.stringify(portfolio.holdings)}
-总资产: $${portfolio.total_value.toFixed(2)}
-盈亏: ${portfolio.pnl?.toFixed(2) || 0}$ (${portfolio.pnl_percentage?.toFixed(2) || 0}%)
-
-【交易规则】
-1. 你只能交易 BTC, ETH, SOL, BNB, DOGE, XRP（对标Alpha Arena比赛币种，现货交易无杠杆）
-2. 单笔交易不超过总资产的 30%
-3. 单笔交易至少 $10（低于此金额不交易）
-4. 必须保留至少 20% 现金
-5. 每笔交易收取 0.1% 手续费
-6. 可以选择：买入、卖出、持有
-
-请返回 JSON 格式的决策（不要包含任何其他文字）：
-{
-    "action": "buy/sell/hold",
-    "asset": "资产代码（buy/sell时填币种如BTC；hold时填null不带引号）",
-    "amount": 数量,
-    "reason": "决策理由（中文，1-2句话）"
-}
-
-注意：hold时asset必须填 null（不是字符串"null"）`;
+    const prompt = buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators);
 
     try {
-        // 使用代理商的OpenAI兼容API调用Gemini Pro
-        const response = await fetch('https://api.gptsapi.net/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${GEMINI_PRO_API_KEY}`
+        // 使用代理商的OpenAI兼容API调用Gemini Pro（旗舰型120秒超时，重试1次）
+        const response = await fetchWithTimeoutAndRetry(
+            'https://api.gptsapi.net/v1/chat/completions',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${GEMINI_PRO_API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: 'gemini-2.5-pro',  // 代理商提供的模型名称
+                    messages: [
+                        { role: 'user', content: prompt }
+                    ],
+                    temperature: 0.7
+                })
             },
-            body: JSON.stringify({
-                model: 'gemini-2.5-pro',  // 代理商提供的模型名称
-                messages: [
-                    { role: 'user', content: prompt }
-                ],
-                temperature: 0.7
-            })
-        });
+            timeoutMs,
+            modelDisplayName,
+            maxAttempts
+        );
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -702,54 +962,31 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
         return decision;
 
     } catch (error) {
-        console.error('Gemini Pro API (via proxy) failed:', error);
-        // 降级：返回保守的 hold 决策
-        return {
-            action: 'hold',
-            asset: null,
-            amount: 0,
-            reason: 'API调用失败，保持持有'
-        };
+        if (error.name === 'AbortError') {
+            console.error(`[${modelDisplayName}] API timeout after ${maxAttempts} attempt(s) (120s each)`);
+            return {
+                action: 'hold',
+                asset: null,
+                amount: 0,
+                reason: 'API超时（2次重试均失败），保持持有'
+            };
+        } else {
+            console.error(`[${modelDisplayName}] API failed:`, error);
+            return {
+                action: 'hold',
+                asset: null,
+                amount: 0,
+                reason: 'API调用失败，保持持有'
+            };
+        }
     }
 }
 
 // ============================================
 // 3.1.2 调用 DeepSeek R1 API (通过代理商)
 // ============================================
-async function askDeepSeekR1(marketData, portfolio) {
-    const prompt = `你是一个专业的加密货币交易员。请基于以下信息做出交易决策。
-
-【当前市场数据】
-BTC价格: $${marketData.BTC.price.toFixed(2)} (24h变化: ${marketData.BTC.change_24h.toFixed(2)}%)
-ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.change_24h.toFixed(2)}%)
-SOL价格: $${marketData.SOL.price.toFixed(2)} (24h变化: ${marketData.SOL.change_24h.toFixed(2)}%)
-BNB价格: $${marketData.BNB.price.toFixed(2)} (24h变化: ${marketData.BNB.change_24h.toFixed(2)}%)
-DOGE价格: $${marketData.DOGE.price.toFixed(4)} (24h变化: ${marketData.DOGE.change_24h.toFixed(2)}%)
-XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.change_24h.toFixed(2)}%)
-
-【你的账户状态】
-现金: $${portfolio.cash.toFixed(2)}
-持仓: ${JSON.stringify(portfolio.holdings)}
-总资产: $${portfolio.total_value.toFixed(2)}
-盈亏: ${portfolio.pnl?.toFixed(2) || 0}$ (${portfolio.pnl_percentage?.toFixed(2) || 0}%)
-
-【交易规则】
-1. 你只能交易 BTC, ETH, SOL, BNB, DOGE, XRP（对标Alpha Arena比赛币种，现货交易无杠杆）
-2. 单笔交易不超过总资产的 30%
-3. 单笔交易至少 $10（低于此金额不交易）
-4. 必须保留至少 20% 现金
-5. 每笔交易收取 0.1% 手续费
-6. 可以选择：买入、卖出、持有
-
-请返回 JSON 格式的决策（不要包含任何其他文字）：
-{
-    "action": "buy/sell/hold",
-    "asset": "资产代码（buy/sell时填币种如BTC；hold时填null不带引号）",
-    "amount": 数量,
-    "reason": "决策理由（中文，1-2句话）"
-}
-
-注意：hold时asset必须填 null（不是字符串"null"）`;
+async function askDeepSeekR1(marketData, portfolio, historicalData, technicalIndicators) {
+    const prompt = buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators);
 
     try {
         // 使用代理商的OpenAI兼容API调用DeepSeek R1（旗舰型120秒超时）
@@ -820,43 +1057,17 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
 // ============================================
 // 3.2 调用 Claude API 获取决策
 // ============================================
-async function askClaude(marketData, portfolio, model = 'claude-haiku-4-5') {
-    const prompt = `你是一个专业的加密货币交易员。请基于以下信息做出交易决策。
+async function askClaude(marketData, portfolio, historicalData, technicalIndicators, model = 'claude-haiku-4-5') {
+    // 判断是旗舰型还是轻量级
+    const isFlagship = model === 'claude-sonnet-4-5-20250929';
+    const timeoutMs = isFlagship ? 120000 : 60000;  // 旗舰120s, 轻量60s
+    const maxAttempts = isFlagship ? 2 : 1;  // 旗舰重试1次, 轻量不重试
+    const modelDisplayName = isFlagship ? 'Sonnet 4.5' : 'Haiku 4.5';
 
-【当前市场数据】
-BTC价格: $${marketData.BTC.price.toFixed(2)} (24h变化: ${marketData.BTC.change_24h.toFixed(2)}%)
-ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.change_24h.toFixed(2)}%)
-SOL价格: $${marketData.SOL.price.toFixed(2)} (24h变化: ${marketData.SOL.change_24h.toFixed(2)}%)
-BNB价格: $${marketData.BNB.price.toFixed(2)} (24h变化: ${marketData.BNB.change_24h.toFixed(2)}%)
-DOGE价格: $${marketData.DOGE.price.toFixed(4)} (24h变化: ${marketData.DOGE.change_24h.toFixed(2)}%)
-XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.change_24h.toFixed(2)}%)
-
-【你的账户状态】
-现金: $${portfolio.cash.toFixed(2)}
-持仓: ${JSON.stringify(portfolio.holdings)}
-总资产: $${portfolio.total_value.toFixed(2)}
-盈亏: ${portfolio.pnl?.toFixed(2) || 0}$ (${portfolio.pnl_percentage?.toFixed(2) || 0}%)
-
-【交易规则】
-1. 你只能交易 BTC, ETH, SOL, BNB, DOGE, XRP（对标Alpha Arena比赛币种，现货交易无杠杆）
-2. 单笔交易不超过总资产的 30%
-3. 单笔交易至少 $10（低于此金额不交易）
-4. 必须保留至少 20% 现金
-5. 每笔交易收取 0.1% 手续费
-6. 可以选择：买入、卖出、持有
-
-请返回 JSON 格式的决策（不要包含任何其他文字）：
-{
-    "action": "buy/sell/hold",
-    "asset": "资产代码（buy/sell时填币种如BTC；hold时填null不带引号）",
-    "amount": 数量,
-    "reason": "决策理由（中文，1-2句话）"
-}
-
-注意：hold时asset必须填 null（不是字符串"null"）`;
+    const prompt = buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators);
 
     try {
-        const response = await fetch(
+        const response = await fetchWithTimeoutAndRetry(
             'https://api.anthropic.com/v1/messages',
             {
                 method: 'POST',
@@ -874,7 +1085,10 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
                         content: prompt
                     }]
                 })
-            }
+            },
+            timeoutMs,
+            modelDisplayName,
+            maxAttempts
         );
 
         const data = await response.json();
@@ -923,60 +1137,40 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
         return decision;
 
     } catch (error) {
-        console.error('Claude API failed:', error);
-        // 降级：返回保守的 hold 决策
-        return {
-            action: 'hold',
-            asset: null,
-            amount: 0,
-            reason: 'API调用失败，保持持有'
-        };
+        if (error.name === 'AbortError') {
+            console.error(`[${modelDisplayName}] API timeout after ${maxAttempts} attempt(s)`);
+            return {
+                action: 'hold',
+                asset: null,
+                amount: 0,
+                reason: `API超时（${maxAttempts}次尝试均失败），保持持有`
+            };
+        } else {
+            console.error(`[${modelDisplayName}] API failed:`, error);
+            return {
+                action: 'hold',
+                asset: null,
+                amount: 0,
+                reason: 'API调用失败，保持持有'
+            };
+        }
     }
 }
 
 // ============================================
 // 3.3 调用 Grok API 获取决策
 // ============================================
-async function askGrok(marketData, portfolio, model = 'grok-2-mini-1212') {
-    const prompt = `你是一个专业的加密货币交易员。请基于以下信息做出交易决策。
+async function askGrok(marketData, portfolio, historicalData, technicalIndicators, model = 'grok-2-mini-1212') {
+    // 判断是旗舰型还是轻量级
+    const isFlagship = model === 'grok-4-0709';
+    const timeoutMs = isFlagship ? 120000 : 60000;  // 旗舰120s, 轻量60s
+    const maxAttempts = isFlagship ? 2 : 1;  // 旗舰重试1次, 轻量不重试
+    const modelDisplayName = isFlagship ? 'Grok 4' : 'Grok 3 mini';
 
-【当前市场数据】
-BTC价格: $${marketData.BTC.price.toFixed(2)} (24h变化: ${marketData.BTC.change_24h.toFixed(2)}%)
-ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.change_24h.toFixed(2)}%)
-SOL价格: $${marketData.SOL.price.toFixed(2)} (24h变化: ${marketData.SOL.change_24h.toFixed(2)}%)
-BNB价格: $${marketData.BNB.price.toFixed(2)} (24h变化: ${marketData.BNB.change_24h.toFixed(2)}%)
-DOGE价格: $${marketData.DOGE.price.toFixed(4)} (24h变化: ${marketData.DOGE.change_24h.toFixed(2)}%)
-XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.change_24h.toFixed(2)}%)
-
-【你的账户状态】
-现金: $${portfolio.cash.toFixed(2)}
-持仓: ${JSON.stringify(portfolio.holdings)}
-总资产: $${portfolio.total_value.toFixed(2)}
-盈亏: ${portfolio.pnl?.toFixed(2) || 0}$ (${portfolio.pnl_percentage?.toFixed(2) || 0}%)
-
-【交易规则】
-1. 你只能交易 BTC, ETH, SOL, BNB, DOGE, XRP（对标Alpha Arena比赛币种，现货交易无杠杆）
-2. 单笔交易不超过总资产的 30%
-3. 单笔交易至少 $10（低于此金额不交易）
-4. 必须保留至少 20% 现金
-5. 每笔交易收取 0.1% 手续费
-6. 可以选择：买入、卖出、持有
-
-请返回 JSON 格式的决策（不要包含任何其他文字）：
-{
-    "action": "buy/sell/hold",
-    "asset": "资产代码（buy/sell时填币种如BTC；hold时填null不带引号）",
-    "amount": 数量,
-    "reason": "决策理由（中文，1-2句话）"
-}
-
-注意：hold时asset必须填 null（不是字符串"null"）`;
+    const prompt = buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators);
 
     try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000); // 60秒超时
-
-        const response = await fetch(
+        const response = await fetchWithTimeoutAndRetry(
             'https://api.x.ai/v1/chat/completions',
             {
                 method: 'POST',
@@ -992,12 +1186,12 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
                     }],
                     temperature: 0.7,
                     max_tokens: 2000
-                }),
-                signal: controller.signal
-            }
+                })
+            },
+            timeoutMs,
+            modelDisplayName,
+            maxAttempts
         );
-
-        clearTimeout(timeoutId);
 
         const data = await response.json();
 
@@ -1046,60 +1240,50 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
 
     } catch (error) {
         if (error.name === 'AbortError') {
-            console.error('Grok API timeout (60s)');
+            console.error(`[${modelDisplayName}] API timeout after ${maxAttempts} attempt(s)`);
+            return {
+                action: 'hold',
+                asset: null,
+                amount: 0,
+                reason: `API超时（${maxAttempts}次尝试均失败），保持持有`
+            };
         } else {
-            console.error('Grok API failed:', error);
+            console.error(`[${modelDisplayName}] API failed:`, error);
+            return {
+                action: 'hold',
+                asset: null,
+                amount: 0,
+                reason: 'API调用失败，保持持有'
+            };
         }
-        // 降级：返回保守的 hold 决策
-        return {
-            action: 'hold',
-            asset: null,
-            amount: 0,
-            reason: error.name === 'AbortError' ? 'API超时（60秒），保持持有' : 'API调用失败，保持持有'
-        };
     }
 }
 
 // ============================================
 // 3.4 调用 OpenAI API 获取决策
 // ============================================
-async function askOpenAI(marketData, portfolio, model = 'gpt-4o-mini') {
-    const prompt = `你是一个专业的加密货币交易员。请基于以下信息做出交易决策。
+async function askOpenAI(marketData, portfolio, historicalData, technicalIndicators, model = 'gpt-4o-mini') {
+    // 判断是旗舰型还是轻量级
+    const isFlagship = model === 'gpt-4.1';
+    const timeoutMs = isFlagship ? 120000 : 60000;  // 旗舰120s, 轻量60s
+    const maxAttempts = isFlagship ? 2 : 1;  // 旗舰重试1次, 轻量不重试
+    const modelDisplayName = isFlagship ? 'GPT-4.1' : 'GPT-4o mini';
 
-【当前市场数据】
-BTC价格: $${marketData.BTC.price.toFixed(2)} (24h变化: ${marketData.BTC.change_24h.toFixed(2)}%)
-ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.change_24h.toFixed(2)}%)
-SOL价格: $${marketData.SOL.price.toFixed(2)} (24h变化: ${marketData.SOL.change_24h.toFixed(2)}%)
-BNB价格: $${marketData.BNB.price.toFixed(2)} (24h变化: ${marketData.BNB.change_24h.toFixed(2)}%)
-DOGE价格: $${marketData.DOGE.price.toFixed(4)} (24h变化: ${marketData.DOGE.change_24h.toFixed(2)}%)
-XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.change_24h.toFixed(2)}%)
-
-【你的账户状态】
-现金: $${portfolio.cash.toFixed(2)}
-持仓: ${JSON.stringify(portfolio.holdings)}
-总资产: $${portfolio.total_value.toFixed(2)}
-盈亏: ${portfolio.pnl?.toFixed(2) || 0}$ (${portfolio.pnl_percentage?.toFixed(2) || 0}%)
-
-【交易规则】
-1. 你只能交易 BTC, ETH, SOL, BNB, DOGE, XRP（对标Alpha Arena比赛币种，现货交易无杠杆）
-2. 单笔交易不超过总资产的 30%
-3. 单笔交易至少 $10（低于此金额不交易）
-4. 必须保留至少 20% 现金
-5. 每笔交易收取 0.1% 手续费
-6. 可以选择：买入、卖出、持有
-
-请返回 JSON 格式的决策（不要包含任何其他文字）：
-{
-    "action": "buy/sell/hold",
-    "asset": "资产代码（buy/sell时填币种如BTC；hold时填null不带引号）",
-    "amount": 数量,
-    "reason": "决策理由（中文，1-2句话）"
-}
-
-注意：hold时asset必须填 null（不是字符串"null"）`;
+    const prompt = buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators);
 
     try {
-        const response = await fetch(
+        // 构建请求体，GPT-4.1和GPT-4o mini都使用标准配置
+        const requestBody = {
+            model: model,
+            messages: [{
+                role: 'user',
+                content: prompt
+            }],
+            temperature: 0.7,
+            max_tokens: 2000
+        };
+
+        const response = await fetchWithTimeoutAndRetry(
             'https://api.openai.com/v1/chat/completions',
             {
                 method: 'POST',
@@ -1107,16 +1291,11 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${OPENAI_API_KEY}`
                 },
-                body: JSON.stringify({
-                    model: model,
-                    messages: [{
-                        role: 'user',
-                        content: prompt
-                    }],
-                    temperature: 0.7,
-                    max_tokens: 2000
-                })
-            }
+                body: JSON.stringify(requestBody)
+            },
+            timeoutMs,
+            modelDisplayName,
+            maxAttempts
         );
 
         const data = await response.json();
@@ -1165,14 +1344,23 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
         return decision;
 
     } catch (error) {
-        console.error('OpenAI API failed:', error);
-        // 降级：返回保守的 hold 决策
-        return {
-            action: 'hold',
-            asset: null,
-            amount: 0,
-            reason: 'API调用失败，保持持有'
-        };
+        if (error.name === 'AbortError') {
+            console.error(`[${modelDisplayName}] API timeout after ${maxAttempts} attempt(s)`);
+            return {
+                action: 'hold',
+                asset: null,
+                amount: 0,
+                reason: `API超时（${maxAttempts}次尝试均失败），保持持有`
+            };
+        } else {
+            console.error(`[${modelDisplayName}] API failed:`, error);
+            return {
+                action: 'hold',
+                asset: null,
+                amount: 0,
+                reason: 'API调用失败，保持持有'
+            };
+        }
     }
 }
 
