@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowUpCircle, ArrowDownCircle, MinusCircle, Clock } from 'lucide-react';
+import { ArrowUpCircle, ArrowDownCircle, MinusCircle, Clock, RefreshCw } from 'lucide-react';
 
 const DecisionTimeline = ({ decisions }) => {
   // 格式化时间
@@ -74,6 +74,14 @@ const DecisionTimeline = ({ decisions }) => {
       borderColor: 'border-gray-200',
       textColor: 'text-gray-800',
       label: '持有'
+    },
+    rebalance: {
+      icon: RefreshCw,
+      color: 'purple',
+      bgColor: 'bg-purple-50',
+      borderColor: 'border-purple-200',
+      textColor: 'text-purple-800',
+      label: '调仓'
     },
     dividend_reinvest: {
       icon: ArrowUpCircle,
