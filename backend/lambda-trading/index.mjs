@@ -1806,14 +1806,25 @@ async function saveDecision(agentName, decision, marketData, portfolioValue) {
                 finalReason += `\n\n整体策略: ${decision.overall_reason}`;
             }
 
-            // 收集所有涉及的资产
-            const assets = [...new Set(decision.actions.map(t => t.asset))].join(', ');
+            // 收集买入和卖出的资产（分开显示）
+            const buyAssets = [...new Set(buyActions.map(t => t.asset))];
+            const sellAssets = [...new Set(sellActions.map(t => t.asset))];
+
+            // 构建资产标签字符串（买入、卖出分开）
+            let assetTags = [];
+            if (buyAssets.length > 0) {
+                assetTags.push(`买入: ${buyAssets.join(', ')}`);
+            }
+            if (sellAssets.length > 0) {
+                assetTags.push(`卖出: ${sellAssets.join(', ')}`);
+            }
+            const assetsDisplay = assetTags.join(' | ');
 
             decisionToSave = {
                 ...decision,
                 // 添加兼容字段：前端会读取这些字段
                 action: displayAction,  // 使用前端认识的action值
-                asset: assets,  // 显示所有涉及的资产
+                asset: assetsDisplay,  // 买入和卖出资产分开显示
                 reason: finalReason,  // 买入和卖出分开写理由
                 // 不添加amount字段（x 4.0000没意义）
                 // 保留原始的actions数组
