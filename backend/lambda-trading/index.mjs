@@ -414,6 +414,59 @@ async function getBenchmarkDecision(benchmarkName, marketData, portfolio) {
 }
 
 // ============================================
+// 3.0 通用超时+重试辅助函数
+// ============================================
+/**
+ * 带超时和重试的fetch封装
+ * @param {string} url - API URL
+ * @param {object} options - fetch options
+ * @param {number} timeoutMs - 超时时间（毫秒）
+ * @param {string} modelName - 模型名称（用于日志）
+ * @returns {Promise<Response>}
+ */
+async function fetchWithTimeoutAndRetry(url, options, timeoutMs, modelName) {
+    let lastError = null;
+
+    // 尝试2次（首次 + 重试1次）
+    for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+            console.log(`[${modelName}] Attempt ${attempt}/2 - Timeout: ${timeoutMs}ms`);
+
+            const response = await fetch(url, {
+                ...options,
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+            return response;
+
+        } catch (error) {
+            lastError = error;
+
+            if (error.name === 'AbortError') {
+                console.error(`[${modelName}] Attempt ${attempt}/2 - Timeout after ${timeoutMs}ms`);
+
+                // 如果是第一次尝试且超时，立即重试
+                if (attempt === 1) {
+                    console.log(`[${modelName}] Retrying immediately...`);
+                    continue;
+                }
+            } else {
+                // 非超时错误，直接抛出不重试
+                console.error(`[${modelName}] Attempt ${attempt}/2 - Error:`, error.message);
+                throw error;
+            }
+        }
+    }
+
+    // 2次都失败，抛出最后一个错误
+    throw lastError;
+}
+
+// ============================================
 // 4. LLM API 路由函数
 // ============================================
 async function askLLM(agentName, marketData, portfolio) {
@@ -699,21 +752,26 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
 注意：hold时asset必须填 null（不是字符串"null"）`;
 
     try {
-        // 使用代理商的OpenAI兼容API调用DeepSeek R1
-        const response = await fetch('https://api.gptsapi.net/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${DEEPSEEK_R1_API_KEY}`
+        // 使用代理商的OpenAI兼容API调用DeepSeek R1（旗舰型120秒超时）
+        const response = await fetchWithTimeoutAndRetry(
+            'https://api.gptsapi.net/v1/chat/completions',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${DEEPSEEK_R1_API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: 'deepseek-r1',  // 代理商提供的模型名称
+                    messages: [
+                        { role: 'user', content: prompt }
+                    ],
+                    temperature: 0.7
+                })
             },
-            body: JSON.stringify({
-                model: 'deepseek-r1',  // 代理商提供的模型名称
-                messages: [
-                    { role: 'user', content: prompt }
-                ],
-                temperature: 0.7
-            })
-        });
+            120000,  // 120秒超时（旗舰型）
+            'DeepSeek R1'
+        );
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -739,14 +797,23 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
         return decision;
 
     } catch (error) {
-        console.error('DeepSeek R1 API (via proxy) failed:', error);
-        // 降级：返回保守的 hold 决策
-        return {
-            action: 'hold',
-            asset: null,
-            amount: 0,
-            reason: 'API调用失败，保持持有'
-        };
+        if (error.name === 'AbortError') {
+            console.error('[DeepSeek R1] API timeout after 2 attempts (120s each)');
+            return {
+                action: 'hold',
+                asset: null,
+                amount: 0,
+                reason: 'API超时（2次重试均失败），保持持有'
+            };
+        } else {
+            console.error('[DeepSeek R1] API failed:', error);
+            return {
+                action: 'hold',
+                asset: null,
+                amount: 0,
+                reason: 'API调用失败，保持持有'
+            };
+        }
     }
 }
 
