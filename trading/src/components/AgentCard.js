@@ -12,7 +12,7 @@ const AgentCard = ({ portfolio, marketData }) => {
 
     // Gemini
     gemini_flash: { name: 'Gemini 2.5 Flash', color: 'blue', icon: '🔷' },
-    gemini_pro: { name: 'Gemini 2.5 Pro', color: 'blue', icon: '🔶' },
+    gemini_pro: { name: 'Gemini 2.5 Pro', color: 'blue', icon: '🔹' },
 
     // Claude
     claude_standard: { name: 'Sonnet 4.5', color: 'purple', icon: '🟣' },

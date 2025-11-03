@@ -30,7 +30,7 @@ const DecisionTimeline = ({ decisions }) => {
 
     // Gemini
     gemini_flash: '🔷',
-    gemini_pro: '🔶',
+    gemini_pro: '🔹',
 
     // Claude
     claude_standard: '🟣',
