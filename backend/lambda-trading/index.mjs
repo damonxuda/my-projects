@@ -19,6 +19,7 @@ const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 const GROK_API_KEY = process.env.GROK_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const DEEPSEEK_R1_API_KEY = process.env.DEEPSEEK_R1_API_KEY;  // 代理商API Key for DeepSeek R1
+const CRYPTOCOMPARE_API_KEY = process.env.CRYPTOCOMPARE_API_KEY;  // CryptoCompare News API
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -83,54 +84,18 @@ export const handler = async (event) => {
             }
         }
 
-        // 2. 对每个 agent 执行交易决策
-        for (const agent of AGENTS) {
-            console.log(`\n========== Processing ${agent.name.toUpperCase()} ==========`);
+        // 1.3 获取加密货币新闻（所有 agents 共享）
+        console.log('📰 Fetching crypto news...');
+        const newsData = await fetchCryptoNews();
 
-            try {
-                // 2.1 获取当前虚拟账户状态
-                const portfolio = await getCurrentPortfolio(agent.name);
-                console.log(`💰 ${agent.name} Portfolio:`, portfolio);
+        // 2. 并发执行所有 agent 的交易决策（性能提升3-5倍）
+        console.log(`\n🚀 开始并发处理 ${AGENTS.length} 个agents...`);
+        const agentResults = await Promise.all(
+            AGENTS.map(agent => processSingleAgent(agent, marketData, historicalData, technicalIndicators, newsData))
+        );
 
-                // 2.2 获取决策（LLM或基准策略）
-                let decision;
-                if (agent.type === 'benchmark') {
-                    decision = await getBenchmarkDecision(agent.name, marketData, portfolio);
-                    console.log(`📊 ${agent.name} Benchmark Decision:`, decision);
-                } else {
-                    decision = await askLLM(agent.name, marketData, portfolio, historicalData, technicalIndicators);
-                    console.log(`🤖 ${agent.name} Decision:`, decision);
-                }
-
-                // 2.3 模拟执行交易，更新账户
-                const newPortfolio = await simulateTrade(portfolio, decision, marketData);
-                console.log(`💼 ${agent.name} New Portfolio:`, newPortfolio);
-
-                // 2.4 保存决策和账户状态到 Supabase
-                // 基准策略Buy & Hold后decision为null，无需记录决策，只更新portfolio
-                if (decision !== null) {
-                    await saveDecision(agent.name, decision, marketData, newPortfolio.total_value);
-                } else {
-                    console.log(`📊 ${agent.name} Buy & Hold策略：无需记录决策，仅更新portfolio`);
-                }
-                await savePortfolio(newPortfolio);
-
-                results.push({
-                    agent: agent.name,
-                    success: true,
-                    decision: decision,
-                    portfolio: newPortfolio
-                });
-
-            } catch (agentError) {
-                console.error(`❌ ${agent.name} failed:`, agentError);
-                results.push({
-                    agent: agent.name,
-                    success: false,
-                    error: agentError.message
-                });
-            }
-        }
+        // 整理结果
+        results.push(...agentResults);
 
         return {
             statusCode: 200,
@@ -153,6 +118,56 @@ export const handler = async (event) => {
         };
     }
 };
+
+// ============================================
+// 处理单个Agent（用于并发执行）
+// ============================================
+async function processSingleAgent(agent, marketData, historicalData, technicalIndicators, newsData) {
+    console.log(`\n========== Processing ${agent.name.toUpperCase()} ==========`);
+
+    try {
+        // 1. 获取当前虚拟账户状态
+        const portfolio = await getCurrentPortfolio(agent.name);
+        console.log(`💰 ${agent.name} Portfolio:`, portfolio);
+
+        // 2. 获取决策（LLM或基准策略）
+        let decision;
+        if (agent.type === 'benchmark') {
+            decision = await getBenchmarkDecision(agent.name, marketData, portfolio);
+            console.log(`📊 ${agent.name} Benchmark Decision:`, decision);
+        } else {
+            decision = await askLLM(agent.name, marketData, portfolio, historicalData, technicalIndicators, newsData);
+            console.log(`🤖 ${agent.name} Decision:`, decision);
+        }
+
+        // 3. 模拟执行交易，更新账户
+        const newPortfolio = await simulateTrade(portfolio, decision, marketData);
+        console.log(`💼 ${agent.name} New Portfolio:`, newPortfolio);
+
+        // 4. 保存决策和账户状态到 Supabase
+        if (decision !== null) {
+            await saveDecision(agent.name, decision, marketData, newPortfolio.total_value);
+        } else {
+            console.log(`📊 ${agent.name} Buy & Hold策略：无需记录决策，仅更新portfolio`);
+        }
+        await savePortfolio(newPortfolio);
+
+        return {
+            agent: agent.name,
+            success: true,
+            decision: decision,
+            portfolio: newPortfolio
+        };
+
+    } catch (agentError) {
+        console.error(`❌ ${agent.name} failed:`, agentError);
+        return {
+            agent: agent.name,
+            success: false,
+            error: agentError.message
+        };
+    }
+}
 
 // ============================================
 // 1. 获取市场数据（CoinGecko 免费 API）
@@ -278,6 +293,45 @@ async function fetchHistoricalOHLC() {
     } catch (error) {
         console.error('Failed to fetch historical OHLC:', error);
         throw error;
+    }
+}
+
+// ============================================
+// 1.1.1 获取加密货币新闻（CryptoCompare）
+// ============================================
+async function fetchCryptoNews() {
+    try {
+        // 获取最新10条关于BTC、ETH、SOL、BNB、DOGE、XRP的新闻
+        const response = await fetch(
+            `https://min-api.cryptocompare.com/data/v2/news/?` +
+            `lang=EN&` +
+            `categories=BTC,ETH,SOL,BNB,DOGE,XRP&` +
+            `api_key=${CRYPTOCOMPARE_API_KEY}`
+        );
+
+        if (!response.ok) {
+            throw new Error(`CryptoCompare News API error: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // 只取最新3条新闻（避免prompt过长）
+        const topNews = data.Data.slice(0, 3).map(item => ({
+            title: item.title,
+            summary: item.body.substring(0, 200) || item.title,  // 摘要最多200字符
+            published: new Date(item.published_on * 1000).toISOString(),
+            categories: item.categories,
+            source: item.source_info?.name || item.source,
+            url: item.url
+        }));
+
+        console.log(`📰 Fetched ${topNews.length} crypto news`);
+        return topNews;
+
+    } catch (error) {
+        console.error('Failed to fetch crypto news:', error);
+        // 新闻获取失败不影响交易，返回空数组
+        return [];
     }
 }
 
@@ -634,9 +688,9 @@ async function fetchWithTimeoutAndRetry(url, options, timeoutMs, modelName, maxA
 }
 
 // ============================================
-// 4. 构建交易提示词（包含历史数据和技术指标）
+// 4. 构建交易提示词（包含历史数据、技术指标和新闻）
 // ============================================
-function buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators) {
+function buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData) {
     // 格式化历史K线数据（只显示最近3天，避免prompt过长）
     const formatOHLC = (symbol) => {
         const ohlc = historicalData[symbol] || [];
@@ -689,7 +743,21 @@ function buildTradingPrompt(marketData, portfolio, historicalData, technicalIndi
         return lines.join('\n');
     };
 
-    return `你是一个专业的加密货币量化交易员。请基于以下市场数据、历史K线和技术指标做出交易决策。
+    // 格式化新闻
+    const formatNews = () => {
+        if (!newsData || newsData.length === 0) {
+            return '  暂无最新新闻';
+        }
+
+        return newsData.map((news, index) =>
+            `${index + 1}. [${news.source}] ${news.title}\n   分类: ${news.categories} | 发布: ${news.published.split('T')[0]}\n   ${news.summary.substring(0, 150)}...`
+        ).join('\n\n');
+    };
+
+    return `你是一个专业的加密货币量化交易员。请基于以下市场数据、历史K线、技术指标和最新新闻做出交易决策。
+
+=== 最新加密货币新闻 ===
+${formatNews()}
 
 === 当前市场数据 ===
 BTC: $${marketData.BTC.price.toFixed(2)} (24h: ${marketData.BTC.change_24h.toFixed(2)}%)
@@ -765,35 +833,35 @@ ${formatIndicators('XRP')}
 // ============================================
 // 5. LLM API 路由函数
 // ============================================
-async function askLLM(agentName, marketData, portfolio, historicalData, technicalIndicators) {
+async function askLLM(agentName, marketData, portfolio, historicalData, technicalIndicators, newsData) {
     switch (agentName) {
         // OpenAI
         case 'openai_standard':
-            return await askOpenAI(marketData, portfolio, historicalData, technicalIndicators, 'gpt-4.1');
+            return await askOpenAI(marketData, portfolio, historicalData, technicalIndicators, newsData, 'gpt-4.1');
         case 'openai_mini':
-            return await askOpenAI(marketData, portfolio, historicalData, technicalIndicators, 'gpt-4o-mini');
+            return await askOpenAI(marketData, portfolio, historicalData, technicalIndicators, newsData, 'gpt-4o-mini');
 
         // Gemini
         case 'gemini_flash':
-            return await askGemini(marketData, portfolio, historicalData, technicalIndicators, 'gemini-2.5-flash');
+            return await askGemini(marketData, portfolio, historicalData, technicalIndicators, newsData, 'gemini-2.5-flash');
         case 'gemini_pro':
-            return await askGeminiPro(marketData, portfolio, historicalData, technicalIndicators);
+            return await askGeminiPro(marketData, portfolio, historicalData, technicalIndicators, newsData);
 
         // Claude
         case 'claude_standard':
-            return await askClaude(marketData, portfolio, historicalData, technicalIndicators, 'claude-sonnet-4-5-20250929');
+            return await askClaude(marketData, portfolio, historicalData, technicalIndicators, newsData, 'claude-sonnet-4-5-20250929');
         case 'claude_mini':
-            return await askClaude(marketData, portfolio, historicalData, technicalIndicators, 'claude-haiku-4-5');
+            return await askClaude(marketData, portfolio, historicalData, technicalIndicators, newsData, 'claude-haiku-4-5');
 
         // Grok
         case 'grok_standard':
-            return await askGrok(marketData, portfolio, historicalData, technicalIndicators, 'grok-4-0709');
+            return await askGrok(marketData, portfolio, historicalData, technicalIndicators, newsData, 'grok-4-0709');
         case 'grok_mini':
-            return await askGrok(marketData, portfolio, historicalData, technicalIndicators, 'grok-3-mini');
+            return await askGrok(marketData, portfolio, historicalData, technicalIndicators, newsData, 'grok-3-mini');
 
         // DeepSeek
         case 'deepseek_r1':
-            return await askDeepSeekR1(marketData, portfolio, historicalData, technicalIndicators);
+            return await askDeepSeekR1(marketData, portfolio, historicalData, technicalIndicators, newsData);
 
         default:
             throw new Error(`Unknown agent: ${agentName}`);
@@ -805,13 +873,13 @@ async function askLLM(agentName, marketData, portfolio, historicalData, technica
 // ============================================
 
 // Gemini API (支持多个模型)
-async function askGemini(marketData, portfolio, historicalData, technicalIndicators, model = 'gemini-2.5-flash') {
+async function askGemini(marketData, portfolio, historicalData, technicalIndicators, newsData, model = 'gemini-2.5-flash') {
     // 轻量级Flash：60秒超时，不重试
     const timeoutMs = 60000;
     const maxAttempts = 1;
     const modelDisplayName = 'Gemini 2.5 Flash';
 
-    const prompt = buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators);
+    const prompt = buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
 
     try {
         const response = await fetchWithTimeoutAndRetry(
@@ -907,13 +975,13 @@ async function askGemini(marketData, portfolio, historicalData, technicalIndicat
 // ============================================
 // 3.1.1 调用 Gemini Pro API (通过代理商)
 // ============================================
-async function askGeminiPro(marketData, portfolio, historicalData, technicalIndicators) {
+async function askGeminiPro(marketData, portfolio, historicalData, technicalIndicators, newsData) {
     // 旗舰型Pro：120秒超时，重试1次
     const timeoutMs = 120000;
     const maxAttempts = 2;
     const modelDisplayName = 'Gemini 2.5 Pro';
 
-    const prompt = buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators);
+    const prompt = buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
 
     try {
         // 使用代理商的OpenAI兼容API调用Gemini Pro（旗舰型120秒超时，重试1次）
@@ -985,8 +1053,8 @@ async function askGeminiPro(marketData, portfolio, historicalData, technicalIndi
 // ============================================
 // 3.1.2 调用 DeepSeek R1 API (通过代理商)
 // ============================================
-async function askDeepSeekR1(marketData, portfolio, historicalData, technicalIndicators) {
-    const prompt = buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators);
+async function askDeepSeekR1(marketData, portfolio, historicalData, technicalIndicators, newsData) {
+    const prompt = buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
 
     try {
         // 使用代理商的OpenAI兼容API调用DeepSeek R1（旗舰型120秒超时）
@@ -1057,14 +1125,14 @@ async function askDeepSeekR1(marketData, portfolio, historicalData, technicalInd
 // ============================================
 // 3.2 调用 Claude API 获取决策
 // ============================================
-async function askClaude(marketData, portfolio, historicalData, technicalIndicators, model = 'claude-haiku-4-5') {
+async function askClaude(marketData, portfolio, historicalData, technicalIndicators, newsData, model = 'claude-haiku-4-5') {
     // 判断是旗舰型还是轻量级
     const isFlagship = model === 'claude-sonnet-4-5-20250929';
     const timeoutMs = isFlagship ? 120000 : 60000;  // 旗舰120s, 轻量60s
     const maxAttempts = isFlagship ? 2 : 1;  // 旗舰重试1次, 轻量不重试
     const modelDisplayName = isFlagship ? 'Sonnet 4.5' : 'Haiku 4.5';
 
-    const prompt = buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators);
+    const prompt = buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
 
     try {
         const response = await fetchWithTimeoutAndRetry(
@@ -1160,14 +1228,14 @@ async function askClaude(marketData, portfolio, historicalData, technicalIndicat
 // ============================================
 // 3.3 调用 Grok API 获取决策
 // ============================================
-async function askGrok(marketData, portfolio, historicalData, technicalIndicators, model = 'grok-2-mini-1212') {
+async function askGrok(marketData, portfolio, historicalData, technicalIndicators, newsData, model = 'grok-2-mini-1212') {
     // 判断是旗舰型还是轻量级
     const isFlagship = model === 'grok-4-0709';
     const timeoutMs = isFlagship ? 120000 : 60000;  // 旗舰120s, 轻量60s
     const maxAttempts = isFlagship ? 2 : 1;  // 旗舰重试1次, 轻量不重试
     const modelDisplayName = isFlagship ? 'Grok 4' : 'Grok 3 mini';
 
-    const prompt = buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators);
+    const prompt = buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
 
     try {
         const response = await fetchWithTimeoutAndRetry(
@@ -1262,14 +1330,14 @@ async function askGrok(marketData, portfolio, historicalData, technicalIndicator
 // ============================================
 // 3.4 调用 OpenAI API 获取决策
 // ============================================
-async function askOpenAI(marketData, portfolio, historicalData, technicalIndicators, model = 'gpt-4o-mini') {
+async function askOpenAI(marketData, portfolio, historicalData, technicalIndicators, newsData, model = 'gpt-4o-mini') {
     // 判断是旗舰型还是轻量级
     const isFlagship = model === 'gpt-4.1';
     const timeoutMs = isFlagship ? 120000 : 60000;  // 旗舰120s, 轻量60s
     const maxAttempts = isFlagship ? 2 : 1;  // 旗舰重试1次, 轻量不重试
     const modelDisplayName = isFlagship ? 'GPT-4.1' : 'GPT-4o mini';
 
-    const prompt = buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators);
+    const prompt = buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
 
     try {
         // 构建请求体，GPT-4.1和GPT-4o mini都使用标准配置
