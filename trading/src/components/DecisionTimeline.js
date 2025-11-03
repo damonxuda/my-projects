@@ -23,25 +23,26 @@ const DecisionTimeline = ({ decisions }) => {
   };
 
   // Agent 图标 (11个agents: 9 AI + 2 ETF)
+  // 旗舰型用圆形，轻量级用菱形/方块
   const agentIcons = {
     // OpenAI
-    openai_standard: '🟢',
-    openai_mini: '🟩',
+    openai_standard: '🟢',  // 旗舰-圆形
+    openai_mini: '🟩',      // 轻量-方块
 
     // Gemini
-    gemini_flash: '🔷',
-    gemini_pro: '🔹',
+    gemini_flash: '🔷',     // 轻量-菱形
+    gemini_pro: '🔵',       // 旗舰-圆形
 
     // Claude
-    claude_standard: '🟣',
-    claude_mini: '🟪',
+    claude_standard: '🟣',  // 旗舰-圆形
+    claude_mini: '🟪',      // 轻量-方块
 
     // Grok
-    grok_standard: '🟠',
-    grok_mini: '🟧',
+    grok_standard: '🟠',    // 旗舰-圆形
+    grok_mini: '🔶',        // 轻量-菱形
 
     // DeepSeek
-    deepseek_r1: '🔴',
+    deepseek_r1: '🔴',      // 旗舰-圆形
 
     // ETF
     gdlc: '📊',

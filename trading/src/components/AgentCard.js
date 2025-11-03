@@ -5,25 +5,26 @@ const AgentCard = ({ portfolio, marketData }) => {
   const { agent_name, total_value, cash, holdings, pnl, pnl_percentage } = portfolio;
 
   // Agent 显示名称和颜色 (9个AI模型 + 2个ETF)
+  // 旗舰型用圆形，轻量级用菱形/方块
   const agentInfo = {
     // OpenAI
-    openai_standard: { name: 'GPT-5', color: 'green', icon: '🟢' },
-    openai_mini: { name: 'GPT-4o mini', color: 'green', icon: '🟩' },
+    openai_standard: { name: 'GPT-5', color: 'green', icon: '🟢' },         // 旗舰-圆形
+    openai_mini: { name: 'GPT-4o mini', color: 'green', icon: '🟩' },      // 轻量-方块
 
     // Gemini
-    gemini_flash: { name: 'Gemini 2.5 Flash', color: 'blue', icon: '🔷' },
-    gemini_pro: { name: 'Gemini 2.5 Pro', color: 'blue', icon: '🔹' },
+    gemini_flash: { name: 'Gemini 2.5 Flash', color: 'blue', icon: '🔷' }, // 轻量-菱形
+    gemini_pro: { name: 'Gemini 2.5 Pro', color: 'blue', icon: '🔵' },     // 旗舰-圆形
 
     // Claude
-    claude_standard: { name: 'Sonnet 4.5', color: 'purple', icon: '🟣' },
-    claude_mini: { name: 'Haiku 4.5', color: 'purple', icon: '🟪' },
+    claude_standard: { name: 'Sonnet 4.5', color: 'purple', icon: '🟣' },  // 旗舰-圆形
+    claude_mini: { name: 'Haiku 4.5', color: 'purple', icon: '🟪' },       // 轻量-方块
 
     // Grok
-    grok_standard: { name: 'Grok 4', color: 'orange', icon: '🟠' },
-    grok_mini: { name: 'Grok 3 mini', color: 'orange', icon: '🟧' },
+    grok_standard: { name: 'Grok 4', color: 'orange', icon: '🟠' },        // 旗舰-圆形
+    grok_mini: { name: 'Grok 3 mini', color: 'orange', icon: '🔶' },       // 轻量-菱形
 
     // DeepSeek
-    deepseek_r1: { name: 'DeepSeek R1', color: 'red', icon: '🔴' },
+    deepseek_r1: { name: 'DeepSeek R1', color: 'red', icon: '🔴' },        // 旗舰-圆形
 
     // ETF
     gdlc: { name: 'GDLC', color: 'yellow', icon: '📊' },
