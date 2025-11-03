@@ -141,7 +141,33 @@ async function processSingleAgent(agent, marketData, historicalData, technicalIn
         }
 
         // 3. 模拟执行交易，更新账户
-        const newPortfolio = await simulateTrade(portfolio, decision, marketData);
+        let newPortfolio;
+        if (decision && decision.actions) {
+            // 多笔交易：按顺序执行
+            console.log(`🔄 Executing ${decision.actions.length} trades...`);
+            newPortfolio = JSON.parse(JSON.stringify(portfolio)); // 深拷贝
+
+            // 先执行所有卖出操作（释放现金）
+            const sellTrades = decision.actions.filter(t => t.action === 'sell');
+            for (const trade of sellTrades) {
+                console.log(`  🔸 Sell: ${trade.amount} ${trade.asset} - ${trade.reason}`);
+                newPortfolio = await simulateTrade(newPortfolio, trade, marketData);
+            }
+
+            // 再执行所有买入操作（使用现金）
+            const buyTrades = decision.actions.filter(t => t.action === 'buy');
+            for (const trade of buyTrades) {
+                console.log(`  🔹 Buy: ${trade.amount} ${trade.asset} - ${trade.reason}`);
+                newPortfolio = await simulateTrade(newPortfolio, trade, marketData);
+            }
+
+            if (decision.overall_reason) {
+                console.log(`📝 Overall Strategy: ${decision.overall_reason}`);
+            }
+        } else {
+            // 单笔交易或持有
+            newPortfolio = await simulateTrade(portfolio, decision, marketData);
+        }
         console.log(`💼 ${agent.name} New Portfolio:`, newPortfolio);
 
         // 4. 保存决策和账户状态到 Supabase
@@ -831,6 +857,169 @@ ${formatIndicators('XRP')}
 }
 
 // ============================================
+// 4.1 构建多资产交易提示词（支持同时操作多个币种）
+// ============================================
+function buildMultiAssetTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData) {
+    // 复用原有的格式化函数
+    const formatOHLC = (symbol) => {
+        const ohlc = historicalData[symbol] || [];
+        if (ohlc.length === 0) return '无历史数据';
+
+        const recent = ohlc.slice(-3);
+        return recent.map(candle =>
+            `  ${candle.date}: 开$${candle.open.toFixed(2)} 高$${candle.high.toFixed(2)} 低$${candle.low.toFixed(2)} 收$${candle.close.toFixed(2)}`
+        ).join('\n');
+    };
+
+    const formatIndicators = (symbol) => {
+        const indicators = technicalIndicators[symbol];
+        if (!indicators) return '  数据不足，无法计算指标';
+
+        let lines = [];
+
+        if (indicators.rsi !== null) {
+            const rsiStatus = indicators.rsi > 70 ? '超买⚠️' : indicators.rsi < 30 ? '超卖⚠️' : '中性';
+            lines.push(`  RSI(14): ${indicators.rsi.toFixed(2)} (${rsiStatus})`);
+        }
+
+        if (indicators.macd) {
+            const trend = indicators.macd.histogram > 0 ? '多头📈' : '空头📉';
+            lines.push(`  MACD: ${indicators.macd.value.toFixed(2)} (信号线: ${indicators.macd.signal.toFixed(2)}, ${trend})`);
+        }
+
+        if (indicators.ma7 !== null) {
+            lines.push(`  MA(7): $${indicators.ma7.toFixed(2)}`);
+        }
+
+        if (indicators.ma25 !== null) {
+            const crossStatus = indicators.ma7 > indicators.ma25 ? '金叉📈(上涨趋势)' : '死叉📉(下跌趋势)';
+            lines.push(`  MA(25): $${indicators.ma25.toFixed(2)} (${crossStatus})`);
+        }
+
+        if (indicators.bollinger) {
+            const bb = indicators.bollinger;
+            const currentPrice = marketData[symbol].price;
+            let position = '';
+            if (currentPrice > bb.upper) position = '(突破上轨，可能回调)';
+            else if (currentPrice < bb.lower) position = '(跌破下轨，可能反弹)';
+            else position = '(在通道内)';
+
+            lines.push(`  布林带: 上$${bb.upper.toFixed(2)} 中$${bb.middle.toFixed(2)} 下$${bb.lower.toFixed(2)} ${position}`);
+        }
+
+        return lines.join('\n');
+    };
+
+    const formatNews = () => {
+        if (!newsData || newsData.length === 0) {
+            return '  暂无最新新闻';
+        }
+
+        return newsData.map((news, index) =>
+            `${index + 1}. [${news.source}] ${news.title}\n   分类: ${news.categories} | 发布: ${news.published.split('T')[0]}\n   ${news.summary.substring(0, 150)}...`
+        ).join('\n\n');
+    };
+
+    return `你是一个专业的加密货币量化交易员。请基于以下市场数据、历史K线、技术指标和最新新闻做出交易决策。
+
+=== 最新加密货币新闻 ===
+${formatNews()}
+
+=== 当前市场数据 ===
+BTC: $${marketData.BTC.price.toFixed(2)} (24h: ${marketData.BTC.change_24h.toFixed(2)}%)
+ETH: $${marketData.ETH.price.toFixed(2)} (24h: ${marketData.ETH.change_24h.toFixed(2)}%)
+SOL: $${marketData.SOL.price.toFixed(2)} (24h: ${marketData.SOL.change_24h.toFixed(2)}%)
+BNB: $${marketData.BNB.price.toFixed(2)} (24h: ${marketData.BNB.change_24h.toFixed(2)}%)
+DOGE: $${marketData.DOGE.price.toFixed(4)} (24h: ${marketData.DOGE.change_24h.toFixed(2)}%)
+XRP: $${marketData.XRP.price.toFixed(4)} (24h: ${marketData.XRP.change_24h.toFixed(2)}%)
+
+=== 历史K线数据（最近3天） ===
+BTC:
+${formatOHLC('BTC')}
+
+ETH:
+${formatOHLC('ETH')}
+
+SOL:
+${formatOHLC('SOL')}
+
+BNB:
+${formatOHLC('BNB')}
+
+DOGE:
+${formatOHLC('DOGE')}
+
+XRP:
+${formatOHLC('XRP')}
+
+=== 技术指标 ===
+BTC:
+${formatIndicators('BTC')}
+
+ETH:
+${formatIndicators('ETH')}
+
+SOL:
+${formatIndicators('SOL')}
+
+BNB:
+${formatIndicators('BNB')}
+
+DOGE:
+${formatIndicators('DOGE')}
+
+XRP:
+${formatIndicators('XRP')}
+
+=== 你的账户状态 ===
+现金: $${portfolio.cash.toFixed(2)}
+持仓: ${JSON.stringify(portfolio.holdings)}
+总资产: $${portfolio.total_value.toFixed(2)}
+盈亏: ${portfolio.pnl?.toFixed(2) || 0}$ (${portfolio.pnl_percentage?.toFixed(2) || 0}%)
+
+=== 交易规则 ===
+1. 你只能交易 BTC, ETH, SOL, BNB, DOGE, XRP（对标Alpha Arena比赛币种，现货交易无杠杆）
+2. 单笔交易不超过总资产的 30%
+3. 单笔交易至少 $10（低于此金额不交易）
+4. 必须保留至少 20% 现金
+5. 每笔交易收取 0.1% 手续费
+6. **你可以在一次决策中同时操作多个币种**（例如：卖出BTC的同时买入SOL）
+
+请返回 JSON 格式的决策（不要包含任何其他文字）：
+
+**单笔交易格式（只操作一个币种）：**
+{
+    "action": "buy/sell/hold",
+    "asset": "BTC",
+    "amount": 0.1,
+    "reason": "决策理由（中文，1-2句话）"
+}
+
+**多笔交易格式（同时操作多个币种，推荐使用）：**
+{
+    "actions": [
+        {"action": "sell", "asset": "BTC", "amount": 0.1, "reason": "BTC技术指标转弱，止盈"},
+        {"action": "buy", "asset": "SOL", "amount": 20, "reason": "SOL超卖反弹信号明显"},
+        {"action": "buy", "asset": "BNB", "amount": 5, "reason": "BNB RSI超卖，逢低布局"}
+    ],
+    "overall_reason": "整体策略：降低BTC仓位，增配超卖的SOL和BNB"
+}
+
+**持有格式（不交易）：**
+{
+    "action": "hold",
+    "asset": null,
+    "amount": 0,
+    "reason": "市场不明朗，暂时观望"
+}
+
+注意事项：
+- 你可以自由选择单笔或多笔交易格式
+- 多笔交易时，先执行卖出操作（释放现金），再执行买入操作
+- 确保所有交易完成后，现金余额 >= 总资产的20%`;
+}
+
+// ============================================
 // 5. LLM API 路由函数
 // ============================================
 async function askLLM(agentName, marketData, portfolio, historicalData, technicalIndicators, newsData) {
@@ -1132,7 +1321,10 @@ async function askClaude(marketData, portfolio, historicalData, technicalIndicat
     const maxAttempts = isFlagship ? 2 : 1;  // 旗舰重试1次, 轻量不重试
     const modelDisplayName = isFlagship ? 'Sonnet 4.5' : 'Haiku 4.5';
 
-    const prompt = buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
+    // Sonnet 4.5 使用多资产交易prompt，Haiku使用单资产prompt
+    const prompt = isFlagship
+        ? buildMultiAssetTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData)
+        : buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
 
     try {
         const response = await fetchWithTimeoutAndRetry(
@@ -1197,12 +1389,27 @@ async function askClaude(marketData, portfolio, historicalData, technicalIndicat
 
         const decision = JSON.parse(jsonMatch[0]);
 
-        // 验证决策格式
-        if (!decision.action || !['buy', 'sell', 'hold'].includes(decision.action)) {
-            throw new Error('Invalid decision action');
+        // 验证决策格式（支持单笔和多笔两种格式）
+        if (decision.actions) {
+            // 多笔交易格式
+            if (!Array.isArray(decision.actions) || decision.actions.length === 0) {
+                throw new Error('Invalid multi-asset decision: actions must be non-empty array');
+            }
+            // 验证每笔交易
+            for (const trade of decision.actions) {
+                if (!trade.action || !['buy', 'sell', 'hold'].includes(trade.action)) {
+                    throw new Error(`Invalid action in multi-asset decision: ${trade.action}`);
+                }
+            }
+            console.log(`🔄 Multi-asset decision: ${decision.actions.length} trades`);
+            return decision;
+        } else {
+            // 单笔交易格式
+            if (!decision.action || !['buy', 'sell', 'hold'].includes(decision.action)) {
+                throw new Error('Invalid decision action');
+            }
+            return decision;
         }
-
-        return decision;
 
     } catch (error) {
         if (error.name === 'AbortError') {
