@@ -168,19 +168,19 @@ const TradingDashboard = () => {
       </div>
 
       {/* Agent 性能卡片 - 4行3列固定布局 */}
-      {/* 第一行: GPT-5, GPT-4o mini, Gemini 2.5 Flash */}
-      {/* 第二行: Gemini 2.5 Pro, Sonnet 4.5, Haiku 4.5 */}
-      {/* 第三行: Grok 4, Grok 3 mini, DeepSeek R1 */}
+      {/* 第一行: DeepSeek R1, GPT-5, GPT-4o mini */}
+      {/* 第二行: Gemini 2.5 Pro, Gemini 2.5 Flash, Sonnet 4.5 */}
+      {/* 第三行: Haiku 4.5, Grok 4, Grok 3 mini */}
       {/* 第四行: BITW, GDLC */}
       <div className="grid grid-cols-3 gap-4">
         {(() => {
-          // 固定显示顺序：每个厂商的标准型+轻量级，然后是DeepSeek，最后是2个ETF
+          // 固定显示顺序：DeepSeek在最前，Gemini Pro在Flash前，其他按厂商分组
           const displayOrder = [
+            'deepseek_r1',
             'openai_standard', 'openai_mini',
-            'gemini_flash', 'gemini_pro',
+            'gemini_pro', 'gemini_flash',
             'claude_standard', 'claude_mini',
             'grok_standard', 'grok_mini',
-            'deepseek_r1',
             'equal_weight', 'gdlc'
           ];
 

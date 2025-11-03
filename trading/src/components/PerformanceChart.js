@@ -2,13 +2,13 @@ import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 
 const PerformanceChart = ({ portfolios }) => {
-  // 固定显示顺序：按厂商分组，每厂商标准型在前，轻量级在后，ETF在最右边
+  // 固定显示顺序：DeepSeek在最前，Gemini Pro在Flash前，其他按厂商分组
   const displayOrder = [
+    'DEEPSEEK_R1',
     'OPENAI_STANDARD', 'OPENAI_MINI',
-    'GEMINI_FLASH', 'GEMINI_PRO',
+    'GEMINI_PRO', 'GEMINI_FLASH',
     'CLAUDE_STANDARD', 'CLAUDE_MINI',
     'GROK_STANDARD', 'GROK_MINI',
-    'DEEPSEEK_R1',
     'EQUAL_WEIGHT', 'GDLC'
   ];
 
