@@ -168,7 +168,7 @@ const TradingDashboard = () => {
       </div>
 
       {/* Agent 性能卡片 - 4行3列固定布局 */}
-      {/* 第一行: DeepSeek R1, GPT-5, GPT-4o mini */}
+      {/* 第一行: DeepSeek R1, GPT-4.1, GPT-4o mini */}
       {/* 第二行: Gemini 2.5 Pro, Gemini 2.5 Flash, Sonnet 4.5 */}
       {/* 第三行: Haiku 4.5, Grok 4, Grok 3 mini */}
       {/* 第四行: BITW, GDLC */}
