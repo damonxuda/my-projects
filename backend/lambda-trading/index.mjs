@@ -1098,12 +1098,12 @@ async function askLLM(agentName, marketData, portfolio, historicalData, technica
 
 // Gemini API (支持多个模型)
 async function askGemini(marketData, portfolio, historicalData, technicalIndicators, newsData, model = 'gemini-2.5-flash') {
-    // 轻量级Flash：60秒超时，不重试，使用单资产prompt
+    // 轻量级Flash：60秒超时，不重试，使用多资产prompt
     const timeoutMs = 60000;
     const maxAttempts = 1;
     const modelDisplayName = 'Gemini 2.5 Flash';
 
-    const prompt = buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
+    const prompt = buildMultiAssetTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
 
     try {
         const response = await fetchWithTimeoutAndRetry(
@@ -1317,10 +1317,8 @@ async function askClaude(marketData, portfolio, historicalData, technicalIndicat
     const maxAttempts = isFlagship ? 2 : 1;  // 旗舰重试1次, 轻量不重试
     const modelDisplayName = isFlagship ? 'Sonnet 4.5' : 'Haiku 4.5';
 
-    // Sonnet 4.5 使用多资产交易prompt，Haiku使用单资产prompt
-    const prompt = isFlagship
-        ? buildMultiAssetTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData)
-        : buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
+    // 所有Claude模型都使用多资产交易prompt
+    const prompt = buildMultiAssetTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
 
     try {
         const response = await fetchWithTimeoutAndRetry(
