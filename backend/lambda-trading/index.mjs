@@ -1776,29 +1776,39 @@ async function saveDecision(agentName, decision, marketData, portfolioValue) {
 
         if (decision && decision.actions && Array.isArray(decision.actions)) {
             // 多资产决策：添加摘要字段供前端显示
-            const buyCount = decision.actions.filter(a => a.action === 'buy').length;
-            const sellCount = decision.actions.filter(a => a.action === 'sell').length;
+            const buyActions = decision.actions.filter(a => a.action === 'buy');
+            const sellActions = decision.actions.filter(a => a.action === 'sell');
 
             // 前端只认识 'buy'/'sell'/'hold'，根据实际操作选择显示的action
             let displayAction = 'hold';
-            if (buyCount > 0 && sellCount > 0) {
-                displayAction = 'buy';  // 既有买又有卖，优先显示买入（调仓通常是为了买入新标的）
-            } else if (buyCount > 0) {
+            if (buyActions.length > 0 && sellActions.length > 0) {
+                displayAction = 'buy';  // 既有买又有卖，优先显示买入
+            } else if (buyActions.length > 0) {
                 displayAction = 'buy';
-            } else if (sellCount > 0) {
+            } else if (sellActions.length > 0) {
                 displayAction = 'sell';
             }
 
+            // 构建详细的交易列表字符串（显示每一笔交易）
+            const tradeDetails = decision.actions.map(trade => {
+                const actionText = trade.action === 'buy' ? '买入' : trade.action === 'sell' ? '卖出' : '持有';
+                return `${actionText} ${trade.asset} ${trade.amount}`;
+            }).join('; ');
+
+            // 收集所有涉及的资产
+            const assets = [...new Set(decision.actions.map(t => t.asset))].join(', ');
+
             decisionToSave = {
                 ...decision,
-                // 添加兼容字段：前端会读取这个action字段
+                // 添加兼容字段：前端会读取这些字段
                 action: displayAction,  // 使用前端认识的action值
-                asset: `${decision.actions.length} assets`,  // 显示操作了多少资产
-                summary: `买入${buyCount}笔, 卖出${sellCount}笔`,  // 操作摘要
-                // 保留原始的actions数组和overall_reason
+                asset: assets,  // 显示所有涉及的资产
+                amount: decision.actions.length,  // 操作笔数
+                reason: tradeDetails + (decision.overall_reason ? ` | 策略: ${decision.overall_reason}` : ''),  // 详细交易列表
+                // 保留原始的actions数组
             };
 
-            console.log(`💾 Saving multi-asset decision: ${buyCount} buys, ${sellCount} sells (display as: ${displayAction})`);
+            console.log(`💾 Saving multi-asset decision: ${tradeDetails} (display as: ${displayAction})`);
         }
 
         const { error } = await supabase
