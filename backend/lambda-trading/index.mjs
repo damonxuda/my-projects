@@ -1020,6 +1020,41 @@ ${formatIndicators('XRP')}
 }
 
 // ============================================
+// 4.2 通用决策格式解析和验证
+// ============================================
+function parseAndValidateDecision(text, modelName) {
+    // 提取 JSON（可能被markdown包裹）
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+        throw new Error(`${modelName} response is not valid JSON`);
+    }
+
+    const decision = JSON.parse(jsonMatch[0]);
+
+    // 验证决策格式（支持单笔和多笔两种格式）
+    if (decision.actions) {
+        // 多笔交易格式
+        if (!Array.isArray(decision.actions) || decision.actions.length === 0) {
+            throw new Error('Invalid multi-asset decision: actions must be non-empty array');
+        }
+        // 验证每笔交易
+        for (const trade of decision.actions) {
+            if (!trade.action || !['buy', 'sell', 'hold'].includes(trade.action)) {
+                throw new Error(`Invalid action in multi-asset decision: ${trade.action}`);
+            }
+        }
+        console.log(`🔄 [${modelName}] Multi-asset decision: ${decision.actions.length} trades`);
+        return decision;
+    } else {
+        // 单笔交易格式
+        if (!decision.action || !['buy', 'sell', 'hold'].includes(decision.action)) {
+            throw new Error('Invalid decision action');
+        }
+        return decision;
+    }
+}
+
+// ============================================
 // 5. LLM API 路由函数
 // ============================================
 async function askLLM(agentName, marketData, portfolio, historicalData, technicalIndicators, newsData) {
@@ -1063,7 +1098,7 @@ async function askLLM(agentName, marketData, portfolio, historicalData, technica
 
 // Gemini API (支持多个模型)
 async function askGemini(marketData, portfolio, historicalData, technicalIndicators, newsData, model = 'gemini-2.5-flash') {
-    // 轻量级Flash：60秒超时，不重试
+    // 轻量级Flash：60秒超时，不重试，使用单资产prompt
     const timeoutMs = 60000;
     const maxAttempts = 1;
     const modelDisplayName = 'Gemini 2.5 Flash';
@@ -1125,20 +1160,7 @@ async function askGemini(marketData, portfolio, historicalData, technicalIndicat
             });
         }
 
-        // 提取 JSON（可能被markdown包裹）
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-            throw new Error('Gemini response is not valid JSON');
-        }
-
-        const decision = JSON.parse(jsonMatch[0]);
-
-        // 验证决策格式
-        if (!decision.action || !['buy', 'sell', 'hold'].includes(decision.action)) {
-            throw new Error('Invalid decision action');
-        }
-
-        return decision;
+        return parseAndValidateDecision(text, modelDisplayName);
 
     } catch (error) {
         if (error.name === 'AbortError') {
@@ -1165,12 +1187,12 @@ async function askGemini(marketData, portfolio, historicalData, technicalIndicat
 // 3.1.1 调用 Gemini Pro API (通过代理商)
 // ============================================
 async function askGeminiPro(marketData, portfolio, historicalData, technicalIndicators, newsData) {
-    // 旗舰型Pro：120秒超时，重试1次
+    // 旗舰型Pro：120秒超时，重试1次，使用多资产prompt
     const timeoutMs = 120000;
     const maxAttempts = 2;
     const modelDisplayName = 'Gemini 2.5 Pro';
 
-    const prompt = buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
+    const prompt = buildMultiAssetTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
 
     try {
         // 使用代理商的OpenAI兼容API调用Gemini Pro（旗舰型120秒超时，重试1次）
@@ -1203,20 +1225,7 @@ async function askGeminiPro(marketData, portfolio, historicalData, technicalIndi
         const data = await response.json();
         const content = data.choices[0].message.content;
 
-        // 从响应中提取JSON（处理可能的markdown代码块）
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-            throw new Error('Gemini Pro response is not valid JSON');
-        }
-
-        const decision = JSON.parse(jsonMatch[0]);
-
-        // 验证决策格式
-        if (!decision.action || !['buy', 'sell', 'hold'].includes(decision.action)) {
-            throw new Error('Invalid decision action');
-        }
-
-        return decision;
+        return parseAndValidateDecision(content, modelDisplayName);
 
     } catch (error) {
         if (error.name === 'AbortError') {
@@ -1243,7 +1252,7 @@ async function askGeminiPro(marketData, portfolio, historicalData, technicalIndi
 // 3.1.2 调用 DeepSeek R1 API (通过代理商)
 // ============================================
 async function askDeepSeekR1(marketData, portfolio, historicalData, technicalIndicators, newsData) {
-    const prompt = buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
+    const prompt = buildMultiAssetTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
 
     try {
         // 使用代理商的OpenAI兼容API调用DeepSeek R1（旗舰型120秒超时）
@@ -1275,20 +1284,7 @@ async function askDeepSeekR1(marketData, portfolio, historicalData, technicalInd
         const data = await response.json();
         const content = data.choices[0].message.content;
 
-        // 从响应中提取JSON（处理可能的markdown代码块）
-        const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-            throw new Error('DeepSeek R1 response is not valid JSON');
-        }
-
-        const decision = JSON.parse(jsonMatch[0]);
-
-        // 验证决策格式
-        if (!decision.action || !['buy', 'sell', 'hold'].includes(decision.action)) {
-            throw new Error('Invalid decision action');
-        }
-
-        return decision;
+        return parseAndValidateDecision(content, 'DeepSeek R1');
 
     } catch (error) {
         if (error.name === 'AbortError') {
@@ -1381,35 +1377,7 @@ async function askClaude(marketData, portfolio, historicalData, technicalIndicat
             });
         }
 
-        // 提取 JSON（可能被markdown包裹）
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-            throw new Error('Claude response is not valid JSON');
-        }
-
-        const decision = JSON.parse(jsonMatch[0]);
-
-        // 验证决策格式（支持单笔和多笔两种格式）
-        if (decision.actions) {
-            // 多笔交易格式
-            if (!Array.isArray(decision.actions) || decision.actions.length === 0) {
-                throw new Error('Invalid multi-asset decision: actions must be non-empty array');
-            }
-            // 验证每笔交易
-            for (const trade of decision.actions) {
-                if (!trade.action || !['buy', 'sell', 'hold'].includes(trade.action)) {
-                    throw new Error(`Invalid action in multi-asset decision: ${trade.action}`);
-                }
-            }
-            console.log(`🔄 Multi-asset decision: ${decision.actions.length} trades`);
-            return decision;
-        } else {
-            // 单笔交易格式
-            if (!decision.action || !['buy', 'sell', 'hold'].includes(decision.action)) {
-                throw new Error('Invalid decision action');
-            }
-            return decision;
-        }
+        return parseAndValidateDecision(text, modelDisplayName);
 
     } catch (error) {
         if (error.name === 'AbortError') {
@@ -1442,7 +1410,10 @@ async function askGrok(marketData, portfolio, historicalData, technicalIndicator
     const maxAttempts = isFlagship ? 2 : 1;  // 旗舰重试1次, 轻量不重试
     const modelDisplayName = isFlagship ? 'Grok 4' : 'Grok 3 mini';
 
-    const prompt = buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
+    // 旗舰型使用多资产prompt，轻量级使用单资产prompt
+    const prompt = isFlagship
+        ? buildMultiAssetTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData)
+        : buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
 
     try {
         const response = await fetchWithTimeoutAndRetry(
@@ -1498,20 +1469,7 @@ async function askGrok(marketData, portfolio, historicalData, technicalIndicator
             });
         }
 
-        // 提取 JSON（可能被markdown包裹）
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-            throw new Error('Grok response is not valid JSON');
-        }
-
-        const decision = JSON.parse(jsonMatch[0]);
-
-        // 验证决策格式
-        if (!decision.action || !['buy', 'sell', 'hold'].includes(decision.action)) {
-            throw new Error('Invalid decision action');
-        }
-
-        return decision;
+        return parseAndValidateDecision(text, modelDisplayName);
 
     } catch (error) {
         if (error.name === 'AbortError') {
@@ -1544,7 +1502,10 @@ async function askOpenAI(marketData, portfolio, historicalData, technicalIndicat
     const maxAttempts = isFlagship ? 2 : 1;  // 旗舰重试1次, 轻量不重试
     const modelDisplayName = isFlagship ? 'GPT-4.1' : 'GPT-4o mini';
 
-    const prompt = buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
+    // 旗舰型使用多资产prompt，轻量级使用单资产prompt
+    const prompt = isFlagship
+        ? buildMultiAssetTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData)
+        : buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
 
     try {
         // 构建请求体，GPT-4.1和GPT-4o mini都使用标准配置
@@ -1603,20 +1564,7 @@ async function askOpenAI(marketData, portfolio, historicalData, technicalIndicat
             });
         }
 
-        // 提取 JSON（可能被markdown包裹）
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-            throw new Error('OpenAI response is not valid JSON');
-        }
-
-        const decision = JSON.parse(jsonMatch[0]);
-
-        // 验证决策格式
-        if (!decision.action || !['buy', 'sell', 'hold'].includes(decision.action)) {
-            throw new Error('Invalid decision action');
-        }
-
-        return decision;
+        return parseAndValidateDecision(text, modelDisplayName);
 
     } catch (error) {
         if (error.name === 'AbortError') {
