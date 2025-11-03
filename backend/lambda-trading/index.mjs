@@ -1789,14 +1789,20 @@ async function saveDecision(agentName, decision, marketData, portfolioValue) {
                 displayAction = 'sell';
             }
 
-            // 构建详细的交易列表字符串（显示每一笔交易）
+            // 构建详细的交易列表字符串（每笔交易显示操作+理由）
             const tradeDetails = decision.actions.map(trade => {
                 const actionText = trade.action === 'buy' ? '买入' : trade.action === 'sell' ? '卖出' : '持有';
-                return `${actionText} ${trade.asset} ${trade.amount}`;
-            }).join('; ');
+                return `${actionText} ${trade.asset} ${trade.amount}: ${trade.reason}`;
+            }).join(' | ');
 
             // 收集所有涉及的资产
             const assets = [...new Set(decision.actions.map(t => t.asset))].join(', ');
+
+            // 构建最终的理由字符串
+            let finalReason = tradeDetails;
+            if (decision.overall_reason) {
+                finalReason = `${tradeDetails}\n\n整体策略: ${decision.overall_reason}`;
+            }
 
             decisionToSave = {
                 ...decision,
@@ -1804,11 +1810,11 @@ async function saveDecision(agentName, decision, marketData, portfolioValue) {
                 action: displayAction,  // 使用前端认识的action值
                 asset: assets,  // 显示所有涉及的资产
                 amount: decision.actions.length,  // 操作笔数
-                reason: tradeDetails + (decision.overall_reason ? ` | 策略: ${decision.overall_reason}` : ''),  // 详细交易列表
+                reason: finalReason,  // 每笔交易的详细信息（操作+理由）
                 // 保留原始的actions数组
             };
 
-            console.log(`💾 Saving multi-asset decision: ${tradeDetails} (display as: ${displayAction})`);
+            console.log(`💾 Saving multi-asset decision: ${decision.actions.length} trades (display as: ${displayAction})`);
         }
 
         const { error } = await supabase
