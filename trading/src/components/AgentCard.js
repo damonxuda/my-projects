@@ -4,11 +4,11 @@ import { TrendingUp, TrendingDown, DollarSign, Wallet } from 'lucide-react';
 const AgentCard = ({ portfolio, marketData }) => {
   const { agent_name, total_value, cash, holdings, pnl, pnl_percentage } = portfolio;
 
-  // Agent 显示名称和颜色 (9个AI模型 + 2个ETF)
+  // Agent 显示名称和颜色 (9个AI模型 + 2个ETF) - v2.0
   // 旗舰型用圆形，轻量级用菱形/方块
   const agentInfo = {
     // OpenAI
-    openai_standard: { name: 'GPT-5', color: 'green', icon: '🟢' },         // 旗舰-圆形
+    openai_standard: { name: 'GPT-4.1', color: 'green', icon: '🟢' },       // 旗舰-圆形
     openai_mini: { name: 'GPT-4o mini', color: 'green', icon: '🟩' },      // 轻量-方块
 
     // Gemini

@@ -2,17 +2,17 @@ import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const PerformanceTrendChart = ({ historyData }) => {
-  // Agent 颜色配置 - 每个模型一个颜色
+  // Agent 颜色配置 - 每个模型一个颜色（按卡片显示顺序排列）
   const agentColors = {
+    'deepseek_r1': '#DC2626',        // red-600
     'openai_standard': '#10B981',    // green-500
     'openai_mini': '#34D399',        // green-400
-    'gemini_flash': '#3B82F6',       // blue-500
     'gemini_pro': '#2563EB',         // blue-600
+    'gemini_flash': '#3B82F6',       // blue-500
     'claude_standard': '#8B5CF6',    // purple-500
     'claude_mini': '#A78BFA',        // purple-400
     'grok_standard': '#F97316',      // orange-500
     'grok_mini': '#FB923C',          // orange-400
-    'deepseek_r1': '#DC2626',        // red-600
     'gdlc': '#EAB308',               // yellow-500
     'equal_weight': '#6B7280'        // gray-500
   };
@@ -20,15 +20,15 @@ const PerformanceTrendChart = ({ historyData }) => {
   // 添加初始点（round=0，所有agent都是50000）
   const initialPoint = {
     round: 0,
+    deepseek_r1: 50000,
     openai_standard: 50000,
     openai_mini: 50000,
-    gemini_flash: 50000,
     gemini_pro: 50000,
+    gemini_flash: 50000,
     claude_standard: 50000,
     claude_mini: 50000,
     grok_standard: 50000,
     grok_mini: 50000,
-    deepseek_r1: 50000,
     gdlc: 50000,
     equal_weight: 50000
   };
@@ -36,17 +36,17 @@ const PerformanceTrendChart = ({ historyData }) => {
   // 合并初始点和历史数据
   const chartData = [initialPoint, ...historyData];
 
-  // 模型显示名称
+  // 模型显示名称（按卡片显示顺序排列）
   const agentNames = {
-    'openai_standard': 'GPT-5',
+    'deepseek_r1': 'DeepSeek R1',
+    'openai_standard': 'GPT-4.1',
     'openai_mini': 'GPT-4o mini',
-    'gemini_flash': 'Gemini 2.5 Flash',
     'gemini_pro': 'Gemini 2.5 Pro',
+    'gemini_flash': 'Gemini 2.5 Flash',
     'claude_standard': 'Sonnet 4.5',
     'claude_mini': 'Haiku 4.5',
     'grok_standard': 'Grok 4',
     'grok_mini': 'Grok 3 mini',
-    'deepseek_r1': 'DeepSeek R1',
     'gdlc': 'GDLC',
     'equal_weight': 'BITW'
   };
