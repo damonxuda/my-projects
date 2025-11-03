@@ -1779,14 +1779,43 @@ async function saveDecision(agentName, decision, marketData, portfolioValue) {
             const buyActions = decision.actions.filter(a => a.action === 'buy');
             const sellActions = decision.actions.filter(a => a.action === 'sell');
 
-            // 前端只认识 'buy'/'sell'/'hold'，根据实际操作选择显示的action
+            // 根据净现金流判断状态（买入/卖出/调仓/持有）
             let displayAction = 'hold';
-            if (buyActions.length > 0 && sellActions.length > 0) {
-                displayAction = 'buy';  // 既有买又有卖，优先显示买入
-            } else if (buyActions.length > 0) {
-                displayAction = 'buy';
-            } else if (sellActions.length > 0) {
-                displayAction = 'sell';
+
+            if (buyActions.length > 0 || sellActions.length > 0) {
+                // 计算买入和卖出的总金额
+                const buyTotal = buyActions.reduce((sum, trade) => {
+                    const price = marketData[trade.asset]?.price || 0;
+                    return sum + (trade.amount * price);
+                }, 0);
+
+                const sellTotal = sellActions.reduce((sum, trade) => {
+                    const price = marketData[trade.asset]?.price || 0;
+                    return sum + (trade.amount * price);
+                }, 0);
+
+                const totalVolume = buyTotal + sellTotal;
+                const netFlow = sellTotal - buyTotal;  // 正数=净卖出，负数=净买入
+
+                // 根据净现金流比例判断状态
+                if (totalVolume === 0) {
+                    displayAction = 'hold';
+                } else {
+                    const netFlowRatio = Math.abs(netFlow) / totalVolume;
+
+                    if (netFlowRatio < 0.15) {
+                        // 买卖金额接近平衡（差异 < 15%）→ 调仓
+                        displayAction = 'rebalance';
+                    } else if (netFlow < 0) {
+                        // 净买入数字货币 → 买入
+                        displayAction = 'buy';
+                    } else {
+                        // 净卖出数字货币 → 卖出
+                        displayAction = 'sell';
+                    }
+                }
+
+                console.log(`💰 Buy: $${buyTotal.toFixed(2)}, Sell: $${sellTotal.toFixed(2)}, Net: $${netFlow.toFixed(2)} → ${displayAction}`);
             }
 
             // 买入和卖出分开，只写理由（不重复写资产和数量，前端asset字段已显示）
