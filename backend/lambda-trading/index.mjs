@@ -13,6 +13,7 @@ const yahooFinance = new YahooFinanceClass();
 // 环境变量配置
 // ============================================
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_PRO_API_KEY = process.env.GEMINI_PRO_API_KEY;  // 代理商API Key for Gemini Pro
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 const GROK_API_KEY = process.env.GROK_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -29,8 +30,9 @@ const AGENTS = [
     { name: 'openai_standard', type: 'llm', enabled: !!OPENAI_API_KEY },  // GPT-4o
     { name: 'openai_mini', type: 'llm', enabled: !!OPENAI_API_KEY },      // GPT-4o mini
 
-    // Gemini (1个) - 免费API只使用2.5 Flash
-    { name: 'gemini_flash', type: 'llm', enabled: !!GEMINI_API_KEY },     // Gemini 2.5 Flash
+    // Gemini (2个)
+    { name: 'gemini_flash', type: 'llm', enabled: !!GEMINI_API_KEY },     // Gemini 2.5 Flash (官方免费API)
+    { name: 'gemini_pro', type: 'llm', enabled: !!GEMINI_PRO_API_KEY },   // Gemini 2.5 Pro (代理商API)
 
     // Claude (2个)
     { name: 'claude_standard', type: 'llm', enabled: !!CLAUDE_API_KEY },  // Sonnet 4.5
@@ -421,6 +423,8 @@ async function askLLM(agentName, marketData, portfolio) {
         // Gemini
         case 'gemini_flash':
             return await askGemini(marketData, portfolio, 'gemini-2.5-flash');
+        case 'gemini_pro':
+            return await askGeminiPro(marketData, portfolio);
 
         // Claude
         case 'claude_standard':
@@ -548,6 +552,96 @@ XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.chan
 
     } catch (error) {
         console.error('Gemini API failed:', error);
+        // 降级：返回保守的 hold 决策
+        return {
+            action: 'hold',
+            asset: null,
+            amount: 0,
+            reason: 'API调用失败，保持持有'
+        };
+    }
+}
+
+// ============================================
+// 3.1.1 调用 Gemini Pro API (通过代理商)
+// ============================================
+async function askGeminiPro(marketData, portfolio) {
+    const prompt = `你是一个专业的加密货币交易员。请基于以下信息做出交易决策。
+
+【当前市场数据】
+BTC价格: $${marketData.BTC.price.toFixed(2)} (24h变化: ${marketData.BTC.change_24h.toFixed(2)}%)
+ETH价格: $${marketData.ETH.price.toFixed(2)} (24h变化: ${marketData.ETH.change_24h.toFixed(2)}%)
+SOL价格: $${marketData.SOL.price.toFixed(2)} (24h变化: ${marketData.SOL.change_24h.toFixed(2)}%)
+BNB价格: $${marketData.BNB.price.toFixed(2)} (24h变化: ${marketData.BNB.change_24h.toFixed(2)}%)
+DOGE价格: $${marketData.DOGE.price.toFixed(4)} (24h变化: ${marketData.DOGE.change_24h.toFixed(2)}%)
+XRP价格: $${marketData.XRP.price.toFixed(4)} (24h变化: ${marketData.XRP.change_24h.toFixed(2)}%)
+
+【你的账户状态】
+现金: $${portfolio.cash.toFixed(2)}
+持仓: ${JSON.stringify(portfolio.holdings)}
+总资产: $${portfolio.total_value.toFixed(2)}
+盈亏: ${portfolio.pnl?.toFixed(2) || 0}$ (${portfolio.pnl_percentage?.toFixed(2) || 0}%)
+
+【交易规则】
+1. 你只能交易 BTC, ETH, SOL, BNB, DOGE, XRP（对标Alpha Arena比赛币种，现货交易无杠杆）
+2. 单笔交易不超过总资产的 30%
+3. 单笔交易至少 $10（低于此金额不交易）
+4. 必须保留至少 20% 现金
+5. 每笔交易收取 0.1% 手续费
+6. 可以选择：买入、卖出、持有
+
+请返回 JSON 格式的决策（不要包含任何其他文字）：
+{
+    "action": "buy/sell/hold",
+    "asset": "资产代码（buy/sell时填币种如BTC；hold时填null不带引号）",
+    "amount": 数量,
+    "reason": "决策理由（中文，1-2句话）"
+}
+
+注意：hold时asset必须填 null（不是字符串"null"）`;
+
+    try {
+        // 使用代理商的OpenAI兼容API调用Gemini Pro
+        const response = await fetch('https://api.gptsapi.net/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${GEMINI_PRO_API_KEY}`
+            },
+            body: JSON.stringify({
+                model: 'gemini-2.5-pro',  // 代理商提供的模型名称
+                messages: [
+                    { role: 'user', content: prompt }
+                ],
+                temperature: 0.7
+            })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Gemini Pro API error: ${response.status} - ${errorText}`);
+        }
+
+        const data = await response.json();
+        const content = data.choices[0].message.content;
+
+        // 从响应中提取JSON（处理可能的markdown代码块）
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) {
+            throw new Error('Gemini Pro response is not valid JSON');
+        }
+
+        const decision = JSON.parse(jsonMatch[0]);
+
+        // 验证决策格式
+        if (!decision.action || !['buy', 'sell', 'hold'].includes(decision.action)) {
+            throw new Error('Invalid decision action');
+        }
+
+        return decision;
+
+    } catch (error) {
+        console.error('Gemini Pro API (via proxy) failed:', error);
         // 降级：返回保守的 hold 决策
         return {
             action: 'hold',

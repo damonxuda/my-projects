@@ -5,7 +5,7 @@ const PerformanceChart = ({ portfolios }) => {
   // 固定显示顺序：按厂商分组，每厂商标准型在前，轻量级在后，ETF在最右边
   const displayOrder = [
     'OPENAI_STANDARD', 'OPENAI_MINI',
-    'GEMINI_FLASH',  // Gemini只有1个模型
+    'GEMINI_FLASH', 'GEMINI_PRO',
     'CLAUDE_STANDARD', 'CLAUDE_MINI',
     'GROK_STANDARD', 'GROK_MINI',
     'EQUAL_WEIGHT', 'GDLC'
@@ -16,6 +16,7 @@ const PerformanceChart = ({ portfolios }) => {
     'OPENAI_STANDARD': 'GPT-5',
     'OPENAI_MINI': 'GPT-4o mini',
     'GEMINI_FLASH': 'Gemini 2.5 Flash',
+    'GEMINI_PRO': 'Gemini 2.5 Pro',
     'CLAUDE_STANDARD': 'Sonnet 4.5',
     'CLAUDE_MINI': 'Haiku 4.5',
     'GROK_STANDARD': 'Grok 4',

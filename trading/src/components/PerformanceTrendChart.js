@@ -7,6 +7,7 @@ const PerformanceTrendChart = ({ historyData }) => {
     'openai_standard': '#10B981',    // green-500
     'openai_mini': '#34D399',        // green-400
     'gemini_flash': '#3B82F6',       // blue-500
+    'gemini_pro': '#2563EB',         // blue-600
     'claude_standard': '#8B5CF6',    // purple-500
     'claude_mini': '#A78BFA',        // purple-400
     'grok_standard': '#F97316',      // orange-500
@@ -21,6 +22,7 @@ const PerformanceTrendChart = ({ historyData }) => {
     openai_standard: 50000,
     openai_mini: 50000,
     gemini_flash: 50000,
+    gemini_pro: 50000,
     claude_standard: 50000,
     claude_mini: 50000,
     grok_standard: 50000,
@@ -37,6 +39,7 @@ const PerformanceTrendChart = ({ historyData }) => {
     'openai_standard': 'GPT-5',
     'openai_mini': 'GPT-4o mini',
     'gemini_flash': 'Gemini 2.5 Flash',
+    'gemini_pro': 'Gemini 2.5 Pro',
     'claude_standard': 'Sonnet 4.5',
     'claude_mini': 'Haiku 4.5',
     'grok_standard': 'Grok 4',
