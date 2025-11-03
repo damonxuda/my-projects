@@ -22,7 +22,7 @@ const DecisionTimeline = ({ decisions }) => {
     });
   };
 
-  // Agent 图标 (9个agents)
+  // Agent 图标 (11个agents: 9 AI + 2 ETF)
   const agentIcons = {
     // OpenAI
     openai_standard: '🟢',
@@ -30,6 +30,7 @@ const DecisionTimeline = ({ decisions }) => {
 
     // Gemini
     gemini_flash: '🔷',
+    gemini_pro: '🔶',
 
     // Claude
     claude_standard: '🟣',
@@ -38,6 +39,9 @@ const DecisionTimeline = ({ decisions }) => {
     // Grok
     grok_standard: '🟠',
     grok_mini: '🟧',
+
+    // DeepSeek
+    deepseek_r1: '🔴',
 
     // ETF
     gdlc: '📊',
