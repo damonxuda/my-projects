@@ -1789,28 +1789,33 @@ async function saveDecision(agentName, decision, marketData, portfolioValue) {
                 displayAction = 'sell';
             }
 
-            // 构建详细的交易列表字符串（每笔交易显示操作+理由）
-            const tradeDetails = decision.actions.map(trade => {
-                const actionText = trade.action === 'buy' ? '买入' : trade.action === 'sell' ? '卖出' : '持有';
-                return `${actionText} ${trade.asset} ${trade.amount}: ${trade.reason}`;
-            }).join(' | ');
+            // 买入和卖出分开，只写理由（不重复写资产和数量，前端asset字段已显示）
+            const sellReasons = sellActions.map(t => t.reason).filter(r => r);
+            const buyReasons = buyActions.map(t => t.reason).filter(r => r);
+
+            let reasonParts = [];
+            if (sellReasons.length > 0) {
+                reasonParts.push(`卖出: ${sellReasons.join('; ')}`);
+            }
+            if (buyReasons.length > 0) {
+                reasonParts.push(`买入: ${buyReasons.join('; ')}`);
+            }
+
+            let finalReason = reasonParts.join('\n\n');
+            if (decision.overall_reason) {
+                finalReason += `\n\n整体策略: ${decision.overall_reason}`;
+            }
 
             // 收集所有涉及的资产
             const assets = [...new Set(decision.actions.map(t => t.asset))].join(', ');
-
-            // 构建最终的理由字符串
-            let finalReason = tradeDetails;
-            if (decision.overall_reason) {
-                finalReason = `${tradeDetails}\n\n整体策略: ${decision.overall_reason}`;
-            }
 
             decisionToSave = {
                 ...decision,
                 // 添加兼容字段：前端会读取这些字段
                 action: displayAction,  // 使用前端认识的action值
                 asset: assets,  // 显示所有涉及的资产
-                amount: decision.actions.length,  // 操作笔数
-                reason: finalReason,  // 每笔交易的详细信息（操作+理由）
+                reason: finalReason,  // 买入和卖出分开写理由
+                // 不添加amount字段（x 4.0000没意义）
                 // 保留原始的actions数组
             };
 
