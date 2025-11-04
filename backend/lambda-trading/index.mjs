@@ -2133,8 +2133,10 @@ async function saveDecision(agentName, decision, marketData, globalMarketData, p
             .insert({
                 agent_name: agentName,
                 decision: decisionToSave,
-                market_data: marketData,
-                global_market_data: globalMarketData,
+                market_data: {
+                    ...marketData,
+                    global_market: globalMarketData  // 临时嵌入到market_data中，等数据库添加字段后再分离
+                },
                 portfolio_value: portfolioValue
             });
 
