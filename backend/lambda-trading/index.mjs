@@ -323,7 +323,15 @@ async function fetchHistoricalOHLC() {
                 }));
 
                 historicalData[symbol] = ohlc;
+
+                // 显示最后一根K线的时间信息
+                const lastCandle = ohlc[ohlc.length - 1];
+                const now = Date.now();
+                const candleAge = Math.floor((now - lastCandle.timestamp) / 1000 / 60); // 分钟
+                const isComplete = candleAge >= 60; // 如果距离现在超过60分钟，说明是完整的
+
                 console.log(`📊 Fetched ${ohlc.length} OHLC candles for ${symbol}`);
+                console.log(`📍 Last candle: ${new Date(lastCandle.timestamp).toISOString()} (${candleAge}min ago, ${isComplete ? '完整' : '进行中'})`);
 
                 // 添加小延迟避免API限流（50次/分钟 = 1.2秒/次，保守使用1.5秒）
                 await new Promise(resolve => setTimeout(resolve, 1500));
