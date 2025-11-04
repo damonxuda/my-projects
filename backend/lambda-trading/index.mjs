@@ -19,6 +19,7 @@ const bedrockClient = new BedrockRuntimeClient({ region: 'ap-northeast-1' });
 // ============================================
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_PRO_API_KEY = process.env.GEMINI_PRO_API_KEY;  // 代理商API Key for Gemini Pro
+const GEMINI_FLASH_API_KEY = process.env.GEMINI_FLASH_API_KEY;  // 代理商API Key for Gemini Flash
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 const GROK_API_KEY = process.env.GROK_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -37,8 +38,8 @@ const AGENTS = [
     { name: 'openai_mini', type: 'llm', enabled: !!OPENAI_API_KEY },      // GPT-4o mini
 
     // Gemini (2个)
-    { name: 'gemini_flash', type: 'llm', enabled: !!GEMINI_API_KEY },     // Gemini 2.5 Flash (官方免费API)
-    { name: 'gemini_pro', type: 'llm', enabled: !!GEMINI_PRO_API_KEY },   // Gemini 2.5 Pro (代理商API)
+    { name: 'gemini_flash', type: 'llm', enabled: !!GEMINI_FLASH_API_KEY },  // Gemini 2.5 Flash (代理商API)
+    { name: 'gemini_pro', type: 'llm', enabled: !!GEMINI_PRO_API_KEY },      // Gemini 2.5 Pro (代理商API)
 
     // Claude (2个)
     { name: 'claude_standard', type: 'llm', enabled: !!CLAUDE_API_KEY },  // Sonnet 4.5
@@ -1073,7 +1074,7 @@ async function askLLM(agentName, marketData, portfolio, historicalData, technica
 
         // Gemini
         case 'gemini_flash':
-            return await askGemini(marketData, portfolio, historicalData, technicalIndicators, newsData, 'gemini-2.5-flash');
+            return await askGeminiFlashProxy(marketData, portfolio, historicalData, technicalIndicators, newsData);
         case 'gemini_pro':
             return await askGeminiPro(marketData, portfolio, historicalData, technicalIndicators, newsData);
 
@@ -1245,6 +1246,69 @@ async function askGeminiPro(marketData, portfolio, historicalData, technicalIndi
                 asset: null,
                 amount: 0,
                 reason: 'API超时（2次重试均失败），保持持有'
+            };
+        } else {
+            console.error(`[${modelDisplayName}] API failed:`, error);
+            return {
+                action: 'hold',
+                asset: null,
+                amount: 0,
+                reason: 'API调用失败，保持持有'
+            };
+        }
+    }
+}
+
+// Gemini Flash (通过代理商API)
+async function askGeminiFlashProxy(marketData, portfolio, historicalData, technicalIndicators, newsData) {
+    // 轻量级Flash：60秒超时，不重试，使用多资产prompt
+    const timeoutMs = 60000;
+    const maxAttempts = 1;
+    const modelDisplayName = 'Gemini 2.5 Flash';
+
+    const prompt = buildMultiAssetTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
+
+    try {
+        // 使用代理商的OpenAI兼容API调用Gemini Flash（轻量级60秒超时，不重试）
+        const response = await fetchWithTimeoutAndRetry(
+            'https://api.gptsapi.net/v1/chat/completions',
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${GEMINI_FLASH_API_KEY}`
+                },
+                body: JSON.stringify({
+                    model: 'gemini-2.5-flash',  // 代理商提供的模型名称
+                    messages: [
+                        { role: 'user', content: prompt }
+                    ],
+                    temperature: 0.7
+                })
+            },
+            timeoutMs,
+            modelDisplayName,
+            maxAttempts
+        );
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Gemini Flash API error: ${response.status} - ${errorText}`);
+        }
+
+        const data = await response.json();
+        const content = data.choices[0].message.content;
+
+        return parseAndValidateDecision(content, modelDisplayName);
+
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            console.error(`[${modelDisplayName}] API timeout after ${maxAttempts} attempt(s) (60s each)`);
+            return {
+                action: 'hold',
+                asset: null,
+                amount: 0,
+                reason: 'API超时，保持持有'
             };
         } else {
             console.error(`[${modelDisplayName}] API failed:`, error);
