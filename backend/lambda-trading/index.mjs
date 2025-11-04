@@ -378,7 +378,7 @@ async function fetchGlobalMarketData() {
 }
 
 // ============================================
-// 1.1 获取历史OHLC数据（过去2天，30分钟K线）
+// 1.1 获取历史OHLC数据（过去1天，30分钟K线）
 // ============================================
 async function fetchHistoricalOHLC() {
     const coinIds = {
@@ -397,10 +397,10 @@ async function fetchHistoricalOHLC() {
         // 串行调用以避免触及速率限制
         for (const [symbol, coinId] of Object.entries(coinIds)) {
             try {
-                // 获取过去2天的OHLC数据（30分钟K线，vs_currency=usd, days=2）
+                // 获取过去1天的OHLC数据（30分钟K线，vs_currency=usd, days=1）
                 console.log(`🔑 [${symbol}] Fetching OHLC with API Key: ${COINGECKO_API_KEY ? 'YES' : 'NO'}`);
                 const response = await fetch(
-                    `https://api.coingecko.com/api/v3/coins/${coinId}/ohlc?vs_currency=usd&days=2`,
+                    `https://api.coingecko.com/api/v3/coins/${coinId}/ohlc?vs_currency=usd&days=1`,
                     {
                         headers: {
                             'x-cg-demo-api-key': COINGECKO_API_KEY
