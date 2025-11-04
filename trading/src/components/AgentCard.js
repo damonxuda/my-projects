@@ -24,7 +24,7 @@ const AgentCard = ({ portfolio, marketData }) => {
     grok_mini: { name: 'Grok 3 mini', color: 'orange', icon: '🔶' },       // 轻量-菱形
 
     // DeepSeek
-    deepseek_r1: { name: 'DeepSeek R1', color: 'red', icon: '🔴' },        // 旗舰-圆形
+    deepseek_v3: { name: 'DeepSeek V3', color: 'red', icon: '🔴' },        // 旗舰-圆形
 
     // ETF
     gdlc: { name: 'GDLC', color: 'yellow', icon: '📊' },

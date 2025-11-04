@@ -6,9 +6,13 @@
 import { createClient } from '@supabase/supabase-js';
 import YahooFinanceClass from 'yahoo-finance2';
 import { RSI, MACD, SMA, BollingerBands } from 'technicalindicators';
+import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
 
 // v3版本需要实例化
 const yahooFinance = new YahooFinanceClass();
+
+// Bedrock Runtime 客户端（用于 DeepSeek V3）
+const bedrockClient = new BedrockRuntimeClient({ region: 'ap-northeast-1' });
 
 // ============================================
 // 环境变量配置
@@ -46,7 +50,7 @@ const AGENTS = [
     { name: 'grok_mini', type: 'llm', enabled: !!GROK_API_KEY },          // Grok 2 mini
 
     // DeepSeek (1个)
-    { name: 'deepseek_r1', type: 'llm', enabled: !!DEEPSEEK_R1_API_KEY }, // DeepSeek R1 (代理商API)
+    { name: 'deepseek_v3', type: 'llm', enabled: true },                  // DeepSeek V3 (AWS Bedrock)
 
     // ETF基准 (2个)
     { name: 'gdlc', type: 'benchmark', enabled: true },                   // GDLC市值加权ETF基准
@@ -1084,8 +1088,8 @@ async function askLLM(agentName, marketData, portfolio, historicalData, technica
             return await askGrok(marketData, portfolio, historicalData, technicalIndicators, newsData, 'grok-3-mini');
 
         // DeepSeek
-        case 'deepseek_r1':
-            return await askDeepSeekR1(marketData, portfolio, historicalData, technicalIndicators, newsData);
+        case 'deepseek_v3':
+            return await askDeepSeekV3Bedrock(marketData, portfolio, historicalData, technicalIndicators, newsData);
 
         default:
             throw new Error(`Unknown agent: ${agentName}`);
@@ -1249,61 +1253,50 @@ async function askGeminiPro(marketData, portfolio, historicalData, technicalIndi
 }
 
 // ============================================
-// 3.1.2 调用 DeepSeek R1 API (通过代理商)
+// 3.1.2 调用 DeepSeek V3 API (通过 AWS Bedrock)
 // ============================================
-async function askDeepSeekR1(marketData, portfolio, historicalData, technicalIndicators, newsData) {
+async function askDeepSeekV3Bedrock(marketData, portfolio, historicalData, technicalIndicators, newsData) {
     const prompt = buildMultiAssetTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
+    const modelDisplayName = 'DeepSeek V3 (Bedrock)';
 
     try {
-        // 使用代理商的OpenAI兼容API调用DeepSeek R1（旗舰型120秒超时）
-        const response = await fetchWithTimeoutAndRetry(
-            'https://api.gptsapi.net/v1/chat/completions',
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${DEEPSEEK_R1_API_KEY}`
-                },
-                body: JSON.stringify({
-                    model: 'deepseek-r1',  // 代理商提供的模型名称
-                    messages: [
-                        { role: 'user', content: prompt }
-                    ],
-                    temperature: 0.7
-                })
-            },
-            120000,  // 120秒超时（旗舰型）
-            'DeepSeek R1'
-        );
+        console.log(`[${modelDisplayName}] Invoking Bedrock model: deepseek.v3-v1:0`);
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`DeepSeek R1 API error: ${response.status} - ${errorText}`);
-        }
+        // 构建 Bedrock API 请求体
+        const requestBody = {
+            messages: [
+                { role: 'user', content: prompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 4000
+        };
 
-        const data = await response.json();
-        const content = data.choices[0].message.content;
+        const command = new InvokeModelCommand({
+            modelId: 'deepseek.v3-v1:0',
+            contentType: 'application/json',
+            accept: 'application/json',
+            body: JSON.stringify(requestBody)
+        });
 
-        return parseAndValidateDecision(content, 'DeepSeek R1');
+        // Bedrock 默认超时为300秒，比代理商的60秒长得多
+        const response = await bedrockClient.send(command);
+
+        // 解析响应
+        const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+        const content = responseBody.choices[0].message.content;
+
+        console.log(`[${modelDisplayName}] Response received successfully`);
+
+        return parseAndValidateDecision(content, modelDisplayName);
 
     } catch (error) {
-        if (error.name === 'AbortError') {
-            console.error('[DeepSeek R1] API timeout after 2 attempts (120s each)');
-            return {
-                action: 'hold',
-                asset: null,
-                amount: 0,
-                reason: 'API超时（2次重试均失败），保持持有'
-            };
-        } else {
-            console.error('[DeepSeek R1] API failed:', error);
-            return {
-                action: 'hold',
-                asset: null,
-                amount: 0,
-                reason: 'API调用失败，保持持有'
-            };
-        }
+        console.error(`[${modelDisplayName}] API failed:`, error);
+        return {
+            action: 'hold',
+            asset: null,
+            amount: 0,
+            reason: 'API调用失败，保持持有'
+        };
     }
 }
 

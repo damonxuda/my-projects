@@ -4,7 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 const PerformanceChart = ({ portfolios }) => {
   // 固定显示顺序：DeepSeek在最前，Gemini Pro在Flash前，其他按厂商分组
   const displayOrder = [
-    'DEEPSEEK_R1',
+    'DEEPSEEK_V3',
     'OPENAI_STANDARD', 'OPENAI_MINI',
     'GEMINI_PRO', 'GEMINI_FLASH',
     'CLAUDE_STANDARD', 'CLAUDE_MINI',
@@ -22,7 +22,7 @@ const PerformanceChart = ({ portfolios }) => {
     'CLAUDE_MINI': 'Haiku 4.5',
     'GROK_STANDARD': 'Grok 4',
     'GROK_MINI': 'Grok 3 mini',
-    'DEEPSEEK_R1': 'DeepSeek R1',
+    'DEEPSEEK_V3': 'DeepSeek V3',
     'EQUAL_WEIGHT': 'BITW',
     'GDLC': 'GDLC'
   };

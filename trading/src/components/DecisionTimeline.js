@@ -42,7 +42,7 @@ const DecisionTimeline = ({ decisions }) => {
     grok_mini: '🔶',        // 轻量-菱形
 
     // DeepSeek
-    deepseek_r1: '🔴',      // 旗舰-圆形
+    deepseek_v3: '🔴',      // 旗舰-圆形
 
     // ETF
     gdlc: '📊',
