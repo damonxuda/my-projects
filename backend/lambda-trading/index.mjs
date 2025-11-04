@@ -76,6 +76,10 @@ export const handler = async (event) => {
         const marketData = await fetchMarketData();
         console.log('📊 Market Data:', marketData);
 
+        // 1.5 获取全局市场数据（所有 agents 共享）
+        console.log('🌍 Fetching global market data...');
+        const globalMarketData = await fetchGlobalMarketData();
+
         // 1.1 获取历史OHLC数据和技术指标（所有 agents 共享）
         console.log('📈 Fetching historical OHLC data...');
         const historicalData = await fetchHistoricalOHLC();
@@ -99,7 +103,7 @@ export const handler = async (event) => {
         // 2. 并发执行所有 agent 的交易决策（性能提升3-5倍）
         console.log(`\n🚀 开始并发处理 ${AGENTS.length} 个agents...`);
         const agentResults = await Promise.all(
-            AGENTS.map(agent => processSingleAgent(agent, marketData, historicalData, technicalIndicators, newsData))
+            AGENTS.map(agent => processSingleAgent(agent, marketData, globalMarketData, historicalData, technicalIndicators, newsData))
         );
 
         // 整理结果
@@ -130,7 +134,7 @@ export const handler = async (event) => {
 // ============================================
 // 处理单个Agent（用于并发执行）
 // ============================================
-async function processSingleAgent(agent, marketData, historicalData, technicalIndicators, newsData) {
+async function processSingleAgent(agent, marketData, globalMarketData, historicalData, technicalIndicators, newsData) {
     console.log(`\n========== Processing ${agent.name.toUpperCase()} ==========`);
 
     try {
@@ -144,7 +148,7 @@ async function processSingleAgent(agent, marketData, historicalData, technicalIn
             decision = await getBenchmarkDecision(agent.name, marketData, portfolio);
             console.log(`📊 ${agent.name} Benchmark Decision:`, decision);
         } else {
-            decision = await askLLM(agent.name, marketData, portfolio, historicalData, technicalIndicators, newsData);
+            decision = await askLLM(agent.name, marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData);
             console.log(`🤖 ${agent.name} Decision:`, decision);
         }
 
@@ -180,7 +184,7 @@ async function processSingleAgent(agent, marketData, historicalData, technicalIn
 
         // 4. 保存决策和账户状态到 Supabase
         if (decision !== null) {
-            await saveDecision(agent.name, decision, marketData, newPortfolio.total_value);
+            await saveDecision(agent.name, decision, marketData, globalMarketData, newPortfolio.total_value);
         } else {
             console.log(`📊 ${agent.name} Buy & Hold策略：无需记录决策，仅更新portfolio`);
         }
@@ -204,18 +208,18 @@ async function processSingleAgent(agent, marketData, historicalData, technicalIn
 }
 
 // ============================================
-// 1. 获取市场数据（使用官方推荐的 /simple/price 端点）
+// 1. 获取市场数据（使用 /coins/markets 端点获取更全面的数据）
 // ============================================
 async function fetchMarketData() {
     try {
         console.log(`🔑 COINGECKO_API_KEY: ${COINGECKO_API_KEY ? 'SET (len=' + COINGECKO_API_KEY.length + ')' : 'NOT SET'}`);
         const response = await fetch(
-            'https://api.coingecko.com/api/v3/simple/price?' +
+            'https://api.coingecko.com/api/v3/coins/markets?' +
+            'vs_currency=usd&' +
             'ids=bitcoin,ethereum,solana,binancecoin,dogecoin,ripple&' +
-            'vs_currencies=usd&' +
-            'include_24hr_change=true&' +
-            'include_24hr_vol=true&' +
-            'include_market_cap=true',
+            'order=market_cap_desc&' +
+            'sparkline=false&' +
+            'price_change_percentage=24h,7d',
             {
                 headers: {
                     'x-cg-demo-api-key': COINGECKO_API_KEY
@@ -229,48 +233,124 @@ async function fetchMarketData() {
 
         const data = await response.json();
 
-        return {
-            BTC: {
-                price: data.bitcoin.usd,
-                change_24h: data.bitcoin.usd_24h_change,
-                volume_24h: data.bitcoin.usd_24h_vol,
-                market_cap: data.bitcoin.usd_market_cap
-            },
-            ETH: {
-                price: data.ethereum.usd,
-                change_24h: data.ethereum.usd_24h_change,
-                volume_24h: data.ethereum.usd_24h_vol,
-                market_cap: data.ethereum.usd_market_cap
-            },
-            SOL: {
-                price: data.solana.usd,
-                change_24h: data.solana.usd_24h_change,
-                volume_24h: data.solana.usd_24h_vol,
-                market_cap: data.solana.usd_market_cap
-            },
-            BNB: {
-                price: data.binancecoin.usd,
-                change_24h: data.binancecoin.usd_24h_change,
-                volume_24h: data.binancecoin.usd_24h_vol,
-                market_cap: data.binancecoin.usd_market_cap
-            },
-            DOGE: {
-                price: data.dogecoin.usd,
-                change_24h: data.dogecoin.usd_24h_change,
-                volume_24h: data.dogecoin.usd_24h_vol,
-                market_cap: data.dogecoin.usd_market_cap
-            },
-            XRP: {
-                price: data.ripple.usd,
-                change_24h: data.ripple.usd_24h_change,
-                volume_24h: data.ripple.usd_24h_vol,
-                market_cap: data.ripple.usd_market_cap
-            },
-            timestamp: new Date().toISOString()
+        // 将数组转为对象映射
+        const coinMap = {
+            'bitcoin': 'BTC',
+            'ethereum': 'ETH',
+            'solana': 'SOL',
+            'binancecoin': 'BNB',
+            'dogecoin': 'DOGE',
+            'ripple': 'XRP'
         };
+
+        const marketData = {};
+
+        for (const coin of data) {
+            const symbol = coinMap[coin.id];
+            if (!symbol) continue;
+
+            marketData[symbol] = {
+                // 基础价格数据
+                price: coin.current_price,
+                change_24h: coin.price_change_percentage_24h,
+                volume_24h: coin.total_volume,
+                market_cap: coin.market_cap,
+
+                // 新增：市场地位数据
+                market_cap_rank: coin.market_cap_rank,
+                fully_diluted_valuation: coin.fully_diluted_valuation,
+
+                // 新增：24h高低价
+                high_24h: coin.high_24h,
+                low_24h: coin.low_24h,
+
+                // 新增：历史极值数据
+                ath: coin.ath,  // 历史最高价
+                ath_change_percentage: coin.ath_change_percentage,  // 距ATH的回撤百分比
+                ath_date: coin.ath_date,
+                atl: coin.atl,  // 历史最低价
+                atl_change_percentage: coin.atl_change_percentage,  // 距ATL的涨幅百分比
+                atl_date: coin.atl_date,
+
+                // 新增：供应数据
+                circulating_supply: coin.circulating_supply,
+                total_supply: coin.total_supply,
+                max_supply: coin.max_supply,
+
+                // 新增：7天价格变化（如果有）
+                price_change_percentage_7d: coin.price_change_percentage_7d_in_currency || null
+            };
+        }
+
+        marketData.timestamp = new Date().toISOString();
+
+        console.log('📊 Market data fetched with extended fields (ATH/ATL, supply, rankings)');
+        return marketData;
+
     } catch (error) {
         console.error('Failed to fetch market data:', error);
         throw error;
+    }
+}
+
+// ============================================
+// 1.5 获取全局市场数据（BTC主导地位、总市值等宏观指标）
+// ============================================
+async function fetchGlobalMarketData() {
+    try {
+        const response = await fetch(
+            'https://api.coingecko.com/api/v3/global',
+            {
+                headers: {
+                    'x-cg-demo-api-key': COINGECKO_API_KEY
+                }
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`CoinGecko Global API error: ${response.status}`);
+        }
+
+        const result = await response.json();
+        const data = result.data;
+
+        const globalData = {
+            // 总市值和交易量
+            total_market_cap_usd: data.total_market_cap?.usd || 0,
+            total_volume_24h_usd: data.total_volume?.usd || 0,
+            market_cap_change_percentage_24h: data.market_cap_change_percentage_24h_usd || 0,
+
+            // 市场主导地位
+            btc_dominance: data.market_cap_percentage?.btc || 0,
+            eth_dominance: data.market_cap_percentage?.eth || 0,
+
+            // 活跃市场统计
+            active_cryptocurrencies: data.active_cryptocurrencies || 0,
+            markets: data.markets || 0,
+
+            // 市场情绪（涨跌币种比例）
+            market_cap_percentage: data.market_cap_percentage || {},
+
+            timestamp: new Date().toISOString()
+        };
+
+        console.log(`🌍 Global market data: Total MC $${(globalData.total_market_cap_usd / 1e12).toFixed(2)}T, BTC dominance ${globalData.btc_dominance.toFixed(2)}%`);
+        return globalData;
+
+    } catch (error) {
+        console.error('Failed to fetch global market data:', error);
+        // 全局数据获取失败不影响主流程，返回空对象
+        return {
+            total_market_cap_usd: 0,
+            total_volume_24h_usd: 0,
+            market_cap_change_percentage_24h: 0,
+            btc_dominance: 0,
+            eth_dominance: 0,
+            active_cryptocurrencies: 0,
+            markets: 0,
+            market_cap_percentage: {},
+            timestamp: new Date().toISOString()
+        };
     }
 }
 
@@ -742,9 +822,9 @@ async function fetchWithTimeoutAndRetry(url, options, timeoutMs, modelName, maxA
 }
 
 // ============================================
-// 4. 构建交易提示词（包含历史数据、技术指标和新闻）
+// 4. 构建交易提示词（包含历史数据、技术指标、新闻和全局市场数据）
 // ============================================
-function buildTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData) {
+function buildTradingPrompt(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData) {
     // 格式化历史K线数据（只显示最近3天，避免prompt过长）
     const formatOHLC = (symbol) => {
         const ohlc = historicalData[symbol] || [];
@@ -810,16 +890,39 @@ function buildTradingPrompt(marketData, portfolio, historicalData, technicalIndi
 
     return `你是一个专业的加密货币量化交易员。请基于以下市场数据、历史K线、技术指标和最新新闻做出交易决策。
 
+=== 全局市场环境 ===
+总市值: $${(globalMarketData.total_market_cap_usd / 1e12).toFixed(2)}T (24h变化: ${globalMarketData.market_cap_change_percentage_24h.toFixed(2)}%)
+24h总交易量: $${(globalMarketData.total_volume_24h_usd / 1e9).toFixed(2)}B
+BTC主导地位: ${globalMarketData.btc_dominance.toFixed(2)}% ${globalMarketData.btc_dominance > 55 ? '(避险情绪，资金流向BTC)' : globalMarketData.btc_dominance < 45 ? '(山寨季，资金追逐高收益)' : '(市场平衡)'}
+ETH主导地位: ${globalMarketData.eth_dominance.toFixed(2)}%
+
 === 最新加密货币新闻 ===
 ${formatNews()}
 
 === 当前市场数据 ===
 BTC: $${marketData.BTC.price.toFixed(2)} (24h: ${marketData.BTC.change_24h.toFixed(2)}%)
+  排名#${marketData.BTC.market_cap_rank} | 市值: $${(marketData.BTC.market_cap / 1e9).toFixed(2)}B | 24h量: $${(marketData.BTC.volume_24h / 1e9).toFixed(2)}B
+  距ATH: ${marketData.BTC.ath_change_percentage.toFixed(2)}% | ATH: $${marketData.BTC.ath.toFixed(2)}
+
 ETH: $${marketData.ETH.price.toFixed(2)} (24h: ${marketData.ETH.change_24h.toFixed(2)}%)
+  排名#${marketData.ETH.market_cap_rank} | 市值: $${(marketData.ETH.market_cap / 1e9).toFixed(2)}B | 24h量: $${(marketData.ETH.volume_24h / 1e9).toFixed(2)}B
+  距ATH: ${marketData.ETH.ath_change_percentage.toFixed(2)}% | ATH: $${marketData.ETH.ath.toFixed(2)}
+
 SOL: $${marketData.SOL.price.toFixed(2)} (24h: ${marketData.SOL.change_24h.toFixed(2)}%)
+  排名#${marketData.SOL.market_cap_rank} | 市值: $${(marketData.SOL.market_cap / 1e9).toFixed(2)}B | 24h量: $${(marketData.SOL.volume_24h / 1e9).toFixed(2)}B
+  距ATH: ${marketData.SOL.ath_change_percentage.toFixed(2)}% | ATH: $${marketData.SOL.ath.toFixed(2)}
+
 BNB: $${marketData.BNB.price.toFixed(2)} (24h: ${marketData.BNB.change_24h.toFixed(2)}%)
+  排名#${marketData.BNB.market_cap_rank} | 市值: $${(marketData.BNB.market_cap / 1e9).toFixed(2)}B | 24h量: $${(marketData.BNB.volume_24h / 1e9).toFixed(2)}B
+  距ATH: ${marketData.BNB.ath_change_percentage.toFixed(2)}% | ATH: $${marketData.BNB.ath.toFixed(2)}
+
 DOGE: $${marketData.DOGE.price.toFixed(4)} (24h: ${marketData.DOGE.change_24h.toFixed(2)}%)
+  排名#${marketData.DOGE.market_cap_rank} | 市值: $${(marketData.DOGE.market_cap / 1e9).toFixed(2)}B | 24h量: $${(marketData.DOGE.volume_24h / 1e9).toFixed(2)}B
+  距ATH: ${marketData.DOGE.ath_change_percentage.toFixed(2)}% | ATH: $${marketData.DOGE.ath.toFixed(4)}
+
 XRP: $${marketData.XRP.price.toFixed(4)} (24h: ${marketData.XRP.change_24h.toFixed(2)}%)
+  排名#${marketData.XRP.market_cap_rank} | 市值: $${(marketData.XRP.market_cap / 1e9).toFixed(2)}B | 24h量: $${(marketData.XRP.volume_24h / 1e9).toFixed(2)}B
+  距ATH: ${marketData.XRP.ath_change_percentage.toFixed(2)}% | ATH: $${marketData.XRP.ath.toFixed(4)}
 
 === 历史K线数据（最近3天） ===
 BTC:
@@ -887,7 +990,7 @@ ${formatIndicators('XRP')}
 // ============================================
 // 4.1 构建多资产交易提示词（支持同时操作多个币种）
 // ============================================
-function buildMultiAssetTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData) {
+function buildMultiAssetTradingPrompt(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData) {
     // 复用原有的格式化函数
     const formatOHLC = (symbol) => {
         const ohlc = historicalData[symbol] || [];
@@ -950,16 +1053,39 @@ function buildMultiAssetTradingPrompt(marketData, portfolio, historicalData, tec
 
     return `你是一个专业的加密货币量化交易员。请基于以下市场数据、历史K线、技术指标和最新新闻做出交易决策。
 
+=== 全局市场环境 ===
+总市值: $${(globalMarketData.total_market_cap_usd / 1e12).toFixed(2)}T (24h变化: ${globalMarketData.market_cap_change_percentage_24h.toFixed(2)}%)
+24h总交易量: $${(globalMarketData.total_volume_24h_usd / 1e9).toFixed(2)}B
+BTC主导地位: ${globalMarketData.btc_dominance.toFixed(2)}% ${globalMarketData.btc_dominance > 55 ? '(避险情绪，资金流向BTC)' : globalMarketData.btc_dominance < 45 ? '(山寨季，资金追逐高收益)' : '(市场平衡)'}
+ETH主导地位: ${globalMarketData.eth_dominance.toFixed(2)}%
+
 === 最新加密货币新闻 ===
 ${formatNews()}
 
 === 当前市场数据 ===
 BTC: $${marketData.BTC.price.toFixed(2)} (24h: ${marketData.BTC.change_24h.toFixed(2)}%)
+  排名#${marketData.BTC.market_cap_rank} | 市值: $${(marketData.BTC.market_cap / 1e9).toFixed(2)}B | 24h量: $${(marketData.BTC.volume_24h / 1e9).toFixed(2)}B
+  距ATH: ${marketData.BTC.ath_change_percentage.toFixed(2)}% | ATH: $${marketData.BTC.ath.toFixed(2)}
+
 ETH: $${marketData.ETH.price.toFixed(2)} (24h: ${marketData.ETH.change_24h.toFixed(2)}%)
+  排名#${marketData.ETH.market_cap_rank} | 市值: $${(marketData.ETH.market_cap / 1e9).toFixed(2)}B | 24h量: $${(marketData.ETH.volume_24h / 1e9).toFixed(2)}B
+  距ATH: ${marketData.ETH.ath_change_percentage.toFixed(2)}% | ATH: $${marketData.ETH.ath.toFixed(2)}
+
 SOL: $${marketData.SOL.price.toFixed(2)} (24h: ${marketData.SOL.change_24h.toFixed(2)}%)
+  排名#${marketData.SOL.market_cap_rank} | 市值: $${(marketData.SOL.market_cap / 1e9).toFixed(2)}B | 24h量: $${(marketData.SOL.volume_24h / 1e9).toFixed(2)}B
+  距ATH: ${marketData.SOL.ath_change_percentage.toFixed(2)}% | ATH: $${marketData.SOL.ath.toFixed(2)}
+
 BNB: $${marketData.BNB.price.toFixed(2)} (24h: ${marketData.BNB.change_24h.toFixed(2)}%)
+  排名#${marketData.BNB.market_cap_rank} | 市值: $${(marketData.BNB.market_cap / 1e9).toFixed(2)}B | 24h量: $${(marketData.BNB.volume_24h / 1e9).toFixed(2)}B
+  距ATH: ${marketData.BNB.ath_change_percentage.toFixed(2)}% | ATH: $${marketData.BNB.ath.toFixed(2)}
+
 DOGE: $${marketData.DOGE.price.toFixed(4)} (24h: ${marketData.DOGE.change_24h.toFixed(2)}%)
+  排名#${marketData.DOGE.market_cap_rank} | 市值: $${(marketData.DOGE.market_cap / 1e9).toFixed(2)}B | 24h量: $${(marketData.DOGE.volume_24h / 1e9).toFixed(2)}B
+  距ATH: ${marketData.DOGE.ath_change_percentage.toFixed(2)}% | ATH: $${marketData.DOGE.ath.toFixed(4)}
+
 XRP: $${marketData.XRP.price.toFixed(4)} (24h: ${marketData.XRP.change_24h.toFixed(2)}%)
+  排名#${marketData.XRP.market_cap_rank} | 市值: $${(marketData.XRP.market_cap / 1e9).toFixed(2)}B | 24h量: $${(marketData.XRP.volume_24h / 1e9).toFixed(2)}B
+  距ATH: ${marketData.XRP.ath_change_percentage.toFixed(2)}% | ATH: $${marketData.XRP.ath.toFixed(4)}
 
 === 历史K线数据（最近3天） ===
 BTC:
@@ -1093,39 +1219,39 @@ function parseAndValidateDecision(text, modelName) {
 // ============================================
 // 5. LLM API 路由函数
 // ============================================
-async function askLLM(agentName, marketData, portfolio, historicalData, technicalIndicators, newsData) {
+async function askLLM(agentName, marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData) {
     switch (agentName) {
         // OpenAI
         case 'openai_standard':
-            return await askOpenAI(marketData, portfolio, historicalData, technicalIndicators, newsData, 'gpt-4.1');
+            return await askOpenAI(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, 'gpt-4.1');
         case 'openai_mini':
-            return await askOpenAI(marketData, portfolio, historicalData, technicalIndicators, newsData, 'gpt-4o-mini');
+            return await askOpenAI(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, 'gpt-4o-mini');
 
         // Gemini
         case 'gemini_flash':
-            return await askGeminiFlashProxy(marketData, portfolio, historicalData, technicalIndicators, newsData);
+            return await askGeminiFlashProxy(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData);
         case 'gemini_pro':
-            return await askGeminiPro(marketData, portfolio, historicalData, technicalIndicators, newsData);
+            return await askGeminiPro(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData);
 
         // Claude
         case 'claude_standard':
-            return await askClaude(marketData, portfolio, historicalData, technicalIndicators, newsData, 'claude-sonnet-4-5-20250929');
+            return await askClaude(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, 'claude-sonnet-4-5-20250929');
         case 'claude_mini':
-            return await askClaude(marketData, portfolio, historicalData, technicalIndicators, newsData, 'claude-haiku-4-5');
+            return await askClaude(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, 'claude-haiku-4-5');
 
         // Grok
         case 'grok_standard':
-            return await askGrok(marketData, portfolio, historicalData, technicalIndicators, newsData, 'grok-4-0709');
+            return await askGrok(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, 'grok-4-0709');
         case 'grok_mini':
-            return await askGrok(marketData, portfolio, historicalData, technicalIndicators, newsData, 'grok-3-mini');
+            return await askGrok(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, 'grok-3-mini');
 
         // DeepSeek
         case 'deepseek_v3':
-            return await askDeepSeekV3Bedrock(marketData, portfolio, historicalData, technicalIndicators, newsData);
+            return await askDeepSeekV3Bedrock(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData);
 
         // Qwen
         case 'qwen3_235b':
-            return await askQwen3Bedrock(marketData, portfolio, historicalData, technicalIndicators, newsData);
+            return await askQwen3Bedrock(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData);
 
         default:
             throw new Error(`Unknown agent: ${agentName}`);
@@ -1137,13 +1263,13 @@ async function askLLM(agentName, marketData, portfolio, historicalData, technica
 // ============================================
 
 // Gemini API (支持多个模型)
-async function askGemini(marketData, portfolio, historicalData, technicalIndicators, newsData, model = 'gemini-2.5-flash') {
+async function askGemini(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, model = 'gemini-2.5-flash') {
     // 轻量级Flash：60秒超时，不重试，使用多资产prompt
     const timeoutMs = 60000;
     const maxAttempts = 1;
     const modelDisplayName = 'Gemini 2.5 Flash';
 
-    const prompt = buildMultiAssetTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
+    const prompt = buildMultiAssetTradingPrompt(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData);
 
     try {
         const response = await fetchWithTimeoutAndRetry(
@@ -1226,13 +1352,13 @@ async function askGemini(marketData, portfolio, historicalData, technicalIndicat
 // ============================================
 // 3.1.1 调用 Gemini Pro API (通过代理商)
 // ============================================
-async function askGeminiPro(marketData, portfolio, historicalData, technicalIndicators, newsData) {
+async function askGeminiPro(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData) {
     // 旗舰型Pro：120秒超时，重试1次，使用多资产prompt
     const timeoutMs = 120000;
     const maxAttempts = 2;
     const modelDisplayName = 'Gemini 2.5 Pro';
 
-    const prompt = buildMultiAssetTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
+    const prompt = buildMultiAssetTradingPrompt(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData);
 
     try {
         // 使用代理商的OpenAI兼容API调用Gemini Pro（旗舰型120秒超时，重试1次）
@@ -1289,13 +1415,13 @@ async function askGeminiPro(marketData, portfolio, historicalData, technicalIndi
 }
 
 // Gemini Flash (通过代理商API)
-async function askGeminiFlashProxy(marketData, portfolio, historicalData, technicalIndicators, newsData) {
+async function askGeminiFlashProxy(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData) {
     // 轻量级Flash：60秒超时，不重试，使用多资产prompt
     const timeoutMs = 60000;
     const maxAttempts = 1;
     const modelDisplayName = 'Gemini 2.5 Flash';
 
-    const prompt = buildMultiAssetTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
+    const prompt = buildMultiAssetTradingPrompt(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData);
 
     try {
         // 使用代理商的OpenAI兼容API调用Gemini Flash（轻量级60秒超时，不重试）
@@ -1354,8 +1480,8 @@ async function askGeminiFlashProxy(marketData, portfolio, historicalData, techni
 // ============================================
 // 3.1.2 调用 DeepSeek V3 API (通过 AWS Bedrock)
 // ============================================
-async function askDeepSeekV3Bedrock(marketData, portfolio, historicalData, technicalIndicators, newsData) {
-    const prompt = buildMultiAssetTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
+async function askDeepSeekV3Bedrock(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData) {
+    const prompt = buildMultiAssetTradingPrompt(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData);
     const modelDisplayName = 'DeepSeek V3 (Bedrock)';
 
     try {
@@ -1402,8 +1528,8 @@ async function askDeepSeekV3Bedrock(marketData, portfolio, historicalData, techn
 // ============================================
 // 3.1.3 调用 Qwen3 235B API (通过 AWS Bedrock)
 // ============================================
-async function askQwen3Bedrock(marketData, portfolio, historicalData, technicalIndicators, newsData) {
-    const prompt = buildMultiAssetTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
+async function askQwen3Bedrock(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData) {
+    const prompt = buildMultiAssetTradingPrompt(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData);
     const modelDisplayName = 'Qwen3 235B (Bedrock)';
 
     try {
@@ -1450,7 +1576,7 @@ async function askQwen3Bedrock(marketData, portfolio, historicalData, technicalI
 // ============================================
 // 3.2 调用 Claude API 获取决策
 // ============================================
-async function askClaude(marketData, portfolio, historicalData, technicalIndicators, newsData, model = 'claude-haiku-4-5') {
+async function askClaude(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, model = 'claude-haiku-4-5') {
     // 判断是旗舰型还是轻量级
     const isFlagship = model === 'claude-sonnet-4-5-20250929';
     const timeoutMs = isFlagship ? 120000 : 60000;  // 旗舰120s, 轻量60s
@@ -1458,7 +1584,7 @@ async function askClaude(marketData, portfolio, historicalData, technicalIndicat
     const modelDisplayName = isFlagship ? 'Sonnet 4.5' : 'Haiku 4.5';
 
     // 所有Claude模型都使用多资产交易prompt
-    const prompt = buildMultiAssetTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
+    const prompt = buildMultiAssetTradingPrompt(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData);
 
     try {
         const response = await fetchWithTimeoutAndRetry(
@@ -1541,7 +1667,7 @@ async function askClaude(marketData, portfolio, historicalData, technicalIndicat
 // ============================================
 // 3.3 调用 Grok API 获取决策
 // ============================================
-async function askGrok(marketData, portfolio, historicalData, technicalIndicators, newsData, model = 'grok-2-mini-1212') {
+async function askGrok(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, model = 'grok-2-mini-1212') {
     // 判断是旗舰型还是轻量级
     const isFlagship = model === 'grok-4-0709';
     const timeoutMs = isFlagship ? 120000 : 60000;  // 旗舰120s, 轻量60s
@@ -1549,7 +1675,7 @@ async function askGrok(marketData, portfolio, historicalData, technicalIndicator
     const modelDisplayName = isFlagship ? 'Grok 4' : 'Grok 3 mini';
 
     // 所有Grok模型都使用多资产交易prompt
-    const prompt = buildMultiAssetTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
+    const prompt = buildMultiAssetTradingPrompt(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData);
 
     try {
         const response = await fetchWithTimeoutAndRetry(
@@ -1631,7 +1757,7 @@ async function askGrok(marketData, portfolio, historicalData, technicalIndicator
 // ============================================
 // 3.4 调用 OpenAI API 获取决策
 // ============================================
-async function askOpenAI(marketData, portfolio, historicalData, technicalIndicators, newsData, model = 'gpt-4o-mini') {
+async function askOpenAI(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, model = 'gpt-4o-mini') {
     // 判断是旗舰型还是轻量级
     const isFlagship = model === 'gpt-4.1';
     const timeoutMs = isFlagship ? 120000 : 60000;  // 旗舰120s, 轻量60s
@@ -1639,7 +1765,7 @@ async function askOpenAI(marketData, portfolio, historicalData, technicalIndicat
     const modelDisplayName = isFlagship ? 'GPT-4.1' : 'GPT-4o mini';
 
     // 所有OpenAI模型都使用多资产交易prompt
-    const prompt = buildMultiAssetTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
+    const prompt = buildMultiAssetTradingPrompt(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData);
 
     try {
         // 构建请求体，GPT-4.1和GPT-4o mini都使用标准配置
@@ -1909,7 +2035,7 @@ async function calculateTotalValue(portfolio, marketData) {
 // ============================================
 // 5. 保存决策到数据库
 // ============================================
-async function saveDecision(agentName, decision, marketData, portfolioValue) {
+async function saveDecision(agentName, decision, marketData, globalMarketData, portfolioValue) {
     try {
         // 为多资产决策添加兼容字段（让前端能正确显示）
         let decisionToSave = decision;
@@ -2008,6 +2134,7 @@ async function saveDecision(agentName, decision, marketData, portfolioValue) {
                 agent_name: agentName,
                 decision: decisionToSave,
                 market_data: marketData,
+                global_market_data: globalMarketData,
                 portfolio_value: portfolioValue
             });
 
