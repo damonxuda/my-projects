@@ -204,68 +204,70 @@ async function processSingleAgent(agent, marketData, historicalData, technicalIn
 }
 
 // ============================================
-// 1. 获取市场数据（使用 /coins/{id} 端点）
+// 1. 获取市场数据（使用官方推荐的 /simple/price 端点）
 // ============================================
 async function fetchMarketData() {
     try {
         console.log(`🔑 COINGECKO_API_KEY: ${COINGECKO_API_KEY ? 'SET (len=' + COINGECKO_API_KEY.length + ')' : 'NOT SET'}`);
-
-        const coinIds = {
-            'BTC': 'bitcoin',
-            'ETH': 'ethereum',
-            'SOL': 'solana',
-            'BNB': 'binancecoin',
-            'DOGE': 'dogecoin',
-            'XRP': 'ripple'
-        };
-
-        const marketData = {};
-
-        // 串行调用每个币种的详细数据（使用官方推荐的 /coins/{id} 端点）
-        for (const [symbol, coinId] of Object.entries(coinIds)) {
-            try {
-                console.log(`🔑 [${symbol}] Fetching market data with API Key: ${COINGECKO_API_KEY ? 'YES' : 'NO'}`);
-                const response = await fetch(
-                    `https://api.coingecko.com/api/v3/coins/${coinId}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`,
-                    {
-                        headers: {
-                            'x-cg-demo-api-key': COINGECKO_API_KEY
-                        }
-                    }
-                );
-
-                if (!response.ok) {
-                    throw new Error(`CoinGecko API error for ${symbol}: ${response.status}`);
+        const response = await fetch(
+            'https://api.coingecko.com/api/v3/simple/price?' +
+            'ids=bitcoin,ethereum,solana,binancecoin,dogecoin,ripple&' +
+            'vs_currencies=usd&' +
+            'include_24hr_change=true&' +
+            'include_24hr_vol=true&' +
+            'include_market_cap=true',
+            {
+                headers: {
+                    'x-cg-demo-api-key': COINGECKO_API_KEY
                 }
-
-                const data = await response.json();
-
-                marketData[symbol] = {
-                    price: data.market_data.current_price.usd,
-                    change_24h: data.market_data.price_change_percentage_24h,
-                    volume_24h: data.market_data.total_volume.usd,
-                    market_cap: data.market_data.market_cap.usd
-                };
-
-                console.log(`📊 Fetched ${symbol} market data: $${marketData[symbol].price}`);
-
-                // 添加小延迟避免API限流
-                await new Promise(resolve => setTimeout(resolve, 1000));
-
-            } catch (error) {
-                console.error(`Failed to fetch market data for ${symbol}:`, error);
-                // 失败时使用默认值，不影响其他币种
-                marketData[symbol] = {
-                    price: 0,
-                    change_24h: 0,
-                    volume_24h: 0,
-                    market_cap: 0
-                };
             }
+        );
+
+        if (!response.ok) {
+            throw new Error(`CoinGecko API error: ${response.status}`);
         }
 
-        marketData.timestamp = new Date().toISOString();
-        return marketData;
+        const data = await response.json();
+
+        return {
+            BTC: {
+                price: data.bitcoin.usd,
+                change_24h: data.bitcoin.usd_24h_change,
+                volume_24h: data.bitcoin.usd_24h_vol,
+                market_cap: data.bitcoin.usd_market_cap
+            },
+            ETH: {
+                price: data.ethereum.usd,
+                change_24h: data.ethereum.usd_24h_change,
+                volume_24h: data.ethereum.usd_24h_vol,
+                market_cap: data.ethereum.usd_market_cap
+            },
+            SOL: {
+                price: data.solana.usd,
+                change_24h: data.solana.usd_24h_change,
+                volume_24h: data.solana.usd_24h_vol,
+                market_cap: data.solana.usd_market_cap
+            },
+            BNB: {
+                price: data.binancecoin.usd,
+                change_24h: data.binancecoin.usd_24h_change,
+                volume_24h: data.binancecoin.usd_24h_vol,
+                market_cap: data.binancecoin.usd_market_cap
+            },
+            DOGE: {
+                price: data.dogecoin.usd,
+                change_24h: data.dogecoin.usd_24h_change,
+                volume_24h: data.dogecoin.usd_24h_vol,
+                market_cap: data.dogecoin.usd_market_cap
+            },
+            XRP: {
+                price: data.ripple.usd,
+                change_24h: data.ripple.usd_24h_change,
+                volume_24h: data.ripple.usd_24h_vol,
+                market_cap: data.ripple.usd_market_cap
+            },
+            timestamp: new Date().toISOString()
+        };
     } catch (error) {
         console.error('Failed to fetch market data:', error);
         throw error;
