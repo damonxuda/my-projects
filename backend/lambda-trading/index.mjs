@@ -1033,10 +1033,18 @@ function parseAndValidateDecision(text, modelName) {
     // 提取 JSON（可能被markdown包裹）
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
+        console.error(`[${modelName}] No JSON found in response. First 500 chars:`, text.substring(0, 500));
         throw new Error(`${modelName} response is not valid JSON`);
     }
 
-    const decision = JSON.parse(jsonMatch[0]);
+    let decision;
+    try {
+        decision = JSON.parse(jsonMatch[0]);
+    } catch (error) {
+        console.error(`[${modelName}] JSON parse error:`, error.message);
+        console.error(`[${modelName}] Raw JSON string (first 500 chars):`, jsonMatch[0].substring(0, 500));
+        throw error;
+    }
 
     // 验证决策格式（支持单笔和多笔两种格式）
     if (decision.actions) {
