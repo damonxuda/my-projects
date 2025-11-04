@@ -24,6 +24,7 @@ const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 const GROK_API_KEY = process.env.GROK_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const CRYPTOCOMPARE_API_KEY = process.env.CRYPTOCOMPARE_API_KEY;  // CryptoCompare News API
+const COINGECKO_API_KEY = process.env.COINGECKO_API_KEY;  // CoinGecko Demo API Key
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -213,7 +214,12 @@ async function fetchMarketData() {
             'vs_currencies=usd&' +
             'include_24hr_change=true&' +
             'include_24hr_vol=true&' +
-            'include_market_cap=true'
+            'include_market_cap=true',
+            {
+                headers: {
+                    'x-cg-demo-api-key': COINGECKO_API_KEY
+                }
+            }
         );
 
         if (!response.ok) {
@@ -289,7 +295,12 @@ async function fetchHistoricalOHLC() {
             try {
                 // 获取过去7天的OHLC数据（vs_currency=usd, days=7）
                 const response = await fetch(
-                    `https://api.coingecko.com/api/v3/coins/${coinId}/ohlc?vs_currency=usd&days=7`
+                    `https://api.coingecko.com/api/v3/coins/${coinId}/ohlc?vs_currency=usd&days=7`,
+                    {
+                        headers: {
+                            'x-cg-demo-api-key': COINGECKO_API_KEY
+                        }
+                    }
                 );
 
                 if (!response.ok) {
