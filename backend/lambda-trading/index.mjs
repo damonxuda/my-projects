@@ -208,12 +208,48 @@ async function processSingleAgent(agent, marketData, globalMarketData, historica
 }
 
 // ============================================
-// 1. 获取市场数据（使用 /coins/markets 端点获取更全面的数据）
+// 1. 获取市场数据（同时使用 /simple/price 和 /coins/markets）
 // ============================================
 async function fetchMarketData() {
     try {
         console.log(`🔑 COINGECKO_API_KEY: ${COINGECKO_API_KEY ? 'SET (len=' + COINGECKO_API_KEY.length + ')' : 'NOT SET'}`);
-        const response = await fetch(
+
+        const coinMap = {
+            'bitcoin': 'BTC',
+            'ethereum': 'ETH',
+            'solana': 'SOL',
+            'binancecoin': 'BNB',
+            'dogecoin': 'DOGE',
+            'ripple': 'XRP'
+        };
+
+        // 1️⃣ 调用 /simple/price 获取最新实时价格
+        console.log('📍 Fetching latest prices from /simple/price...');
+        const priceResponse = await fetch(
+            'https://api.coingecko.com/api/v3/simple/price?' +
+            'ids=bitcoin,ethereum,solana,binancecoin,dogecoin,ripple&' +
+            'vs_currencies=usd&' +
+            'include_market_cap=true&' +
+            'include_24hr_vol=true&' +
+            'include_24hr_change=true&' +
+            'include_last_updated_at=true',
+            {
+                headers: {
+                    'x-cg-demo-api-key': COINGECKO_API_KEY
+                }
+            }
+        );
+
+        if (!priceResponse.ok) {
+            throw new Error(`CoinGecko /simple/price error: ${priceResponse.status}`);
+        }
+
+        const priceData = await priceResponse.json();
+        console.log('✅ Latest prices fetched from /simple/price');
+
+        // 2️⃣ 调用 /coins/markets 获取完整市场数据（ATH/ATL、供应量等）
+        console.log('📊 Fetching market data from /coins/markets...');
+        const marketsResponse = await fetch(
             'https://api.coingecko.com/api/v3/coins/markets?' +
             'vs_currency=usd&' +
             'ids=bitcoin,ethereum,solana,binancecoin,dogecoin,ripple&' +
@@ -227,64 +263,51 @@ async function fetchMarketData() {
             }
         );
 
-        if (!response.ok) {
-            throw new Error(`CoinGecko API error: ${response.status}`);
+        if (!marketsResponse.ok) {
+            throw new Error(`CoinGecko /coins/markets error: ${marketsResponse.status}`);
         }
 
-        const data = await response.json();
+        const marketsData = await marketsResponse.json();
+        console.log('✅ Market data fetched from /coins/markets');
 
-        // 将数组转为对象映射
-        const coinMap = {
-            'bitcoin': 'BTC',
-            'ethereum': 'ETH',
-            'solana': 'SOL',
-            'binancecoin': 'BNB',
-            'dogecoin': 'DOGE',
-            'ripple': 'XRP'
-        };
-
+        // 3️⃣ 合并两个API的数据
         const marketData = {};
 
-        for (const coin of data) {
+        for (const coin of marketsData) {
             const symbol = coinMap[coin.id];
             if (!symbol) continue;
 
-            marketData[symbol] = {
-                // 基础价格数据
-                price: coin.current_price,
-                change_24h: coin.price_change_percentage_24h,
-                volume_24h: coin.total_volume,
-                market_cap: coin.market_cap,
+            const simplePriceData = priceData[coin.id];
 
-                // 新增：市场地位数据
+            marketData[symbol] = {
+                // 使用 /simple/price 的最新价格（更实时）
+                price: simplePriceData?.usd || coin.current_price,
+                change_24h: simplePriceData?.usd_24h_change || coin.price_change_percentage_24h,
+                volume_24h: simplePriceData?.usd_24h_vol || coin.total_volume,
+                market_cap: simplePriceData?.usd_market_cap || coin.market_cap,
+                last_updated: simplePriceData?.last_updated_at ? new Date(simplePriceData.last_updated_at * 1000).toISOString() : null,
+
+                // 使用 /coins/markets 的扩展数据
                 market_cap_rank: coin.market_cap_rank,
                 fully_diluted_valuation: coin.fully_diluted_valuation,
-
-                // 新增：24h高低价
                 high_24h: coin.high_24h,
                 low_24h: coin.low_24h,
-
-                // 新增：历史极值数据
-                ath: coin.ath,  // 历史最高价
-                ath_change_percentage: coin.ath_change_percentage,  // 距ATH的回撤百分比
+                ath: coin.ath,
+                ath_change_percentage: coin.ath_change_percentage,
                 ath_date: coin.ath_date,
-                atl: coin.atl,  // 历史最低价
-                atl_change_percentage: coin.atl_change_percentage,  // 距ATL的涨幅百分比
+                atl: coin.atl,
+                atl_change_percentage: coin.atl_change_percentage,
                 atl_date: coin.atl_date,
-
-                // 新增：供应数据
                 circulating_supply: coin.circulating_supply,
                 total_supply: coin.total_supply,
                 max_supply: coin.max_supply,
-
-                // 新增：7天价格变化（如果有）
                 price_change_percentage_7d: coin.price_change_percentage_7d_in_currency || null
             };
         }
 
         marketData.timestamp = new Date().toISOString();
 
-        console.log('📊 Market data fetched with extended fields (ATH/ATL, supply, rankings)');
+        console.log('📊 Market data merged: /simple/price (latest) + /coins/markets (extended)');
         return marketData;
 
     } catch (error) {
