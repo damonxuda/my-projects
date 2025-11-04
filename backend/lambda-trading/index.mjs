@@ -22,7 +22,6 @@ const GEMINI_PRO_API_KEY = process.env.GEMINI_PRO_API_KEY;  // 代理商API Key 
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 const GROK_API_KEY = process.env.GROK_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const DEEPSEEK_R1_API_KEY = process.env.DEEPSEEK_R1_API_KEY;  // 代理商API Key for DeepSeek R1
 const CRYPTOCOMPARE_API_KEY = process.env.CRYPTOCOMPARE_API_KEY;  // CryptoCompare News API
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
