@@ -51,6 +51,9 @@ const AGENTS = [
     // DeepSeek (1个)
     { name: 'deepseek_v3', type: 'llm', enabled: true },                  // DeepSeek V3 (AWS Bedrock)
 
+    // Qwen (1个)
+    { name: 'qwen3_235b', type: 'llm', enabled: true },                   // Qwen3 235B A22B (AWS Bedrock)
+
     // ETF基准 (2个)
     { name: 'gdlc', type: 'benchmark', enabled: true },                   // GDLC市值加权ETF基准
     { name: 'equal_weight', type: 'benchmark', enabled: true }            // BITW等权重ETF基准
@@ -1090,6 +1093,10 @@ async function askLLM(agentName, marketData, portfolio, historicalData, technica
         case 'deepseek_v3':
             return await askDeepSeekV3Bedrock(marketData, portfolio, historicalData, technicalIndicators, newsData);
 
+        // Qwen
+        case 'qwen3_235b':
+            return await askQwen3Bedrock(marketData, portfolio, historicalData, technicalIndicators, newsData);
+
         default:
             throw new Error(`Unknown agent: ${agentName}`);
     }
@@ -1281,6 +1288,54 @@ async function askDeepSeekV3Bedrock(marketData, portfolio, historicalData, techn
         const response = await bedrockClient.send(command);
 
         // 解析响应
+        const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+        const content = responseBody.choices[0].message.content;
+
+        console.log(`[${modelDisplayName}] Response received successfully`);
+
+        return parseAndValidateDecision(content, modelDisplayName);
+
+    } catch (error) {
+        console.error(`[${modelDisplayName}] API failed:`, error);
+        return {
+            action: 'hold',
+            asset: null,
+            amount: 0,
+            reason: 'API调用失败，保持持有'
+        };
+    }
+}
+
+// ============================================
+// 3.1.3 调用 Qwen3 235B API (通过 AWS Bedrock)
+// ============================================
+async function askQwen3Bedrock(marketData, portfolio, historicalData, technicalIndicators, newsData) {
+    const prompt = buildMultiAssetTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData);
+    const modelDisplayName = 'Qwen3 235B (Bedrock)';
+
+    try {
+        console.log(`[${modelDisplayName}] Invoking Bedrock model: qwen.qwen3-235b-a22b-2507-v1:0`);
+
+        // 构建 Bedrock API 请求体
+        const requestBody = {
+            messages: [
+                { role: 'user', content: prompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 4000
+        };
+
+        const command = new InvokeModelCommand({
+            modelId: 'qwen.qwen3-235b-a22b-2507-v1:0',
+            contentType: 'application/json',
+            accept: 'application/json',
+            body: JSON.stringify(requestBody)
+        });
+
+        // Bedrock 默认超时为300秒
+        const response = await bedrockClient.send(command);
+
+        // 解析响应（OpenAI兼容格式）
         const responseBody = JSON.parse(new TextDecoder().decode(response.body));
         const content = responseBody.choices[0].message.content;
 

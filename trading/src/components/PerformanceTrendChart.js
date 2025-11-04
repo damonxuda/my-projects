@@ -5,6 +5,7 @@ const PerformanceTrendChart = ({ historyData }) => {
   // Agent 颜色配置 - 每个模型一个颜色（按卡片显示顺序排列）
   const agentColors = {
     'deepseek_v3': '#DC2626',        // red-600
+    'qwen3_235b': '#EC4899',         // pink-500
     'openai_standard': '#10B981',    // green-500
     'openai_mini': '#34D399',        // green-400
     'gemini_pro': '#2563EB',         // blue-600
@@ -21,6 +22,7 @@ const PerformanceTrendChart = ({ historyData }) => {
   const initialPoint = {
     round: 0,
     deepseek_v3: 50000,
+    qwen3_235b: 50000,
     openai_standard: 50000,
     openai_mini: 50000,
     gemini_pro: 50000,
@@ -39,6 +41,7 @@ const PerformanceTrendChart = ({ historyData }) => {
   // 模型显示名称（按卡片显示顺序排列）
   const agentNames = {
     'deepseek_v3': 'DeepSeek V3',
+    'qwen3_235b': 'Qwen3 235B',
     'openai_standard': 'GPT-4.1',
     'openai_mini': 'GPT-4o mini',
     'gemini_pro': 'Gemini 2.5 Pro',

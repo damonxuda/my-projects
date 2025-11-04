@@ -44,6 +44,9 @@ const DecisionTimeline = ({ decisions }) => {
     // DeepSeek
     deepseek_v3: '🔴',      // 旗舰-圆形
 
+    // Qwen
+    qwen3_235b: '🩷',       // 旗舰-心形
+
     // ETF
     gdlc: '📊',
     equal_weight: '⚖️'

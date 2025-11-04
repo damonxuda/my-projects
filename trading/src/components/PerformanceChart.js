@@ -2,9 +2,9 @@ import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 
 const PerformanceChart = ({ portfolios }) => {
-  // 固定显示顺序：DeepSeek在最前，Gemini Pro在Flash前，其他按厂商分组
+  // 固定显示顺序：DeepSeek在最前，Qwen紧随其后，Gemini Pro在Flash前，其他按厂商分组
   const displayOrder = [
-    'DEEPSEEK_V3',
+    'DEEPSEEK_V3', 'QWEN3_235B',
     'OPENAI_STANDARD', 'OPENAI_MINI',
     'GEMINI_PRO', 'GEMINI_FLASH',
     'CLAUDE_STANDARD', 'CLAUDE_MINI',
@@ -23,6 +23,7 @@ const PerformanceChart = ({ portfolios }) => {
     'GROK_STANDARD': 'Grok 4',
     'GROK_MINI': 'Grok 3 mini',
     'DEEPSEEK_V3': 'DeepSeek V3',
+    'QWEN3_235B': 'Qwen3 235B',
     'EQUAL_WEIGHT': 'BITW',
     'GDLC': 'GDLC'
   };
