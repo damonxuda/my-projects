@@ -208,6 +208,7 @@ async function processSingleAgent(agent, marketData, historicalData, technicalIn
 // ============================================
 async function fetchMarketData() {
     try {
+        console.log(`🔑 COINGECKO_API_KEY: ${COINGECKO_API_KEY ? 'SET (len=' + COINGECKO_API_KEY.length + ')' : 'NOT SET'}`);
         const response = await fetch(
             'https://api.coingecko.com/api/v3/simple/price?' +
             'ids=bitcoin,ethereum,solana,binancecoin,dogecoin,ripple&' +
@@ -294,6 +295,7 @@ async function fetchHistoricalOHLC() {
         for (const [symbol, coinId] of Object.entries(coinIds)) {
             try {
                 // 获取过去7天的OHLC数据（vs_currency=usd, days=7）
+                console.log(`🔑 [${symbol}] Fetching OHLC with API Key: ${COINGECKO_API_KEY ? 'YES' : 'NO'}`);
                 const response = await fetch(
                     `https://api.coingecko.com/api/v3/coins/${coinId}/ohlc?vs_currency=usd&days=7`,
                     {
