@@ -167,12 +167,13 @@ const TradingDashboard = () => {
         </button>
       </div>
 
-      {/* Agent 性能卡片 - 4行3列固定布局 */}
+      {/* Agent 性能卡片 - 响应式布局 */}
+      {/* 手机: 1列 | 平板竖屏: 2列 | 平板横屏/桌面: 3列 */}
       {/* 第一行: DeepSeek R1, GPT-4.1, GPT-4o mini */}
       {/* 第二行: Gemini 2.5 Pro, Gemini 2.5 Flash, Sonnet 4.5 */}
       {/* 第三行: Haiku 4.5, Grok 4, Grok 3 mini */}
       {/* 第四行: BITW, GDLC */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {(() => {
           // 固定显示顺序：DeepSeek在最前，Gemini Pro在Flash前，其他按厂商分组
           const displayOrder = [
