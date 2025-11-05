@@ -171,18 +171,18 @@ serve(async (req) => {
       const hours = parseInt(url.searchParams.get('hours') || '240') // 默认10天 = 240小时
 
       // 自适应采样间隔：根据时间范围自动调整采样密度
-      let sampleHours = 1 // 默认每小时采样
+      let sampleMinutes = 60 // 默认每小时采样（60分钟）
       if (hours > 720) { // 超过30天
-        sampleHours = 24 // 每天一个点
+        sampleMinutes = 1440 // 每天一个点（24小时）
       } else if (hours > 168) { // 超过7天
-        sampleHours = 4 // 每4小时一个点
+        sampleMinutes = 240 // 每4小时一个点
       }
 
       // 使用数据库函数进行聚合，避免在Edge Function中处理大量数据
       const { data: portfolios, error } = await supabase
         .rpc('get_portfolio_history', {
           hours_back: hours,
-          sample_hours: sampleHours
+          sample_interval_minutes: sampleMinutes
         })
 
       if (error) {
