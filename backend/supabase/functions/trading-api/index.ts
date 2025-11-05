@@ -169,39 +169,36 @@ serve(async (req) => {
     // GET /history - 获取所有agents的历史数据（用于趋势图）
     if (req.method === 'GET' && path === '/history') {
       const hours = parseInt(url.searchParams.get('hours') || '240') // 默认10天 = 240小时
-      const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString()
 
-      // 获取指定时间范围内的所有portfolio记录
-      // 限制最多返回1000条记录，避免内存溢出
+      // 自适应采样间隔：根据时间范围自动调整采样密度
+      let sampleHours = 1 // 默认每小时采样
+      if (hours > 720) { // 超过30天
+        sampleHours = 24 // 每天一个点
+      } else if (hours > 168) { // 超过7天
+        sampleHours = 4 // 每4小时一个点
+      }
+
+      // 使用数据库函数进行聚合，避免在Edge Function中处理大量数据
       const { data: portfolios, error } = await supabase
-        .from('llm_trading_portfolios')
-        .select('agent_name, total_value, created_at')
-        .gte('created_at', since)
-        .order('created_at', { ascending: true })
-        .limit(1000)
+        .rpc('get_portfolio_history', {
+          hours_back: hours,
+          sample_hours: sampleHours
+        })
 
       if (error) {
         throw error
       }
 
-      // 按时间分组：将5分钟内的记录归为同一轮采样
+      // 将数据转换为前端需要的格式：{ round: 1, agent1: value1, agent2: value2, ... }
       const roundMap: any = {}
-      let currentRound = 0
-      let lastTimestamp = 0
 
       portfolios?.forEach((p: any) => {
-        const timestamp = new Date(p.created_at).getTime()
+        const round = p.round_number
 
-        // 如果距离上次采样超过5分钟（300000ms），开始新一轮
-        if (timestamp - lastTimestamp > 300000) {
-          currentRound++
-          lastTimestamp = timestamp
+        if (!roundMap[round]) {
+          roundMap[round] = { round }
         }
-
-        if (!roundMap[currentRound]) {
-          roundMap[currentRound] = { round: currentRound }
-        }
-        roundMap[currentRound][p.agent_name] = parseFloat(p.total_value)
+        roundMap[round][p.agent_name] = parseFloat(p.total_value)
       })
 
       const history = Object.values(roundMap)
