@@ -1264,9 +1264,9 @@ async function askLLM(agentName, marketData, globalMarketData, portfolio, histor
 
         // Grok
         case 'grok_standard':
-            return await askGrok(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, 'grok-4-0709');
+            return await askGrok(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, 'grok-4-fast-reasoning');
         case 'grok_mini':
-            return await askGrok(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, 'grok-3-mini');
+            return await askGrok(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, 'grok-4-fast-non-reasoning');
 
         // DeepSeek
         case 'deepseek_v3':
@@ -1690,12 +1690,12 @@ async function askClaude(marketData, globalMarketData, portfolio, historicalData
 // ============================================
 // 3.3 调用 Grok API 获取决策
 // ============================================
-async function askGrok(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, model = 'grok-2-mini-1212') {
-    // 判断是旗舰型还是轻量级
-    const isFlagship = model === 'grok-4-0709';
-    const timeoutMs = isFlagship ? 120000 : 60000;  // 旗舰120s, 轻量60s
-    const maxAttempts = isFlagship ? 2 : 1;  // 旗舰重试1次, 轻量不重试
-    const modelDisplayName = isFlagship ? 'Grok 4' : 'Grok 3 mini';
+async function askGrok(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, model = 'grok-4-fast-non-reasoning') {
+    // 判断是推理型还是非推理型
+    const isReasoning = model === 'grok-4-fast-reasoning';
+    const timeoutMs = isReasoning ? 120000 : 60000;  // 推理型120s, 非推理型60s
+    const maxAttempts = isReasoning ? 2 : 1;  // 推理型重试1次, 非推理型不重试
+    const modelDisplayName = isReasoning ? 'Grok 4 Fast Reasoning' : 'Grok 4 Fast';
 
     // 所有Grok模型都使用多资产交易prompt
     const prompt = buildMultiAssetTradingPrompt(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData);
