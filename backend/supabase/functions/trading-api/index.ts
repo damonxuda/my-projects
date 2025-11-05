@@ -172,11 +172,13 @@ serve(async (req) => {
       const since = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString()
 
       // 获取指定时间范围内的所有portfolio记录
+      // 限制最多返回1000条记录，避免内存溢出
       const { data: portfolios, error } = await supabase
         .from('llm_trading_portfolios')
         .select('agent_name, total_value, created_at')
         .gte('created_at', since)
         .order('created_at', { ascending: true })
+        .limit(1000)
 
       if (error) {
         throw error
