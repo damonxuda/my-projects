@@ -185,6 +185,15 @@ serve(async (req) => {
         throw error
       }
 
+      // 查询项目开始时间（最早的记录）
+      const { data: earliestData } = await supabase
+        .from('llm_trading_portfolios')
+        .select('created_at')
+        .order('created_at', { ascending: true })
+        .limit(1)
+
+      const projectStartTime = earliestData?.[0]?.created_at || null
+
       // 将数据转换为前端需要的格式：{ round: 1, agent1: value1, agent2: value2, ... }
       const roundMap: any = {}
 
@@ -200,7 +209,11 @@ serve(async (req) => {
       const history = Object.values(roundMap)
 
       return new Response(
-        JSON.stringify({ success: true, history }),
+        JSON.stringify({
+          success: true,
+          history,
+          projectStartTime // 返回项目开始时间，供前端判断是否需要添加初始点
+        }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }

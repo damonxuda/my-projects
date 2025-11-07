@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d }) => {
+const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, projectStartTime }) => {
   // 时间范围选择：24h（全采样）/ 7d（4小时采样）/ 30d（1天采样）
   const [timeRange, setTimeRange] = useState('24h');
 
@@ -16,6 +16,24 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d }
   };
 
   const historyData = getHistoryData();
+
+  // 判断是否需要添加初始点：项目开始时间在当前视图范围内
+  const shouldAddInitialPoint = () => {
+    if (!projectStartTime) return false;
+
+    const now = new Date();
+    const startTime = new Date(projectStartTime);
+    const hoursSinceStart = (now - startTime) / (1000 * 60 * 60);
+
+    // 根据当前视图判断
+    switch(timeRange) {
+      case '24h': return hoursSinceStart <= 24;
+      case '7d': return hoursSinceStart <= 168; // 7天 = 168小时
+      case '30d': return hoursSinceStart <= 720; // 30天 = 720小时
+      default: return false;
+    }
+  };
+
   // Agent 颜色配置 - 每个模型一个颜色（按卡片显示顺序排列）
   const agentColors = {
     'deepseek_v3': '#DC2626',        // red-600
@@ -32,8 +50,25 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d }
     'equal_weight': '#6B7280'        // gray-500
   };
 
-  // 所有视图都直接使用后端返回的实际数据，不添加$50,000初始点
-  const chartData = historyData;
+  // 初始点定义（所有agent都从$50,000开始）
+  const initialPoint = {
+    round: 0,
+    deepseek_v3: 50000,
+    qwen3_235b: 50000,
+    openai_standard: 50000,
+    openai_mini: 50000,
+    gemini_pro: 50000,
+    gemini_flash: 50000,
+    claude_standard: 50000,
+    claude_mini: 50000,
+    grok_standard: 50000,
+    grok_mini: 50000,
+    gdlc: 50000,
+    equal_weight: 50000
+  };
+
+  // 根据项目开始时间动态决定是否添加初始点
+  const chartData = shouldAddInitialPoint() ? [initialPoint, ...historyData] : historyData;
 
   // 模型显示名称（按卡片显示顺序排列）
   const agentNames = {

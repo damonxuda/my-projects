@@ -14,6 +14,7 @@ const TradingDashboard = () => {
   const [historyData24h, setHistoryData24h] = useState([]);
   const [historyData7d, setHistoryData7d] = useState([]);
   const [historyData30d, setHistoryData30d] = useState([]);
+  const [projectStartTime, setProjectStartTime] = useState(null);
   const [marketData, setMarketData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -109,14 +110,24 @@ const TradingDashboard = () => {
 
       if (history24hData.success) {
         setHistoryData24h(history24hData.history || []);
+        // 保存项目开始时间（只需要保存一次）
+        if (history24hData.projectStartTime && !projectStartTime) {
+          setProjectStartTime(history24hData.projectStartTime);
+        }
       }
 
       if (history7dData.success) {
         setHistoryData7d(history7dData.history || []);
+        if (history7dData.projectStartTime && !projectStartTime) {
+          setProjectStartTime(history7dData.projectStartTime);
+        }
       }
 
       if (history30dData.success) {
         setHistoryData30d(history30dData.history || []);
+        if (history30dData.projectStartTime && !projectStartTime) {
+          setProjectStartTime(history30dData.projectStartTime);
+        }
       }
 
       setLastUpdate(new Date());
@@ -234,12 +245,13 @@ const TradingDashboard = () => {
         })()}
       </div>
 
-      {/* 账户价值趋势图 - 传入3个不同时间范围的数据 */}
+      {/* 账户价值趋势图 - 传入3个不同时间范围的数据和项目开始时间 */}
       {(historyData24h.length > 0 || historyData7d.length > 0 || historyData30d.length > 0) && (
         <PerformanceTrendChart
           historyData24h={historyData24h}
           historyData7d={historyData7d}
           historyData30d={historyData30d}
+          projectStartTime={projectStartTime}
         />
       )}
 
