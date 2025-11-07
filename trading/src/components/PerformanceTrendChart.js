@@ -32,25 +32,8 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d }
     'equal_weight': '#6B7280'        // gray-500
   };
 
-  // 添加初始点（round=0，所有agent都是50000）
-  const initialPoint = {
-    round: 0,
-    deepseek_v3: 50000,
-    qwen3_235b: 50000,
-    openai_standard: 50000,
-    openai_mini: 50000,
-    gemini_pro: 50000,
-    gemini_flash: 50000,
-    claude_standard: 50000,
-    claude_mini: 50000,
-    grok_standard: 50000,
-    grok_mini: 50000,
-    gdlc: 50000,
-    equal_weight: 50000
-  };
-
-  // 合并初始点和历史数据
-  const chartData = [initialPoint, ...historyData];
+  // 所有视图都直接使用后端返回的实际数据，不添加$50,000初始点
+  const chartData = historyData;
 
   // 模型显示名称（按卡片显示顺序排列）
   const agentNames = {
