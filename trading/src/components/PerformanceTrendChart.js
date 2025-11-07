@@ -1,7 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-const PerformanceTrendChart = ({ historyData }) => {
+const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d }) => {
+  // 时间范围选择：24h（全采样）/ 7d（4小时采样）/ 30d（1天采样）
+  const [timeRange, setTimeRange] = useState('24h');
+
+  // 根据时间范围选择对应的数据
+  const getHistoryData = () => {
+    switch(timeRange) {
+      case '24h': return historyData24h || [];
+      case '7d': return historyData7d || [];
+      case '30d': return historyData30d || [];
+      default: return historyData24h || [];
+    }
+  };
+
+  const historyData = getHistoryData();
   // Agent 颜色配置 - 每个模型一个颜色（按卡片显示顺序排列）
   const agentColors = {
     'deepseek_v3': '#DC2626',        // red-600
@@ -102,7 +116,44 @@ const PerformanceTrendChart = ({ historyData }) => {
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6">
-      <h2 className="text-xl font-bold text-gray-900 mb-4">账户价值趋势</h2>
+      {/* 标题和时间范围选择器 */}
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold text-gray-900">账户价值趋势</h2>
+
+        {/* 时间范围切换按钮 */}
+        <div className="flex space-x-2">
+          <button
+            onClick={() => setTimeRange('24h')}
+            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+              timeRange === '24h'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            24小时
+          </button>
+          <button
+            onClick={() => setTimeRange('7d')}
+            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+              timeRange === '7d'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            7天
+          </button>
+          <button
+            onClick={() => setTimeRange('30d')}
+            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+              timeRange === '30d'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            30天
+          </button>
+        </div>
+      </div>
 
       <ResponsiveContainer width="100%" height={400}>
         <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>

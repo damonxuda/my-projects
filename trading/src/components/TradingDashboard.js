@@ -11,7 +11,9 @@ const TradingDashboard = () => {
   // 状态管理
   const [portfolios, setPortfolios] = useState([]);
   const [decisions, setDecisions] = useState([]);
-  const [historyData, setHistoryData] = useState([]);
+  const [historyData24h, setHistoryData24h] = useState([]);
+  const [historyData7d, setHistoryData7d] = useState([]);
+  const [historyData30d, setHistoryData30d] = useState([]);
   const [marketData, setMarketData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -37,8 +39,8 @@ const TradingDashboard = () => {
         throw new Error('未能获取用户邮箱');
       }
 
-      // 并行请求 portfolios, decisions 和 history
-      const [portfoliosRes, decisionsRes, historyRes] = await Promise.all([
+      // 并行请求 portfolios, decisions 和 3个不同时间范围的 history
+      const [portfoliosRes, decisionsRes, history24hRes, history7dRes, history30dRes] = await Promise.all([
         fetch(`${TRADING_API_URL}/portfolios`, {
           headers: {
             'clerk-token': token,
@@ -53,7 +55,24 @@ const TradingDashboard = () => {
             'Content-Type': 'application/json'
           }
         }),
-        fetch(`${TRADING_API_URL}/history?hours=240`, {
+        // 24小时：每小时1个点（24个点）
+        fetch(`${TRADING_API_URL}/history?hours=24&sample_minutes=60`, {
+          headers: {
+            'clerk-token': token,
+            'x-user-email': userEmail,
+            'Content-Type': 'application/json'
+          }
+        }),
+        // 7天：每4小时1个点（42个点）
+        fetch(`${TRADING_API_URL}/history?hours=168&sample_minutes=240`, {
+          headers: {
+            'clerk-token': token,
+            'x-user-email': userEmail,
+            'Content-Type': 'application/json'
+          }
+        }),
+        // 30天：每天1个点（30个点）
+        fetch(`${TRADING_API_URL}/history?hours=720&sample_minutes=1440`, {
           headers: {
             'clerk-token': token,
             'x-user-email': userEmail,
@@ -62,13 +81,15 @@ const TradingDashboard = () => {
         })
       ]);
 
-      if (!portfoliosRes.ok || !decisionsRes.ok || !historyRes.ok) {
+      if (!portfoliosRes.ok || !decisionsRes.ok || !history24hRes.ok || !history7dRes.ok || !history30dRes.ok) {
         throw new Error('API请求失败');
       }
 
       const portfoliosData = await portfoliosRes.json();
       const decisionsData = await decisionsRes.json();
-      const historyDataRes = await historyRes.json();
+      const history24hData = await history24hRes.json();
+      const history7dData = await history7dRes.json();
+      const history30dData = await history30dRes.json();
 
       if (portfoliosData.success) {
         setPortfolios(portfoliosData.portfolios || []);
@@ -86,8 +107,16 @@ const TradingDashboard = () => {
         }
       }
 
-      if (historyDataRes.success) {
-        setHistoryData(historyDataRes.history || []);
+      if (history24hData.success) {
+        setHistoryData24h(history24hData.history || []);
+      }
+
+      if (history7dData.success) {
+        setHistoryData7d(history7dData.history || []);
+      }
+
+      if (history30dData.success) {
+        setHistoryData30d(history30dData.history || []);
       }
 
       setLastUpdate(new Date());
@@ -205,9 +234,13 @@ const TradingDashboard = () => {
         })()}
       </div>
 
-      {/* 账户价值趋势图 */}
-      {historyData.length > 0 && (
-        <PerformanceTrendChart historyData={historyData} />
+      {/* 账户价值趋势图 - 传入3个不同时间范围的数据 */}
+      {(historyData24h.length > 0 || historyData7d.length > 0 || historyData30d.length > 0) && (
+        <PerformanceTrendChart
+          historyData24h={historyData24h}
+          historyData7d={historyData7d}
+          historyData30d={historyData30d}
+        />
       )}
 
       {/* 决策时间线 */}

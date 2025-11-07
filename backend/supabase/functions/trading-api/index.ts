@@ -170,12 +170,18 @@ serve(async (req) => {
     if (req.method === 'GET' && path === '/history') {
       const hours = parseInt(url.searchParams.get('hours') || '240') // 默认10天 = 240小时
 
-      // 自适应采样间隔：根据时间范围自动调整采样密度
-      let sampleMinutes = 60 // 默认每小时采样（60分钟）
-      if (hours > 720) { // 超过30天
-        sampleMinutes = 1440 // 每天一个点（24小时）
-      } else if (hours > 168) { // 超过7天
-        sampleMinutes = 240 // 每4小时一个点
+      // 采样间隔：可由前端指定，或根据时间范围自动调整
+      let sampleMinutes = parseInt(url.searchParams.get('sample_minutes') || '0')
+
+      if (sampleMinutes === 0) {
+        // 未指定时，自适应采样间隔
+        if (hours > 720) { // 超过30天
+          sampleMinutes = 1440 // 每天一个点
+        } else if (hours > 168) { // 超过7天
+          sampleMinutes = 240 // 每4小时一个点
+        } else {
+          sampleMinutes = 60 // 每小时一个点
+        }
       }
 
       // 使用数据库函数进行聚合，避免在Edge Function中处理大量数据
