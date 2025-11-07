@@ -55,24 +55,24 @@ const TradingDashboard = () => {
             'Content-Type': 'application/json'
           }
         }),
-        // 24小时：每小时1个点（24个点）
-        fetch(`${TRADING_API_URL}/history?hours=24&sample_minutes=60`, {
+        // 24小时：每小时1个点（最多24个点）
+        fetch(`${TRADING_API_URL}/history?hours=24`, {
           headers: {
             'clerk-token': token,
             'x-user-email': userEmail,
             'Content-Type': 'application/json'
           }
         }),
-        // 7天：每4小时1个点（42个点）
-        fetch(`${TRADING_API_URL}/history?hours=168&sample_minutes=240`, {
+        // 7天：每4小时1个点（最多42个点）
+        fetch(`${TRADING_API_URL}/history?hours=168`, {
           headers: {
             'clerk-token': token,
             'x-user-email': userEmail,
             'Content-Type': 'application/json'
           }
         }),
-        // 30天：每天1个点（30个点）
-        fetch(`${TRADING_API_URL}/history?hours=720&sample_minutes=1440`, {
+        // 30天：每天1个点（最多30个点）
+        fetch(`${TRADING_API_URL}/history?hours=720`, {
           headers: {
             'clerk-token': token,
             'x-user-email': userEmail,
