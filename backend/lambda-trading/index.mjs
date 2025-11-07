@@ -142,6 +142,12 @@ async function processSingleAgent(agent, marketData, globalMarketData, historica
         const portfolio = await getCurrentPortfolio(agent.name);
         console.log(`💰 ${agent.name} Portfolio:`, portfolio);
 
+        // 1.5 扣除ETF每日管理费（如果持有GDLC或BITW）
+        const feeResult = await deductDailyManagementFees(portfolio);
+        if (feeResult.totalFeesDeducted > 0) {
+            console.log(`💳 ${agent.name} 管理费扣除: 共 -$${feeResult.totalFeesDeducted.toFixed(2)}`);
+        }
+
         // 2. 获取决策（LLM或基准策略）
         let decision;
         if (agent.type === 'benchmark') {
@@ -614,6 +620,97 @@ async function getCurrentPortfolio(agentName) {
         console.error('Failed to fetch portfolio:', error);
         throw error;
     }
+}
+
+// ============================================
+// 2.4 扣除ETF每日管理费
+// ============================================
+async function deductDailyManagementFees(portfolio) {
+    // ETF年度管理费率
+    const ANNUAL_FEE_RATES = {
+        'GDLC': 0.0059,  // 0.59% 年费
+        'BITW': 0.0250   // 2.50% 年费
+    };
+
+    const HOURS_PER_DAY = 24;
+    const DAYS_PER_YEAR = 365;
+
+    let totalFeesDeducted = 0;
+    const feeDetails = [];
+
+    for (const ticker of Object.keys(ANNUAL_FEE_RATES)) {
+        const sharesKey = `${ticker}_SHARES`;
+        const lastFeeCheckKey = `${ticker}_LAST_FEE_CHECK`;
+
+        // 检查是否持有该ETF
+        if (!portfolio.holdings[sharesKey] || portfolio.holdings[sharesKey] <= 0) {
+            continue;
+        }
+
+        const currentShares = portfolio.holdings[sharesKey];
+        const lastFeeCheckTimestamp = portfolio.holdings[lastFeeCheckKey] || 0;
+        const nowTimestamp = Date.now();
+
+        // 计算自上次扣费以来的小时数
+        let hoursSinceLastFee = 0;
+        if (lastFeeCheckTimestamp === 0) {
+            // 首次检查，按1小时计算（避免回溯扣费）
+            hoursSinceLastFee = 1;
+        } else {
+            hoursSinceLastFee = (nowTimestamp - lastFeeCheckTimestamp) / (1000 * 3600);
+        }
+
+        // 计算应扣除的天数（小时转天数）
+        const daysToCharge = hoursSinceLastFee / HOURS_PER_DAY;
+
+        // 获取当前ETF价格
+        try {
+            const quote = await yahooFinance.quote(ticker);
+            const currentPrice = quote.regularMarketPrice;
+
+            if (!currentPrice || currentPrice <= 0) {
+                console.warn(`⚠️ ${ticker}: 无法获取价格，跳过管理费扣除`);
+                continue;
+            }
+
+            // 计算持仓市值
+            const holdingValue = currentShares * currentPrice;
+
+            // 计算管理费金额：持仓市值 × 年费率 × (天数 / 365)
+            const annualFeeRate = ANNUAL_FEE_RATES[ticker];
+            const feeAmount = holdingValue * annualFeeRate * (daysToCharge / DAYS_PER_YEAR);
+
+            if (feeAmount > 0.01) {
+                // 从现金中扣除管理费
+                portfolio.cash -= feeAmount;
+                totalFeesDeducted += feeAmount;
+
+                feeDetails.push({
+                    ticker,
+                    shares: currentShares,
+                    price: currentPrice,
+                    value: holdingValue,
+                    annualRate: annualFeeRate,
+                    daysCharged: daysToCharge,
+                    feeAmount
+                });
+
+                console.log(`💳 ${ticker} 管理费: ${currentShares.toFixed(2)}股 × $${currentPrice.toFixed(2)} = $${holdingValue.toFixed(2)}, 费率 ${(annualFeeRate * 100).toFixed(2)}%/年 × ${daysToCharge.toFixed(2)}天 = -$${feeAmount.toFixed(2)}`);
+            }
+
+            // 更新最后扣费时间
+            portfolio.holdings[lastFeeCheckKey] = nowTimestamp;
+
+        } catch (error) {
+            console.error(`Failed to deduct management fee for ${ticker}:`, error);
+            continue;
+        }
+    }
+
+    return {
+        totalFeesDeducted,
+        feeDetails
+    };
 }
 
 // ============================================
@@ -1905,6 +2002,7 @@ async function simulateTrade(portfolio, decision, marketData) {
         newPortfolio.holdings[etfKey] = shares;
         newPortfolio.holdings[`${ticker}_INIT_PRICE`] = pricePerShare;  // 记录初始价格用于追踪
         newPortfolio.holdings[`${ticker}_LAST_DIV_CHECK`] = Date.now();  // 初始化分红检查时间戳
+        newPortfolio.holdings[`${ticker}_LAST_FEE_CHECK`] = Date.now();  // 初始化管理费检查时间戳
         newPortfolio.cash -= totalCost;
 
         console.log(`📊 Buy ETF ${ticker}: ${shares.toFixed(2)} shares at $${pricePerShare.toFixed(2)}/share, cost $${cost.toFixed(2)}, fee $${fee.toFixed(2)}, total $${totalCost.toFixed(2)}`);
@@ -2042,7 +2140,7 @@ async function calculateTotalValue(portfolio, marketData) {
             }
         }
         // 跳过ETF元数据字段
-        else if (asset.endsWith('_INIT_PRICE') || asset.endsWith('_LAST_DIV_CHECK')) {
+        else if (asset.endsWith('_INIT_PRICE') || asset.endsWith('_LAST_DIV_CHECK') || asset.endsWith('_LAST_FEE_CHECK')) {
             continue;
         }
         // 加密货币持仓
