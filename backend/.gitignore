@@ -1,35 +1,7 @@
 node_modules/
-*/node_modules/
 .env
-*/.env
 build/
 dist/
-*/build/
-*/dist/
-docs-local/
 .DS_Store
-Thumbs.db
 *.log
 *.zip
-
-# 备份文件
-*.backup
-*.backup-*
-backup-*/
-*.bak
-*.orig
-
-# 临时文件
-*.tmp
-*.temp
-temp/
-tmp/
-
-# 小程序项目（独立Git仓库，不需要主仓库管理）
-WeChatProjects/
-
-# 小游戏项目（独立Git仓库，用于测试账号开发）
-WeChatMiniGames/
-
-# 一次性SQL脚本（数据重置等临时操作）
-supabase/migrations/RESET_ALL_TRADING_DATA.sql
