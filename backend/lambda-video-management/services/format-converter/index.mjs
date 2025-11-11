@@ -56,41 +56,57 @@ export const handler = async (event, context) => {
 
       console.log(`MediaConvert作业 ${jobId} 状态: ${status}`);
 
-      // 如果转换完成，自动删除原文件以节省存储空间
+      // 如果转换完成，检查是否需要删除原文件
       if (status === "COMPLETE") {
         try {
           const userMetadata = jobDetail.userMetadata || {};
           const originalKey = userMetadata.originalKey;
 
           if (originalKey && originalKey.startsWith("videos/") && !originalKey.includes("_mobile.")) {
-            console.log(`🗑️ 转换成功，准备删除原文件: ${originalKey}`);
-
-            const { DeleteObjectCommand } = await import("@aws-sdk/client-s3");
+            const { HeadObjectCommand, DeleteObjectCommand } = await import("@aws-sdk/client-s3");
             const { s3Client, VIDEO_BUCKET } = await import("./shared/s3-config.mjs");
 
-            await s3Client.send(new DeleteObjectCommand({
-              Bucket: VIDEO_BUCKET,
-              Key: originalKey
-            }));
-
-            console.log(`✅ 原文件已删除: ${originalKey} (已生成_mobile.mp4版本)`);
-
-            // 同时删除原文件的缩略图（如果存在）
-            const relativePath = originalKey.replace('videos/', '');
-            const originalThumbnailKey = `thumbnails/${relativePath.replace(/\.[^.]+$/, '.jpg')}`;
+            // 检查是否真的生成了 _mobile.mp4 版本
+            const mobileKey = originalKey.replace(/\.(mp4|avi|mov|wmv|mkv|flv|webm)$/i, '_mobile.mp4');
 
             try {
+              await s3Client.send(new HeadObjectCommand({
+                Bucket: VIDEO_BUCKET,
+                Key: mobileKey
+              }));
+
+              // _mobile.mp4 存在，说明确实生成了移动版本，可以删除原文件
+              console.log(`🗑️ 检测到_mobile.mp4版本，准备删除原文件: ${originalKey}`);
+
               await s3Client.send(new DeleteObjectCommand({
                 Bucket: VIDEO_BUCKET,
-                Key: originalThumbnailKey
+                Key: originalKey
               }));
-              console.log(`✅ 原文件缩略图已删除: ${originalThumbnailKey}`);
-            } catch (thumbError) {
-              console.log(`⚠️ 原文件缩略图删除失败或不存在: ${originalThumbnailKey}`);
+
+              console.log(`✅ 原文件已删除: ${originalKey} (已生成${mobileKey})`);
+
+              // 同时删除原文件的缩略图（如果存在）
+              const relativePath = originalKey.replace('videos/', '');
+              const originalThumbnailKey = `thumbnails/${relativePath.replace(/\.[^.]+$/, '.jpg')}`;
+
+              try {
+                await s3Client.send(new DeleteObjectCommand({
+                  Bucket: VIDEO_BUCKET,
+                  Key: originalThumbnailKey
+                }));
+                console.log(`✅ 原文件缩略图已删除: ${originalThumbnailKey}`);
+              } catch (thumbError) {
+                console.log(`⚠️ 原文件缩略图删除失败或不存在: ${originalThumbnailKey}`);
+              }
+            } catch (headError) {
+              // _mobile.mp4 不存在，说明这次转换不是为了生成mobile版本
+              // 可能只是优化MOOV位置或其他原因，保留原文件
+              console.log(`ℹ️ 未检测到_mobile.mp4版本，保留原文件: ${originalKey}`);
+              console.log(`   可能原因：仅优化MOOV位置或文件本身已兼容`);
             }
           }
         } catch (deleteError) {
-          console.error(`❌ 删除原文件失败:`, deleteError);
+          console.error(`❌ 处理转换完成事件失败:`, deleteError);
           // 不阻断主流程，只记录错误
         }
       }
