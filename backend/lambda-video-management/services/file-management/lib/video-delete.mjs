@@ -106,9 +106,13 @@ export async function deleteVideo(event, user) {
     }
 
     // 如果是视频文件，还要尝试删除关联的移动端版本和对应的移动端缩略图
+    // 支持所有7种视频格式: mp4, avi, mov, wmv, mkv, flv, webm
     let assocMobileVersionDeleted = false;
-    if (key.endsWith('.mp4') && !key.includes('_mobile.mp4')) {
-      const mobileKey = key.replace('.mp4', '_mobile.mp4');
+    const videoExtMatch = key.match(/\.(mp4|avi|mov|wmv|mkv|flv|webm)$/i);
+    if (videoExtMatch && !key.includes('_mobile.')) {
+      // 移动端版本统一为 _mobile.mp4
+      const mobileKey = key.replace(/\.(mp4|avi|mov|wmv|mkv|flv|webm)$/i, '_mobile.mp4');
+
       try {
         await s3Client.send(new DeleteObjectCommand({
           Bucket: VIDEO_BUCKET,

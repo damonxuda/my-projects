@@ -30,7 +30,8 @@ export const handler = async (event, context) => {
       console.log("S3事件触发智能分析和转换:", videoKey);
 
       // 只处理视频文件，且不是已经转换过的移动版本
-      if (/\.(mp4|avi|mov|wmv|mkv)$/i.test(videoKey) && !videoKey.includes('_mobile.')) {
+      // 支持所有7种视频格式: mp4, avi, mov, wmv, mkv, flv, webm
+      if (/\.(mp4|avi|mov|wmv|mkv|flv|webm)$/i.test(videoKey) && !videoKey.includes('_mobile.')) {
         // 使用新的智能分析和自动转换逻辑，基于MOOV位置判断是否需要生成mobile版本
         return await analyzeAndAutoConvert(videoKey, true, null);
       } else {
@@ -54,6 +55,45 @@ export const handler = async (event, context) => {
       const status = jobDetail.status;
 
       console.log(`MediaConvert作业 ${jobId} 状态: ${status}`);
+
+      // 如果转换完成，自动删除原文件以节省存储空间
+      if (status === "COMPLETE") {
+        try {
+          const userMetadata = jobDetail.userMetadata || {};
+          const originalKey = userMetadata.originalKey;
+
+          if (originalKey && originalKey.startsWith("videos/") && !originalKey.includes("_mobile.")) {
+            console.log(`🗑️ 转换成功，准备删除原文件: ${originalKey}`);
+
+            const { DeleteObjectCommand } = await import("@aws-sdk/client-s3");
+            const { s3Client, VIDEO_BUCKET } = await import("./shared/s3-config.mjs");
+
+            await s3Client.send(new DeleteObjectCommand({
+              Bucket: VIDEO_BUCKET,
+              Key: originalKey
+            }));
+
+            console.log(`✅ 原文件已删除: ${originalKey} (已生成_mobile.mp4版本)`);
+
+            // 同时删除原文件的缩略图（如果存在）
+            const relativePath = originalKey.replace('videos/', '');
+            const originalThumbnailKey = `thumbnails/${relativePath.replace(/\.[^.]+$/, '.jpg')}`;
+
+            try {
+              await s3Client.send(new DeleteObjectCommand({
+                Bucket: VIDEO_BUCKET,
+                Key: originalThumbnailKey
+              }));
+              console.log(`✅ 原文件缩略图已删除: ${originalThumbnailKey}`);
+            } catch (thumbError) {
+              console.log(`⚠️ 原文件缩略图删除失败或不存在: ${originalThumbnailKey}`);
+            }
+          }
+        } catch (deleteError) {
+          console.error(`❌ 删除原文件失败:`, deleteError);
+          // 不阻断主流程，只记录错误
+        }
+      }
 
       // 可以在这里添加状态更新逻辑，比如更新数据库或发送通知
       return createSuccessResponse({

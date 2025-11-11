@@ -342,8 +342,8 @@ export async function analyzeVideoCompatibility(videoKey) {
 
     console.log(`文件信息: ${fileSize} bytes, ${contentType}, 修改时间: ${lastModified}`);
 
-    // 只分析支持的视频格式
-    const supportedFormats = ['.mp4', '.mov', '.avi', '.mkv'];
+    // 只分析支持的视频格式 - 扩展支持所有7种格式
+    const supportedFormats = ['.mp4', '.mov', '.avi', '.mkv', '.wmv', '.flv', '.webm'];
     const fileExtension = videoKey.toLowerCase().match(/\.[^.]*$/)?.[0];
 
     if (!fileExtension || !supportedFormats.includes(fileExtension)) {
@@ -571,10 +571,20 @@ async function performDetailedAnalysis(videoKey, fileSize, fileExtension) {
         analysis.issues.push("未检测到MOOV atom或位置不明确");
       }
     } else {
-      // 非MP4格式通常需要转换
-      analysis.issues.push(`${fileExtension}格式，建议转换为MP4以获得更好兼容性`);
+      // 非MP4格式（AVI, MOV, WMV, FLV, WebM, MKV）需要转换为移动端兼容的MP4
+      analysis.issues.push(`${fileExtension}格式，需要转换为MP4以确保移动端兼容性和字幕识别支持`);
       analysis.mobileCompatibility = "poor";
-      analysis.desktopCompatibility = "good";
+      analysis.desktopCompatibility = "moderate";
+
+      // 非MP4格式默认需要转换
+      if (!analysis.h264Analysis) {
+        analysis.h264Analysis = {
+          detected: false,
+          needsMobile: true,
+          needsFaststart: true,
+          compatibilityReason: `${fileExtension}格式需要转换为MP4以支持AWS Transcribe字幕识别`
+        };
+      }
     }
 
     // 综合兼容性评估
