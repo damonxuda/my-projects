@@ -1,4 +1,4 @@
-// Trigger deployment with fixed environment variable configuration
+// Force rebuild to ensure VideoPlayer fix is deployed
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
