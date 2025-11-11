@@ -448,7 +448,7 @@ const VideoPlayer = ({ video, apiUrl, processingApiUrl, onClose }) => {
 
             {/* 字幕控制组件 */}
             <SubtitlePlayer
-              videoKey={video.key}
+              videoKey={currentPlayingKey || video.key}
               videoRef={videoRef}
               apiUrl={process.env.REACT_APP_SUBTITLE_API_URL || apiUrl}
               getToken={getCachedToken}
