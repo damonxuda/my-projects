@@ -31,10 +31,20 @@ export async function generateUploadUrl(event, user) {
       return createErrorResponse(400, "Invalid file path - must be in videos/ directory");
     }
 
-    // 验证文件类型
-    const validTypes = ['video/mp4', 'video/avi', 'video/mov', 'video/mkv', 'video/webm'];
+    // 验证文件类型 - 支持所有可以生成缩略图的视频格式
+    const validTypes = [
+      'video/mp4',
+      'video/avi',
+      'video/mov',
+      'video/x-ms-wmv',  // WMV格式
+      'video/wmv',       // WMV格式的替代MIME类型
+      'video/x-flv',     // FLV格式
+      'video/webm',
+      'video/x-matroska', // MKV格式
+      'video/mkv'        // MKV格式的替代MIME类型
+    ];
     if (fileType && !validTypes.includes(fileType)) {
-      return createErrorResponse(400, "Invalid file type", "只支持 MP4, AVI, MOV, MKV, WebM 格式");
+      return createErrorResponse(400, "Invalid file type", "只支持 MP4, AVI, MOV, WMV, FLV, WebM, MKV 格式");
     }
 
     // 验证文件大小 (限制为 2GB)
