@@ -178,25 +178,24 @@ jobs:
       - name: Build Videos Application
         if: steps.changes.outputs.videos_changed == 'true' || steps.changes.outputs.force_deploy == 'true'
         working-directory: ./videos
-        run: |
-          echo "🔧 Setting environment variables..."
-          echo "REACT_APP_CLERK_PUBLISHABLE_KEY=${{ secrets.REACT_APP_CLERK_PUBLISHABLE_KEY }}" >> .env.production
-          echo "REACT_APP_ADMIN_EMAILS=${{ secrets.REACT_APP_ADMIN_EMAILS }}" >> .env.production
+        env:
+          REACT_APP_CLERK_PUBLISHABLE_KEY: ${{ secrets.REACT_APP_CLERK_PUBLISHABLE_KEY }}
+          REACT_APP_ADMIN_EMAILS: ${{ secrets.REACT_APP_ADMIN_EMAILS }}
           # 新的5函数架构 - 专门化Lambda函数
-          echo "REACT_APP_FILE_MANAGEMENT_API_URL=${{ secrets.REACT_APP_FILE_MANAGEMENT_API_URL }}" >> .env.production
-          echo "REACT_APP_THUMBNAIL_GENERATOR_API_URL=${{ secrets.REACT_APP_THUMBNAIL_GENERATOR_API_URL }}" >> .env.production
-          echo "REACT_APP_FORMAT_CONVERTER_API_URL=${{ secrets.REACT_APP_FORMAT_CONVERTER_API_URL }}" >> .env.production
-          echo "REACT_APP_VIDEO_PLAYER_API_URL=${{ secrets.REACT_APP_VIDEO_PLAYER_API_URL }}" >> .env.production
-          echo "REACT_APP_YOUTUBE_MANAGER_API_URL=${{ secrets.REACT_APP_YOUTUBE_MANAGER_API_URL }}" >> .env.production
-          echo "REACT_APP_SUBTITLE_API_URL=${{ secrets.REACT_APP_SUBTITLE_API_URL }}" >> .env.production
+          REACT_APP_FILE_MANAGEMENT_API_URL: ${{ secrets.REACT_APP_FILE_MANAGEMENT_API_URL }}
+          REACT_APP_THUMBNAIL_GENERATOR_API_URL: ${{ secrets.REACT_APP_THUMBNAIL_GENERATOR_API_URL }}
+          REACT_APP_FORMAT_CONVERTER_API_URL: ${{ secrets.REACT_APP_FORMAT_CONVERTER_API_URL }}
+          REACT_APP_VIDEO_PLAYER_API_URL: ${{ secrets.REACT_APP_VIDEO_PLAYER_API_URL }}
+          REACT_APP_YOUTUBE_MANAGER_API_URL: ${{ secrets.REACT_APP_YOUTUBE_MANAGER_API_URL }}
+          REACT_APP_SUBTITLE_API_URL: ${{ secrets.REACT_APP_SUBTITLE_API_URL }}
           # 旧的3函数架构 - 向后兼容
-          echo "REACT_APP_VIDEO_CORE_API_URL=${{ secrets.REACT_APP_VIDEO_CORE_API_URL }}" >> .env.production
-          echo "REACT_APP_VIDEO_PROCESSING_API_URL=${{ secrets.REACT_APP_VIDEO_PROCESSING_API_URL }}" >> .env.production
-          echo "REACT_APP_YOUTUBE_API_URL=${{ secrets.REACT_APP_YOUTUBE_API_URL }}" >> .env.production
-          echo "REACT_APP_VIDEO_API_URL=${{ secrets.REACT_APP_VIDEO_CORE_API_URL }}" >> .env.production
-          echo "REACT_APP_USER_MANAGEMENT_API_URL=${{ secrets.REACT_APP_USER_MANAGEMENT_API_URL }}" >> .env.production
-          echo "GENERATE_SOURCEMAP=false" >> .env.production
-
+          REACT_APP_VIDEO_CORE_API_URL: ${{ secrets.REACT_APP_VIDEO_CORE_API_URL }}
+          REACT_APP_VIDEO_PROCESSING_API_URL: ${{ secrets.REACT_APP_VIDEO_PROCESSING_API_URL }}
+          REACT_APP_YOUTUBE_API_URL: ${{ secrets.REACT_APP_YOUTUBE_API_URL }}
+          REACT_APP_VIDEO_API_URL: ${{ secrets.REACT_APP_VIDEO_CORE_API_URL }}
+          REACT_APP_USER_MANAGEMENT_API_URL: ${{ secrets.REACT_APP_USER_MANAGEMENT_API_URL }}
+          GENERATE_SOURCEMAP: false
+        run: |
           echo "🏗️ Building Videos React application..."
           npm run build
 
