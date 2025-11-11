@@ -105,38 +105,13 @@ export async function deleteVideo(event, user) {
       }
     }
 
-    // 如果是视频文件，还要尝试删除关联的移动端版本和对应的移动端缩略图
-    // 支持所有7种视频格式: mp4, avi, mov, wmv, mkv, flv, webm
+    // 注意：原文件和_mobile.mp4现在是独立管理的
+    // 删除原文件不会自动删除_mobile.mp4（用户可能想保留优化版本）
+    // 删除_mobile.mp4不会自动删除原文件（用户可能想保留原始版本）
+    // 如果需要清理重复文件，应该通过批量清理脚本处理
     let assocMobileVersionDeleted = false;
-    const videoExtMatch = key.match(/\.(mp4|avi|mov|wmv|mkv|flv|webm)$/i);
-    if (videoExtMatch && !key.includes('_mobile.')) {
-      // 移动端版本统一为 _mobile.mp4
-      const mobileKey = key.replace(/\.(mp4|avi|mov|wmv|mkv|flv|webm)$/i, '_mobile.mp4');
 
-      try {
-        await s3Client.send(new DeleteObjectCommand({
-          Bucket: VIDEO_BUCKET,
-          Key: mobileKey,
-        }));
-        console.log("移动端版本删除成功:", mobileKey);
-        assocMobileVersionDeleted = true;
-
-        // 删除移动端缩略图
-        const relativePath = mobileKey.replace('videos/', '');
-        const mobileThumbnailKey = `thumbnails/${relativePath.replace(/\.[^.]+$/, '.jpg')}`;
-        try {
-          await s3Client.send(new DeleteObjectCommand({
-            Bucket: VIDEO_BUCKET,
-            Key: mobileThumbnailKey,
-          }));
-          console.log("移动端缩略图删除成功:", mobileThumbnailKey);
-        } catch (mobileThumbnailError) {
-          console.log("移动端缩略图删除失败或不存在:", mobileThumbnailKey);
-        }
-      } catch (mobileError) {
-        console.log("移动端版本删除失败或不存在:", mobileKey, mobileError.message);
-      }
-    }
+    console.log("ℹ️  文件删除完成。原文件和_mobile.mp4现在独立管理，不会级联删除。");
 
     return createSuccessResponse({
       message: "File deleted successfully",
