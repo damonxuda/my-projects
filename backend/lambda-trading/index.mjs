@@ -1726,6 +1726,7 @@ async function askClaude(marketData, globalMarketData, portfolio, historicalData
             requestBody.thinking = {
                 type: 'enabled'
             };
+            console.log(`[${modelDisplayName}] Request body with thinking:`, JSON.stringify(requestBody, null, 2));
         }
 
         const response = await fetchWithTimeoutAndRetry(
