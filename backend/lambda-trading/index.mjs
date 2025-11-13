@@ -1356,7 +1356,7 @@ async function askLLM(agentName, marketData, globalMarketData, portfolio, histor
 
         // Claude
         case 'claude_standard':
-            return await askClaude(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, 'claude-sonnet-4-5-20250929-thinking');
+            return await askClaude(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, 'claude-sonnet-4-5-20250929');
         case 'claude_mini':
             return await askClaude(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, 'claude-haiku-4-5-20251001');
 
@@ -1699,10 +1699,10 @@ async function askQwen3Bedrock(marketData, globalMarketData, portfolio, historic
 // ============================================
 async function askClaude(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, model = 'claude-haiku-4-5-20251001') {
     // 判断是旗舰型还是轻量级
-    const isFlagship = model === 'claude-sonnet-4-5-20250929-thinking';
+    const isFlagship = model === 'claude-sonnet-4-5-20250929';
     const timeoutMs = isFlagship ? 120000 : 60000;  // 旗舰120s, 轻量60s
     const maxAttempts = isFlagship ? 2 : 1;  // 旗舰重试1次, 轻量不重试
-    const modelDisplayName = isFlagship ? 'Sonnet 4.5 thinking' : 'Haiku 4.5';
+    const modelDisplayName = isFlagship ? 'Sonnet 4.5' : 'Haiku 4.5';
 
     // 选择对应的API Key
     const apiKey = isFlagship ? CLAUDE_SONNET_API_KEY : CLAUDE_HAIKU_API_KEY;
@@ -1711,7 +1711,7 @@ async function askClaude(marketData, globalMarketData, portfolio, historicalData
     const prompt = buildMultiAssetTradingPrompt(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData);
 
     try {
-        // 使用代理商的OpenAI兼容API调用Claude
+        // 使用代理商的OpenAI兼容API调用Claude (non-thinking mode)
         const requestBody = {
             model: model,
             messages: [
@@ -1720,14 +1720,6 @@ async function askClaude(marketData, globalMarketData, portfolio, historicalData
             temperature: 0.7,
             max_tokens: 2000
         };
-
-        // 如果是 -thinking 模型，启用 extended thinking 能力
-        if (isFlagship) {
-            requestBody.thinking = {
-                type: 'enabled'
-            };
-            console.log(`[${modelDisplayName}] Request body with thinking:`, JSON.stringify(requestBody, null, 2));
-        }
 
         const response = await fetchWithTimeoutAndRetry(
             'https://api.gptsapi.net/v1/chat/completions',
