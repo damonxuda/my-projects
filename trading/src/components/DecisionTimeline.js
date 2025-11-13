@@ -42,7 +42,8 @@ const DecisionTimeline = ({ decisions }) => {
     grok_mini: '🔶',        // 轻量-菱形
 
     // DeepSeek
-    deepseek_v3: '🔴',      // 旗舰-圆形
+    deepseek_v3: '🔴',      // 旧版（兼容历史数据）
+    deepseek_r1: '🔴',      // 新版
 
     // Qwen
     qwen3_235b: '🩷',       // 旗舰-心形

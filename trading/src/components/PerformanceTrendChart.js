@@ -36,7 +36,8 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, 
 
   // Agent 颜色配置 - 每个模型一个颜色（按卡片显示顺序排列）
   const agentColors = {
-    'deepseek_v3': '#DC2626',        // red-600
+    'deepseek_v3': '#DC2626',        // red-600 (旧版，兼容历史数据)
+    'deepseek_r1': '#DC2626',        // red-600 (新版)
     'qwen3_235b': '#EC4899',         // pink-500
     'openai_standard': '#10B981',    // green-500
     'openai_mini': '#34D399',        // green-400
