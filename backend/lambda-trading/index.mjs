@@ -1358,7 +1358,7 @@ async function askLLM(agentName, marketData, globalMarketData, portfolio, histor
         case 'claude_standard':
             return await askClaude(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, 'claude-sonnet-4-5-20250929');
         case 'claude_mini':
-            return await askClaude(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, 'claude-haiku-4-5');
+            return await askClaude(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, 'claude-3-5-haiku-20241022');
 
         // Grok
         case 'grok_standard':
