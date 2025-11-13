@@ -1721,7 +1721,12 @@ async function askClaude(marketData, globalMarketData, portfolio, historicalData
             max_tokens: 2000
         };
 
-        // 注意：thinking 模式已通过模型名称后缀 -thinking 启用，无需额外参数
+        // 如果是 -thinking 模型，启用 extended thinking 能力
+        if (isFlagship) {
+            requestBody.thinking = {
+                type: 'enabled'
+            };
+        }
 
         const response = await fetchWithTimeoutAndRetry(
             'https://api.gptsapi.net/v1/chat/completions',
