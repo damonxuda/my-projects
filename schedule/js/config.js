@@ -9,8 +9,8 @@ console.log('当前环境:', isProduction ? '生产环境' : '测试环境');
 console.log('当前域名:', window.location.hostname);
 
 // Supabase 配置 - 从环境变量获取
-const supabaseUrl = window.REACT_APP_SUPABASE_URL || 'https://qeedsnqbudbogqpcerqb.supabase.co';
-const supabaseKey = window.REACT_APP_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFlZWRzbnFidWRib2dxcGNlcnFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0NjMxOTIsImV4cCI6MjA3MDAzOTE5Mn0.-hWnQwcpvXjX1dMJcNaQC7AUp8jYC9ozhgjFzSHeAGo'; // 请填入你的API Key
+const supabaseUrl = window.REACT_APP_SUPABASE_URL || '${REACT_APP_SUPABASE_URL}';
+const supabaseKey = window.REACT_APP_SUPABASE_ANON_KEY || '${REACT_APP_SUPABASE_ANON_KEY}';
 
 console.log('🔧 Supabase配置检查:');
 console.log('  - URL (环境变量):', window.REACT_APP_SUPABASE_URL);
