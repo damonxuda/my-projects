@@ -1,7 +1,7 @@
 // AWS Lambda Function: Multi-LLM Trading Decision Maker
 // 用途：定时调用多个 LLM API（Gemini, Claude, Grok, OpenAI）进行交易决策，并保存到 Supabase
 // 触发：CloudWatch Events (每小时一次)
-// 环境变量：GEMINI_API_KEY, CLAUDE_API_KEY, GROK_API_KEY, OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+// 环境变量：GEMINI_PRO_API_KEY, GEMINI_FLASH_API_KEY, CLAUDE_SONNET_API_KEY, CLAUDE_HAIKU_API_KEY, GROK_API_KEY, OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 
 import { createClient } from '@supabase/supabase-js';
 import YahooFinanceClass from 'yahoo-finance2';
@@ -20,7 +20,8 @@ const bedrockClient = new BedrockRuntimeClient({ region: 'ap-northeast-1' });
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_PRO_API_KEY = process.env.GEMINI_PRO_API_KEY;  // 代理商API Key for Gemini Pro
 const GEMINI_FLASH_API_KEY = process.env.GEMINI_FLASH_API_KEY;  // 代理商API Key for Gemini Flash
-const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
+const CLAUDE_SONNET_API_KEY = process.env.CLAUDE_SONNET_API_KEY;  // 代理商API Key for Sonnet 4.5 thinking
+const CLAUDE_HAIKU_API_KEY = process.env.CLAUDE_HAIKU_API_KEY;    // 代理商API Key for Haiku 4.5
 const GROK_API_KEY = process.env.GROK_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const CRYPTOCOMPARE_API_KEY = process.env.CRYPTOCOMPARE_API_KEY;  // CryptoCompare News API
@@ -43,8 +44,8 @@ const AGENTS = [
     { name: 'gemini_pro', type: 'llm', enabled: !!GEMINI_PRO_API_KEY },      // Gemini 2.5 Pro (代理商API)
 
     // Claude (2个)
-    { name: 'claude_standard', type: 'llm', enabled: !!CLAUDE_API_KEY },  // Sonnet 4.5
-    { name: 'claude_mini', type: 'llm', enabled: !!CLAUDE_API_KEY },      // Haiku 4.5
+    { name: 'claude_standard', type: 'llm', enabled: !!CLAUDE_SONNET_API_KEY },  // Sonnet 4.5 thinking
+    { name: 'claude_mini', type: 'llm', enabled: !!CLAUDE_HAIKU_API_KEY },       // Haiku 4.5
 
     // Grok (2个)
     { name: 'grok_standard', type: 'llm', enabled: !!GROK_API_KEY },      // Grok 2
@@ -1701,67 +1702,73 @@ async function askClaude(marketData, globalMarketData, portfolio, historicalData
     const isFlagship = model === 'claude-sonnet-4-5-20250929';
     const timeoutMs = isFlagship ? 120000 : 60000;  // 旗舰120s, 轻量60s
     const maxAttempts = isFlagship ? 2 : 1;  // 旗舰重试1次, 轻量不重试
-    const modelDisplayName = isFlagship ? 'Sonnet 4.5' : 'Haiku 4.5';
+    const modelDisplayName = isFlagship ? 'Sonnet 4.5 thinking' : 'Haiku 4.5';
+
+    // 选择对应的API Key
+    const apiKey = isFlagship ? CLAUDE_SONNET_API_KEY : CLAUDE_HAIKU_API_KEY;
 
     // 所有Claude模型都使用多资产交易prompt
     const prompt = buildMultiAssetTradingPrompt(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData);
 
     try {
+        // 使用代理商的OpenAI兼容API调用Claude
+        const requestBody = {
+            model: model,
+            messages: [
+                { role: 'user', content: prompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 2000
+        };
+
+        // 如果是旗舰模型，启用 thinking 模式（不设置token上限）
+        if (isFlagship) {
+            requestBody.thinking = {
+                type: 'enabled'
+            };
+        }
+
         const response = await fetchWithTimeoutAndRetry(
-            'https://api.anthropic.com/v1/messages',
+            'https://api.gptsapi.net/v1/chat/completions',
             {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'x-api-key': CLAUDE_API_KEY,
-                    'anthropic-version': '2023-06-01'
+                    'Authorization': `Bearer ${apiKey}`
                 },
-                body: JSON.stringify({
-                    model: model,
-                    max_tokens: 2000,
-                    temperature: 0.7,
-                    messages: [{
-                        role: 'user',
-                        content: prompt
-                    }]
-                })
+                body: JSON.stringify(requestBody)
             },
             timeoutMs,
             modelDisplayName,
             maxAttempts
         );
 
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Claude API error - status:', response.status);
+            console.error('Claude API error details:', errorText);
+            throw new Error(`Claude API error: ${response.status} - ${errorText}`);
+        }
+
         const data = await response.json();
 
         // DEBUG: 打印完整响应
         console.log('Claude API full response:', JSON.stringify(data, null, 2));
 
-        // 检查API响应
-        if (!response.ok) {
-            console.error('Claude API error - status:', response.status);
-            console.error('Claude API error details:', data);
-            throw new Error(`Claude API error: ${response.status}`);
-        }
+        // 提取内容（OpenAI兼容格式）
+        const content = data.choices[0].message.content;
 
-        // 检查返回数据结构
-        if (!data.content || !data.content[0] || !data.content[0].text) {
-            console.error('Invalid response structure. Available keys:', Object.keys(data));
-            throw new Error('Invalid response from Claude API');
-        }
-
-        const text = data.content[0].text;
-
-        // 📊 记录 Token 使用量（用于建立经验值）
+        // 📊 记录 Token 使用量
         if (data.usage) {
             console.log('📊 Claude Token Usage:', {
-                input: data.usage.input_tokens,
-                output: data.usage.output_tokens,
-                total: data.usage.input_tokens + data.usage.output_tokens,
+                input: data.usage.prompt_tokens || data.usage.input_tokens,
+                output: data.usage.completion_tokens || data.usage.output_tokens,
+                total: data.usage.total_tokens,
                 maxAllowed: 2000
             });
         }
 
-        return parseAndValidateDecision(text, modelDisplayName);
+        return parseAndValidateDecision(content, modelDisplayName);
 
     } catch (error) {
         if (error.name === 'AbortError') {
