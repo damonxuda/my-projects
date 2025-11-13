@@ -1442,8 +1442,7 @@ async function askGemini(marketData, globalMarketData, portfolio, historicalData
                 prompt: data.usageMetadata.promptTokenCount,
                 output: data.usageMetadata.candidatesTokenCount,
                 thoughts: data.usageMetadata.thoughtsTokenCount || 0,
-                total: data.usageMetadata.totalTokenCount,
-                maxAllowed: 4000
+                total: data.usageMetadata.totalTokenCount
             });
         }
 
@@ -1791,8 +1790,7 @@ async function askClaude(marketData, globalMarketData, portfolio, historicalData
             console.log('📊 Claude Token Usage:', {
                 input: data.usage.prompt_tokens || data.usage.input_tokens,
                 output: data.usage.completion_tokens || data.usage.output_tokens,
-                total: data.usage.total_tokens,
-                maxAllowed: 2000
+                total: data.usage.total_tokens
             });
         }
 
@@ -1881,8 +1879,7 @@ async function askGrok(marketData, globalMarketData, portfolio, historicalData, 
             console.log('📊 Grok Token Usage:', {
                 prompt: data.usage.prompt_tokens,
                 completion: data.usage.completion_tokens,
-                total: data.usage.total_tokens,
-                maxAllowed: 2000
+                total: data.usage.total_tokens
             });
         }
 
@@ -1974,8 +1971,7 @@ async function askOpenAI(marketData, globalMarketData, portfolio, historicalData
             console.log('📊 OpenAI Token Usage:', {
                 prompt: data.usage.prompt_tokens,
                 completion: data.usage.completion_tokens,
-                total: data.usage.total_tokens,
-                maxAllowed: 2000
+                total: data.usage.total_tokens
             });
         }
 
