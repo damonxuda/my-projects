@@ -22,7 +22,6 @@ const GEMINI_PRO_API_KEY = process.env.GEMINI_PRO_API_KEY;  // 代理商API Key 
 const GEMINI_FLASH_API_KEY = process.env.GEMINI_FLASH_API_KEY;  // 代理商API Key for Gemini Flash
 const CLAUDE_SONNET_API_KEY = process.env.CLAUDE_SONNET_API_KEY;  // 代理商API Key for Sonnet 4.5 thinking
 const CLAUDE_HAIKU_API_KEY = process.env.CLAUDE_HAIKU_API_KEY;    // 代理商API Key for Haiku 4.5
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;  // 代理商API Key for DeepSeek R1
 const GROK_API_KEY = process.env.GROK_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const CRYPTOCOMPARE_API_KEY = process.env.CRYPTOCOMPARE_API_KEY;  // CryptoCompare News API
@@ -53,7 +52,7 @@ const AGENTS = [
     { name: 'grok_mini', type: 'llm', enabled: !!GROK_API_KEY },          // Grok 2 mini
 
     // DeepSeek (1个)
-    { name: 'deepseek_r1', type: 'llm', enabled: !!DEEPSEEK_API_KEY },    // DeepSeek R1 (代理商API)
+    { name: 'deepseek_v3', type: 'llm', enabled: true },                  // DeepSeek V3 (AWS Bedrock)
 
     // Qwen (1个)
     { name: 'qwen3_235b', type: 'llm', enabled: true },                   // Qwen3 235B A22B (AWS Bedrock)
@@ -1408,8 +1407,8 @@ async function askLLM(agentName, marketData, globalMarketData, portfolio, histor
             return await askGrok(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, 'grok-4-fast-non-reasoning');
 
         // DeepSeek
-        case 'deepseek_r1':
-            return await askDeepSeek(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, 'deepseek-reasoner');
+        case 'deepseek_v3':
+            return await askDeepSeekV3Bedrock(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData);
 
         // Qwen
         case 'qwen3_235b':
@@ -1657,6 +1656,63 @@ async function askGeminiFlashProxy(marketData, globalMarketData, portfolio, hist
 }
 
 // ============================================
+// 3.1.2 调用 DeepSeek V3 API (通过 AWS Bedrock)
+// ============================================
+async function askDeepSeekV3Bedrock(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData) {
+    const prompt = buildMultiAssetTradingPrompt(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData);
+    const modelDisplayName = 'DeepSeek V3 (Bedrock)';
+
+    try {
+        console.log(`[${modelDisplayName}] Invoking Bedrock model: deepseek.v3-v1:0`);
+
+        // 构建 Bedrock API 请求体
+        const requestBody = {
+            messages: [
+                { role: 'user', content: prompt }
+            ],
+            temperature: 0.7,
+            max_tokens: 4000
+        };
+
+        const command = new InvokeModelCommand({
+            modelId: 'deepseek.v3-v1:0',
+            contentType: 'application/json',
+            accept: 'application/json',
+            body: JSON.stringify(requestBody)
+        });
+
+        // Bedrock 默认超时为300秒
+        const response = await bedrockClient.send(command);
+
+        // 解析响应
+        const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+        const content = responseBody.choices[0].message.content;
+
+        console.log(`[${modelDisplayName}] Response received successfully`);
+
+        // 📊 记录 Token 使用量
+        if (responseBody.usage) {
+            console.log('📊 DeepSeek Token Usage:', {
+                input: responseBody.usage.prompt_tokens || responseBody.usage.input_tokens,
+                output: responseBody.usage.completion_tokens || responseBody.usage.output_tokens,
+                total: responseBody.usage.total_tokens
+            });
+        }
+
+        return parseAndValidateDecision(content, modelDisplayName);
+
+    } catch (error) {
+        console.error(`[${modelDisplayName}] API failed:`, error);
+        return {
+            action: 'hold',
+            asset: null,
+            amount: 0,
+            reason: 'API调用失败，保持持有'
+        };
+    }
+}
+
+// ============================================
 // 3.1.3 调用 Qwen3 235B API (通过 AWS Bedrock)
 // ============================================
 async function askQwen3Bedrock(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData) {
@@ -1772,90 +1828,6 @@ async function askClaude(marketData, globalMarketData, portfolio, historicalData
         // 📊 记录 Token 使用量
         if (data.usage) {
             console.log('📊 Claude Token Usage:', {
-                input: data.usage.prompt_tokens || data.usage.input_tokens,
-                output: data.usage.completion_tokens || data.usage.output_tokens,
-                total: data.usage.total_tokens
-            });
-        }
-
-        return parseAndValidateDecision(content, modelDisplayName);
-
-    } catch (error) {
-        if (error.name === 'AbortError') {
-            console.error(`[${modelDisplayName}] API timeout after ${maxAttempts} attempt(s)`);
-            return {
-                action: 'hold',
-                asset: null,
-                amount: 0,
-                reason: `API超时（${maxAttempts}次尝试均失败），保持持有`
-            };
-        } else {
-            console.error(`[${modelDisplayName}] API failed:`, error);
-            return {
-                action: 'hold',
-                asset: null,
-                amount: 0,
-                reason: 'API调用失败，保持持有'
-            };
-        }
-    }
-}
-
-// ============================================
-// 3.2.1 调用 DeepSeek API 获取决策
-// ============================================
-async function askDeepSeek(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, model = 'deepseek-reasoner') {
-    // DeepSeek R1 是推理模型，类似Claude Sonnet
-    const timeoutMs = 120000;  // 120s超时
-    const maxAttempts = 2;  // 重试1次
-    const modelDisplayName = 'DeepSeek R1';
-
-    // 使用多资产交易prompt
-    const prompt = buildMultiAssetTradingPrompt(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData);
-
-    try {
-        // 使用代理商的OpenAI兼容API调用DeepSeek
-        const requestBody = {
-            model: model,
-            messages: [
-                { role: 'user', content: prompt }
-            ],
-            temperature: 0.6  // DeepSeek R1推荐0.5-0.7
-        };
-
-        const response = await fetchWithTimeoutAndRetry(
-            'https://api.gptsapi.net/v1/chat/completions',
-            {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${DEEPSEEK_API_KEY}`
-                },
-                body: JSON.stringify(requestBody)
-            },
-            timeoutMs,
-            modelDisplayName,
-            maxAttempts
-        );
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('DeepSeek API error - status:', response.status);
-            console.error('DeepSeek API error details:', errorText);
-            throw new Error(`DeepSeek API error: ${response.status} - ${errorText}`);
-        }
-
-        const data = await response.json();
-
-        // DEBUG: 打印完整响应
-        console.log('DeepSeek API full response:', JSON.stringify(data, null, 2));
-
-        // 提取内容（OpenAI兼容格式）
-        const content = data.choices[0].message.content;
-
-        // 📊 记录 Token 使用量
-        if (data.usage) {
-            console.log('📊 DeepSeek Token Usage:', {
                 input: data.usage.prompt_tokens || data.usage.input_tokens,
                 output: data.usage.completion_tokens || data.usage.output_tokens,
                 total: data.usage.total_tokens
