@@ -1356,7 +1356,7 @@ async function askLLM(agentName, marketData, globalMarketData, portfolio, histor
 
         // Claude
         case 'claude_standard':
-            return await askClaude(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, 'claude-sonnet-4-5-20250929');
+            return await askClaude(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, 'claude-sonnet-4-5-20250929-thinking');
         case 'claude_mini':
             return await askClaude(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, 'claude-haiku-4-5-20251001');
 
@@ -1697,9 +1697,9 @@ async function askQwen3Bedrock(marketData, globalMarketData, portfolio, historic
 // ============================================
 // 3.2 调用 Claude API 获取决策
 // ============================================
-async function askClaude(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, model = 'claude-haiku-4-5') {
+async function askClaude(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, model = 'claude-haiku-4-5-20251001') {
     // 判断是旗舰型还是轻量级
-    const isFlagship = model === 'claude-sonnet-4-5-20250929';
+    const isFlagship = model === 'claude-sonnet-4-5-20250929-thinking';
     const timeoutMs = isFlagship ? 120000 : 60000;  // 旗舰120s, 轻量60s
     const maxAttempts = isFlagship ? 2 : 1;  // 旗舰重试1次, 轻量不重试
     const modelDisplayName = isFlagship ? 'Sonnet 4.5 thinking' : 'Haiku 4.5';
@@ -1721,12 +1721,7 @@ async function askClaude(marketData, globalMarketData, portfolio, historicalData
             max_tokens: 2000
         };
 
-        // 如果是旗舰模型，启用 thinking 模式（不设置token上限）
-        if (isFlagship) {
-            requestBody.thinking = {
-                type: 'enabled'
-            };
-        }
+        // 注意：thinking 模式已通过模型名称后缀 -thinking 启用，无需额外参数
 
         const response = await fetchWithTimeoutAndRetry(
             'https://api.gptsapi.net/v1/chat/completions',
