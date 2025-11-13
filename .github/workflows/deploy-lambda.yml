@@ -272,4 +272,3 @@ jobs:
             --function-name TRADING_LAMBDA
 
           echo "✅ TRADING_LAMBDA deployed successfully!"
-          echo "ℹ️  EventBridge schedule is configured separately (cron: 15 * * * ? *)"
