@@ -206,11 +206,50 @@ async function processSingleAgent(agent, marketData, globalMarketData, historica
 
     } catch (agentError) {
         console.error(`❌ ${agent.name} failed:`, agentError);
-        return {
-            agent: agent.name,
-            success: false,
-            error: agentError.message
-        };
+
+        // 兜底方案：无论什么原因失败（超时、崩溃、API错误），都要保存一个降级的portfolio
+        try {
+            console.log(`🛡️ ${agent.name} 启动降级保护：保存HOLD状态的portfolio`);
+
+            // 获取最后成功的portfolio
+            const lastPortfolio = await getCurrentPortfolio(agent.name);
+            console.log(`📊 ${agent.name} 使用上次portfolio作为基准`);
+
+            // 创建降级portfolio：保持holdings不变，只更新total_value
+            const fallbackPortfolio = JSON.parse(JSON.stringify(lastPortfolio));
+            fallbackPortfolio.total_value = await calculateTotalValue(fallbackPortfolio, marketData);
+            fallbackPortfolio.pnl = fallbackPortfolio.total_value - 50000;
+            fallbackPortfolio.pnl_percentage = (fallbackPortfolio.pnl / 50000) * 100;
+            fallbackPortfolio.timestamp = new Date().toISOString();
+            fallbackPortfolio.created_at = new Date().toISOString();
+
+            console.log(`💼 ${agent.name} Fallback Portfolio (HOLD):`, {
+                cash: fallbackPortfolio.cash,
+                total_value: fallbackPortfolio.total_value,
+                pnl: fallbackPortfolio.pnl,
+                pnl_percentage: fallbackPortfolio.pnl_percentage
+            });
+
+            // 保存降级portfolio
+            await savePortfolio(fallbackPortfolio);
+            console.log(`✅ ${agent.name} 降级portfolio已保存`);
+
+            return {
+                agent: agent.name,
+                success: false,
+                error: agentError.message,
+                fallback: true,
+                portfolio: fallbackPortfolio
+            };
+        } catch (fallbackError) {
+            console.error(`❌ ${agent.name} 降级保护也失败了:`, fallbackError);
+            return {
+                agent: agent.name,
+                success: false,
+                error: agentError.message,
+                fallback_error: fallbackError.message
+            };
+        }
     }
 }
 
