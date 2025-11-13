@@ -144,7 +144,6 @@ const DatabaseManager = {
 
   async loadAllSchedules() {
     try {
-      console.log('从 Edge Function 加载课程数据...');
 
       // 调用 get-schedule Edge Function
       const response = await fetch(`${window.supabaseUrl}/functions/v1/get-schedule`, {
@@ -164,7 +163,6 @@ const DatabaseManager = {
       }
 
       const data = await response.json();
-      console.log('从 Edge Function 加载了', data?.length || 0, '条课程记录');
       return { success: true, data: data || [] };
     } catch (error) {
       console.error('加载课程数据异常:', error);
@@ -174,7 +172,6 @@ const DatabaseManager = {
 
   async saveSchedule(schedule) {
     try {
-      console.log('通过 Edge Function 保存课程...');
 
       // 调用 save-schedule Edge Function（插入新记录）
       const response = await fetch(`${window.supabaseUrl}/functions/v1/save-schedule`, {
@@ -198,7 +195,6 @@ const DatabaseManager = {
       }
 
       const data = await response.json();
-      console.log('✅ Edge Function 保存成功');
       return { success: true, data: data[0] || data };
     } catch (error) {
       console.error('保存课程异常:', error);
@@ -208,7 +204,6 @@ const DatabaseManager = {
 
   async updateSchedule(id, updates) {
     try {
-      console.log('通过 Edge Function 更新课程...');
 
       // 调用 save-schedule Edge Function（更新现有记录）
       const response = await fetch(`${window.supabaseUrl}/functions/v1/save-schedule`, {
@@ -233,7 +228,6 @@ const DatabaseManager = {
       }
 
       const data = await response.json();
-      console.log('✅ Edge Function 更新成功');
       return { success: true, data: data[0] || data };
     } catch (error) {
       console.error('更新课程异常:', error);
@@ -243,7 +237,6 @@ const DatabaseManager = {
 
   async deleteSchedule(id) {
     try {
-      console.log('通过 Edge Function 删除课程...');
 
       // 调用 delete-schedule Edge Function
       const response = await fetch(`${window.supabaseUrl}/functions/v1/delete-schedule?id=${id}`, {
@@ -263,7 +256,6 @@ const DatabaseManager = {
       }
 
       const result = await response.json();
-      console.log('✅ Edge Function 删除成功');
       return { success: true };
     } catch (error) {
       console.error('删除课程异常:', error);
@@ -280,14 +272,12 @@ const DatabaseManager = {
           schema: 'public',
           table: getTableName('schedules')  // 使用动态表名
         }, (payload) => {
-          console.log('实时数据更新:', payload);
           if (onUpdate) {
             onUpdate(payload);
           }
         })
         .subscribe();
 
-      console.log('Supabase实时监听已启动');
       return subscription;
     } catch (error) {
       console.error('设置实时监听失败:', error);
@@ -653,7 +643,6 @@ const EditorManager = {
       dateStr = UIManager.formatDate(UIManager.currentDate);
     }
     
-    console.log('打开编辑器，使用日期:', dateStr); // 调试信息
     
     document.getElementById('editDate').value = dateStr;
     document.getElementById('editorOverlay').style.display = 'flex';
@@ -837,7 +826,6 @@ const EditorManager = {
 function handleEditClick() {
   // 传递当前 UI 显示的日期
   const currentDateStr = UIManager.formatDate(UIManager.currentDate);
-  console.log('点击编辑按钮，当前选择的日期:', currentDateStr); // 调试信息
   EditorManager.openEditor(currentDateStr);
 }
 
@@ -875,13 +863,11 @@ function waitForSupabaseClient() {
       attempts++;
 
       if (window.supabase && typeof window.supabase.from === 'function') {
-        console.log('✅ Supabase客户端已就绪');
         resolve();
       } else if (attempts >= maxAttempts) {
         console.error('❌ 等待Supabase客户端超时');
         reject(new Error('Supabase客户端初始化超时'));
       } else {
-        console.log(`⏳ 等待Supabase客户端初始化... (${attempts}/${maxAttempts})`);
         setTimeout(checkSupabase, 100);
       }
     };
@@ -892,7 +878,6 @@ function waitForSupabaseClient() {
 
 // 应用初始化
 async function initApp() {
-  console.log('🚀 初始化应用 - 使用统一数据模型');
 
   try {
     // 等待Supabase客户端初始化完成
@@ -901,7 +886,6 @@ async function initApp() {
     await ScheduleManager.init();
     UIManager.updateDisplay();
     UIManager.bindEvents();
-    console.log('✅ 应用初始化完成');
   } catch (error) {
     console.error('❌ 应用初始化失败:', error);
     UIManager.showError('应用初始化失败: ' + error.message);
