@@ -2073,6 +2073,27 @@ async function simulateTrade(portfolio, decision, marketData) {
 
     const asset = decision.asset;
     const amount = decision.amount;
+
+    // 检查交易金额是否为0（模型已判断不可交易）
+    if (amount === 0) {
+        console.log(`⚠️ ${decision.action} ${asset} amount is 0, skipping trade: ${decision.reason}`);
+        // 转为持有，只更新总价值
+        newPortfolio.total_value = await calculateTotalValue(newPortfolio, marketData);
+        newPortfolio.pnl = newPortfolio.total_value - 50000;
+        newPortfolio.pnl_percentage = (newPortfolio.pnl / 50000) * 100;
+        return newPortfolio;
+    }
+
+    // 检查资产是否在市场数据中
+    if (!marketData[asset]) {
+        console.warn(`⚠️ ${asset} not found in market data, converting to HOLD`);
+        // 转为持有，只更新总价值
+        newPortfolio.total_value = await calculateTotalValue(newPortfolio, marketData);
+        newPortfolio.pnl = newPortfolio.total_value - 50000;
+        newPortfolio.pnl_percentage = (newPortfolio.pnl / 50000) * 100;
+        return newPortfolio;
+    }
+
     const price = marketData[asset].price;
     const tradeValue = amount * price;
 
