@@ -1512,6 +1512,15 @@ async function askGeminiPro(marketData, globalMarketData, portfolio, historicalD
         const data = await response.json();
         const content = data.choices[0].message.content;
 
+        // 📊 记录 Token 使用量
+        if (data.usage) {
+            console.log('📊 Gemini Token Usage:', {
+                input: data.usage.prompt_tokens || data.usage.input_tokens,
+                output: data.usage.completion_tokens || data.usage.output_tokens,
+                total: data.usage.total_tokens
+            });
+        }
+
         return parseAndValidateDecision(content, modelDisplayName);
 
     } catch (error) {
@@ -1575,6 +1584,15 @@ async function askGeminiFlashProxy(marketData, globalMarketData, portfolio, hist
         const data = await response.json();
         const content = data.choices[0].message.content;
 
+        // 📊 记录 Token 使用量
+        if (data.usage) {
+            console.log('📊 Gemini Token Usage:', {
+                input: data.usage.prompt_tokens || data.usage.input_tokens,
+                output: data.usage.completion_tokens || data.usage.output_tokens,
+                total: data.usage.total_tokens
+            });
+        }
+
         return parseAndValidateDecision(content, modelDisplayName);
 
     } catch (error) {
@@ -1633,6 +1651,15 @@ async function askDeepSeekV3Bedrock(marketData, globalMarketData, portfolio, his
 
         console.log(`[${modelDisplayName}] Response received successfully`);
 
+        // 📊 记录 Token 使用量
+        if (responseBody.usage) {
+            console.log('📊 DeepSeek Token Usage:', {
+                input: responseBody.usage.prompt_tokens || responseBody.usage.input_tokens,
+                output: responseBody.usage.completion_tokens || responseBody.usage.output_tokens,
+                total: responseBody.usage.total_tokens
+            });
+        }
+
         return parseAndValidateDecision(content, modelDisplayName);
 
     } catch (error) {
@@ -1680,6 +1707,15 @@ async function askQwen3Bedrock(marketData, globalMarketData, portfolio, historic
         const content = responseBody.choices[0].message.content;
 
         console.log(`[${modelDisplayName}] Response received successfully`);
+
+        // 📊 记录 Token 使用量
+        if (responseBody.usage) {
+            console.log('📊 Qwen Token Usage:', {
+                input: responseBody.usage.prompt_tokens || responseBody.usage.input_tokens,
+                output: responseBody.usage.completion_tokens || responseBody.usage.output_tokens,
+                total: responseBody.usage.total_tokens
+            });
+        }
 
         return parseAndValidateDecision(content, modelDisplayName);
 
