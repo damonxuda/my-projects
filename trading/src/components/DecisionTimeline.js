@@ -41,9 +41,9 @@ const DecisionTimeline = ({ decisions }) => {
     grok_standard: '🟠',    // 旗舰-圆形
     grok_mini: '🔶',        // 轻量-菱形
 
-    // DeepSeek
-    deepseek_v3: '🔴',      // 旧版（兼容历史数据）
-    deepseek_r1: '🔴',      // 新版
+    // DeepSeek (合并 V3 和 R1，统一显示)
+    deepseek_v3: '🔴',      // 兼容历史数据
+    deepseek_r1: '🔴',      // 当前使用
 
     // Qwen
     qwen3_235b: '🩷',       // 旗舰-心形

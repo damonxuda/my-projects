@@ -36,8 +36,7 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, 
 
   // Agent 颜色配置 - 每个模型一个颜色（按卡片显示顺序排列）
   const agentColors = {
-    'deepseek_v3': '#DC2626',        // red-600 (旧版，兼容历史数据)
-    'deepseek_r1': '#DC2626',        // red-600 (新版)
+    'deepseek': '#DC2626',           // red-600 (合并后的统一显示)
     'qwen3_235b': '#EC4899',         // pink-500
     'openai_standard': '#10B981',    // green-500
     'openai_mini': '#34D399',        // green-400
@@ -54,7 +53,7 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, 
   // 初始点定义（所有agent都从$50,000开始）
   const initialPoint = {
     round: 0,
-    deepseek_v3: 50000,
+    deepseek: 50000,
     qwen3_235b: 50000,
     openai_standard: 50000,
     openai_mini: 50000,
@@ -68,12 +67,24 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, 
     equal_weight: 50000
   };
 
+  // 合并 deepseek_v3 和 deepseek_r1 的数据
+  const mergedHistoryData = historyData.map(point => {
+    const merged = { ...point };
+    // 如果存在 deepseek_v3 或 deepseek_r1，合并到 deepseek
+    if (point.deepseek_v3 !== undefined || point.deepseek_r1 !== undefined) {
+      merged.deepseek = point.deepseek_r1 || point.deepseek_v3;
+      delete merged.deepseek_v3;
+      delete merged.deepseek_r1;
+    }
+    return merged;
+  });
+
   // 根据项目开始时间动态决定是否添加初始点
-  const chartData = shouldAddInitialPoint() ? [initialPoint, ...historyData] : historyData;
+  const chartData = shouldAddInitialPoint() ? [initialPoint, ...mergedHistoryData] : mergedHistoryData;
 
   // 模型显示名称（按卡片显示顺序排列）
   const agentNames = {
-    'deepseek_v3': 'DeepSeek V3',
+    'deepseek': 'DeepSeek',
     'qwen3_235b': 'Qwen3 235B',
     'openai_standard': 'GPT-4.1',
     'openai_mini': 'GPT-4o mini',
