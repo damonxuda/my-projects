@@ -24,8 +24,9 @@ const AgentCard = ({ portfolio, marketData }) => {
     grok_mini: { name: 'Grok 4 Fast', color: 'orange', icon: '🔶' },       // 非推理型-菱形
 
     // DeepSeek (合并 V3 和 R1，统一显示)
+    deepseek: { name: 'DeepSeek', color: 'red', icon: '🔴' },              // 当前使用
     deepseek_v3: { name: 'DeepSeek', color: 'red', icon: '🔴' },           // 兼容历史数据
-    deepseek_r1: { name: 'DeepSeek', color: 'red', icon: '🔴' },           // 当前使用
+    deepseek_r1: { name: 'DeepSeek', color: 'red', icon: '🔴' },           // 兼容历史数据
 
     // Qwen
     qwen3_235b: { name: 'Qwen3 235B', color: 'pink', icon: '🩷' },         // 旗舰-心形
