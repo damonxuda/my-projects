@@ -41,14 +41,11 @@
 
 ```sql
 -- 备份相关表
-CREATE TABLE portfolios_backup_20251115 AS
-SELECT * FROM portfolios WHERE agent_name IN ('deepseek_v3', 'deepseek_r1');
+CREATE TABLE llm_trading_portfolios_backup_20251115 AS
+SELECT * FROM llm_trading_portfolios WHERE agent_name IN ('deepseek_v3', 'deepseek_r1');
 
-CREATE TABLE portfolio_history_backup_20251115 AS
-SELECT * FROM portfolio_history WHERE agent_name IN ('deepseek_v3', 'deepseek_r1');
-
-CREATE TABLE trading_decisions_backup_20251115 AS
-SELECT * FROM trading_decisions WHERE agent_name IN ('deepseek_v3', 'deepseek_r1');
+CREATE TABLE llm_trading_decisions_backup_20251115 AS
+SELECT * FROM llm_trading_decisions WHERE agent_name IN ('deepseek_v3', 'deepseek_r1');
 ```
 
 ### Step 4: 执行迁移
@@ -63,10 +60,9 @@ SELECT * FROM trading_decisions WHERE agent_name IN ('deepseek_v3', 'deepseek_r1
 
 迁移完成后，应该看到：
 
-1. **portfolios 表**：只有一条 `deepseek` 记录
-2. **trading_decisions 表**：所有记录的 agent_name 都是 `deepseek`
-3. **portfolio_history 表**：所有记录的 agent_name 都是 `deepseek`
-4. **前端显示**：DeepSeek 卡片显示正常，趋势线连续
+1. **llm_trading_portfolios 表**：所有 DeepSeek 记录的 agent_name 都是 `deepseek`
+2. **llm_trading_decisions 表**：所有 DeepSeek 记录的 agent_name 都是 `deepseek`
+3. **前端显示**：DeepSeek 卡片显示正常，趋势线连续
 
 ### Step 6: 部署后端更新
 
@@ -84,14 +80,12 @@ SELECT * FROM trading_decisions WHERE agent_name IN ('deepseek_v3', 'deepseek_r1
 BEGIN;
 
 -- 删除迁移后的数据
-DELETE FROM portfolios WHERE agent_name = 'deepseek';
-DELETE FROM portfolio_history WHERE agent_name = 'deepseek';
-DELETE FROM trading_decisions WHERE agent_name = 'deepseek';
+DELETE FROM llm_trading_portfolios WHERE agent_name = 'deepseek';
+DELETE FROM llm_trading_decisions WHERE agent_name = 'deepseek';
 
 -- 从备份恢复
-INSERT INTO portfolios SELECT * FROM portfolios_backup_20251115;
-INSERT INTO portfolio_history SELECT * FROM portfolio_history_backup_20251115;
-INSERT INTO trading_decisions SELECT * FROM trading_decisions_backup_20251115;
+INSERT INTO llm_trading_portfolios SELECT * FROM llm_trading_portfolios_backup_20251115;
+INSERT INTO llm_trading_decisions SELECT * FROM llm_trading_decisions_backup_20251115;
 
 COMMIT;
 ```
