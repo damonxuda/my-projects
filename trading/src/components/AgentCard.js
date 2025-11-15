@@ -25,6 +25,7 @@ const AgentCard = ({ portfolio, marketData }) => {
 
     // DeepSeek
     deepseek_v3: { name: 'DeepSeek V3', color: 'red', icon: '🔴' },        // 旗舰-圆形
+    deepseek_r1: { name: 'DeepSeek R1', color: 'red', icon: '🔴' },        // 推理模型-圆形
 
     // Qwen
     qwen3_235b: { name: 'Qwen3 235B', color: 'pink', icon: '🩷' },         // 旗舰-心形
