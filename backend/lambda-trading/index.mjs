@@ -11,7 +11,7 @@ import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedroc
 // v3版本需要实例化
 const yahooFinance = new YahooFinanceClass();
 
-// Bedrock Runtime 客户端（用于 DeepSeek V3）
+// Bedrock Runtime 客户端（用于 DeepSeek 和 Qwen）
 const bedrockClient = new BedrockRuntimeClient({ region: 'ap-northeast-1' });
 
 // ============================================
@@ -51,8 +51,8 @@ const AGENTS = [
     { name: 'grok_standard', type: 'llm', enabled: !!GROK_API_KEY },      // Grok 2
     { name: 'grok_mini', type: 'llm', enabled: !!GROK_API_KEY },          // Grok 2 mini
 
-    // DeepSeek (1个)
-    { name: 'deepseek_v3', type: 'llm', enabled: true },                  // DeepSeek V3 (AWS Bedrock)
+    // DeepSeek (1个) - 统一使用 deepseek 标识（支持V3和R1）
+    { name: 'deepseek', type: 'llm', enabled: true },                     // DeepSeek (AWS Bedrock)
 
     // Qwen (1个)
     { name: 'qwen3_235b', type: 'llm', enabled: true },                   // Qwen3 235B A22B (AWS Bedrock)
@@ -1406,9 +1406,9 @@ async function askLLM(agentName, marketData, globalMarketData, portfolio, histor
         case 'grok_mini':
             return await askGrok(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData, 'grok-4-fast-non-reasoning');
 
-        // DeepSeek
-        case 'deepseek_v3':
-            return await askDeepSeekV3Bedrock(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData);
+        // DeepSeek (统一标识，支持V3和R1)
+        case 'deepseek':
+            return await askDeepSeekBedrock(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData);
 
         // Qwen
         case 'qwen3_235b':
@@ -1656,11 +1656,12 @@ async function askGeminiFlashProxy(marketData, globalMarketData, portfolio, hist
 }
 
 // ============================================
-// 3.1.2 调用 DeepSeek V3 API (通过 AWS Bedrock)
+// 3.1.2 调用 DeepSeek API (通过 AWS Bedrock)
+// 支持 DeepSeek V3 和 R1，根据 Bedrock 中配置的模型自动切换
 // ============================================
-async function askDeepSeekV3Bedrock(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData) {
+async function askDeepSeekBedrock(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData) {
     const prompt = buildMultiAssetTradingPrompt(marketData, globalMarketData, portfolio, historicalData, technicalIndicators, newsData);
-    const modelDisplayName = 'DeepSeek V3 (Bedrock)';
+    const modelDisplayName = 'DeepSeek';
 
     try {
         console.log(`[${modelDisplayName}] Invoking Bedrock model: deepseek.v3-v1:0`);
