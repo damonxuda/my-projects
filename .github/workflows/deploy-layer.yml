@@ -1,0 +1,125 @@
+name: Deploy Lambda Layer
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/lambda-trading-shared/**'
+      - '.github/workflows/deploy-layer.yml'
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  deploy-trading-shared-layer:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: ./backend/lambda-trading-shared
+        run: |
+          echo "📦 Installing dependencies for Lambda Layer..."
+          npm install --production
+
+          echo "✅ Dependencies installed:"
+          ls -la node_modules/ | head -20
+
+      - name: Create Layer package
+        working-directory: ./backend/lambda-trading-shared
+        run: |
+          echo "📦 Creating Lambda Layer package..."
+
+          # 创建 Layer 目录结构（必须是 nodejs/）
+          mkdir -p layer/nodejs
+
+          # 复制核心代码文件
+          echo "Copying core modules..."
+          cp llm-clients.mjs layer/nodejs/
+          cp technical-indicators.mjs layer/nodejs/
+          cp decision-parser.mjs layer/nodejs/
+          cp utils.mjs layer/nodejs/
+          cp index.mjs layer/nodejs/
+
+          # 复制 package.json
+          cp package.json layer/nodejs/
+
+          # 复制 node_modules
+          echo "Copying node_modules..."
+          cp -r node_modules layer/nodejs/
+
+          # 打包 Layer
+          cd layer
+          zip -r ../layer.zip nodejs/ -q
+          cd ..
+
+          echo "✅ Layer package created:"
+          ls -lh layer.zip
+          echo "Package size: $(ls -lh layer.zip | awk '{print $5}')"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Publish Lambda Layer
+        working-directory: ./backend/lambda-trading-shared
+        run: |
+          echo "📤 Publishing Lambda Layer to AWS..."
+
+          LAYER_VERSION=$(aws lambda publish-layer-version \
+            --layer-name lambda-trading-shared \
+            --description "Shared modules for trading systems (LLM clients, indicators, decision parser, utils)" \
+            --zip-file fileb://layer.zip \
+            --compatible-runtimes nodejs20.x \
+            --region ${{ secrets.AWS_REGION }} \
+            --query 'Version' \
+            --output text)
+
+          echo "✅ Published lambda-trading-shared Layer version: ${LAYER_VERSION}"
+
+          # 保存 Layer ARN 到环境变量
+          LAYER_ARN="arn:aws:lambda:${{ secrets.AWS_REGION }}:730335478220:layer:lambda-trading-shared:${LAYER_VERSION}"
+          echo "LAYER_ARN=${LAYER_ARN}" >> $GITHUB_ENV
+          echo "LAYER_VERSION=${LAYER_VERSION}" >> $GITHUB_ENV
+
+          echo "📌 Layer ARN: ${LAYER_ARN}"
+
+      - name: Update TRADING_LAMBDA to use new Layer
+        run: |
+          echo "🔗 Updating TRADING_LAMBDA to use Layer version ${LAYER_VERSION}..."
+
+          aws lambda update-function-configuration \
+            --function-name TRADING_LAMBDA \
+            --layers "${LAYER_ARN}" \
+            --region ${{ secrets.AWS_REGION }}
+
+          echo "⏳ Waiting for function update to complete..."
+          aws lambda wait function-updated \
+            --function-name TRADING_LAMBDA \
+            --region ${{ secrets.AWS_REGION }}
+
+          echo "✅ TRADING_LAMBDA updated to Layer version ${LAYER_VERSION}"
+
+      - name: Deployment Summary
+        run: |
+          echo "🎉 Lambda Layer Deployment Complete!"
+          echo ""
+          echo "📦 Layer Name: lambda-trading-shared"
+          echo "📌 Layer ARN: ${LAYER_ARN}"
+          echo "🔢 Layer Version: ${LAYER_VERSION}"
+          echo ""
+          echo "✅ Updated Functions:"
+          echo "  - TRADING_LAMBDA"
+          echo ""
+          echo "💡 To update other functions manually, use:"
+          echo "   aws lambda update-function-configuration \\"
+          echo "     --function-name YOUR_FUNCTION_NAME \\"
+          echo "     --layers \"${LAYER_ARN}\""

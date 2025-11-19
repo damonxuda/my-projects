@@ -1,0 +1,32 @@
+{
+  "name": "lambda-trading-shared",
+  "version": "1.0.0",
+  "description": "Shared modules for Lambda Trading Systems (Crypto & Stock)",
+  "type": "module",
+  "main": "index.mjs",
+  "exports": {
+    "./llm-clients": "./llm-clients.mjs",
+    "./technical-indicators": "./technical-indicators.mjs",
+    "./decision-parser": "./decision-parser.mjs",
+    "./utils": "./utils.mjs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "lambda",
+    "trading",
+    "llm",
+    "shared",
+    "crypto",
+    "stock"
+  ],
+  "author": "Damon Xu",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.0.0",
+    "technicalindicators": "^3.1.0"
+  },
+  "devDependencies": {},
+  "peerDependencies": {}
+}
