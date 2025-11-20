@@ -1,0 +1,16 @@
+# Node modules
+node_modules/
+
+# Layer build artifacts
+layer/
+nodejs/
+package/
+*.zip
+
+# Test files
+lambda-test*.json
+
+# Backup files
+*.bak
+*.bak2
+*.backup

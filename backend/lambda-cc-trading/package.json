@@ -1,0 +1,19 @@
+{
+  "name": "lambda-cc-trading",
+  "version": "1.0.0",
+  "description": "Streamlined Cryptocurrency Trading Lambda using lambda-trading-shared Layer",
+  "type": "module",
+  "main": "index.mjs",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "lambda",
+    "cryptocurrency",
+    "trading",
+    "llm"
+  ],
+  "author": "Damon Xu",
+  "license": "MIT",
+  "dependencies": {}
+}

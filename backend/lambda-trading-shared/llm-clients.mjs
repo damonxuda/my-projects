@@ -5,6 +5,11 @@
 import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime';
 
 // ============================================
+// 全局 Bedrock Client（复用连接，提升性能）
+// ============================================
+const bedrockClient = new BedrockRuntimeClient({ region: 'ap-northeast-1' });
+
+// ============================================
 // 工具函数：带超时和重试的 fetch
 // ============================================
 async function fetchWithTimeoutAndRetry(url, options, timeoutMs = 60000, modelName = 'LLM', maxAttempts = 2) {
@@ -304,15 +309,12 @@ export async function callGrok(prompt, options = {}) {
 // ============================================
 export async function callDeepSeekBedrock(prompt, options = {}) {
     const {
-        region = 'ap-northeast-1',
-        model = 'deepseek.deepseek-v3',
+        model = 'deepseek.v3-v1:0',
         temperature = 0.7,
         maxTokens = 2000
     } = options;
 
     try {
-        const bedrockClient = new BedrockRuntimeClient({ region });
-
         const payload = {
             messages: [{ role: 'user', content: prompt }],
             max_tokens: maxTokens,
@@ -353,15 +355,12 @@ export async function callDeepSeekBedrock(prompt, options = {}) {
 // ============================================
 export async function callQwen3Bedrock(prompt, options = {}) {
     const {
-        region = 'ap-northeast-1',
-        model = 'qwen.qwen3-235b-a22b-instruct-v1:0',
+        model = 'qwen.qwen3-235b-a22b-2507-v1:0',
         temperature = 0.7,
         maxTokens = 2000
     } = options;
 
     try {
-        const bedrockClient = new BedrockRuntimeClient({ region });
-
         const payload = {
             messages: [{ role: 'user', content: prompt }],
             max_tokens: maxTokens,
