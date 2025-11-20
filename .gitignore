@@ -25,6 +25,12 @@ backup-*/
 temp/
 tmp/
 
+# Lambda 构建产物
+layer/
+nodejs/
+package/
+lambda-test*.json
+
 # 小程序项目（独立Git仓库，不需要主仓库管理）
 WeChatProjects/
 
