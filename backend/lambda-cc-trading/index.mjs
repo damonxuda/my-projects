@@ -171,7 +171,7 @@ const AGENT_CONFIGS = {
             model: 'deepseek.v3-v1:0',
             temperature: 0.7,
             maxTokens: 4000,
-            timeout: 300000
+            timeout: 60000
         },
         displayName: 'DeepSeek'
     },
@@ -183,7 +183,7 @@ const AGENT_CONFIGS = {
             model: 'qwen.qwen3-235b-a22b-2507-v1:0',
             temperature: 0.7,
             maxTokens: 4000,
-            timeout: 300000
+            timeout: 60000
         },
         displayName: 'Qwen3 235B'
     }
