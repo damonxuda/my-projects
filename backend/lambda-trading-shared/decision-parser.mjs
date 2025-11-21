@@ -78,8 +78,8 @@ function validateSingleTradeDecision(decision, options) {
 
     // 验证 amount
     if (requireAmount) {
-        if (typeof decision.amount !== 'number' || decision.amount <= 0) {
-            throw new Error(`Invalid amount: ${decision.amount}. Must be positive number`);
+        if (typeof decision.amount !== 'number' || decision.amount < 0) {
+            throw new Error(`Invalid amount: ${decision.amount}. Must be non-negative number`);
         }
     }
 
