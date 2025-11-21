@@ -278,6 +278,7 @@ jobs:
           echo "REACT_APP_CLERK_PUBLISHABLE_KEY=${{ secrets.REACT_APP_CLERK_PUBLISHABLE_KEY }}" >> .env.production
           echo "REACT_APP_ADMIN_EMAILS=${{ secrets.REACT_APP_ADMIN_EMAILS }}" >> .env.production
           echo "REACT_APP_TRADING_API_URL=${{ secrets.REACT_APP_TRADING_API_URL }}" >> .env.production
+          echo "REACT_APP_STOCK_TRADING_API_URL=${{ secrets.REACT_APP_STOCK_TRADING_API_URL }}" >> .env.production
           echo "GENERATE_SOURCEMAP=false" >> .env.production
 
           echo "🏗️ Building Trading React application..."
