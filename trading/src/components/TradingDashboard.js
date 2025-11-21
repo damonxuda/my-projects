@@ -21,7 +21,8 @@ const TradingDashboard = () => {
   const [lastUpdate, setLastUpdate] = useState(null);
 
   // Supabase Edge Function URL (数字货币交易API)
-  const TRADING_API_URL = process.env.REACT_APP_TRADING_API_URL || 'https://qeedsnqbudbogqpcerqb.supabase.co/functions/v1/trading-api';
+  const SUPABASE_FUNCTIONS_BASE = process.env.REACT_APP_SUPABASE_FUNCTIONS_BASE || 'https://qeedsnqbudbogqpcerqb.supabase.co/functions/v1';
+  const TRADING_API_URL = `${SUPABASE_FUNCTIONS_BASE}/trading-api`;
 
   // 获取数据
   const fetchData = async () => {

@@ -21,7 +21,8 @@ const StockTradingDashboard = () => {
   const [lastUpdate, setLastUpdate] = useState(null);
 
   // Supabase Edge Function URL (美股交易API)
-  const TRADING_API_URL = 'https://qeedsnqbudbogqpcerqb.supabase.co/functions/v1/stock-trading-api';
+  const SUPABASE_FUNCTIONS_BASE = process.env.REACT_APP_SUPABASE_FUNCTIONS_BASE || 'https://qeedsnqbudbogqpcerqb.supabase.co/functions/v1';
+  const TRADING_API_URL = `${SUPABASE_FUNCTIONS_BASE}/stock-trading-api`;
 
   // 获取数据
   const fetchData = async () => {
