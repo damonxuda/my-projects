@@ -183,9 +183,8 @@ serve(async (req) => {
     // GET /history - 获取所有agents的历史数据（用于趋势图）
     if (req.method === 'GET' && path === '/history') {
       const hours = parseInt(url.searchParams.get('hours') || '24')
-      const sampleMinutes = parseInt(url.searchParams.get('sample_minutes') || '60')
 
-      // 调用统一的数据库函数（按5分钟窗口分轮次）
+      // 调用统一的数据库函数（按5分钟窗口分轮次，返回时间范围内所有轮次）
       const { data: portfolios, error } = await supabase.rpc('get_stock_portfolio_history', { time_range_hours: hours })
 
       if (error) {
@@ -201,36 +200,20 @@ serve(async (req) => {
 
       const projectStartTime = earliestData?.[0]?.created_at || null
 
-      // 在应用层做采样：根据 sample_minutes 参数
-      // 先按round_number分组
-      const allRounds: any = {}
+      // 将数据转换为前端需要的格式：{ round: 1, agent1: value1, agent2: value2, ... }
+      // 不做采样，返回所有轮次
+      const roundMap: any = {}
+
       portfolios?.forEach((p: any) => {
         const round = p.round_number
-        if (!allRounds[round]) {
-          allRounds[round] = { round, timestamp: new Date(p.sample_time).getTime() }
+
+        if (!roundMap[round]) {
+          roundMap[round] = { round }
         }
-        allRounds[round][p.agent_name] = parseFloat(p.total_value)
+        roundMap[round][p.agent_name] = parseFloat(p.total_value)
       })
 
-      // 按时间间隔采样
-      const sampledRounds: any = {}
-      let lastSampleTime = 0
-      let sampledRound = 0
-
-      Object.values(allRounds).forEach((roundData: any) => {
-        const timestamp = roundData.timestamp
-
-        // 如果距离上次采样超过 sample_minutes，则采样这一轮
-        if (timestamp - lastSampleTime > sampleMinutes * 60 * 1000) {
-          sampledRound++
-          lastSampleTime = timestamp
-
-          sampledRounds[sampledRound] = { ...roundData, round: sampledRound }
-          delete sampledRounds[sampledRound].timestamp
-        }
-      })
-
-      const history = Object.values(sampledRounds)
+      const history = Object.values(roundMap)
 
       return new Response(
         JSON.stringify({
