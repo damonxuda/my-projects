@@ -183,17 +183,10 @@ serve(async (req) => {
     // GET /history - 获取所有agents的历史数据（用于趋势图）
     if (req.method === 'GET' && path === '/history') {
       const hours = parseInt(url.searchParams.get('hours') || '24')
+      const sampleMinutes = parseInt(url.searchParams.get('sample_minutes') || '60')
 
-      // 根据时间范围调用不同的数据库函数
-      let functionName = 'get_stock_portfolio_history_24h'
-      if (hours >= 720) {
-        functionName = 'get_stock_portfolio_history_30d'
-      } else if (hours >= 168) {
-        functionName = 'get_stock_portfolio_history_7d'
-      }
-
-      // 调用对应的数据库函数
-      const { data: portfolios, error } = await supabase.rpc(functionName)
+      // 调用统一的数据库函数（按5分钟窗口分轮次）
+      const { data: portfolios, error } = await supabase.rpc('get_stock_portfolio_history', { time_range_hours: hours })
 
       if (error) {
         throw error
@@ -208,19 +201,36 @@ serve(async (req) => {
 
       const projectStartTime = earliestData?.[0]?.created_at || null
 
-      // 将数据转换为前端需要的格式：{ round: 1, agent1: value1, agent2: value2, ... }
-      const roundMap: any = {}
-
+      // 在应用层做采样：根据 sample_minutes 参数
+      // 先按round_number分组
+      const allRounds: any = {}
       portfolios?.forEach((p: any) => {
         const round = p.round_number
-
-        if (!roundMap[round]) {
-          roundMap[round] = { round }
+        if (!allRounds[round]) {
+          allRounds[round] = { round, timestamp: new Date(p.sample_time).getTime() }
         }
-        roundMap[round][p.agent_name] = parseFloat(p.total_value)
+        allRounds[round][p.agent_name] = parseFloat(p.total_value)
       })
 
-      const history = Object.values(roundMap)
+      // 按时间间隔采样
+      const sampledRounds: any = {}
+      let lastSampleTime = 0
+      let sampledRound = 0
+
+      Object.values(allRounds).forEach((roundData: any) => {
+        const timestamp = roundData.timestamp
+
+        // 如果距离上次采样超过 sample_minutes，则采样这一轮
+        if (timestamp - lastSampleTime > sampleMinutes * 60 * 1000) {
+          sampledRound++
+          lastSampleTime = timestamp
+
+          sampledRounds[sampledRound] = { ...roundData, round: sampledRound }
+          delete sampledRounds[sampledRound].timestamp
+        }
+      })
+
+      const history = Object.values(sampledRounds)
 
       return new Response(
         JSON.stringify({
