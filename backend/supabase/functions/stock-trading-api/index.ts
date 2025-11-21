@@ -184,8 +184,16 @@ serve(async (req) => {
     if (req.method === 'GET' && path === '/history') {
       const hours = parseInt(url.searchParams.get('hours') || '24')
 
-      // 调用统一的数据库函数（按5分钟窗口分轮次，返回时间范围内所有轮次）
-      const { data: portfolios, error } = await supabase.rpc('get_stock_portfolio_history', { time_range_hours: hours })
+      // 根据时间范围调用不同的数据库函数
+      let functionName = 'get_stock_portfolio_history_24h'
+      if (hours >= 720) {
+        functionName = 'get_stock_portfolio_history_30d'
+      } else if (hours >= 168) {
+        functionName = 'get_stock_portfolio_history_7d'
+      }
+
+      // 调用对应的数据库函数
+      const { data: portfolios, error } = await supabase.rpc(functionName)
 
       if (error) {
         throw error
@@ -201,7 +209,6 @@ serve(async (req) => {
       const projectStartTime = earliestData?.[0]?.created_at || null
 
       // 将数据转换为前端需要的格式：{ round: 1, agent1: value1, agent2: value2, ... }
-      // 不做采样，返回所有轮次
       const roundMap: any = {}
 
       portfolios?.forEach((p: any) => {
