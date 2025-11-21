@@ -32,9 +32,9 @@ const AgentCard = ({ portfolio, marketData }) => {
     qwen3_235b: { name: 'Qwen3 235B', color: 'pink', icon: '🩷' },         // 旗舰-心形
 
     // 美股ETF基准
-    qqq: { name: 'QQQ', color: 'cyan', icon: '🔷' },                       // 纳斯达克100 ETF
-    vgt: { name: 'VGT', color: 'teal', icon: '🔶' },                       // 科技股ETF
-    spy: { name: 'SPY', color: 'indigo', icon: '🟦' }                      // 标普500 ETF
+    qqq: { name: 'QQQ', color: 'cyan', icon: '🟦' },                       // 纳斯达克100 ETF - 蓝色方块
+    vgt: { name: 'VGT', color: 'teal', icon: '🟩' },                       // 科技股ETF - 绿色方块
+    spy: { name: 'SPY', color: 'indigo', icon: '🟨' }                      // 标普500 ETF - 黄色方块
   };
 
   const info = agentInfo[agent_name] || { name: agent_name, color: 'gray', icon: '⚪' };

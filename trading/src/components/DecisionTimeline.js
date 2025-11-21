@@ -49,7 +49,12 @@ const DecisionTimeline = ({ decisions }) => {
     // Qwen
     qwen3_235b: '🩷',       // 旗舰-心形
 
-    // ETF
+    // 美股ETF基准
+    qqq: '🟦',              // 纳斯达克100 ETF - 蓝色方块
+    vgt: '🟩',              // 科技股ETF - 绿色方块
+    spy: '🟨',              // 标普500 ETF - 黄色方块
+
+    // 数字货币ETF
     gdlc: '📊',
     equal_weight: '⚖️'
   };
