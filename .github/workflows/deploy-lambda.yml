@@ -4,6 +4,7 @@ name: Deploy Lambda Functions
 # ⚠️ 重要：所有Lambda函数已配置Lambda Layer用于依赖管理
 # Lambda Layer ARN: arn:aws:lambda:ap-northeast-1:905418159488:layer:video-management-dependencies:1
 # 部署时只打包代码文件（index.mjs + shared/），不打包node_modules
+# IAM权限已更新 (2025-11-21)
 
 on:
   push:
