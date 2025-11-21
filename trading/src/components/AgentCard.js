@@ -31,9 +31,10 @@ const AgentCard = ({ portfolio, marketData }) => {
     // Qwen
     qwen3_235b: { name: 'Qwen3 235B', color: 'pink', icon: '🩷' },         // 旗舰-心形
 
-    // ETF
-    gdlc: { name: 'GDLC', color: 'yellow', icon: '📊' },
-    equal_weight: { name: 'BITW', color: 'gray', icon: '⚖️' }
+    // 美股ETF基准
+    qqq: { name: 'QQQ', color: 'cyan', icon: '🔷' },                       // 纳斯达克100 ETF
+    vgt: { name: 'VGT', color: 'teal', icon: '🔶' },                       // 科技股ETF
+    spy: { name: 'SPY', color: 'indigo', icon: '🟦' }                      // 标普500 ETF
   };
 
   const info = agentInfo[agent_name] || { name: agent_name, color: 'gray', icon: '⚪' };
@@ -104,43 +105,84 @@ const AgentCard = ({ portfolio, marketData }) => {
         {Object.keys(holdings).length > 0 ? (
           <div className="space-y-1">
             <span className="text-xs text-gray-500">持仓:</span>
-            {Object.entries(holdings)
-              .filter(([asset, amount]) => {
-                // 过滤掉ETF元数据字段（_SHARES, _INIT_PRICE, _LAST_DIV_CHECK）
-                // 只显示加密货币持仓（BTC, ETH, SOL, BNB, DOGE, XRP）
-                const isMetadataField = asset.includes('_SHARES') ||
-                                       asset.includes('_INIT_PRICE') ||
-                                       asset.includes('_LAST_DIV_CHECK');
-                return !isMetadataField && amount > 0;
-              })
-              .map(([asset, amount]) => {
-                // 计算持仓价值（如果有市场数据）
-                const price = marketData && marketData[asset] ? marketData[asset].price : null;
-                const value = price ? amount * price : null;
+            {(() => {
+              // 分离股票持仓和ETF持仓
+              const stockHoldings = [];
+              const etfHoldings = [];
 
-                return (
-                  <div key={asset} className="flex justify-between items-center text-sm">
-                    <div className="flex flex-col">
-                      <span className="text-gray-600">{asset}</span>
-                      {price && (
-                        <span className="text-xs text-gray-400">
-                          @${price >= 1 ? price.toFixed(2) : price.toFixed(4)}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <span className="font-mono text-gray-900">
-                        {amount.toFixed(4)}
-                      </span>
-                      {value && (
-                        <span className="text-xs text-gray-500">
-                          ≈ ${value.toFixed(2)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+              Object.entries(holdings).forEach(([key, value]) => {
+                // ETF份额字段：QQQ_SHARES, VGT_SHARES, SPY_SHARES
+                if (key.endsWith('_SHARES') && value > 0) {
+                  const ticker = key.replace('_SHARES', '');
+                  const initPrice = holdings[`${ticker}_INIT_PRICE`];
+                  const currentPrice = marketData && marketData[ticker] ? marketData[ticker].price : null;
+                  etfHoldings.push({ ticker, shares: value, initPrice, currentPrice });
+                }
+                // 股票持仓：不包含元数据字段
+                else if (!key.includes('_INIT_PRICE') && !key.includes('_LAST_DIV_CHECK') && !key.includes('_LAST_FEE_CHECK') && value > 0) {
+                  const price = marketData && marketData[key] ? marketData[key].price : null;
+                  stockHoldings.push({ asset: key, amount: value, price });
+                }
+              });
+
+              return (
+                <>
+                  {/* 显示股票持仓 */}
+                  {stockHoldings.map(({ asset, amount, price }) => {
+                    const value = price ? amount * price : null;
+                    return (
+                      <div key={asset} className="flex justify-between items-center text-sm">
+                        <div className="flex flex-col">
+                          <span className="text-gray-600">{asset}</span>
+                          {price && (
+                            <span className="text-xs text-gray-400">
+                              @${price >= 1 ? price.toFixed(2) : price.toFixed(4)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end">
+                          <span className="font-mono text-gray-900">
+                            {amount >= 1 ? amount.toFixed(2) : amount.toFixed(4)}
+                          </span>
+                          {value && (
+                            <span className="text-xs text-gray-500">
+                              ≈ ${value.toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* 显示ETF持仓 */}
+                  {etfHoldings.map(({ ticker, shares, initPrice, currentPrice }) => {
+                    const value = currentPrice ? shares * currentPrice : null;
+                    return (
+                      <div key={ticker} className="flex justify-between items-center text-sm">
+                        <div className="flex flex-col">
+                          <span className="text-gray-600 font-semibold">{ticker}</span>
+                          {currentPrice && (
+                            <span className="text-xs text-gray-400">
+                              @${currentPrice.toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-end">
+                          <span className="font-mono text-gray-900">
+                            {shares.toFixed(2)} 份
+                          </span>
+                          {value && (
+                            <span className="text-xs text-gray-500">
+                              ≈ ${value.toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              );
+            })()}
           </div>
         ) : (
           <div className="text-xs text-gray-400 italic">无持仓</div>

@@ -46,8 +46,9 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, 
     'claude_mini': '#A78BFA',        // purple-400
     'grok_standard': '#F97316',      // orange-500
     'grok_mini': '#FB923C',          // orange-400
-    'gdlc': '#EAB308',               // yellow-500
-    'equal_weight': '#6B7280'        // gray-500
+    'qqq': '#06B6D4',                // cyan-500 (纳斯达克100 ETF)
+    'vgt': '#14B8A6',                // teal-500 (科技股ETF)
+    'spy': '#6366F1'                 // indigo-500 (标普500 ETF)
   };
 
   // 初始点定义（所有agent都从$50,000开始）
@@ -63,8 +64,9 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, 
     claude_mini: 50000,
     grok_standard: 50000,
     grok_mini: 50000,
-    gdlc: 50000,
-    equal_weight: 50000
+    qqq: 50000,
+    vgt: 50000,
+    spy: 50000
   };
 
   // 合并 deepseek_v3 和 deepseek_r1 的数据
@@ -94,8 +96,9 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, 
     'claude_mini': 'Haiku 4.5',
     'grok_standard': 'Grok 4',
     'grok_mini': 'Grok 3 mini',
-    'gdlc': 'GDLC',
-    'equal_weight': 'BITW'
+    'qqq': 'QQQ',
+    'vgt': 'VGT',
+    'spy': 'SPY'
   };
 
   // 自定义 Tooltip

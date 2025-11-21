@@ -216,14 +216,14 @@ const StockTradingDashboard = () => {
       {/* 第四行: BITW, GDLC */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {(() => {
-          // 固定显示顺序：DeepSeek在最前，Qwen紧随其后，Gemini Pro在Flash前，其他按厂商分组
+          // 固定显示顺序：DeepSeek在最前，Qwen紧随其后，Gemini Pro在Flash前，其他按厂商分组，ETF在最后
           const displayOrder = [
             'deepseek', 'qwen3_235b',
             'openai_standard', 'openai_mini',
             'gemini_pro', 'gemini_flash',
             'claude_standard', 'claude_mini',
             'grok_standard', 'grok_mini',
-            'equal_weight', 'gdlc'
+            'qqq', 'vgt', 'spy'
           ];
 
           // 创建portfolio查找映射，合并 deepseek_v3 和 deepseek_r1

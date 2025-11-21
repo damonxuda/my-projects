@@ -539,6 +539,42 @@ async function fetchMarketData() {
             }
         }
 
+        // 获取3个ETF基准的实时报价
+        const ETF_TICKERS = ['QQQ', 'VGT', 'SPY'];
+        for (const symbol of ETF_TICKERS) {
+            try {
+                const quote = await yahooFinance.quote(symbol);
+
+                marketData[symbol] = {
+                    price: quote.regularMarketPrice,
+                    change_24h: quote.regularMarketChangePercent,
+                    volume_24h: quote.regularMarketVolume,
+                    market_cap: quote.marketCap,
+                    high_24h: quote.regularMarketDayHigh,
+                    low_24h: quote.regularMarketDayLow,
+                    fifty_two_week_high: quote.fiftyTwoWeekHigh,
+                    fifty_two_week_low: quote.fiftyTwoWeekLow,
+                    last_updated: new Date().toISOString()
+                };
+
+                console.log(`✅ Fetched ETF ${symbol}: $${quote.regularMarketPrice.toFixed(2)}`);
+
+            } catch (error) {
+                console.error(`Failed to fetch ETF ${symbol}:`, error);
+                marketData[symbol] = {
+                    price: 0,
+                    change_24h: 0,
+                    volume_24h: 0,
+                    market_cap: 0,
+                    high_24h: 0,
+                    low_24h: 0,
+                    fifty_two_week_high: 0,
+                    fifty_two_week_low: 0,
+                    last_updated: new Date().toISOString()
+                };
+            }
+        }
+
         marketData.timestamp = new Date().toISOString();
         return marketData;
 
