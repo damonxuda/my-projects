@@ -184,25 +184,16 @@ serve(async (req) => {
     if (req.method === 'GET' && path === '/history') {
       const hours = parseInt(url.searchParams.get('hours') || '24')
 
-      // 根据时间范围确定采样间隔
-      let intervalSeconds: number
+      // 根据时间范围调用不同的数据库函数
+      let functionName = 'get_stock_portfolio_history_24h'
       if (hours >= 720) {
-        // 30天：每天1个点（86400秒）
-        intervalSeconds = 86400
+        functionName = 'get_stock_portfolio_history_30d'
       } else if (hours >= 168) {
-        // 7天：每4小时1个点（14400秒）
-        intervalSeconds = 14400
-      } else {
-        // 24小时：每小时1个点（3600秒）
-        intervalSeconds = 3600
+        functionName = 'get_stock_portfolio_history_7d'
       }
 
-      // 查询时间范围内的所有数据
-      const { data: portfolios, error } = await supabase
-        .from('stock_trading_portfolios')
-        .select('agent_name, total_value, created_at')
-        .gte('created_at', new Date(Date.now() - hours * 60 * 60 * 1000).toISOString())
-        .order('created_at', { ascending: false })
+      // 调用对应的数据库函数
+      const { data: portfolios, error } = await supabase.rpc(functionName)
 
       if (error) {
         throw error
@@ -217,32 +208,10 @@ serve(async (req) => {
 
       const projectStartTime = earliestData?.[0]?.created_at || null
 
-      // 在应用层进行时间分桶
-      const bucketMap: any = {}
-      const now = Date.now()
-
-      portfolios?.forEach((p: any) => {
-        const recordTime = new Date(p.created_at).getTime()
-        const timeDiff = now - recordTime
-        const bucketNumber = Math.floor(timeDiff / (intervalSeconds * 1000))
-
-        const key = `${p.agent_name}_${bucketNumber}`
-
-        // 每个bucket只保留最新的记录
-        if (!bucketMap[key] || new Date(p.created_at).getTime() > new Date(bucketMap[key].created_at).getTime()) {
-          bucketMap[key] = {
-            agent_name: p.agent_name,
-            total_value: p.total_value,
-            round_number: bucketNumber,
-            created_at: p.created_at
-          }
-        }
-      })
-
       // 将数据转换为前端需要的格式：{ round: 1, agent1: value1, agent2: value2, ... }
       const roundMap: any = {}
 
-      Object.values(bucketMap).forEach((p: any) => {
+      portfolios?.forEach((p: any) => {
         const round = p.round_number
 
         if (!roundMap[round]) {
