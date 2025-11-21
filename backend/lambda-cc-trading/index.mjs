@@ -203,6 +203,9 @@ const API_KEYS = {
     qwen3_235b: null     // AWS Bedrock 不需要 API Key
 };
 
+// 可交易资产列表（严格限制）
+const AVAILABLE_ASSETS = ['BTC', 'ETH', 'SOL', 'BNB', 'DOGE', 'XRP'];
+
 // 配置要运行的 LLM agents + 基准策略
 // 新架构：每家厂商2个模型（标准型 + 轻量级）+ 2个ETF基准
 const AGENTS = [
@@ -269,8 +272,13 @@ async function executeAgent(agentName, promptBuilder, apiKeys) {
             console.log(`📊 ${displayName} Token Usage:`, result.usage);
         }
 
-        // 5. 解析决策
-        const decision = parseAndValidateDecisionFromLayer(result.text, displayName);
+        // 5. 解析并验证决策（强制限制可交易资产）
+        const decision = parseAndValidateDecisionFromLayer(result.text, {
+            modelName: displayName,
+            availableAssets: AVAILABLE_ASSETS,  // 严格限制：BTC, ETH, SOL, BNB, DOGE, XRP
+            allowHold: true,
+            requireAmount: true  // 必须提供正数amount
+        });
 
         return {
             decision,
@@ -1241,9 +1249,13 @@ ${formatIndicators('XRP')}
 // 4.2 决策解析（使用 Layer）
 // ============================================
 function parseAndValidateDecision(text, modelName) {
-    // 使用 Layer 的 parseAndValidateDecision 函数
-    // Layer 签名: parseAndValidateDecision(text, { modelName, ... })
-    return parseAndValidateDecisionFromLayer(text, { modelName });
+    // 使用 Layer 的 parseAndValidateDecision 函数，强制验证可交易资产
+    return parseAndValidateDecisionFromLayer(text, {
+        modelName,
+        availableAssets: AVAILABLE_ASSETS,  // 严格限制：BTC, ETH, SOL, BNB, DOGE, XRP
+        allowHold: true,
+        requireAmount: true  // 必须提供正数amount
+    });
 }
 // ============================================
 // 4. LLM Agent 执行（使用 Layer agent-executor）
