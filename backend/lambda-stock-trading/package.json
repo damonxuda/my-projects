@@ -1,24 +1,13 @@
 {
   "name": "lambda-stock-trading",
   "version": "1.0.0",
-  "description": "Multi-LLM Stock Trading Decision Maker - 美股量化交易系统",
+  "description": "AWS Lambda function for US stock algorithmic trading with 10 LLMs",
   "type": "module",
   "main": "index.mjs",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [
-    "lambda",
-    "trading",
-    "stock",
-    "llm",
-    "quantitative"
-  ],
+  "keywords": ["aws", "lambda", "stock-trading", "llm"],
   "author": "Damon Xu",
   "license": "MIT",
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
-    "yahoo-finance2": "^2.11.3",
-    "@aws-sdk/client-bedrock-runtime": "^3.0.0"
+    "@supabase/supabase-js": "^2.39.0"
   }
 }

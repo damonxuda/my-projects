@@ -15,12 +15,13 @@ const yahooFinance = new YahooFinance();
  * 从数据库获取 Agent 的最新投资组合
  * @param {string} agentName - Agent 名称
  * @param {object} dbClient - 数据库客户端（如 supabase）
+ * @param {string} tableName - 表名（默认：llm_trading_portfolios）
  * @returns {Promise<object>} 投资组合对象
  */
-export async function getCurrentPortfolio(agentName, dbClient) {
+export async function getCurrentPortfolio(agentName, dbClient, tableName = 'llm_trading_portfolios') {
     try {
         const { data, error } = await dbClient
-            .from('llm_trading_portfolios')
+            .from(tableName)
             .select('*')
             .eq('agent_name', agentName)
             .order('created_at', { ascending: false })
@@ -468,19 +469,21 @@ export async function calculateTotalValue(portfolio, marketData) {
  * 保存投资组合到数据库
  * @param {object} portfolio - 投资组合对象
  * @param {object} dbClient - 数据库客户端（如 supabase）
+ * @param {string} tableName - 表名（默认：llm_trading_portfolios）
  * @returns {Promise<void>}
  */
-export async function savePortfolio(portfolio, dbClient) {
+export async function savePortfolio(portfolio, dbClient, tableName = 'llm_trading_portfolios') {
     try {
-        const { error } = await dbClient
-            .from('llm_trading_portfolios')
+        const { error} = await dbClient
+            .from(tableName)
             .insert({
                 agent_name: portfolio.agent_name,
                 cash: portfolio.cash,
                 holdings: portfolio.holdings,
                 total_value: portfolio.total_value,
                 pnl: portfolio.pnl,
-                pnl_percentage: portfolio.pnl_percentage
+                pnl_percentage: portfolio.pnl_percentage,
+                timestamp: portfolio.timestamp || new Date().toISOString()
             });
 
         if (error) {

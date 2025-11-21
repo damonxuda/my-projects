@@ -1,6 +1,7 @@
 import { ClerkAuthProvider, useAuth, UserProfile } from '../../auth-clerk/src';
-import React from 'react';
+import React, { useState } from 'react';
 import TradingDashboard from './components/TradingDashboard';
+import StockTradingDashboard from './components/StockTradingDashboard';
 import { User, Lock } from 'lucide-react';
 import './App.css';
 
@@ -8,6 +9,7 @@ import './App.css';
 // 交易观察系统主组件 - Multi-Agent Trading System
 const TradingApp = () => {
   const { user, loading: authLoading, isAdmin } = useAuth();
+  const [activeTab, setActiveTab] = useState('crypto'); // 'crypto' or 'stock'
 
   // 用户显示信息生成函数
   const getUserDisplayInfo = () => {
@@ -74,7 +76,7 @@ const TradingApp = () => {
         <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 rounded-t-lg">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-4">
-              <h1 className="text-xl font-bold text-gray-900">📊 LLM Trading Observer</h1>
+              <h1 className="text-xl font-bold text-gray-900">📊 量化模拟</h1>
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 {getUserDisplayInfo().avatar ? (
                   <img
@@ -108,9 +110,35 @@ const TradingApp = () => {
           </div>
         </div>
 
+        {/* 二级导航 - 美股/数字货币切换 */}
+        <div className="border-b border-gray-200">
+          <div className="flex space-x-1 px-6">
+            <button
+              onClick={() => setActiveTab('stock')}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'stock'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+              }`}
+            >
+              🇺🇸 美股交易
+            </button>
+            <button
+              onClick={() => setActiveTab('crypto')}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'crypto'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+              }`}
+            >
+              ₿ 数字货币交易
+            </button>
+          </div>
+        </div>
+
         {/* 主内容区域 */}
         <div className="p-6">
-          <TradingDashboard />
+          {activeTab === 'stock' ? <StockTradingDashboard /> : <TradingDashboard />}
         </div>
       </div>
     </div>
