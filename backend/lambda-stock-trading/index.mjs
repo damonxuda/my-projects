@@ -408,14 +408,14 @@ async function processSingleAgent(agent, marketData, historicalData, technicalIn
             // 先执行所有卖出操作（释放现金）
             const sellTrades = decision.actions.filter(t => t.action === 'sell');
             for (const trade of sellTrades) {
-                console.log(`  🔸 Sell: ${trade.amount} ${trade.stock} - ${trade.reason}`);
+                console.log(`  🔸 Sell: ${trade.amount} ${trade.asset} - ${trade.reason}`);
                 newPortfolio = await simulateTrade(newPortfolio, trade, marketData);
             }
 
             // 再执行所有买入操作（使用现金）
             const buyTrades = decision.actions.filter(t => t.action === 'buy');
             for (const trade of buyTrades) {
-                console.log(`  🔹 Buy: ${trade.amount} ${trade.stock} - ${trade.reason}`);
+                console.log(`  🔹 Buy: ${trade.amount} ${trade.asset} - ${trade.reason}`);
                 newPortfolio = await simulateTrade(newPortfolio, trade, marketData);
             }
 
@@ -812,7 +812,7 @@ ${AVAILABLE_STOCKS.map(s => `${s}:\n${formatIndicators(s)}`).join('\n\n')}
 **单笔交易格式：**
 {
     "action": "buy/sell/hold",
-    "stock": "AAPL",
+    "asset": "AAPL",
     "amount": 10,
     "reason": "决策理由（中文，1-2句话）"
 }
@@ -820,8 +820,8 @@ ${AVAILABLE_STOCKS.map(s => `${s}:\n${formatIndicators(s)}`).join('\n\n')}
 **多笔交易格式（推荐）：**
 {
     "actions": [
-        {"action": "sell", "stock": "NVDA", "amount": 5, "reason": "NVDA技术指标转弱，止盈"},
-        {"action": "buy", "stock": "AAPL", "amount": 10, "reason": "AAPL超卖反弹信号明显"}
+        {"action": "sell", "asset": "NVDA", "amount": 5, "reason": "NVDA技术指标转弱，止盈"},
+        {"action": "buy", "asset": "AAPL", "amount": 10, "reason": "AAPL超卖反弹信号明显"}
     ],
     "overall_reason": "整体策略：降低NVDA仓位，增配AAPL"
 }
@@ -829,7 +829,7 @@ ${AVAILABLE_STOCKS.map(s => `${s}:\n${formatIndicators(s)}`).join('\n\n')}
 **持有格式：**
 {
     "action": "hold",
-    "stock": null,
+    "asset": null,
     "amount": 0,
     "reason": "市场不明朗，暂时观望"
 }
@@ -874,12 +874,12 @@ async function saveDecision(agentName, decision, marketData, portfolioValue) {
 
             if (buyActions.length > 0 || sellActions.length > 0) {
                 const buyTotal = buyActions.reduce((sum, trade) => {
-                    const price = marketData[trade.stock]?.price || 0;
+                    const price = marketData[trade.asset]?.price || 0;
                     return sum + (trade.amount * price);
                 }, 0);
 
                 const sellTotal = sellActions.reduce((sum, trade) => {
-                    const price = marketData[trade.stock]?.price || 0;
+                    const price = marketData[trade.asset]?.price || 0;
                     return sum + (trade.amount * price);
                 }, 0);
 
@@ -919,8 +919,8 @@ async function saveDecision(agentName, decision, marketData, portfolioValue) {
                 finalReason += `\n\n整体策略: ${decision.overall_reason}`;
             }
 
-            const buyStocks = [...new Set(buyActions.map(t => t.stock))];
-            const sellStocks = [...new Set(sellActions.map(t => t.stock))];
+            const buyStocks = [...new Set(buyActions.map(t => t.asset))];
+            const sellStocks = [...new Set(sellActions.map(t => t.asset))];
 
             let stockTags = [];
             if (buyStocks.length > 0) {
