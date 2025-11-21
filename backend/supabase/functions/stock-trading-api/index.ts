@@ -2,6 +2,7 @@
 // 用途：美股交易观察系统的安全API层
 // 只允许管理员访问交易数据
 // 使用 Clerk JWT 进行身份验证
+// Updated: 2025-11-21 (IAM permissions fixed, simplified RPC logic)
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
