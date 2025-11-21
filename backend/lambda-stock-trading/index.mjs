@@ -296,7 +296,7 @@ async function executeAgent(agentName, promptBuilder, apiKeys) {
         return {
             decision: {
                 action: 'hold',
-                stock: null,
+                asset: null,
                 amount: 0,
                 reason: `API调用失败（${errorMsg}），保持持有`
             },
