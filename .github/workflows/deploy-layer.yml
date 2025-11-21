@@ -92,21 +92,37 @@ jobs:
 
           echo "📌 Layer ARN: ${LAYER_ARN}"
 
-      - name: Update TRADING_LAMBDA to use new Layer
+      - name: Update TRADING_CC_LAMBDA to use new Layer
         run: |
-          echo "🔗 Updating TRADING_LAMBDA to use Layer version ${LAYER_VERSION}..."
+          echo "🔗 Updating TRADING_CC_LAMBDA to use Layer version ${LAYER_VERSION}..."
 
           aws lambda update-function-configuration \
-            --function-name TRADING_LAMBDA \
+            --function-name TRADING_CC_LAMBDA \
             --layers "${LAYER_ARN}" \
             --region ${{ secrets.AWS_REGION }}
 
           echo "⏳ Waiting for function update to complete..."
           aws lambda wait function-updated \
-            --function-name TRADING_LAMBDA \
+            --function-name TRADING_CC_LAMBDA \
             --region ${{ secrets.AWS_REGION }}
 
-          echo "✅ TRADING_LAMBDA updated to Layer version ${LAYER_VERSION}"
+          echo "✅ TRADING_CC_LAMBDA updated to Layer version ${LAYER_VERSION}"
+
+      - name: Update TRADING_STOCK_LAMBDA to use new Layer
+        run: |
+          echo "🔗 Updating TRADING_STOCK_LAMBDA to use Layer version ${LAYER_VERSION}..."
+
+          aws lambda update-function-configuration \
+            --function-name TRADING_STOCK_LAMBDA \
+            --layers "${LAYER_ARN}" \
+            --region ${{ secrets.AWS_REGION }}
+
+          echo "⏳ Waiting for function update to complete..."
+          aws lambda wait function-updated \
+            --function-name TRADING_STOCK_LAMBDA \
+            --region ${{ secrets.AWS_REGION }}
+
+          echo "✅ TRADING_STOCK_LAMBDA updated to Layer version ${LAYER_VERSION}"
 
       - name: Deployment Summary
         run: |
@@ -117,7 +133,8 @@ jobs:
           echo "🔢 Layer Version: ${LAYER_VERSION}"
           echo ""
           echo "✅ Updated Functions:"
-          echo "  - TRADING_LAMBDA"
+          echo "  - TRADING_CC_LAMBDA (Crypto Trading)"
+          echo "  - TRADING_STOCK_LAMBDA (Stock Trading)"
           echo ""
           echo "💡 To update other functions manually, use:"
           echo "   aws lambda update-function-configuration \\"
