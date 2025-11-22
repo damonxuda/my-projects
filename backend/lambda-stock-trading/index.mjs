@@ -227,8 +227,8 @@ const AGENTS = [
     { name: 'grok_standard', type: 'llm', enabled: !!GROK_API_KEY },      // Grok 2
     { name: 'grok_mini', type: 'llm', enabled: !!GROK_API_KEY },          // Grok 2 mini
 
-    // DeepSeek (1个) - 统一使用 deepseek 标识（支持V3和R1）
-    { name: 'deepseek', type: 'llm', enabled: true },                     // DeepSeek (AWS Bedrock)
+    // DeepSeek - DISABLED (性能差，经常超时)
+    // { name: 'deepseek', type: 'llm', enabled: true },
 
     // Qwen (1个)
     { name: 'qwen3_235b', type: 'llm', enabled: true },                   // Qwen3 235B A22B (AWS Bedrock)
