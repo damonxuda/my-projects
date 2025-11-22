@@ -143,3 +143,158 @@ jobs:
           echo "   aws lambda update-function-configuration \\"
           echo "     --function-name YOUR_FUNCTION_NAME \\"
           echo "     --layers \"${LAYER_ARN}\""
+
+  deploy-trading-cc:
+    runs-on: ubuntu-latest
+    # Crypto trading lambda uses lambda-trading-shared Layer
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create deployment package (code only, no node_modules)
+        working-directory: ./backend/lambda-cc-trading
+        run: |
+          echo "📦 Creating TRADING_CC_LAMBDA package (Crypto Trading)..."
+          echo "⚠️  Using lambda-trading-shared Layer for dependencies"
+
+          # 只打包代码文件
+          zip -r function.zip index.mjs -x "*.DS_Store" "node_modules/*" "*.zip"
+
+          ls -lh function.zip
+          echo "✅ Package size: $(ls -lh function.zip | awk '{print $5}')"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Upload to S3
+        working-directory: ./backend/lambda-cc-trading
+        run: |
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          S3_KEY="lambda-deploy/TRADING_CC_LAMBDA-${TIMESTAMP}.zip"
+
+          echo "📤 Uploading to S3: s3://damonxuda-video-files/${S3_KEY}"
+          aws s3 cp function.zip s3://damonxuda-video-files/${S3_KEY}
+
+          echo "S3_KEY=${S3_KEY}" >> $GITHUB_ENV
+
+      - name: Deploy to Lambda
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_PRO_API_KEY: ${{ secrets.GEMINI_PRO_API_KEY }}
+          GEMINI_FLASH_API_KEY: ${{ secrets.GEMINI_FLASH_API_KEY }}
+          CLAUDE_SONNET_API_KEY: ${{ secrets.CLAUDE_SONNET_API_KEY }}
+          CLAUDE_HAIKU_API_KEY: ${{ secrets.CLAUDE_HAIKU_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CRYPTOCOMPARE_API_KEY: ${{ secrets.CRYPTOCOMPARE_API_KEY }}
+          COINGECKO_API_KEY: ${{ secrets.COINGECKO_API_KEY }}
+          SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          echo "🚀 Deploying TRADING_CC_LAMBDA (Crypto Trading)..."
+          echo "📦 Using S3 key: ${{ env.S3_KEY }}"
+
+          # 更新函数代码
+          aws lambda update-function-code \
+            --function-name TRADING_CC_LAMBDA \
+            --s3-bucket damonxuda-video-files \
+            --s3-key ${{ env.S3_KEY }}
+
+          # 等待函数更新完成
+          aws lambda wait function-updated \
+            --function-name TRADING_CC_LAMBDA
+
+          # 更新环境变量（Lambda Layer 由 deploy-layer.yml 管理）
+          echo "🔧 Updating environment variables..."
+          aws lambda update-function-configuration \
+            --function-name TRADING_CC_LAMBDA \
+            --environment "Variables={GEMINI_API_KEY=${GEMINI_API_KEY},GEMINI_PRO_API_KEY=${GEMINI_PRO_API_KEY},GEMINI_FLASH_API_KEY=${GEMINI_FLASH_API_KEY},CLAUDE_SONNET_API_KEY=${CLAUDE_SONNET_API_KEY},CLAUDE_HAIKU_API_KEY=${CLAUDE_HAIKU_API_KEY},DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY},GROK_API_KEY=${GROK_API_KEY},OPENAI_API_KEY=${OPENAI_API_KEY},CRYPTOCOMPARE_API_KEY=${CRYPTOCOMPARE_API_KEY},COINGECKO_API_KEY=${COINGECKO_API_KEY},SUPABASE_URL=${SUPABASE_URL},SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}}"
+
+          # 等待配置更新完成
+          aws lambda wait function-updated \
+            --function-name TRADING_CC_LAMBDA
+
+          echo "✅ TRADING_CC_LAMBDA deployed successfully!"
+
+  deploy-trading-stock:
+    runs-on: ubuntu-latest
+    # Stock trading lambda uses lambda-trading-shared Layer
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create deployment package (code only, no node_modules)
+        working-directory: ./backend/lambda-stock-trading
+        run: |
+          echo "📦 Creating TRADING_STOCK_LAMBDA package (Stock Trading)..."
+          echo "⚠️  Using lambda-trading-shared Layer for dependencies"
+
+          # 只打包代码文件
+          zip -r function.zip index.mjs -x "*.DS_Store" "node_modules/*" "*.zip"
+
+          ls -lh function.zip
+          echo "✅ Package size: $(ls -lh function.zip | awk '{print $5}')"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Upload to S3
+        working-directory: ./backend/lambda-stock-trading
+        run: |
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          S3_KEY="lambda-deploy/TRADING_STOCK_LAMBDA-${TIMESTAMP}.zip"
+
+          echo "📤 Uploading to S3: s3://damonxuda-video-files/${S3_KEY}"
+          aws s3 cp function.zip s3://damonxuda-video-files/${S3_KEY}
+
+          echo "S3_KEY=${S3_KEY}" >> $GITHUB_ENV
+
+      - name: Deploy to Lambda
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_PRO_API_KEY: ${{ secrets.GEMINI_PRO_API_KEY }}
+          GEMINI_FLASH_API_KEY: ${{ secrets.GEMINI_FLASH_API_KEY }}
+          CLAUDE_SONNET_API_KEY: ${{ secrets.CLAUDE_SONNET_API_KEY }}
+          CLAUDE_HAIKU_API_KEY: ${{ secrets.CLAUDE_HAIKU_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
+          SUPABASE_URL: ${{ secrets.REACT_APP_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          echo "🚀 Deploying TRADING_STOCK_LAMBDA (Stock Trading)..."
+          echo "📦 Using S3 key: ${{ env.S3_KEY }}"
+
+          # 更新函数代码
+          aws lambda update-function-code \
+            --function-name TRADING_STOCK_LAMBDA \
+            --s3-bucket damonxuda-video-files \
+            --s3-key ${{ env.S3_KEY }}
+
+          # 等待函数更新完成
+          aws lambda wait function-updated \
+            --function-name TRADING_STOCK_LAMBDA
+
+          # 更新环境变量（Lambda Layer 由 deploy-layer.yml 管理）
+          echo "🔧 Updating environment variables..."
+          aws lambda update-function-configuration \
+            --function-name TRADING_STOCK_LAMBDA \
+            --environment "Variables={GEMINI_API_KEY=${GEMINI_API_KEY},GEMINI_PRO_API_KEY=${GEMINI_PRO_API_KEY},GEMINI_FLASH_API_KEY=${GEMINI_FLASH_API_KEY},CLAUDE_SONNET_API_KEY=${CLAUDE_SONNET_API_KEY},CLAUDE_HAIKU_API_KEY=${CLAUDE_HAIKU_API_KEY},DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY},GROK_API_KEY=${GROK_API_KEY},OPENAI_API_KEY=${OPENAI_API_KEY},ALPHA_VANTAGE_API_KEY=${ALPHA_VANTAGE_API_KEY},SUPABASE_URL=${SUPABASE_URL},SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}}"
+
+          # 等待配置更新完成
+          aws lambda wait function-updated \
+            --function-name TRADING_STOCK_LAMBDA
+
+          echo "✅ TRADING_STOCK_LAMBDA deployed successfully!"
