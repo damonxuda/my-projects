@@ -279,21 +279,6 @@ const StockTradingDashboard = () => {
           </p>
         </div>
       )}
-
-      {/* CoinGecko 归属声明 */}
-      <footer className="mt-8 pt-4 border-t border-gray-200 text-center">
-        <p className="text-xs text-gray-500">
-          Price data provided by{' '}
-          <a
-            href="https://www.coingecko.com/en/api"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-500 hover:text-blue-600 hover:underline"
-          >
-            CoinGecko API
-          </a>
-        </p>
-      </footer>
     </div>
   );
 };
