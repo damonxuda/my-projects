@@ -591,17 +591,17 @@ async function fetchHistoricalOHLC() {
     const historicalData = {};
 
     try {
-        // 获取过去30天的日K线数据（确保至少20根K线用于技术指标计算）
+        // 获取过去7天的30分钟K线数据（与加密货币一致，约336根K线）
         const endDate = new Date();
         const startDate = new Date();
-        startDate.setDate(startDate.getDate() - 30);
+        startDate.setDate(startDate.getDate() - 7);
 
         for (const symbol of AVAILABLE_STOCKS) {
             try {
                 const result = await yahooFinance.historical(symbol, {
                     period1: startDate,
                     period2: endDate,
-                    interval: '1d'
+                    interval: '30m'  // 30分钟K线，与加密货币一致
                 });
 
                 // 转换为统一格式
