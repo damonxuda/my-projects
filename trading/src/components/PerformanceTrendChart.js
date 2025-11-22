@@ -48,7 +48,6 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, 
   };
 
   const baseAgentColors = {
-    'deepseek': '#DC2626',           // red-600 (合并后的统一显示)
     'qwen3_235b': '#EC4899',         // pink-500
     'openai_standard': '#10B981',    // green-500
     'openai_mini': '#34D399',        // green-400
@@ -68,7 +67,6 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, 
   // 初始点定义（所有agent都从$50,000开始）- 根据 mode 动态生成
   const baseInitialPoint = {
     round: 0,
-    deepseek: 50000,
     qwen3_235b: 50000,
     openai_standard: 50000,
     openai_mini: 50000,
@@ -113,7 +111,6 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, 
 
   // 模型显示名称（按卡片显示顺序排列）- 根据 mode 动态选择
   const baseAgentNames = {
-    'deepseek': 'DeepSeek',
     'qwen3_235b': 'Qwen3 235B',
     'openai_standard': 'GPT-4.1',
     'openai_mini': 'GPT-4o mini',

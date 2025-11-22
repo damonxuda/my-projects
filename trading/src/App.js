@@ -131,7 +131,7 @@ const TradingApp = () => {
                   : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
               }`}
             >
-              ₿ 数字货币交易
+              ₿ 加密货币交易
             </button>
           </div>
         </div>
