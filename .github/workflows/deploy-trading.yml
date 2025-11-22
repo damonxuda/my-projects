@@ -1,11 +1,13 @@
-name: Deploy Lambda Layer
+name: Deploy Trading System
 
 on:
   push:
     branches: [main]
     paths:
       - 'backend/lambda-trading-shared/**'
-      - '.github/workflows/deploy-layer.yml'
+      - 'backend/lambda-cc-trading/**'
+      - 'backend/lambda-stock-trading/**'
+      - '.github/workflows/deploy-trading.yml'
   workflow_dispatch:  # 允许手动触发
 
 jobs:
