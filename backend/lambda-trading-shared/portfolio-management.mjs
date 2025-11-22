@@ -270,7 +270,20 @@ export async function simulateTrade(portfolio, decision, marketData) {
 
         // 计算可买入份额（扣除手续费）
         const availableCash = newPortfolio.cash / (1 + TRADING_FEE_RATE);
-        const shares = availableCash / pricePerShare;
+        const sharesRaw = availableCash / pricePerShare;
+
+        // ⚠️ 美股ETF最小单位是1股（整数）
+        const shares = Math.floor(sharesRaw);
+
+        if (shares < 1) {
+            console.warn(`⚠️ Cannot buy ${ticker}: insufficient cash for 1 share (need $${pricePerShare.toFixed(2)}, have $${availableCash.toFixed(2)})`);
+            // 转为持有，只更新总价值
+            newPortfolio.total_value = await calculateTotalValue(newPortfolio, marketData);
+            newPortfolio.pnl = newPortfolio.total_value - 50000;
+            newPortfolio.pnl_percentage = (newPortfolio.pnl / 50000) * 100;
+            return newPortfolio;
+        }
+
         const cost = shares * pricePerShare;
         const fee = cost * TRADING_FEE_RATE;
         const totalCost = cost + fee;
@@ -319,7 +332,23 @@ export async function simulateTrade(portfolio, decision, marketData) {
     }
 
     const asset = decision.asset;
-    const amount = decision.amount;
+    let amount = decision.amount;
+
+    // ⚠️ 美股最小单位是1股（整数）- 对美股进行向下取整
+    // 加密货币保持小数（如 0.123 BTC）
+    const isStock = asset && marketData[asset] && !asset.match(/^(BTC|ETH|SOL|XRP|DOGE|ADA|AVAX|DOT|MATIC|LINK|UNI|ATOM|LTC|BCH|XLM|ALGO|VET|FIL|HBAR|ICP|NEAR|APT|ARB|OP|RNDR|IMX|EGLD|RUNE|FTM|FLOW|KCS|MINA|AAVE|CRV|MKR|SNX|COMP|ZRX|BAL|SUSHI|YFI|UMA|LRC|ENJ|MANA|SAND|AXS|GALA|CHZ|1INCH)$/i);
+
+    if (isStock) {
+        amount = Math.floor(amount);
+        if (amount < 1 && decision.action === 'buy') {
+            console.warn(`⚠️ Cannot buy ${asset}: amount ${decision.amount} rounds down to 0 shares`);
+            // 转为持有，只更新总价值
+            newPortfolio.total_value = await calculateTotalValue(newPortfolio, marketData);
+            newPortfolio.pnl = newPortfolio.total_value - 50000;
+            newPortfolio.pnl_percentage = (newPortfolio.pnl / 50000) * 100;
+            return newPortfolio;
+        }
+    }
 
     // 检查交易金额是否为0（模型已判断不可交易）
     if (amount === 0) {
