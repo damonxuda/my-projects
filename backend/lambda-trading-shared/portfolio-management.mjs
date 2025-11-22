@@ -391,7 +391,21 @@ export async function simulateTrade(portfolio, decision, marketData) {
         if (totalCost > newPortfolio.cash) {
             console.warn('⚠️ Insufficient cash, adjusting amount');
             // 调整为可买数量（扣除手续费后）
-            const adjustedAmount = (newPortfolio.cash / (price * (1 + TRADING_FEE_RATE))) * 0.95; // 留5%余量
+            let adjustedAmount = (newPortfolio.cash / (price * (1 + TRADING_FEE_RATE))) * 0.95; // 留5%余量
+
+            // ⚠️ 美股必须是整股 - 对调整后的数量也要取整
+            if (isStock) {
+                adjustedAmount = Math.floor(adjustedAmount);
+                if (adjustedAmount < 1) {
+                    console.warn(`⚠️ Cannot buy ${asset}: insufficient cash for 1 share (have $${newPortfolio.cash.toFixed(2)}, need $${(price * (1 + TRADING_FEE_RATE)).toFixed(2)})`);
+                    // 转为持有，只更新总价值
+                    newPortfolio.total_value = await calculateTotalValue(newPortfolio, marketData);
+                    newPortfolio.pnl = newPortfolio.total_value - 50000;
+                    newPortfolio.pnl_percentage = (newPortfolio.pnl / 50000) * 100;
+                    return newPortfolio;
+                }
+            }
+
             const adjustedCost = adjustedAmount * price;
             const adjustedFee = adjustedCost * TRADING_FEE_RATE;
             newPortfolio.cash -= (adjustedCost + adjustedFee);
