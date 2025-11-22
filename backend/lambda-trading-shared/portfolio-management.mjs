@@ -218,16 +218,58 @@ export async function checkAndReinvestDividends(portfolio, ticker) {
             throw new Error(`Invalid current price for ${ticker}`);
         }
 
+        // 计算可用于再投资的总金额 = 分红 + 现金余额
+        const cashBalance = portfolio.cash || 0;
+        const totalAvailable = totalDividend + cashBalance;
+
+        console.log(`💵 可用资金: 分红 $${totalDividend.toFixed(2)} + 余额 $${cashBalance.toFixed(2)} = $${totalAvailable.toFixed(2)}`);
+
+        // 计算扣除手续费后可购买的份额
+        const TRADING_FEE_RATE = 0.001; // 0.1%手续费
+        const sharesToBuyRaw = totalAvailable / (currentPrice * (1 + TRADING_FEE_RATE));
+
+        // 判断是否为美股ETF（需要整数份额）
+        // 美股ETF: QQQ, VGT, SPY
+        // 加密货币ETF: equal_weight, gdlc, BITW
+        const isStockETF = ['QQQ', 'VGT', 'SPY'].includes(ticker.toUpperCase());
+
+        let sharesToBuy = sharesToBuyRaw;
+        if (isStockETF) {
+            sharesToBuy = Math.floor(sharesToBuyRaw);
+            if (sharesToBuy < 1) {
+                console.log(`📊 ${ticker}: 资金不足购买1份 (需要 $${(currentPrice * (1 + TRADING_FEE_RATE)).toFixed(2)}, 有 $${totalAvailable.toFixed(2)})，分红转为现金余额等待下次`);
+                // 分红转为现金，不执行购买
+                return {
+                    action: 'dividend_to_cash',
+                    ticker: ticker,
+                    dividend_amount: totalDividend,
+                    reason: `${ticker}分红 $${totalDividend.toFixed(2)}，但资金不足购买1份ETF，分红转为现金余额`,
+                    timestamp: nowTimestamp
+                };
+            }
+        }
+
+        const actualCost = sharesToBuy * currentPrice;
+        const actualFee = actualCost * TRADING_FEE_RATE;
+        const totalSpent = actualCost + actualFee;
+
+        console.log(`📈 ${ticker} 再投资: $${totalAvailable.toFixed(2)} → ${sharesToBuy.toFixed(6)} 份 @ $${currentPrice.toFixed(2)}/份 (费用 $${actualFee.toFixed(2)})`);
+
         // 返回分红再投资决策
         return {
             action: 'dividend_reinvest',
             ticker: ticker,
             dividend_amount: totalDividend,
+            cash_used: cashBalance,
+            total_available: totalAvailable,
             current_price: currentPrice,
-            shares_to_buy: totalDividend / currentPrice,
+            shares_to_buy: sharesToBuy,
+            cost: actualCost,
+            fee: actualFee,
+            total_spent: totalSpent,
             current_shares: currentShares,
             dividend_per_share: quarterlyDividendPerShare,
-            reason: `${ticker}季度分红 $${quarterlyDividendPerShare.toFixed(4)}/股，自动再投资购买 ${(totalDividend / currentPrice).toFixed(4)} 股`,
+            reason: `${ticker}季度分红 $${quarterlyDividendPerShare.toFixed(4)}/股 + 余额 $${cashBalance.toFixed(2)}，再投资购买 ${sharesToBuy.toFixed(isStockETF ? 0 : 6)} 份`,
             timestamp: nowTimestamp
         };
 
@@ -306,22 +348,59 @@ export async function simulateTrade(portfolio, decision, marketData) {
         return newPortfolio;
     }
 
+    // 处理分红转现金（资金不足购买1份ETF）
+    if (decision.action === 'dividend_to_cash') {
+        const ticker = decision.ticker;
+        const dividendAmount = decision.dividend_amount;
+        const lastDivCheckKey = `${ticker}_LAST_DIV_CHECK`;
+
+        // 分红转为现金余额
+        newPortfolio.cash += dividendAmount;
+        newPortfolio.holdings[lastDivCheckKey] = decision.timestamp;  // 更新分红检查时间戳
+
+        console.log(`💵 Dividend to Cash ${ticker}: $${dividendAmount.toFixed(2)} 转为现金余额（资金不足购买1份）`);
+        console.log(`📊 现金余额: $${(newPortfolio.cash - dividendAmount).toFixed(2)} + $${dividendAmount.toFixed(2)} = $${newPortfolio.cash.toFixed(2)}`);
+
+        // 计算新的总价值
+        newPortfolio.total_value = await calculateTotalValue(newPortfolio, marketData);
+        newPortfolio.pnl = newPortfolio.total_value - 50000;
+        newPortfolio.pnl_percentage = (newPortfolio.pnl / 50000) * 100;
+
+        return newPortfolio;
+    }
+
     // 处理ETF分红再投资
     if (decision.action === 'dividend_reinvest') {
         const ticker = decision.ticker;
         const dividendAmount = decision.dividend_amount;
+        const cashUsed = decision.cash_used;
+        const totalSpent = decision.total_spent;
         const currentPrice = decision.current_price;
         const newShares = decision.shares_to_buy;
+        const fee = decision.fee;
 
-        // 分红直接转为新股份，无需现金交易（分红已直接再投资）
         const sharesKey = `${ticker}_SHARES`;
         const lastDivCheckKey = `${ticker}_LAST_DIV_CHECK`;
 
+        // 分红金额直接用于购买，现金余额需要扣除
+        newPortfolio.cash -= cashUsed;
+
+        // 扣除手续费（从剩余现金中扣除，因为总花费已经包含手续费）
+        // 实际上 totalSpent = cost + fee，其中 cost 来自分红和现金，fee 也要从现金支付
+        // 但分红部分直接再投资，所以只需从现金中扣除 (cashUsed + 手续费中现金承担的部分)
+        // 简化：分红不占用现金，现金部分需承担相应比例的手续费
+        const cashPortion = cashUsed / (dividendAmount + cashUsed);
+        const cashFee = fee * cashPortion;
+        newPortfolio.cash -= cashFee;
+
+        // 增加ETF份额
         newPortfolio.holdings[sharesKey] += newShares;
         newPortfolio.holdings[lastDivCheckKey] = decision.timestamp;  // 更新分红检查时间戳
 
-        console.log(`💰 Dividend Reinvest ${ticker}: $${dividendAmount.toFixed(2)} dividend → ${newShares.toFixed(4)} shares at $${currentPrice.toFixed(2)}/share`);
-        console.log(`📊 ${ticker} 总持仓: ${decision.current_shares.toFixed(4)} + ${newShares.toFixed(4)} = ${newPortfolio.holdings[sharesKey].toFixed(4)} 股`);
+        console.log(`💰 Dividend Reinvest ${ticker}: 分红 $${dividendAmount.toFixed(2)} + 现金 $${cashUsed.toFixed(2)} → ${newShares.toFixed(4)} 份 @ $${currentPrice.toFixed(2)}/份`);
+        console.log(`💵 手续费: $${fee.toFixed(2)} (现金承担 $${cashFee.toFixed(2)})`);
+        console.log(`📊 ${ticker} 总持仓: ${decision.current_shares.toFixed(4)} + ${newShares.toFixed(4)} = ${newPortfolio.holdings[sharesKey].toFixed(4)} 份`);
+        console.log(`📊 剩余现金: $${newPortfolio.cash.toFixed(2)}`);
 
         // 计算新的总价值
         newPortfolio.total_value = await calculateTotalValue(newPortfolio, marketData);
