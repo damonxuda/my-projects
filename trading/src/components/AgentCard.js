@@ -31,6 +31,10 @@ const AgentCard = ({ portfolio, marketData }) => {
     // Qwen
     qwen3_235b: { name: 'Qwen3 235B', color: 'pink', icon: '🩷' },         // 旗舰-心形
 
+    // 加密货币ETF基准
+    equal_weight: { name: 'Equal Weight', color: 'cyan', icon: '🟦' },     // Equal Weight 加密货币ETF - 蓝色方块
+    gdlc: { name: 'GDLC', color: 'teal', icon: '🟩' },                     // Grayscale Digital Large Cap - 绿色方块
+
     // 美股ETF基准
     qqq: { name: 'QQQ', color: 'cyan', icon: '🟦' },                       // 纳斯达克100 ETF - 蓝色方块
     vgt: { name: 'VGT', color: 'teal', icon: '🟩' },                       // 科技股ETF - 绿色方块

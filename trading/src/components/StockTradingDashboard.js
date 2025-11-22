@@ -259,6 +259,7 @@ const StockTradingDashboard = () => {
           historyData7d={historyData7d}
           historyData30d={historyData30d}
           projectStartTime={projectStartTime}
+          mode="stock"
         />
       )}
 

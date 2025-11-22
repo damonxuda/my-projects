@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, projectStartTime }) => {
+const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, projectStartTime, mode = 'crypto' }) => {
+  // mode: 'crypto' (数字货币) 或 'stock' (美股)
   // 时间范围选择：24h（全采样）/ 7d（4小时采样）/ 30d（1天采样）
   const [timeRange, setTimeRange] = useState('24h');
 
@@ -34,8 +35,19 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, 
     }
   };
 
-  // Agent 颜色配置 - 每个模型一个颜色（按卡片显示顺序排列）
-  const agentColors = {
+  // Agent 颜色配置 - 根据 mode 动态选择
+  const cryptoETFs = {
+    'equal_weight': '#06B6D4',       // cyan-500 (Equal Weight 加密货币 ETF)
+    'gdlc': '#14B8A6'                // teal-500 (Grayscale Digital Large Cap ETF)
+  };
+
+  const stockETFs = {
+    'qqq': '#06B6D4',                // cyan-500 (纳斯达克100 ETF)
+    'vgt': '#14B8A6',                // teal-500 (科技股ETF)
+    'spy': '#6366F1'                 // indigo-500 (标普500 ETF)
+  };
+
+  const baseAgentColors = {
     'deepseek': '#DC2626',           // red-600 (合并后的统一显示)
     'qwen3_235b': '#EC4899',         // pink-500
     'openai_standard': '#10B981',    // green-500
@@ -45,14 +57,16 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, 
     'claude_standard': '#8B5CF6',    // purple-500
     'claude_mini': '#A78BFA',        // purple-400
     'grok_standard': '#F97316',      // orange-500
-    'grok_mini': '#FB923C',          // orange-400
-    'qqq': '#06B6D4',                // cyan-500 (纳斯达克100 ETF)
-    'vgt': '#14B8A6',                // teal-500 (科技股ETF)
-    'spy': '#6366F1'                 // indigo-500 (标普500 ETF)
+    'grok_mini': '#FB923C'           // orange-400
   };
 
-  // 初始点定义（所有agent都从$50,000开始）
-  const initialPoint = {
+  const agentColors = {
+    ...baseAgentColors,
+    ...(mode === 'stock' ? stockETFs : cryptoETFs)
+  };
+
+  // 初始点定义（所有agent都从$50,000开始）- 根据 mode 动态生成
+  const baseInitialPoint = {
     round: 0,
     deepseek: 50000,
     qwen3_235b: 50000,
@@ -63,10 +77,23 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, 
     claude_standard: 50000,
     claude_mini: 50000,
     grok_standard: 50000,
-    grok_mini: 50000,
+    grok_mini: 50000
+  };
+
+  const cryptoETFInitialPoints = {
+    equal_weight: 50000,
+    gdlc: 50000
+  };
+
+  const stockETFInitialPoints = {
     qqq: 50000,
     vgt: 50000,
     spy: 50000
+  };
+
+  const initialPoint = {
+    ...baseInitialPoint,
+    ...(mode === 'stock' ? stockETFInitialPoints : cryptoETFInitialPoints)
   };
 
   // 合并 deepseek_v3 和 deepseek_r1 的数据
@@ -84,8 +111,8 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, 
   // 根据项目开始时间动态决定是否添加初始点
   const chartData = shouldAddInitialPoint() ? [initialPoint, ...mergedHistoryData] : mergedHistoryData;
 
-  // 模型显示名称（按卡片显示顺序排列）
-  const agentNames = {
+  // 模型显示名称（按卡片显示顺序排列）- 根据 mode 动态选择
+  const baseAgentNames = {
     'deepseek': 'DeepSeek',
     'qwen3_235b': 'Qwen3 235B',
     'openai_standard': 'GPT-4.1',
@@ -95,10 +122,23 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, 
     'claude_standard': 'Sonnet 4.5',
     'claude_mini': 'Haiku 4.5',
     'grok_standard': 'Grok 4',
-    'grok_mini': 'Grok 3 mini',
+    'grok_mini': 'Grok 3 mini'
+  };
+
+  const cryptoETFNames = {
+    'equal_weight': 'Equal Weight',
+    'gdlc': 'GDLC'
+  };
+
+  const stockETFNames = {
     'qqq': 'QQQ',
     'vgt': 'VGT',
     'spy': 'SPY'
+  };
+
+  const agentNames = {
+    ...baseAgentNames,
+    ...(mode === 'stock' ? stockETFNames : cryptoETFNames)
   };
 
   // 自定义 Tooltip
