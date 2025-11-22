@@ -12,7 +12,7 @@ on:
     paths:
       - 'backend/lambda-video-management/**'
       - 'backend/lambda-user-management/**'
-      - 'backend/lambda-trading/**'
+      - 'backend/lambda-cc-trading/**'
       - 'backend/lambda-stock-trading/**'
       - 'lambda-subtitle/**'
       - '.github/workflows/deploy-lambda.yml'  # workflow 自身修改也触发
@@ -160,7 +160,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Create deployment package (code only, no node_modules)
-        working-directory: ./backend/lambda-trading
+        working-directory: ./backend/lambda-cc-trading
         run: |
           echo "📦 Creating TRADING_CC_LAMBDA package (Crypto Trading)..."
           echo "⚠️  Using lambda-trading-shared Layer for dependencies"
@@ -179,7 +179,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Upload to S3
-        working-directory: ./backend/lambda-trading
+        working-directory: ./backend/lambda-cc-trading
         run: |
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
           S3_KEY="lambda-deploy/TRADING_CC_LAMBDA-${TIMESTAMP}.zip"
