@@ -743,6 +743,29 @@ async function getBenchmarkDecision(benchmarkName, marketData, portfolio) {
 // 4. 构建美股交易提示词
 // ============================================
 function buildStockTradingPrompt(marketData, portfolio, historicalData, technicalIndicators, newsData) {
+    // 检查是否在美股交易时段 (美东时间 9:30-16:00, 周一至周五)
+    const now = new Date();
+    const etTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const hour = etTime.getHours();
+    const minute = etTime.getMinutes();
+    const day = etTime.getDay();
+    const isMarketOpen = (day >= 1 && day <= 5) &&
+                         ((hour === 9 && minute >= 30) || (hour > 9 && hour < 16));
+    const tradingStatus = isMarketOpen ? '✅ 市场开盘中' : '🔴 市场休市中';
+
+    // 计算预期可用现金（卖出所有持仓后的现金）
+    let expectedCash = portfolio.cash;
+    const holdingsValue = [];
+    for (const [symbol, quantity] of Object.entries(portfolio.holdings)) {
+        if (quantity > 0 && marketData[symbol]) {
+            const currentPrice = marketData[symbol].price;
+            const value = currentPrice * quantity;
+            const afterFee = value * 0.999; // 扣除0.1%手续费
+            expectedCash += afterFee;
+            holdingsValue.push(`${symbol}: ${quantity}股 × $${currentPrice.toFixed(2)} = $${value.toFixed(2)} (卖出后得 $${afterFee.toFixed(2)})`);
+        }
+    }
+
     // 格式化历史K线数据
     const formatOHLC = (symbol) => {
         const ohlc = historicalData[symbol] || [];
@@ -830,19 +853,29 @@ ${AVAILABLE_STOCKS.map(s => `${s}:\n${formatOHLC(s)}`).join('\n\n')}
 ${AVAILABLE_STOCKS.map(s => `${s}:\n${formatIndicators(s)}`).join('\n\n')}
 
 === 你的账户状态 ===
-现金: $${portfolio.cash.toFixed(2)}
-持仓: ${JSON.stringify(portfolio.holdings)}
+交易状态: ${tradingStatus}
+当前现金: $${portfolio.cash.toFixed(2)}
+持仓详情:
+${holdingsValue.length > 0 ? holdingsValue.join('\n') : '  无持仓'}
+预期可用现金（卖出所有持仓后）: $${expectedCash.toFixed(2)}
 总资产: $${portfolio.total_value.toFixed(2)}
 盈亏: ${portfolio.pnl?.toFixed(2) || 0}$ (${portfolio.pnl_percentage?.toFixed(2) || 0}%)
+
+⚠️ 重要提示：
+${isMarketOpen
+    ? '• 当前市场开盘中，交易将立即执行'
+    : '• 当前市场休市中，但系统使用当前价格模拟交易\n• 如需买入但现金不足，可以先卖出部分持仓，释放的现金会立即可用\n• 买卖操作会按照你指定的顺序执行（建议先卖后买）'}
 
 === 交易规则 ===
 1. ⚠️ **严格限制**：你只能交易这16支股票：${AVAILABLE_STOCKS.join(', ')}
 2. 现货交易无杠杆
 3. 单笔交易不超过总资产的 30%
 4. 单笔交易至少 $10（低于此金额不交易）
-5. 必须保留至少 20% 现金
+5. 买入操作需保留至少 20% 现金（卖出操作不受此限制）
 6. 每笔交易收取 0.1% 手续费
 7. **你可以在一次决策中同时操作多个股票**
+8. **如果现金不足，可以先卖出持仓筹集资金，然后买入（在同一次决策中）**
+9. **休市期间也可以做决策，系统会按当前价格模拟成交**
 
 请返回 JSON 格式的决策（不要包含任何其他文字）：
 
