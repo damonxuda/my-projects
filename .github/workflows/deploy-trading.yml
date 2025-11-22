@@ -45,6 +45,7 @@ jobs:
           cp llm-clients.mjs layer/nodejs/
           cp technical-indicators.mjs layer/nodejs/
           cp decision-parser.mjs layer/nodejs/
+          cp portfolio-management.mjs layer/nodejs/
           cp utils.mjs layer/nodejs/
           cp index.mjs layer/nodejs/
 
