@@ -591,10 +591,10 @@ async function fetchHistoricalOHLC() {
     const historicalData = {};
 
     try {
-        // 获取过去7天的日K线数据
+        // 获取过去30天的日K线数据（确保至少20根K线用于技术指标计算）
         const endDate = new Date();
         const startDate = new Date();
-        startDate.setDate(startDate.getDate() - 7);
+        startDate.setDate(startDate.getDate() - 30);
 
         for (const symbol of AVAILABLE_STOCKS) {
             try {
