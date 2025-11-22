@@ -598,14 +598,15 @@ async function fetchHistoricalOHLC() {
 
         for (const symbol of AVAILABLE_STOCKS) {
             try {
-                const result = await yahooFinance.historical(symbol, {
+                const result = await yahooFinance.chart(symbol, {
                     period1: startDate,
                     period2: endDate,
                     interval: '30m'  // 30分钟K线，与加密货币一致
                 });
 
-                // 转换为统一格式
-                const ohlc = result.map(candle => ({
+                // 转换为统一格式（chart API返回的数据结构不同）
+                const quotes = result.quotes || [];
+                const ohlc = quotes.map(candle => ({
                     timestamp: candle.date.getTime(),
                     date: candle.date.toISOString().split('T')[0],
                     open: candle.open,
