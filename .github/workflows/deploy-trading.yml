@@ -360,8 +360,7 @@ jobs:
             --runtime nodejs20.x \
             --role arn:aws:iam::730335478220:role/lambda-trading-role \
             --handler index.handler \
-            --s3-bucket damonxuda-video-files \
-            --s3-key ${{ env.S3_KEY }} \
+            --code S3Bucket=damonxuda-video-files,S3Key=${{ env.S3_KEY }} \
             --timeout 60 \
             --memory-size 256 \
             --environment "Variables={FINNHUB_API_KEY=${FINNHUB_API_KEY}}" \
