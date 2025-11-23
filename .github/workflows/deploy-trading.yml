@@ -178,8 +178,8 @@ jobs:
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
           S3_KEY="lambda-deploy/TRADING_CC_LAMBDA-${TIMESTAMP}.zip"
 
-          echo "📤 Uploading to S3: s3://damonxuda-video-files/${S3_KEY}"
-          aws s3 cp function.zip s3://damonxuda-video-files/${S3_KEY}
+          echo "📤 Uploading to S3: s3://damonxuda-projects/${S3_KEY}"
+          aws s3 cp function.zip s3://damonxuda-projects/${S3_KEY}
 
           echo "S3_KEY=${S3_KEY}" >> $GITHUB_ENV
 
@@ -204,7 +204,7 @@ jobs:
           # 更新函数代码
           aws lambda update-function-code \
             --function-name TRADING_CC_LAMBDA \
-            --s3-bucket damonxuda-video-files \
+            --s3-bucket damonxuda-projects \
             --s3-key ${{ env.S3_KEY }}
 
           # 等待函数更新完成
@@ -256,8 +256,8 @@ jobs:
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
           S3_KEY="lambda-deploy/TRADING_STOCK_LAMBDA-${TIMESTAMP}.zip"
 
-          echo "📤 Uploading to S3: s3://damonxuda-video-files/${S3_KEY}"
-          aws s3 cp function.zip s3://damonxuda-video-files/${S3_KEY}
+          echo "📤 Uploading to S3: s3://damonxuda-projects/${S3_KEY}"
+          aws s3 cp function.zip s3://damonxuda-projects/${S3_KEY}
 
           echo "S3_KEY=${S3_KEY}" >> $GITHUB_ENV
 
@@ -281,7 +281,7 @@ jobs:
           # 更新函数代码
           aws lambda update-function-code \
             --function-name TRADING_STOCK_LAMBDA \
-            --s3-bucket damonxuda-video-files \
+            --s3-bucket damonxuda-projects \
             --s3-key ${{ env.S3_KEY }}
 
           # 等待函数更新完成
@@ -332,8 +332,8 @@ jobs:
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
           S3_KEY="lambda-deploy/TEST_FINNHUB_LAMBDA-${TIMESTAMP}.zip"
 
-          echo "📤 Uploading to S3: s3://damonxuda-video-files/${S3_KEY}"
-          aws s3 cp function.zip s3://damonxuda-video-files/${S3_KEY}
+          echo "📤 Uploading to S3: s3://damonxuda-projects/${S3_KEY}"
+          aws s3 cp function.zip s3://damonxuda-projects/${S3_KEY}
 
           echo "S3_KEY=${S3_KEY}" >> $GITHUB_ENV
 
@@ -360,7 +360,7 @@ jobs:
             --runtime nodejs20.x \
             --role arn:aws:iam::730335478220:role/lambda-trading-role \
             --handler index.handler \
-            --code S3Bucket=damonxuda-video-files,S3Key=${{ env.S3_KEY }} \
+            --code S3Bucket=damonxuda-projects,S3Key=${{ env.S3_KEY }} \
             --timeout 60 \
             --memory-size 256 \
             --environment "Variables={FINNHUB_API_KEY=${FINNHUB_API_KEY}}" \
@@ -379,7 +379,7 @@ jobs:
           # 更新函数代码
           aws lambda update-function-code \
             --function-name TEST_FINNHUB_LAMBDA \
-            --s3-bucket damonxuda-video-files \
+            --s3-bucket damonxuda-projects \
             --s3-key ${{ env.S3_KEY }}
 
           # 等待函数更新完成

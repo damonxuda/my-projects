@@ -83,11 +83,11 @@ zip -r function.zip index.mjs shared/ lib/ -x "*.DS_Store" "node_modules/*"
 
 # 上传到S3并更新Lambda
 TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-aws s3 cp function.zip s3://damonxuda-video-files/lambda-deploy/SUBTITLE_MANAGER_LAMBDA-${TIMESTAMP}.zip
+aws s3 cp function.zip s3://damonxuda-projects/lambda-deploy/SUBTITLE_MANAGER_LAMBDA-${TIMESTAMP}.zip
 
 aws lambda update-function-code \
   --function-name SUBTITLE_MANAGER_LAMBDA \
-  --s3-bucket damonxuda-video-files \
+  --s3-bucket damonxuda-projects \
   --s3-key lambda-deploy/SUBTITLE_MANAGER_LAMBDA-${TIMESTAMP}.zip
 ```
 

@@ -74,8 +74,8 @@ jobs:
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
           S3_KEY="lambda-deploy/${{ matrix.service.name }}-${TIMESTAMP}.zip"
 
-          echo "📤 Uploading to S3: s3://damonxuda-video-files/${S3_KEY}"
-          aws s3 cp function.zip s3://damonxuda-video-files/${S3_KEY}
+          echo "📤 Uploading to S3: s3://damonxuda-projects/${S3_KEY}"
+          aws s3 cp function.zip s3://damonxuda-projects/${S3_KEY}
 
           echo "S3_KEY=${S3_KEY}" >> $GITHUB_ENV
 
@@ -87,7 +87,7 @@ jobs:
           # 更新函数代码
           aws lambda update-function-code \
             --function-name ${{ matrix.service.name }} \
-            --s3-bucket damonxuda-video-files \
+            --s3-bucket damonxuda-projects \
             --s3-key ${{ env.S3_KEY }}
 
           # 等待函数更新完成
@@ -129,8 +129,8 @@ jobs:
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
           S3_KEY="lambda-deploy/user_management-${TIMESTAMP}.zip"
 
-          echo "📤 Uploading to S3: s3://damonxuda-video-files/${S3_KEY}"
-          aws s3 cp function.zip s3://damonxuda-video-files/${S3_KEY}
+          echo "📤 Uploading to S3: s3://damonxuda-projects/${S3_KEY}"
+          aws s3 cp function.zip s3://damonxuda-projects/${S3_KEY}
 
           echo "S3_KEY=${S3_KEY}" >> $GITHUB_ENV
 
@@ -141,7 +141,7 @@ jobs:
 
           aws lambda update-function-code \
             --function-name user_management \
-            --s3-bucket damonxuda-video-files \
+            --s3-bucket damonxuda-projects \
             --s3-key ${{ env.S3_KEY }}
 
           aws lambda wait function-updated \
