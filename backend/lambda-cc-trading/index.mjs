@@ -29,10 +29,6 @@ import {
 // 从 Lambda Layer 导入依赖包
 // ============================================
 import { createClient } from '@supabase/supabase-js';
-import YahooFinanceClass from 'yahoo-finance2';
-
-// v3版本需要实例化
-const yahooFinance = new YahooFinanceClass();
 
 // ============================================
 // 环境变量配置
@@ -44,6 +40,7 @@ const CLAUDE_SONNET_API_KEY = process.env.CLAUDE_SONNET_API_KEY;  // 代理商AP
 const CLAUDE_HAIKU_API_KEY = process.env.CLAUDE_HAIKU_API_KEY;    // 代理商API Key for Haiku 4.5
 const GROK_API_KEY = process.env.GROK_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY;  // Finnhub API Key (用于GDLC和BITW ETF)
 const CRYPTOCOMPARE_API_KEY = process.env.CRYPTOCOMPARE_API_KEY;  // CryptoCompare News API
 const COINGECKO_API_KEY = process.env.COINGECKO_API_KEY;  // CoinGecko Demo API Key
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -794,6 +791,39 @@ function calculateTechnicalIndicators(ohlcData) {
 
 
 // ============================================
+// 2.5 获取单个ETF报价（Finnhub）
+// ============================================
+async function getFinnhubQuote(symbol) {
+    try {
+        const url = `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        // Finnhub 返回格式：
+        // c: 当前价格, h: 最高价, l: 最低价, o: 开盘价, pc: 昨日收盘价, t: 时间戳
+        return {
+            price: data.c,
+            open: data.o,
+            high: data.h,
+            low: data.l,
+            previousClose: data.pc,
+            change: data.c - data.pc,
+            changePercent: ((data.c - data.pc) / data.pc) * 100,
+            timestamp: data.t
+        };
+
+    } catch (error) {
+        console.error(`❌ ${symbol} Finnhub获取失败:`, error.message);
+        throw error;
+    }
+}
+
+// ============================================
 // 3. 基准策略决策函数
 // ============================================
 async function getBenchmarkDecision(benchmarkName, marketData, portfolio) {
@@ -823,10 +853,10 @@ async function getBenchmarkDecision(benchmarkName, marketData, portfolio) {
 
     // 初始状态：买入真实ETF份额
     if (benchmarkName === 'gdlc') {
-        // GDLC策略：追踪Grayscale CoinDesk Crypto 5 ETF真实价格
+        // GDLC策略：追踪Grayscale CoinDesk Crypto 5 ETF真实价格（使用Finnhub）
         try {
-            const quote = await yahooFinance.quote('GDLC');
-            const price = quote.regularMarketPrice;
+            const quote = await getFinnhubQuote('GDLC');
+            const price = quote.price;
 
             if (!price) {
                 throw new Error('Failed to get GDLC price');
@@ -850,10 +880,10 @@ async function getBenchmarkDecision(benchmarkName, marketData, portfolio) {
         }
 
     } else if (benchmarkName === 'equal_weight') {
-        // Equal Weight策略：追踪Bitwise 10 Crypto Index Fund (BITW)
+        // Equal Weight策略：追踪Bitwise 10 Crypto Index Fund (BITW)（使用Finnhub）
         try {
-            const quote = await yahooFinance.quote('BITW');
-            const price = quote.regularMarketPrice;
+            const quote = await getFinnhubQuote('BITW');
+            const price = quote.price;
 
             if (!price) {
                 throw new Error('Failed to get BITW price');

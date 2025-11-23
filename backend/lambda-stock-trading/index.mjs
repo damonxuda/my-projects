@@ -29,10 +29,6 @@ import {
 // 从 Lambda Layer 导入依赖包
 // ============================================
 import { createClient } from '@supabase/supabase-js';
-import YahooFinanceClass from 'yahoo-finance2';
-
-// v3版本需要实例化
-const yahooFinance = new YahooFinanceClass();
 
 // ============================================
 // 环境变量配置
@@ -44,6 +40,7 @@ const CLAUDE_SONNET_API_KEY = process.env.CLAUDE_SONNET_API_KEY;  // 代理商AP
 const CLAUDE_HAIKU_API_KEY = process.env.CLAUDE_HAIKU_API_KEY;    // 代理商API Key for Haiku 4.5
 const GROK_API_KEY = process.env.GROK_API_KEY;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY;  // Finnhub API Key
 const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY;  // Alpha Vantage News API
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -493,7 +490,40 @@ async function processSingleAgent(agent, marketData, historicalData, technicalIn
 }
 
 // ============================================
-// 1. 获取市场数据（Yahoo Finance）
+// 1. 获取单个股票报价（Finnhub）
+// ============================================
+async function getFinnhubQuote(symbol) {
+    try {
+        const url = `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        // Finnhub 返回格式：
+        // c: 当前价格, h: 最高价, l: 最低价, o: 开盘价, pc: 昨日收盘价, t: 时间戳
+        return {
+            price: data.c,
+            open: data.o,
+            high: data.h,
+            low: data.l,
+            previousClose: data.pc,
+            change: data.c - data.pc,
+            changePercent: ((data.c - data.pc) / data.pc) * 100,
+            timestamp: data.t
+        };
+
+    } catch (error) {
+        console.error(`❌ ${symbol} Finnhub获取失败:`, error.message);
+        throw error;
+    }
+}
+
+// ============================================
+// 1.1 获取市场数据（Finnhub）
 // ============================================
 async function fetchMarketData() {
     try {
@@ -502,23 +532,26 @@ async function fetchMarketData() {
         // 获取16支股票的实时报价
         for (const symbol of AVAILABLE_STOCKS) {
             try {
-                const quote = await yahooFinance.quote(symbol);
+                const quote = await getFinnhubQuote(symbol);
 
                 marketData[symbol] = {
-                    price: quote.regularMarketPrice,
-                    change_24h: quote.regularMarketChangePercent,
-                    volume_24h: quote.regularMarketVolume,
-                    market_cap: quote.marketCap,
-                    high_24h: quote.regularMarketDayHigh,
-                    low_24h: quote.regularMarketDayLow,
-                    pe_ratio: quote.trailingPE,
-                    eps: quote.epsTrailingTwelveMonths,
-                    fifty_two_week_high: quote.fiftyTwoWeekHigh,
-                    fifty_two_week_low: quote.fiftyTwoWeekLow,
+                    price: quote.price,
+                    change_24h: quote.changePercent,
+                    volume_24h: 0,  // Finnhub免费版不提供成交量
+                    market_cap: 0,  // Finnhub免费版不提供市值
+                    high_24h: quote.high,
+                    low_24h: quote.low,
+                    pe_ratio: 0,    // Finnhub免费版不提供PE
+                    eps: 0,         // Finnhub免费版不提供EPS
+                    fifty_two_week_high: 0,  // Finnhub免费版不提供52周数据
+                    fifty_two_week_low: 0,
                     last_updated: new Date().toISOString()
                 };
 
-                console.log(`✅ Fetched ${symbol}: $${quote.regularMarketPrice.toFixed(2)}`);
+                console.log(`✅ Fetched ${symbol}: $${quote.price.toFixed(2)} (${quote.changePercent.toFixed(2)}%)`);
+
+                // 避免触发速率限制（60次/分钟 = 1秒1次）
+                await new Promise(resolve => setTimeout(resolve, 100));
 
             } catch (error) {
                 console.error(`Failed to fetch ${symbol}:`, error);
@@ -543,21 +576,24 @@ async function fetchMarketData() {
         const ETF_TICKERS = ['QQQ', 'VGT', 'SPY'];
         for (const symbol of ETF_TICKERS) {
             try {
-                const quote = await yahooFinance.quote(symbol);
+                const quote = await getFinnhubQuote(symbol);
 
                 marketData[symbol] = {
-                    price: quote.regularMarketPrice,
-                    change_24h: quote.regularMarketChangePercent,
-                    volume_24h: quote.regularMarketVolume,
-                    market_cap: quote.marketCap,
-                    high_24h: quote.regularMarketDayHigh,
-                    low_24h: quote.regularMarketDayLow,
-                    fifty_two_week_high: quote.fiftyTwoWeekHigh,
-                    fifty_two_week_low: quote.fiftyTwoWeekLow,
+                    price: quote.price,
+                    change_24h: quote.changePercent,
+                    volume_24h: 0,
+                    market_cap: 0,
+                    high_24h: quote.high,
+                    low_24h: quote.low,
+                    fifty_two_week_high: 0,
+                    fifty_two_week_low: 0,
                     last_updated: new Date().toISOString()
                 };
 
-                console.log(`✅ Fetched ETF ${symbol}: $${quote.regularMarketPrice.toFixed(2)}`);
+                console.log(`✅ Fetched ETF ${symbol}: $${quote.price.toFixed(2)} (${quote.changePercent.toFixed(2)}%)`);
+
+                // 避免触发速率限制
+                await new Promise(resolve => setTimeout(resolve, 100));
 
             } catch (error) {
                 console.error(`Failed to fetch ETF ${symbol}:`, error);
@@ -585,39 +621,49 @@ async function fetchMarketData() {
 }
 
 // ============================================
-// 1.1 获取历史OHLC数据（Yahoo Finance）
+// 1.2 获取历史OHLC数据（Finnhub - 30分钟K线）
 // ============================================
 async function fetchHistoricalOHLC() {
     const historicalData = {};
 
     try {
-        // 获取过去7天的30分钟K线数据（与加密货币一致，约336根K线）
-        const endDate = new Date();
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - 7);
+        // 获取过去7天的30分钟K线数据（与加密货币一致）
+        const endTimestamp = Math.floor(Date.now() / 1000);
+        const startTimestamp = endTimestamp - (7 * 24 * 60 * 60);  // 7天前
 
         for (const symbol of AVAILABLE_STOCKS) {
             try {
-                const result = await yahooFinance.chart(symbol, {
-                    period1: startDate,
-                    period2: endDate,
-                    interval: '30m'  // 30分钟K线，与加密货币一致
-                });
+                const url = `https://finnhub.io/api/v1/stock/candle?symbol=${symbol}&resolution=30&from=${startTimestamp}&to=${endTimestamp}&token=${FINNHUB_API_KEY}`;
+                const response = await fetch(url);
 
-                // 转换为统一格式（chart API返回的数据结构不同）
-                const quotes = result.quotes || [];
-                const ohlc = quotes.map(candle => ({
-                    timestamp: candle.date.getTime(),
-                    date: candle.date.toISOString().split('T')[0],
-                    open: candle.open,
-                    high: candle.high,
-                    low: candle.low,
-                    close: candle.close,
-                    volume: candle.volume
-                }));
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
 
-                historicalData[symbol] = ohlc;
-                console.log(`📊 Fetched ${ohlc.length} OHLC candles for ${symbol}`);
+                const data = await response.json();
+
+                // Finnhub返回格式：
+                // c: close prices array, h: high, l: low, o: open, v: volume, t: timestamp
+                if (data.s === 'ok' && data.t && data.t.length > 0) {
+                    const ohlc = data.t.map((timestamp, i) => ({
+                        timestamp: timestamp * 1000,  // 转为毫秒
+                        date: new Date(timestamp * 1000).toISOString().split('T')[0],
+                        open: data.o[i],
+                        high: data.h[i],
+                        low: data.l[i],
+                        close: data.c[i],
+                        volume: data.v[i]
+                    }));
+
+                    historicalData[symbol] = ohlc;
+                    console.log(`📊 Fetched ${ohlc.length} OHLC candles for ${symbol}`);
+                } else {
+                    console.warn(`⚠️ No OHLC data for ${symbol}`);
+                    historicalData[symbol] = [];
+                }
+
+                // 避免触发速率限制
+                await new Promise(resolve => setTimeout(resolve, 100));
 
             } catch (error) {
                 console.error(`Failed to fetch OHLC for ${symbol}:`, error);
@@ -714,8 +760,8 @@ async function getBenchmarkDecision(benchmarkName, marketData, portfolio) {
 
     // 初始状态：买入真实ETF份额
     try {
-        const quote = await yahooFinance.quote(ticker);
-        const price = quote.regularMarketPrice;
+        const quote = await getFinnhubQuote(ticker);
+        const price = quote.price;
 
         if (!price) {
             throw new Error(`Failed to get ${ticker} price`);
