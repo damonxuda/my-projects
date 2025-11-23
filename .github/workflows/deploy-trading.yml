@@ -358,7 +358,7 @@ jobs:
           aws lambda create-function \
             --function-name TEST_FINNHUB_LAMBDA \
             --runtime nodejs20.x \
-            --role arn:aws:iam::730335478220:role/lambda-trading-role \
+            --role arn:aws:iam::730335478220:role/service-role/video_management-role-4tceqnka \
             --handler index.handler \
             --code S3Bucket=damonxuda-projects,S3Key=${{ env.S3_KEY }} \
             --timeout 60 \
