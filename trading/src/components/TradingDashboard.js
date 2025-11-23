@@ -210,15 +210,14 @@ const TradingDashboard = () => {
 
       {/* Agent 性能卡片 - 响应式布局 */}
       {/* 手机: 1列 | 平板竖屏: 2列 | 平板横屏/桌面: 3列 */}
-      {/* 第一行: DeepSeek, GPT-4.1, GPT-4o mini */}
-      {/* 第二行: Gemini 2.5 Pro, Gemini 2.5 Flash, Sonnet 4.5 */}
-      {/* 第三行: Haiku 4.5, Grok 4.1 Fast Reasoning, Grok 4.1 Fast */}
-      {/* 第四行: BITW, GDLC */}
+      {/* 第一行: GPT-4.1, GPT-4o mini, Gemini 2.5 Pro */}
+      {/* 第二行: Gemini 2.5 Flash, Sonnet 4.5, Haiku 4.5 */}
+      {/* 第三行: Grok 4.1 Fast Reasoning, Grok 4.1 Fast, BITW */}
+      {/* 第四行: GDLC */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {(() => {
-          // 固定显示顺序：DeepSeek在最前，Gemini Pro在Flash前，其他按厂商分组
+          // 固定显示顺序：Gemini Pro在Flash前，其他按厂商分组
           const displayOrder = [
-            'deepseek',
             'openai_standard', 'openai_mini',
             'gemini_pro', 'gemini_flash',
             'claude_standard', 'claude_mini',
@@ -226,16 +225,11 @@ const TradingDashboard = () => {
             'equal_weight', 'gdlc'
           ];
 
-          // 创建portfolio查找映射，合并 deepseek_v3 和 deepseek_r1
+          // 创建portfolio查找映射
           const portfolioMap = {};
           portfolios.forEach(p => {
             const agentKey = p.agent_name.toLowerCase();
-            // 将 deepseek_v3 和 deepseek_r1 都映射到 'deepseek'
-            if (agentKey === 'deepseek_v3' || agentKey === 'deepseek_r1') {
-              portfolioMap['deepseek'] = p;
-            } else {
-              portfolioMap[agentKey] = p;
-            }
+            portfolioMap[agentKey] = p;
           });
 
           // 按固定顺序渲染卡片

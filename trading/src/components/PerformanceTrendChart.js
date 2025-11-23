@@ -92,20 +92,8 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, 
     ...(mode === 'stock' ? stockETFInitialPoints : cryptoETFInitialPoints)
   };
 
-  // 合并 deepseek_v3 和 deepseek_r1 的数据
-  const mergedHistoryData = historyData.map(point => {
-    const merged = { ...point };
-    // 如果存在 deepseek_v3 或 deepseek_r1，合并到 deepseek
-    if (point.deepseek_v3 !== undefined || point.deepseek_r1 !== undefined) {
-      merged.deepseek = point.deepseek_r1 || point.deepseek_v3;
-      delete merged.deepseek_v3;
-      delete merged.deepseek_r1;
-    }
-    return merged;
-  });
-
   // 根据项目开始时间动态决定是否添加初始点
-  const chartData = shouldAddInitialPoint() ? [initialPoint, ...mergedHistoryData] : mergedHistoryData;
+  const chartData = shouldAddInitialPoint() ? [initialPoint, ...historyData] : historyData;
 
   // 模型显示名称（按卡片显示顺序排列）- 根据 mode 动态选择
   const baseAgentNames = {

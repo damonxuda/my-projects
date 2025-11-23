@@ -10,9 +10,7 @@ import {
     callOpenAI,
     callGemini,
     callClaude,
-    callGrok,
-    callDeepSeekBedrock,
-    callQwen3Bedrock
+    callGrok
 } from '/opt/nodejs/llm-clients.mjs';
 import { parseAndValidateDecision as parseAndValidateDecisionFromLayer } from '/opt/nodejs/decision-parser.mjs';
 import { calculateAllIndicators } from '/opt/nodejs/technical-indicators.mjs';
@@ -158,30 +156,6 @@ const AGENT_CONFIGS = {
             maxRetries: 1
         },
         displayName: 'Grok 4.1 Fast'
-    },
-
-    // DeepSeek (1个) - AWS Bedrock
-    deepseek: {
-        llmClient: callDeepSeekBedrock,
-        llmOptions: {
-            model: 'deepseek.v3-v1:0',
-            temperature: 0.7,
-            maxTokens: 4000,
-            timeout: 60000
-        },
-        displayName: 'DeepSeek'
-    },
-
-    // Qwen (1个) - AWS Bedrock
-    qwen3_235b: {
-        llmClient: callQwen3Bedrock,
-        llmOptions: {
-            model: 'qwen.qwen3-235b-a22b-2507-v1:0',
-            temperature: 0.7,
-            maxTokens: 4000,
-            timeout: 60000
-        },
-        displayName: 'Qwen3 235B'
     }
 };
 
@@ -194,9 +168,7 @@ const API_KEYS = {
     claude_standard: CLAUDE_SONNET_API_KEY,
     claude_mini: CLAUDE_HAIKU_API_KEY,
     grok_standard: GROK_API_KEY,
-    grok_mini: GROK_API_KEY,
-    deepseek: null,      // AWS Bedrock 不需要 API Key
-    qwen3_235b: null     // AWS Bedrock 不需要 API Key
+    grok_mini: GROK_API_KEY
 };
 
 // 可交易股票列表（严格限制）- 16支美股
@@ -209,7 +181,7 @@ const AVAILABLE_STOCKS = [
 // 新架构：每家厂商2个模型（标准型 + 轻量级）+ 3个ETF基准
 const AGENTS = [
     // OpenAI (2个)
-    { name: 'openai_standard', type: 'llm', enabled: !!OPENAI_API_KEY },  // GPT-4o
+    { name: 'openai_standard', type: 'llm', enabled: !!OPENAI_API_KEY },  // GPT-4.1
     { name: 'openai_mini', type: 'llm', enabled: !!OPENAI_API_KEY },      // GPT-4o mini
 
     // Gemini (2个)
@@ -217,18 +189,12 @@ const AGENTS = [
     { name: 'gemini_pro', type: 'llm', enabled: !!GEMINI_PRO_API_KEY },      // Gemini 2.5 Pro (代理商API)
 
     // Claude (2个)
-    { name: 'claude_standard', type: 'llm', enabled: !!CLAUDE_SONNET_API_KEY },  // Sonnet 4.5 thinking
+    { name: 'claude_standard', type: 'llm', enabled: !!CLAUDE_SONNET_API_KEY },  // Sonnet 4.5
     { name: 'claude_mini', type: 'llm', enabled: !!CLAUDE_HAIKU_API_KEY },       // Haiku 4.5
 
     // Grok (2个)
-    { name: 'grok_standard', type: 'llm', enabled: !!GROK_API_KEY },      // Grok 2
-    { name: 'grok_mini', type: 'llm', enabled: !!GROK_API_KEY },          // Grok 2 mini
-
-    // DeepSeek - DISABLED (性能差，经常超时)
-    // { name: 'deepseek', type: 'llm', enabled: true },
-
-    // Qwen (1个)
-    { name: 'qwen3_235b', type: 'llm', enabled: true },                   // Qwen3 235B A22B (AWS Bedrock)
+    { name: 'grok_standard', type: 'llm', enabled: !!GROK_API_KEY },      // Grok 4.1 Fast Reasoning
+    { name: 'grok_mini', type: 'llm', enabled: !!GROK_API_KEY },          // Grok 4.1 Fast
 
     // ETF基准 (3个)
     { name: 'qqq', type: 'benchmark', enabled: true },                    // Invesco QQQ ETF
