@@ -118,8 +118,8 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, 
     'gemini_flash': 'Gemini 2.5 Flash',
     'claude_standard': 'Sonnet 4.5',
     'claude_mini': 'Haiku 4.5',
-    'grok_standard': 'Grok 4',
-    'grok_mini': 'Grok 3 mini'
+    'grok_standard': 'Grok 4.1',
+    'grok_mini': 'Grok 4.1 Fast'
   };
 
   const cryptoETFNames = {

@@ -212,7 +212,7 @@ const StockTradingDashboard = () => {
       {/* 手机: 1列 | 平板竖屏: 2列 | 平板横屏/桌面: 3列 */}
       {/* 第一行: DeepSeek, GPT-4.1, GPT-4o mini */}
       {/* 第二行: Gemini 2.5 Pro, Gemini 2.5 Flash, Sonnet 4.5 */}
-      {/* 第三行: Haiku 4.5, Grok 4, Grok 3 mini */}
+      {/* 第三行: Haiku 4.5, Grok 4.1 Fast Reasoning, Grok 4.1 Fast */}
       {/* 第四行: BITW, GDLC */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {(() => {

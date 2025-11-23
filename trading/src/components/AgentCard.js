@@ -20,8 +20,8 @@ const AgentCard = ({ portfolio, marketData }) => {
     claude_mini: { name: 'Haiku 4.5', color: 'purple', icon: '🟪' },       // 轻量-方块
 
     // Grok
-    grok_standard: { name: 'Grok 4 Fast Reasoning', color: 'orange', icon: '🟠' },        // 推理型-圆形
-    grok_mini: { name: 'Grok 4 Fast', color: 'orange', icon: '🔶' },       // 非推理型-菱形
+    grok_standard: { name: 'Grok 4.1 Fast Reasoning', color: 'orange', icon: '🟠' },        // 推理型-圆形
+    grok_mini: { name: 'Grok 4.1 Fast', color: 'orange', icon: '🔶' },       // 非推理型-菱形
 
     // DeepSeek (合并 V3 和 R1，统一显示)
     deepseek: { name: 'DeepSeek', color: 'red', icon: '🔴' },              // 当前使用

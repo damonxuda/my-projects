@@ -143,24 +143,24 @@ const AGENT_CONFIGS = {
     grok_standard: {
         llmClient: callGrok,
         llmOptions: {
-            model: 'grok-4-fast-reasoning',
+            model: 'grok-4-1-fast-reasoning',
             temperature: 0.7,
             maxTokens: 2000,
             timeout: 120000,
             maxRetries: 2
         },
-        displayName: 'Grok 4 Fast Reasoning'
+        displayName: 'Grok 4.1 Fast Reasoning'
     },
     grok_mini: {
         llmClient: callGrok,
         llmOptions: {
-            model: 'grok-4-fast-non-reasoning',
+            model: 'grok-4-1-fast-non-reasoning',
             temperature: 0.7,
             maxTokens: 2000,
             timeout: 60000,
             maxRetries: 1
         },
-        displayName: 'Grok 4 Fast'
+        displayName: 'Grok 4.1 Fast'
     },
 
     // DeepSeek (1个) - AWS Bedrock
