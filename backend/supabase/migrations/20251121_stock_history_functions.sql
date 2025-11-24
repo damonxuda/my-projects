@@ -1,7 +1,7 @@
 -- 为美股交易创建历史数据查询函数
 -- 与数字货币trading-api保持一致的逻辑
 
--- 1. 24小时历史（每小时采样）
+-- 1. 24小时历史（每30分钟采样）
 CREATE OR REPLACE FUNCTION get_stock_portfolio_history_24h()
 RETURNS TABLE (
   agent_name TEXT,
@@ -16,12 +16,12 @@ BEGIN
       p.agent_name,
       p.total_value,
       p.created_at,
-      -- 按小时分组（向下取整到小时）
-      EXTRACT(EPOCH FROM (NOW() - p.created_at)) / 3600 AS hours_ago,
-      FLOOR(EXTRACT(EPOCH FROM (NOW() - p.created_at)) / 3600) AS round_number,
-      -- 在每个小时bucket内按时间排序，取最新的
+      -- 按30分钟分组（向下取整到30分钟）
+      EXTRACT(EPOCH FROM (NOW() - p.created_at)) / 1800 AS half_hours_ago,
+      FLOOR(EXTRACT(EPOCH FROM (NOW() - p.created_at)) / 1800) AS round_number,
+      -- 在每个30分钟bucket内按时间排序，取最新的
       ROW_NUMBER() OVER (
-        PARTITION BY p.agent_name, FLOOR(EXTRACT(EPOCH FROM (NOW() - p.created_at)) / 3600)
+        PARTITION BY p.agent_name, FLOOR(EXTRACT(EPOCH FROM (NOW() - p.created_at)) / 1800)
         ORDER BY p.created_at DESC
       ) AS rn
     FROM stock_trading_portfolios p
