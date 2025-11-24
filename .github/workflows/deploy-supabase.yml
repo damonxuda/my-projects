@@ -40,11 +40,11 @@ jobs:
           # Link to remote project
           supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
 
-          # Execute SQL files directly (bypassing migration system)
+          # Execute SQL files using input redirection
           for sql_file in migrations/*.sql; do
             if [ -f "$sql_file" ]; then
               echo "Executing: $sql_file"
-              supabase db execute --file "$sql_file" --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+              cat "$sql_file" | supabase db execute --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
             fi
           done
 
