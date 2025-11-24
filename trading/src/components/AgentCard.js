@@ -35,10 +35,11 @@ const AgentCard = ({ portfolio, marketData }) => {
     equal_weight: { name: 'Equal Weight', color: 'cyan', icon: '🟦' },     // Equal Weight 加密货币ETF - 蓝色方块
     gdlc: { name: 'GDLC', color: 'teal', icon: '🟩' },                     // Grayscale Digital Large Cap - 绿色方块
 
-    // 美股ETF基准
-    qqq: { name: 'QQQ', color: 'cyan', icon: '🟦' },                       // 纳斯达克100 ETF - 蓝色方块
+    // 美股ETF基准（按规模从大到小排序）
     spy: { name: 'SPY', color: 'teal', icon: '🟩' },                       // 标普500 ETF - 绿色方块
-    kweb: { name: 'KWEB', color: 'pink', icon: '🩷' }                      // 中国互联网ETF - 粉色心形
+    qqq: { name: 'QQQ', color: 'cyan', icon: '🟦' },                       // 纳斯达克100 ETF - 蓝色方块
+    kweb: { name: 'KWEB', color: 'pink', icon: '🩷' },                     // 中国互联网ETF - 粉色心形
+    fxi: { name: 'FXI', color: 'orange', icon: '🟧' }                      // 中国大盘股ETF - 橙色方块
   };
 
   const info = agentInfo[agent_name] || { name: agent_name, color: 'gray', icon: '⚪' };
@@ -115,7 +116,7 @@ const AgentCard = ({ portfolio, marketData }) => {
               const etfHoldings = [];
 
               Object.entries(holdings).forEach(([key, value]) => {
-                // ETF份额字段：QQQ_SHARES, SPY_SHARES, KWEB_SHARES
+                // ETF份额字段：SPY_SHARES, QQQ_SHARES, KWEB_SHARES, FXI_SHARES
                 if (key.endsWith('_SHARES') && value > 0) {
                   const ticker = key.replace('_SHARES', '');
                   const initPrice = holdings[`${ticker}_INIT_PRICE`];
