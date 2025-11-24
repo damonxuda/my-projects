@@ -340,8 +340,8 @@ export async function simulateTrade(portfolio, decision, marketData) {
 
         console.log(`📊 Buy ETF ${ticker}: ${shares.toFixed(2)} shares at $${pricePerShare.toFixed(2)}/share, cost $${cost.toFixed(2)}, fee $${fee.toFixed(2)}, total $${totalCost.toFixed(2)}`);
 
-        // 计算新的总价值（初始买入时，价值就是成本）
-        newPortfolio.total_value = cost;  // 不包含手续费（已损失）
+        // 计算新的总价值（现金 + 持仓市值）
+        newPortfolio.total_value = newPortfolio.cash + cost;  // 剩余现金 + ETF持仓价值
         newPortfolio.pnl = newPortfolio.total_value - 50000;
         newPortfolio.pnl_percentage = (newPortfolio.pnl / 50000) * 100;
 
