@@ -32,6 +32,7 @@ import {
 // 从 Lambda Layer 导入依赖包
 // ============================================
 import { createClient } from '@supabase/supabase-js';
+import YahooFinance from 'yahoo-finance2';
 
 // ============================================
 // 环境变量配置
@@ -599,8 +600,8 @@ async function fetchHistoricalOHLC() {
     const historicalData = {};
 
     try {
-        // 动态导入 yahoo-finance2
-        const yahooFinance = (await import('yahoo-finance2')).default;
+        // 实例化 YahooFinance (v3 API要求)
+        const yahooFinance = new YahooFinance();
 
         // 获取过去7天的30分钟K线数据
         const endDate = new Date();

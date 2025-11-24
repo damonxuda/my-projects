@@ -37,8 +37,9 @@ const AgentCard = ({ portfolio, marketData }) => {
 
     // 美股ETF基准
     qqq: { name: 'QQQ', color: 'cyan', icon: '🟦' },                       // 纳斯达克100 ETF - 蓝色方块
-    vgt: { name: 'VGT', color: 'teal', icon: '🟩' },                       // 科技股ETF - 绿色方块
-    spy: { name: 'SPY', color: 'indigo', icon: '🟨' }                      // 标普500 ETF - 黄色方块
+    spy: { name: 'SPY', color: 'teal', icon: '🟩' },                       // 标普500 ETF - 绿色方块
+    kweb: { name: 'KWEB', color: 'pink', icon: '🩷' },                     // 中国互联网ETF - 粉色心形
+    vgt: { name: 'VGT', color: 'indigo', icon: '🟪' }                      // 科技股ETF - 紫色方块
   };
 
   const info = agentInfo[agent_name] || { name: agent_name, color: 'gray', icon: '⚪' };
