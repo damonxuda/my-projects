@@ -283,6 +283,27 @@ export const handler = async (event) => {
     console.log(`Active agents: ${AGENTS.map(a => a.name).join(', ')}`);
     console.log('Event:', JSON.stringify(event, null, 2));
 
+    // 检查是否在有效交易时间（9:30-16:00，每30分钟）
+    // Scheduler设置为 cron(0,30 9-16 ? * MON-FRI *)，需要过滤掉9:00和16:30
+    const now = new Date();
+    const etTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const hour = etTime.getHours();
+    const minute = etTime.getMinutes();
+
+    // 排除9:00（开盘前）和16:30（收盘后）
+    if ((hour === 9 && minute === 0) || (hour === 16 && minute === 30)) {
+        console.log(`⏰ Outside valid trading hours (${hour}:${minute.toString().padStart(2, '0')} ET), skipping execution`);
+        return {
+            statusCode: 200,
+            body: JSON.stringify({
+                message: `Skipped: outside valid trading hours (${hour}:${minute.toString().padStart(2, '0')} ET)`,
+                time: etTime.toISOString()
+            })
+        };
+    }
+
+    console.log(`⏰ Valid trading time: ${hour}:${minute.toString().padStart(2, '0')} ET`);
+
     const results = [];
 
     try {
