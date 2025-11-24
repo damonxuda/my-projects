@@ -44,8 +44,7 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, 
   const stockETFs = {
     'qqq': '#06B6D4',                // cyan-500 (纳斯达克100 ETF)
     'spy': '#14B8A6',                // teal-500 (标普500 ETF)
-    'kweb': '#EC4899',               // pink-500 (中国互联网ETF)
-    'vgt': '#6366F1'                 // indigo-500 (科技股ETF)
+    'kweb': '#EC4899'                // pink-500 (中国互联网ETF)
   };
 
   const baseAgentColors = {
@@ -85,8 +84,7 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, 
   const stockETFInitialPoints = {
     qqq: 50000,
     spy: 50000,
-    kweb: 50000,
-    vgt: 50000
+    kweb: 50000
   };
 
   const initialPoint = {
@@ -117,8 +115,7 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, 
   const stockETFNames = {
     'qqq': 'QQQ',
     'spy': 'SPY',
-    'kweb': 'KWEB',
-    'vgt': 'VGT'
+    'kweb': 'KWEB'
   };
 
   const agentNames = {

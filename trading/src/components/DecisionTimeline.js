@@ -53,7 +53,6 @@ const DecisionTimeline = ({ decisions }) => {
     qqq: '🟦',              // 纳斯达克100 ETF - 蓝色方块
     spy: '🟩',              // 标普500 ETF - 绿色方块
     kweb: '🩷',             // 中国互联网ETF - 粉色心形
-    vgt: '🟪',              // 科技股ETF - 紫色方块
 
     // 数字货币ETF
     gdlc: '📊',

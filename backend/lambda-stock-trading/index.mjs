@@ -202,11 +202,10 @@ const AGENTS = [
     { name: 'grok_standard', type: 'llm', enabled: !!GROK_API_KEY },      // Grok 4.1 Fast Reasoning
     { name: 'grok_mini', type: 'llm', enabled: !!GROK_API_KEY },          // Grok 4.1 Fast
 
-    // ETF基准 (4个) - 按规模从大到小排序
+    // ETF基准 (3个) - 按规模从大到小排序
     { name: 'qqq', type: 'benchmark', enabled: true },                    // Invesco QQQ ETF
     { name: 'spy', type: 'benchmark', enabled: true },                    // SPDR S&P 500 ETF
-    { name: 'kweb', type: 'benchmark', enabled: true },                   // KraneShares CSI China Internet ETF
-    { name: 'vgt', type: 'benchmark', enabled: true }                     // Vanguard Information Technology ETF
+    { name: 'kweb', type: 'benchmark', enabled: true }                    // KraneShares CSI China Internet ETF
 ].filter(agent => agent.enabled);
 
 // ============================================
@@ -373,7 +372,7 @@ async function processSingleAgent(agent, marketData, historicalData, technicalIn
         const portfolio = await getCurrentPortfolio(agent.name, supabase, 'stock_trading_portfolios');
         console.log(`💰 ${agent.name} Portfolio:`, portfolio);
 
-        // 1.5 扣除ETF每日管理费（如果持有QQQ、VGT或SPY）
+        // 1.5 扣除ETF每日管理费（如果持有QQQ、SPY或KWEB）
         const feeResult = await deductDailyManagementFees(portfolio);
         if (feeResult.totalFeesDeducted > 0) {
             console.log(`💳 ${agent.name} 管理费扣除: 共 -$${feeResult.totalFeesDeducted.toFixed(2)}`);
@@ -566,8 +565,8 @@ async function fetchMarketData() {
             }
         }
 
-        // 获取4个ETF基准的实时报价（按规模从大到小排序）
-        const ETF_TICKERS = ['QQQ', 'SPY', 'KWEB', 'VGT'];
+        // 获取3个ETF基准的实时报价（按规模从大到小排序）
+        const ETF_TICKERS = ['QQQ', 'SPY', 'KWEB'];
         for (const symbol of ETF_TICKERS) {
             try {
                 const quote = await getFinnhubQuote(symbol);
@@ -730,8 +729,7 @@ async function getBenchmarkDecision(benchmarkName, marketData, portfolio) {
     const tickerMap = {
         'qqq': 'QQQ',
         'spy': 'SPY',
-        'kweb': 'KWEB',
-        'vgt': 'VGT'
+        'kweb': 'KWEB'
     };
     const ticker = tickerMap[benchmarkName];
     const sharesKey = `${ticker}_SHARES`;

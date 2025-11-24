@@ -213,16 +213,16 @@ const StockTradingDashboard = () => {
       {/* 第一行: GPT-4.1, GPT-4o mini, Gemini 2.5 Pro */}
       {/* 第二行: Gemini 2.5 Flash, Sonnet 4.5, Haiku 4.5 */}
       {/* 第三行: Grok 4.1 Fast Reasoning, Grok 4.1 Fast, QQQ */}
-      {/* 第四行: SPY, KWEB, VGT */}
+      {/* 第四行: SPY, KWEB */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {(() => {
-          // 固定显示顺序：Gemini Pro在Flash前，其他按厂商分组，ETF按规模排序（QQQ, SPY, KWEB, VGT）
+          // 固定显示顺序：Gemini Pro在Flash前，其他按厂商分组，ETF按规模排序（QQQ, SPY, KWEB）
           const displayOrder = [
             'openai_standard', 'openai_mini',
             'gemini_pro', 'gemini_flash',
             'claude_standard', 'claude_mini',
             'grok_standard', 'grok_mini',
-            'qqq', 'spy', 'kweb', 'vgt'
+            'qqq', 'spy', 'kweb'
           ];
 
           // 创建portfolio查找映射

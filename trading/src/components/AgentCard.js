@@ -38,8 +38,7 @@ const AgentCard = ({ portfolio, marketData }) => {
     // 美股ETF基准
     qqq: { name: 'QQQ', color: 'cyan', icon: '🟦' },                       // 纳斯达克100 ETF - 蓝色方块
     spy: { name: 'SPY', color: 'teal', icon: '🟩' },                       // 标普500 ETF - 绿色方块
-    kweb: { name: 'KWEB', color: 'pink', icon: '🩷' },                     // 中国互联网ETF - 粉色心形
-    vgt: { name: 'VGT', color: 'indigo', icon: '🟪' }                      // 科技股ETF - 紫色方块
+    kweb: { name: 'KWEB', color: 'pink', icon: '🩷' }                      // 中国互联网ETF - 粉色心形
   };
 
   const info = agentInfo[agent_name] || { name: agent_name, color: 'gray', icon: '⚪' };
@@ -116,7 +115,7 @@ const AgentCard = ({ portfolio, marketData }) => {
               const etfHoldings = [];
 
               Object.entries(holdings).forEach(([key, value]) => {
-                // ETF份额字段：QQQ_SHARES, VGT_SHARES, SPY_SHARES
+                // ETF份额字段：QQQ_SHARES, SPY_SHARES, KWEB_SHARES
                 if (key.endsWith('_SHARES') && value > 0) {
                   const ticker = key.replace('_SHARES', '');
                   const initPrice = holdings[`${ticker}_INIT_PRICE`];
