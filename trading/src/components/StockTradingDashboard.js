@@ -269,9 +269,6 @@ const StockTradingDashboard = () => {
       {portfolios.length === 0 && !loading && (
         <div className="bg-gray-50 rounded-lg p-12 text-center">
           <p className="text-gray-600">暂无交易数据</p>
-          <p className="text-sm text-gray-500 mt-2">
-            Lambda函数将每小时执行一次交易决策
-          </p>
         </div>
       )}
     </div>
