@@ -705,11 +705,12 @@ async function getBenchmarkDecision(benchmarkName, marketData, portfolio) {
     // 基准策略：追踪真实ETF价格（Buy and Hold）
     // 只在初始状态时买入ETF份额，之后持有不动
 
-    // 映射ETF ticker
+    // 映射ETF ticker（小写agent_name → 大写ticker）
     const tickerMap = {
         'qqq': 'QQQ',
-        'vgt': 'VGT',
-        'spy': 'SPY'
+        'spy': 'SPY',
+        'kweb': 'KWEB',
+        'vgt': 'VGT'
     };
     const ticker = tickerMap[benchmarkName];
     const sharesKey = `${ticker}_SHARES`;
