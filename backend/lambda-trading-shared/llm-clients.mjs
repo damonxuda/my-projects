@@ -82,6 +82,13 @@ export async function callOpenAI(prompt, options = {}) {
             maxRetries
         );
 
+        // 检查响应类型，防止解析 HTML 错误页面
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            throw new Error(`OpenAI API returned non-JSON response (${response.status}): ${text.substring(0, 200)}`);
+        }
+
         const data = await response.json();
 
         if (!response.ok) {
@@ -149,6 +156,13 @@ export async function callGemini(prompt, options = {}) {
             maxRetries
         );
 
+        // 检查响应类型，防止解析 HTML 错误页面
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            throw new Error(`Gemini API returned non-JSON response (${response.status}): ${text.substring(0, 200)}`);
+        }
+
         const data = await response.json();
 
         if (!response.ok) {
@@ -215,6 +229,13 @@ export async function callClaude(prompt, options = {}) {
             maxRetries
         );
 
+        // 检查响应类型，防止解析 HTML 错误页面
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            throw new Error(`Claude API returned non-JSON response (${response.status}): ${text.substring(0, 200)}`);
+        }
+
         const data = await response.json();
 
         if (!response.ok) {
@@ -278,6 +299,13 @@ export async function callGrok(prompt, options = {}) {
             `Grok ${model}`,
             maxRetries
         );
+
+        // 检查响应类型，防止解析 HTML 错误页面
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            throw new Error(`Grok API returned non-JSON response (${response.status}): ${text.substring(0, 200)}`);
+        }
 
         const data = await response.json();
 
