@@ -201,10 +201,11 @@ const AGENTS = [
     { name: 'grok_standard', type: 'llm', enabled: !!GROK_API_KEY },      // Grok 4.1 Fast Reasoning
     { name: 'grok_mini', type: 'llm', enabled: !!GROK_API_KEY },          // Grok 4.1 Fast
 
-    // ETF基准 (3个)
+    // ETF基准 (4个)
     { name: 'qqq', type: 'benchmark', enabled: true },                    // Invesco QQQ ETF
     { name: 'vgt', type: 'benchmark', enabled: true },                    // Vanguard Information Technology ETF
-    { name: 'spy', type: 'benchmark', enabled: true }                     // SPDR S&P 500 ETF
+    { name: 'spy', type: 'benchmark', enabled: true },                    // SPDR S&P 500 ETF
+    { name: 'kweb', type: 'benchmark', enabled: true }                    // KraneShares CSI China Internet ETF
 ].filter(agent => agent.enabled);
 
 // ============================================
@@ -543,8 +544,8 @@ async function fetchMarketData() {
             }
         }
 
-        // 获取3个ETF基准的实时报价
-        const ETF_TICKERS = ['QQQ', 'VGT', 'SPY'];
+        // 获取4个ETF基准的实时报价
+        const ETF_TICKERS = ['QQQ', 'VGT', 'SPY', 'KWEB'];
         for (const symbol of ETF_TICKERS) {
             try {
                 const quote = await getFinnhubQuote(symbol);
