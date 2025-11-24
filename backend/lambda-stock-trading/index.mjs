@@ -1,7 +1,12 @@
 // AWS Lambda Function: Multi-LLM Stock Trading Decision Maker
 // 用途：定时调用多个 LLM API（Gemini, Claude, Grok, OpenAI）进行美股交易决策，并保存到 Supabase
-// 触发：CloudWatch Events (每小时一次)
-// 环境变量：GEMINI_PRO_API_KEY, GEMINI_FLASH_API_KEY, CLAUDE_SONNET_API_KEY, CLAUDE_HAIKU_API_KEY, GROK_API_KEY, OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ALPHA_VANTAGE_API_KEY
+// 触发：EventBridge Scheduler (每小时一次，美东时间周一至周五 4:15-19:15)
+// 环境变量：GEMINI_PRO_API_KEY, GEMINI_FLASH_API_KEY, CLAUDE_SONNET_API_KEY, CLAUDE_HAIKU_API_KEY, GROK_API_KEY, OPENAI_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, ALPHA_VANTAGE_API_KEY, FINNHUB_API_KEY
+//
+// 行情数据源：
+// - 实时报价：Finnhub API (延迟几秒)
+// - 历史K线：Yahoo Finance API (免费，30分钟K线)
+// - 新闻数据：Alpha Vantage API
 
 // ============================================
 // 从 Lambda Layer 导入共享模块
@@ -587,49 +592,48 @@ async function fetchMarketData() {
 }
 
 // ============================================
-// 1.2 获取历史OHLC数据（Finnhub - 30分钟K线）
+// 1.2 获取历史OHLC数据（Yahoo Finance - 30分钟K线）
 // ============================================
 async function fetchHistoricalOHLC() {
     const historicalData = {};
 
     try {
-        // 获取过去7天的30分钟K线数据（与加密货币一致）
-        const endTimestamp = Math.floor(Date.now() / 1000);
-        const startTimestamp = endTimestamp - (7 * 24 * 60 * 60);  // 7天前
+        // 动态导入 yahoo-finance2
+        const yahooFinance = (await import('yahoo-finance2')).default;
+
+        // 获取过去7天的30分钟K线数据
+        const endDate = new Date();
+        const startDate = new Date(endDate.getTime() - 7 * 24 * 60 * 60 * 1000);  // 7天前
 
         for (const symbol of AVAILABLE_STOCKS) {
             try {
-                const url = `https://finnhub.io/api/v1/stock/candle?symbol=${symbol}&resolution=30&from=${startTimestamp}&to=${endTimestamp}&token=${FINNHUB_API_KEY}`;
-                const response = await fetch(url);
+                // 使用 Yahoo Finance 获取30分钟K线
+                const result = await yahooFinance.chart(symbol, {
+                    period1: startDate,
+                    period2: endDate,
+                    interval: '30m'  // 30分钟K线
+                });
 
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
-                }
-
-                const data = await response.json();
-
-                // Finnhub返回格式：
-                // c: close prices array, h: high, l: low, o: open, v: volume, t: timestamp
-                if (data.s === 'ok' && data.t && data.t.length > 0) {
-                    const ohlc = data.t.map((timestamp, i) => ({
-                        timestamp: timestamp * 1000,  // 转为毫秒
-                        date: new Date(timestamp * 1000).toISOString().split('T')[0],
-                        open: data.o[i],
-                        high: data.h[i],
-                        low: data.l[i],
-                        close: data.c[i],
-                        volume: data.v[i]
-                    }));
+                if (result && result.quotes && result.quotes.length > 0) {
+                    const ohlc = result.quotes.map(quote => ({
+                        timestamp: quote.date.getTime(),
+                        date: quote.date.toISOString().split('T')[0],
+                        open: quote.open,
+                        high: quote.high,
+                        low: quote.low,
+                        close: quote.close,
+                        volume: quote.volume || 0
+                    })).filter(q => q.open && q.high && q.low && q.close);  // 过滤无效数据
 
                     historicalData[symbol] = ohlc;
-                    console.log(`📊 Fetched ${ohlc.length} OHLC candles for ${symbol}`);
+                    console.log(`📊 Fetched ${ohlc.length} OHLC candles for ${symbol} (Yahoo Finance)`);
                 } else {
                     console.warn(`⚠️ No OHLC data for ${symbol}`);
                     historicalData[symbol] = [];
                 }
 
                 // 避免触发速率限制
-                await new Promise(resolve => setTimeout(resolve, 100));
+                await new Promise(resolve => setTimeout(resolve, 200));
 
             } catch (error) {
                 console.error(`Failed to fetch OHLC for ${symbol}:`, error);
@@ -879,7 +883,9 @@ ${isMarketOpen
     : '• 当前市场休市中，但系统使用当前价格模拟交易\n• 如需买入但现金不足，可以先卖出部分持仓，释放的现金会立即可用\n• 买卖操作会按照你指定的顺序执行（建议先卖后买）'}
 
 === 交易规则 ===
-1. ⚠️ **严格限制**：你只能交易这16支股票：${AVAILABLE_STOCKS.join(', ')}
+1. ⚠️ **【强制规则】你只能交易这16支股票：${AVAILABLE_STOCKS.join(', ')}**
+   - 交易任何其他股票（包括 BABA, TCEHY, JD, BIDU 等）都会导致决策被拒绝
+   - 请严格遵守这个股票列表，不要尝试交易列表外的任何股票
 2. 现货交易无杠杆
 3. 单笔交易不超过总资产的 30%
 4. 单笔交易至少 $10（低于此金额不交易）
