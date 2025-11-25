@@ -630,41 +630,64 @@ export async function savePortfolio(portfolio, dbClient, tableName = 'llm_tradin
 
 /**
  * 计算美股交易的轮次编号
- * 基于项目开始时间和当前时间，按30分钟分bucket
+ * 使用固定时间基线：10:00 ET = Round 1, 10:30 ET = Round 2, ..., 16:00 ET = Round 13
  * @param {object} dbClient - 数据库客户端
  * @param {string} tableName - 表名
  * @returns {Promise<number>} 轮次编号（从1开始）
  */
 async function calculateRoundNumber(dbClient, tableName) {
     try {
-        // 获取项目开始时间（第一条记录的时间）
-        const { data: firstRecord, error: firstError } = await dbClient
-            .from(tableName)
-            .select('created_at')
-            .order('created_at', { ascending: true })
-            .limit(1)
-            .single();
+        // 固定的交易时间基线（美东时间，以小时:分钟表示）
+        const tradingBaselines = [
+            { hour: 10, minute: 0, round: 1 },   // 10:00 ET
+            { hour: 10, minute: 30, round: 2 },  // 10:30 ET
+            { hour: 11, minute: 0, round: 3 },   // 11:00 ET
+            { hour: 11, minute: 30, round: 4 },  // 11:30 ET
+            { hour: 12, minute: 0, round: 5 },   // 12:00 ET
+            { hour: 12, minute: 30, round: 6 },  // 12:30 ET
+            { hour: 13, minute: 0, round: 7 },   // 13:00 ET
+            { hour: 13, minute: 30, round: 8 },  // 13:30 ET
+            { hour: 14, minute: 0, round: 9 },   // 14:00 ET
+            { hour: 14, minute: 30, round: 10 }, // 14:30 ET
+            { hour: 15, minute: 0, round: 11 },  // 15:00 ET
+            { hour: 15, minute: 30, round: 12 }, // 15:30 ET
+            { hour: 16, minute: 0, round: 13 }   // 16:00 ET
+        ];
 
-        if (firstError && firstError.code !== 'PGRST116') {
-            throw firstError;
+        // 获取当前美东时间
+        const now = new Date();
+        const etTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+        const currentHour = etTime.getHours();
+        const currentMinute = etTime.getMinutes();
+
+        // 转换为分钟数（方便计算距离）
+        const currentTimeInMinutes = currentHour * 60 + currentMinute;
+
+        // 找到最接近的基线时间点（±10分钟内）
+        let closestRound = null;
+        let minDifference = Infinity;
+
+        for (const baseline of tradingBaselines) {
+            const baselineTimeInMinutes = baseline.hour * 60 + baseline.minute;
+            const difference = Math.abs(currentTimeInMinutes - baselineTimeInMinutes);
+
+            // 只考虑±10分钟内的基线
+            if (difference <= 10 && difference < minDifference) {
+                minDifference = difference;
+                closestRound = baseline.round;
+            }
         }
 
-        // 如果是第一条记录，返回轮次1
-        if (!firstRecord) {
-            return 1;
+        if (closestRound !== null) {
+            console.log(`📊 Matched to round ${closestRound} (ET time: ${currentHour}:${currentMinute.toString().padStart(2, '0')})`);
+            return closestRound;
         }
 
-        const projectStartTime = new Date(firstRecord.created_at).getTime();
-        const currentTime = Date.now();
-
-        // 计算从项目开始到现在经过了多少个30分钟
-        const halfHoursSinceStart = Math.floor((currentTime - projectStartTime) / (30 * 60 * 1000));
-
-        // 轮次 = bucket数 + 1（从1开始计数）
-        return halfHoursSinceStart + 1;
+        // 如果没有匹配的基线（非交易时间），返回null
+        console.warn(`⚠️ No matching trading round for ET time ${currentHour}:${currentMinute.toString().padStart(2, '0')}`);
+        return null;
     } catch (error) {
         console.error('Failed to calculate round number:', error);
-        // 如果计算失败，返回null（数据库会允许null）
         return null;
     }
 }
