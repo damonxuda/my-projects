@@ -220,7 +220,9 @@ serve(async (req) => {
         roundMap[round][p.agent_name] = parseFloat(p.total_value)
       })
 
-      const history = Object.values(roundMap)
+      // 按 round 降序排列（大到小），使得图表从左到右显示时间顺序：最旧 → 最新
+      // round_number 越大表示越久远（如 round 36 = 18小时前，round 24 = 12小时前）
+      const history = Object.values(roundMap).sort((a: any, b: any) => b.round - a.round)
 
       return new Response(
         JSON.stringify({
