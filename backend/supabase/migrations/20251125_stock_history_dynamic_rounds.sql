@@ -1,6 +1,9 @@
 -- 修改美股历史函数，使用动态计算 round_number（模仿加密货币的实现）
 -- 不依赖表中的 round_number 列
 
+-- 删除旧函数（返回类型不同，必须先删除）
+DROP FUNCTION IF EXISTS get_stock_portfolio_history_24h();
+
 -- 1. 最近5个交易日历史（约70轮，每30分钟一轮）
 CREATE OR REPLACE FUNCTION get_stock_portfolio_history_24h()
 RETURNS TABLE(
