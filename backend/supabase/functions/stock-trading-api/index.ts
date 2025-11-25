@@ -220,7 +220,8 @@ serve(async (req) => {
         roundMap[round][p.agent_name] = parseFloat(p.total_value)
       })
 
-      const history = Object.values(roundMap)
+      // 显式升序排序：时间早的round小，时间晚的round大
+      const history = Object.values(roundMap).sort((a: any, b: any) => a.round - b.round)
 
       return new Response(
         JSON.stringify({
