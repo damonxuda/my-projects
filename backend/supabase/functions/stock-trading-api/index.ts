@@ -220,10 +220,10 @@ serve(async (req) => {
         roundMap[round][p.agent_name] = parseFloat(p.total_value)
       })
 
-      // 按 round 升序排列（小到大）：24, 25, ..., 36
-      // round_number 越小表示越新（如 round 24 = 最新收盘，round 36 = 最旧开盘）
-      // 但图表需要从左到右显示时间进度，所以保持升序让数字递增
-      const sortedHistory = Object.values(roundMap).sort((a: any, b: any) => a.round - b.round)
+      // 按 round 降序排列（大到小）：36, 35, ..., 24
+      // round_number 越大表示越旧（如 round 36 = 最旧开盘，round 24 = 最新收盘）
+      // 降序排列使得重新编号后：round 1=最旧，round 13=最新
+      const sortedHistory = Object.values(roundMap).sort((a: any, b: any) => b.round - a.round)
 
       // 重新编号：从 1 开始（0 保留给前端的初始点 $50,000）
       const history = sortedHistory.map((item: any, index: number) => ({
