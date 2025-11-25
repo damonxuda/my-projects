@@ -596,17 +596,26 @@ export async function calculateTotalValue(portfolio, marketData) {
  */
 export async function savePortfolio(portfolio, dbClient, tableName = 'llm_trading_portfolios') {
     try {
-        const { error} = await dbClient
+        const insertData = {
+            agent_name: portfolio.agent_name,
+            cash: portfolio.cash,
+            holdings: portfolio.holdings,
+            total_value: portfolio.total_value,
+            pnl: portfolio.pnl,
+            pnl_percentage: portfolio.pnl_percentage,
+            timestamp: portfolio.timestamp || new Date().toISOString()
+        };
+
+        // 如果是美股表，计算并添加 round_number
+        if (tableName === 'stock_trading_portfolios') {
+            const roundNumber = await calculateRoundNumber(dbClient, tableName);
+            insertData.round_number = roundNumber;
+            console.log(`📊 Calculated round_number: ${roundNumber}`);
+        }
+
+        const { error } = await dbClient
             .from(tableName)
-            .insert({
-                agent_name: portfolio.agent_name,
-                cash: portfolio.cash,
-                holdings: portfolio.holdings,
-                total_value: portfolio.total_value,
-                pnl: portfolio.pnl,
-                pnl_percentage: portfolio.pnl_percentage,
-                timestamp: portfolio.timestamp || new Date().toISOString()
-            });
+            .insert(insertData);
 
         if (error) {
             throw error;
@@ -616,5 +625,46 @@ export async function savePortfolio(portfolio, dbClient, tableName = 'llm_tradin
     } catch (error) {
         console.error('Failed to save portfolio:', error);
         throw error;
+    }
+}
+
+/**
+ * 计算美股交易的轮次编号
+ * 基于项目开始时间和当前时间，按30分钟分bucket
+ * @param {object} dbClient - 数据库客户端
+ * @param {string} tableName - 表名
+ * @returns {Promise<number>} 轮次编号（从1开始）
+ */
+async function calculateRoundNumber(dbClient, tableName) {
+    try {
+        // 获取项目开始时间（第一条记录的时间）
+        const { data: firstRecord, error: firstError } = await dbClient
+            .from(tableName)
+            .select('created_at')
+            .order('created_at', { ascending: true })
+            .limit(1)
+            .single();
+
+        if (firstError && firstError.code !== 'PGRST116') {
+            throw firstError;
+        }
+
+        // 如果是第一条记录，返回轮次1
+        if (!firstRecord) {
+            return 1;
+        }
+
+        const projectStartTime = new Date(firstRecord.created_at).getTime();
+        const currentTime = Date.now();
+
+        // 计算从项目开始到现在经过了多少个30分钟
+        const halfHoursSinceStart = Math.floor((currentTime - projectStartTime) / (30 * 60 * 1000));
+
+        // 轮次 = bucket数 + 1（从1开始计数）
+        return halfHoursSinceStart + 1;
+    } catch (error) {
+        console.error('Failed to calculate round number:', error);
+        // 如果计算失败，返回null（数据库会允许null）
+        return null;
     }
 }
