@@ -46,15 +46,31 @@ BEGIN
       half_hour_bucket,
       ROW_NUMBER() OVER (ORDER BY half_hour_bucket) AS round_num
     FROM half_hourly_buckets
+  ),
+  latest_70_rounds AS (
+    -- 只保留最近70轮
+    SELECT
+      half_hour_bucket,
+      round_num
+    FROM rounds_numbered
+    ORDER BY round_num DESC
+    LIMIT 70
+  ),
+  renumbered AS (
+    -- 重新编号：最老的=1，最新的=70（或更少）
+    SELECT
+      half_hour_bucket,
+      ROW_NUMBER() OVER (ORDER BY half_hour_bucket) AS final_round_num
+    FROM latest_70_rounds
   )
   SELECT
-    rn.round_num::INTEGER AS round_number,
+    rn.final_round_num::INTEGER AS round_number,
     lpba.agent_name,
     lpba.total_value,
     lpba.half_hour_bucket AS sample_time
   FROM latest_per_bucket_agent lpba
-  JOIN rounds_numbered rn ON lpba.half_hour_bucket = rn.half_hour_bucket
-  ORDER BY rn.round_num, lpba.agent_name;
+  JOIN renumbered rn ON lpba.half_hour_bucket = rn.half_hour_bucket
+  ORDER BY rn.final_round_num, lpba.agent_name;
 END;
 $$;
 
