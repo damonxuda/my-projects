@@ -40,11 +40,11 @@ jobs:
           # Link to remote project
           supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
 
-          # Execute SQL files using input redirection
+          # Execute SQL files using input redirection (无需 --project-ref，已经 link 过了)
           for sql_file in migrations/*.sql; do
             if [ -f "$sql_file" ]; then
               echo "Executing: $sql_file"
-              cat "$sql_file" | supabase db execute --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+              cat "$sql_file" | supabase db execute
             fi
           done
 
