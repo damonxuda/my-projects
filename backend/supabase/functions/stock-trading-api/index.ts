@@ -222,7 +222,13 @@ serve(async (req) => {
 
       // 按 round 降序排列（大到小），使得图表从左到右显示时间顺序：最旧 → 最新
       // round_number 越大表示越久远（如 round 36 = 18小时前，round 24 = 12小时前）
-      const history = Object.values(roundMap).sort((a: any, b: any) => b.round - a.round)
+      const sortedHistory = Object.values(roundMap).sort((a: any, b: any) => b.round - a.round)
+
+      // 重新编号：从 1 开始（0 保留给前端的初始点 $50,000）
+      const history = sortedHistory.map((item: any, index: number) => ({
+        ...item,
+        round: index + 1
+      }))
 
       return new Response(
         JSON.stringify({
