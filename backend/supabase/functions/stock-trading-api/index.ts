@@ -209,6 +209,7 @@ serve(async (req) => {
       const projectStartTime = earliestData?.[0]?.created_at || null
 
       // 将数据转换为前端需要的格式：{ round: 1, agent1: value1, agent2: value2, ... }
+      // 数据库函数已经返回升序排列的绝对轮次，直接使用即可
       const roundMap: any = {}
 
       portfolios?.forEach((p: any) => {
@@ -220,16 +221,8 @@ serve(async (req) => {
         roundMap[round][p.agent_name] = parseFloat(p.total_value)
       })
 
-      // 按 round 降序排列（大到小）：36, 35, ..., 24
-      // round_number 越大表示越旧（如 round 36 = 最旧开盘，round 24 = 最新收盘）
-      // 降序排列使得重新编号后：round 1=最旧，round 13=最新
-      const sortedHistory = Object.values(roundMap).sort((a: any, b: any) => b.round - a.round)
-
-      // 重新编号：从 1 开始（0 保留给前端的初始点 $50,000）
-      const history = sortedHistory.map((item: any, index: number) => ({
-        ...item,
-        round: index + 1
-      }))
+      // 按 round 升序排列（数据库已返回绝对轮次，数字越大=越新）
+      const history = Object.values(roundMap).sort((a: any, b: any) => a.round - b.round)
 
       return new Response(
         JSON.stringify({

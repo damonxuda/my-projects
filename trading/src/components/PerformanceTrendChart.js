@@ -188,18 +188,21 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, 
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            24小时
+            {mode === 'stock' ? '5个交易日' : '24小时'}
           </button>
-          <button
-            onClick={() => setTimeRange('7d')}
-            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-              timeRange === '7d'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            7天
-          </button>
+          {/* 美股不显示7天视图 */}
+          {mode !== 'stock' && (
+            <button
+              onClick={() => setTimeRange('7d')}
+              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                timeRange === '7d'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              7天
+            </button>
+          )}
           <button
             onClick={() => setTimeRange('30d')}
             className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
