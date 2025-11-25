@@ -22,38 +22,38 @@ BEGIN
       p.agent_name,
       p.total_value,
       p.created_at,
-      -- 按30分钟分组
+      -- 按5分钟分组（EventBridge每5分钟触发一次）
       DATE_TRUNC('hour', p.created_at) +
-        INTERVAL '30 minutes' * FLOOR(EXTRACT(MINUTE FROM p.created_at) / 30) AS half_hour_bucket
+        INTERVAL '5 minutes' * FLOOR(EXTRACT(MINUTE FROM p.created_at) / 5) AS five_min_bucket
     FROM stock_trading_portfolios p
     WHERE p.created_at > NOW() - INTERVAL '120 hours'
   ),
-  half_hourly_buckets AS (
-    -- 获取所有30分钟bucket
-    SELECT DISTINCT half_hour_bucket
+  five_min_buckets AS (
+    -- 获取所有5分钟bucket
+    SELECT DISTINCT five_min_bucket
     FROM recent_data
-    ORDER BY half_hour_bucket
+    ORDER BY five_min_bucket
   ),
   latest_per_bucket_agent AS (
-    -- 每个30分钟bucket内每个agent的最新记录
-    SELECT DISTINCT ON (rd.half_hour_bucket, rd.agent_name)
+    -- 每个5分钟bucket内每个agent的最新记录
+    SELECT DISTINCT ON (rd.five_min_bucket, rd.agent_name)
       rd.agent_name,
       rd.total_value,
-      rd.half_hour_bucket
+      rd.five_min_bucket
     FROM recent_data rd
-    ORDER BY rd.half_hour_bucket, rd.agent_name, rd.created_at DESC
+    ORDER BY rd.five_min_bucket, rd.agent_name, rd.created_at DESC
   ),
   rounds_numbered AS (
     -- 动态生成 round_number（从1开始递增）
     SELECT
-      half_hour_bucket,
-      ROW_NUMBER() OVER (ORDER BY half_hour_bucket) AS round_num
-    FROM half_hourly_buckets
+      five_min_bucket,
+      ROW_NUMBER() OVER (ORDER BY five_min_bucket) AS round_num
+    FROM five_min_buckets
   ),
   latest_70_rounds AS (
     -- 只保留最近70轮
     SELECT
-      half_hour_bucket,
+      five_min_bucket,
       round_num
     FROM rounds_numbered
     ORDER BY round_num DESC
@@ -62,17 +62,17 @@ BEGIN
   renumbered AS (
     -- 重新编号：最老的=1，最新的=70（或更少）
     SELECT
-      half_hour_bucket,
-      ROW_NUMBER() OVER (ORDER BY half_hour_bucket) AS final_round_num
+      five_min_bucket,
+      ROW_NUMBER() OVER (ORDER BY five_min_bucket) AS final_round_num
     FROM latest_70_rounds
   )
   SELECT
     rn.final_round_num::INTEGER AS round_number,
     lpba.agent_name,
     lpba.total_value,
-    lpba.half_hour_bucket AS sample_time
+    lpba.five_min_bucket AS sample_time
   FROM latest_per_bucket_agent lpba
-  JOIN renumbered rn ON lpba.half_hour_bucket = rn.half_hour_bucket
+  JOIN renumbered rn ON lpba.five_min_bucket = rn.five_min_bucket
   ORDER BY rn.final_round_num, lpba.agent_name;
 END;
 $$;
