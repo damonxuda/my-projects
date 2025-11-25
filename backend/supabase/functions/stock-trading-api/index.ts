@@ -209,7 +209,6 @@ serve(async (req) => {
       const projectStartTime = earliestData?.[0]?.created_at || null
 
       // 将数据转换为前端需要的格式：{ round: 1, agent1: value1, agent2: value2, ... }
-      // 数据库函数已经返回升序排列的绝对轮次，直接使用即可
       const roundMap: any = {}
 
       portfolios?.forEach((p: any) => {
@@ -221,8 +220,7 @@ serve(async (req) => {
         roundMap[round][p.agent_name] = parseFloat(p.total_value)
       })
 
-      // 按 round 升序排列（数据库已返回绝对轮次，数字越大=越新）
-      const history = Object.values(roundMap).sort((a: any, b: any) => a.round - b.round)
+      const history = Object.values(roundMap)
 
       return new Response(
         JSON.stringify({
