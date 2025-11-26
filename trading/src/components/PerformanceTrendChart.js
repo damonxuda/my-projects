@@ -20,6 +20,10 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, 
 
   // 判断是否需要添加初始点：项目开始时间在当前视图范围内
   const shouldAddInitialPoint = () => {
+    // 美股模式：始终显示初始点（轮次0）
+    if (mode === 'stock') return true;
+
+    // 加密货币模式：根据项目开始时间判断
     if (!projectStartTime) return false;
 
     const now = new Date();
@@ -56,7 +60,9 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, 
     'claude_standard': '#8B5CF6',    // purple-500
     'claude_mini': '#A78BFA',        // purple-400
     'grok_standard': '#F97316',      // orange-500
-    'grok_mini': '#FB923C'           // orange-400
+    'grok_mini': '#FB923C',          // orange-400
+    'deepseek': '#EF4444',           // red-500
+    'qwen3_235b': '#DC2626'          // red-600
   };
 
   const agentColors = {
@@ -74,7 +80,9 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, 
     claude_standard: 50000,
     claude_mini: 50000,
     grok_standard: 50000,
-    grok_mini: 50000
+    grok_mini: 50000,
+    deepseek: 50000,
+    qwen3_235b: 50000
   };
 
   const cryptoETFInitialPoints = {
@@ -106,7 +114,9 @@ const PerformanceTrendChart = ({ historyData24h, historyData7d, historyData30d, 
     'claude_standard': 'Sonnet 4.5',
     'claude_mini': 'Haiku 4.5',
     'grok_standard': 'Grok 4.1',
-    'grok_mini': 'Grok 4.1 Fast'
+    'grok_mini': 'Grok 4.1 Fast',
+    'deepseek': 'DeepSeek',
+    'qwen3_235b': 'Qwen3 235B'
   };
 
   const cryptoETFNames = {
