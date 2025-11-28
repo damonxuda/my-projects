@@ -283,7 +283,23 @@ export const handler = async (event) => {
     console.log(`Active agents: ${AGENTS.map(a => a.name).join(', ')}`);
     console.log('Event:', JSON.stringify(event, null, 2));
 
-    // 检查是否在有效交易时间（9:30-16:00，每30分钟）
+    // 0. 首先检查市场是否开放（节假日、休市日检查）
+    const marketStatus = await checkMarketStatus();
+    if (!marketStatus.isOpen) {
+        const holidayInfo = marketStatus.holiday ? ` (${marketStatus.holiday})` : '';
+        console.log(`🔴 Market is closed${holidayInfo}, skipping execution`);
+        return {
+            statusCode: 200,
+            body: JSON.stringify({
+                message: `Skipped: market is closed${holidayInfo}`,
+                marketStatus: marketStatus,
+                time: new Date().toISOString()
+            })
+        };
+    }
+    console.log(`✅ Market is open (session: ${marketStatus.session})`);
+
+    // 1. 检查是否在有效交易时间（9:30-16:00，每30分钟）
     // Scheduler设置为 cron(0,30 9-16 ? * MON-FRI *)，需要过滤掉9:00和16:30
     const now = new Date();
     const etTime = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
@@ -480,6 +496,30 @@ async function processSingleAgent(agent, marketData, historicalData, technicalIn
                 fallback_error: fallbackError.message
             };
         }
+    }
+}
+
+// ============================================
+// 0. 检查市场状态（Finnhub Market Status API）
+// ============================================
+async function checkMarketStatus() {
+    try {
+        const url = `https://finnhub.io/api/v1/stock/market-status?exchange=US&token=${FINNHUB_API_KEY}`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        // 返回格式: { exchange: "US", isOpen: true/false, session: "regular"/"pre-market"/"post-market"/null, holiday: "Thanksgiving Day"/null }
+        console.log('📊 Market Status:', JSON.stringify(data));
+        return data;
+
+    } catch (error) {
+        console.error('❌ Failed to check market status:', error.message);
+        // 如果 API 调用失败，返回默认值（假设市场开放，避免因 API 问题阻止交易）
+        return { isOpen: true, session: 'unknown', holiday: null };
     }
 }
 
