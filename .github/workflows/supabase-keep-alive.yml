@@ -1,0 +1,63 @@
+# .github/workflows/supabase-keep-alive.yml
+# 每天对两个 Supabase free-tier 数据库执行一次 SELECT 1，
+# 触发真实的 PostgreSQL 查询，避免因 7 天无活动被暂停。
+# Beijing 04:00 = UTC 20:00
+
+name: Supabase Keep-Alive
+
+on:
+  schedule:
+    # UTC 20:00 = 北京时间 04:00
+    - cron: '0 20 * * *'
+  workflow_dispatch: # 允许手动触发用于测试
+
+jobs:
+  keep-alive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Ping Project 1 (qeedsnqbudbogqpcerqb)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          echo "🔔 Pinging Project 1 (ref: ${{ secrets.SUPABASE_PROJECT_REF }})..."
+          # 通过 stdin 传入 SELECT 1，触发真实 PostgreSQL 查询
+          RESULT=$(echo "SELECT 1 AS keep_alive;" | \
+            supabase db execute \
+              --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}" 2>&1)
+          echo "Result: $RESULT"
+          # SELECT 1 必然返回一行；只要 CLI 没报错就算成功
+          if echo "$RESULT" | grep -qi "error\|fail"; then
+            echo "::error::Project 1 ping failed"
+            exit 1
+          fi
+          echo "✅ Project 1 alive"
+
+      - name: Ping Project 2 (nrzskzkigmvlegtlrmug)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          echo "🔔 Pinging Project 2 (ref: ${{ secrets.SUPABASE_PROJECT_REF_2 }})..."
+          RESULT=$(echo "SELECT 1 AS keep_alive;" | \
+            supabase db execute \
+              --project-ref "${{ secrets.SUPABASE_PROJECT_REF_2 }}" 2>&1)
+          echo "Result: $RESULT"
+          if echo "$RESULT" | grep -qi "error\|fail"; then
+            echo "::error::Project 2 ping failed"
+            exit 1
+          fi
+          echo "✅ Project 2 alive"
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "📅 Keep-alive run completed at $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
