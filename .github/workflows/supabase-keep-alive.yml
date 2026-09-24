@@ -30,11 +30,12 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           echo "🔔 Pinging Project 1 (ref: ${{ secrets.SUPABASE_PROJECT_REF }})..."
-          # 通过 stdin 传入 SELECT 1，触发真实 PostgreSQL 查询
+          # 新版 CLI 用 db query 子命令，SQL 通过 -f 文件传入
+          echo "SELECT 1 AS keep_alive;" > /tmp/ping.sql
           # || true 防止 set -e 提前退出，确保能看到完整错误输出
-          RESULT=$(echo "SELECT 1 AS keep_alive;" | \
-            supabase db execute \
-              --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}" 2>&1) || true
+          RESULT=$(supabase db query \
+              --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}" \
+              -f /tmp/ping.sql 2>&1) || true
           echo "Result: $RESULT"
           # SELECT 1 必然返回一行；只要 CLI 没报错就算成功
           if echo "$RESULT" | grep -qi "error\|fail"; then
@@ -48,9 +49,10 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
           echo "🔔 Pinging Project 2 (ref: ${{ secrets.SUPABASE_PROJECT_REF_2 }})..."
-          RESULT=$(echo "SELECT 1 AS keep_alive;" | \
-            supabase db execute \
-              --project-ref "${{ secrets.SUPABASE_PROJECT_REF_2 }}" 2>&1) || true
+          echo "SELECT 1 AS keep_alive;" > /tmp/ping.sql
+          RESULT=$(supabase db query \
+              --project-ref "${{ secrets.SUPABASE_PROJECT_REF_2 }}" \
+              -f /tmp/ping.sql 2>&1) || true
           echo "Result: $RESULT"
           if echo "$RESULT" | grep -qi "error\|fail"; then
             echo "::error::Project 2 ping failed"
